@@ -1,0 +1,13 @@
+{
+  "name": "meine-skills",
+  "owner": {
+    "name": "Paul"
+  },
+  "plugins": [
+    {
+      "name": "paketierung",
+      "source": "./plugins/paketierung",
+      "description": "Skills für das Paketierungsprojekt"
+    }
+  ]
+}
