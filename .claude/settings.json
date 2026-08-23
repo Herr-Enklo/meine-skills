@@ -10,13 +10,13 @@
   },
   "enabledPlugins": {
     "paketierung@meine-skills": true,
-    "agency-dev@meine-skills": true,
-    "agency-ops@meine-skills": true,
-    "agency-security@meine-skills": true,
-    "agency-qa@meine-skills": true,
-    "agency-ki@meine-skills": true,
-    "agency-produkt@meine-skills": true,
-    "agency-ux@meine-skills": true,
-    "agency-iot@meine-skills": true
+    "agency-dev@meine-skills": false,
+    "agency-ops@meine-skills": false,
+    "agency-security@meine-skills": false,
+    "agency-qa@meine-skills": false,
+    "agency-ki@meine-skills": false,
+    "agency-produkt@meine-skills": false,
+    "agency-ux@meine-skills": false,
+    "agency-iot@meine-skills": false
   }
 }
