@@ -1,0 +1,10 @@
+{
+  "name": "agency-dev",
+  "description": "Entwicklung und Architektur: Architekten, Code-Review, Frontend, Backend, Git, Doku",
+  "version": "1.0.0",
+  "author": {
+    "name": "Paul"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/msitarzewski/agency-agents"
+}

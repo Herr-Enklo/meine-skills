@@ -1,0 +1,10 @@
+{
+  "name": "agency-ux",
+  "description": "Design und Frontend-Qualität: UI, UX-Recherche, Interface-Review, i18n, Datenvisualisierung",
+  "version": "1.0.0",
+  "author": {
+    "name": "Paul"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/msitarzewski/agency-agents"
+}
