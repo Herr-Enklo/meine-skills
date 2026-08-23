@@ -1,0 +1,10 @@
+{
+  "name": "agency-security",
+  "description": "Sicherheit: Threat Modeling, AppSec, Secrets, Pentest, Compliance, Privacy, Identity",
+  "version": "1.0.0",
+  "author": {
+    "name": "Paul"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/msitarzewski/agency-agents"
+}
