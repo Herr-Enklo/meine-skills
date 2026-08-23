@@ -159,21 +159,44 @@ Farben abgebildet. `emoji` und `vibe` sind entfernt, weil Claude Code sie nicht
 auswertet. Der Text der Agents ist unverändert. Lizenztext und Quellenangabe liegen
 in jedem Plugin unter `NOTICE.md`.
 
-## Automatisch laden statt von Hand installieren
+## Zwei Wege, wie die Agents in eine Session kommen
 
-`.claude/settings.json` in diesem Repo meldet den Marketplace an und aktiviert alle
-neun Plugins, sodass lokale Claude-Code-Sessions in diesem Repo sie ohne
-`/plugin install` bekommen.
+Beide sind getestet, keiner deckt alles ab.
 
-In Web-Sessions auf claude.ai/code greift das **nicht**. Getestet am 23.08.2026 mit
-einer frischen Session auf `main`: Die Datei liegt im Arbeitsverzeichnis, geladen
-wird trotzdem keines der neun Plugins. Web-Sessions stellen ihre Plugins und Skills
-aus den claude.ai-Kontoeinstellungen zusammen, nicht aus den Repo-Settings.
+**Plugins** (`/plugin install ...`) landen unter `~/.claude/plugins/` und gelten für
+jede lokale Claude-Code-Session auf dem Rechner, unabhängig vom Projekt. In
+Web-Sessions auf claude.ai/code greifen sie nicht: Getestet am 23.08.2026 mit einer
+frischen Session auf `main` wurde keines der neun Plugins geladen, obwohl
+`.claude/settings.json` sie aktiviert. Web-Sessions stellen Plugins und Skills aus
+den claude.ai-Kontoeinstellungen zusammen, nicht aus den Repo-Settings.
 
-Willst du dasselbe in einem anderen Projekt, kopier die Datei nach
-`<projekt>/.claude/settings.json` und streich die Plugins raus, die du dort nicht
-brauchst. Ein `false` statt `true` schaltet ein einzelnes Plugin ab, ohne die Zeile
-zu löschen.
+**`.claude/agents/`** im Repo funktioniert dagegen in Web-Sessions. Gleicher Test,
+gleicher Tag, Branch mit dem Ordner: 68 Agent-Typen geladen, davon alle 62 aus dem
+Ordner. Der Preis ist, dass die Dateien doppelt im Repo liegen, einmal als
+Plugin-Quelle und einmal als Kopie.
+
+### Was in diesem Repo eingestellt ist
+
+`.claude/agents/` enthält die 62 Agents, damit Web-Sessions sie haben. Damit lokale
+Sessions sie nicht zusätzlich über die global installierten Plugins bekommen und
+dadurch doppelt führen, stehen die acht agency-Plugins in `.claude/settings.json`
+auf `false`. Das Projekt-Setting sticht die Nutzer-Einstellung. `paketierung` bleibt
+auf `true`, weil der Ordner nur Agents abdeckt, keine Skills.
+
+### Für ein anderes Projekt
+
+Sollen die Agents dort auch in Web-Sessions verfügbar sein, kopier `.claude/agents/`
+in das Projekt und setz die agency-Plugins in dessen `.claude/settings.json`
+ebenfalls auf `false`. Reicht dir lokal, lass den Ordner weg – dann genügen die
+global installierten Plugins.
+
+### Kopie auffrischen
+
+Nach Änderungen an den Plugin-Agents:
+
+```
+rm -rf .claude/agents && mkdir -p .claude/agents && cp plugins/agency-*/agents/*.md .claude/agents/
+```
 
 ## Änderungen ausrollen
 
