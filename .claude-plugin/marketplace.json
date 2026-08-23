@@ -8,6 +8,46 @@
       "name": "paketierung",
       "source": "./plugins/paketierung",
       "description": "Skills für das Paketierungsprojekt"
+    },
+    {
+      "name": "agency-dev",
+      "source": "./plugins/agency-dev",
+      "description": "Entwicklung und Architektur: Architekten, Code-Review, Frontend, Backend, Git, Doku"
+    },
+    {
+      "name": "agency-ops",
+      "source": "./plugins/agency-ops",
+      "description": "Betrieb und Infrastruktur: DevOps, SRE, Incident Response, Datenbanken, Netzwerk, Cloud-Kosten"
+    },
+    {
+      "name": "agency-security",
+      "source": "./plugins/agency-security",
+      "description": "Sicherheit: Threat Modeling, AppSec, Secrets, Pentest, Compliance, Privacy, Identity"
+    },
+    {
+      "name": "agency-qa",
+      "source": "./plugins/agency-qa",
+      "description": "Test und Qualität: Testautomatisierung, API-Tests, Performance, Barrierefreiheit, Evidenzprüfung"
+    },
+    {
+      "name": "agency-ki",
+      "source": "./plugins/agency-ki",
+      "description": "KI-Systeme: Prompt Engineering, RAG, Multi-Agent-Architektur, MCP-Server, Workflows"
+    },
+    {
+      "name": "agency-produkt",
+      "source": "./plugins/agency-produkt",
+      "description": "Produkt und Projekt: Product Management, Sprintplanung, Projektsteuerung, Meeting-Notizen"
+    },
+    {
+      "name": "agency-ux",
+      "source": "./plugins/agency-ux",
+      "description": "Design und Frontend-Qualität: UI, UX-Recherche, Interface-Review, i18n, Datenvisualisierung"
+    },
+    {
+      "name": "agency-iot",
+      "source": "./plugins/agency-iot",
+      "description": "IoT und Embedded: Firmware (ESP32/STM32), Geräteflotten, Sprach-KI-Pipelines"
     }
   ]
 }
