@@ -162,8 +162,13 @@ in jedem Plugin unter `NOTICE.md`.
 ## Automatisch laden statt von Hand installieren
 
 `.claude/settings.json` in diesem Repo meldet den Marketplace an und aktiviert alle
-neun Plugins. Jede Claude-Code-Session, die in diesem Repo startet, lädt sie damit
-von selbst – auch Sessions auf claude.ai/code, wo kein `/plugin install` möglich ist.
+neun Plugins, sodass lokale Claude-Code-Sessions in diesem Repo sie ohne
+`/plugin install` bekommen.
+
+In Web-Sessions auf claude.ai/code greift das **nicht**. Getestet am 23.08.2026 mit
+einer frischen Session auf `main`: Die Datei liegt im Arbeitsverzeichnis, geladen
+wird trotzdem keines der neun Plugins. Web-Sessions stellen ihre Plugins und Skills
+aus den claude.ai-Kontoeinstellungen zusammen, nicht aus den Repo-Settings.
 
 Willst du dasselbe in einem anderen Projekt, kopier die Datei nach
 `<projekt>/.claude/settings.json` und streich die Plugins raus, die du dort nicht
