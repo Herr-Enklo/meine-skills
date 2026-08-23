@@ -159,6 +159,17 @@ Farben abgebildet. `emoji` und `vibe` sind entfernt, weil Claude Code sie nicht
 auswertet. Der Text der Agents ist unverändert. Lizenztext und Quellenangabe liegen
 in jedem Plugin unter `NOTICE.md`.
 
+## Automatisch laden statt von Hand installieren
+
+`.claude/settings.json` in diesem Repo meldet den Marketplace an und aktiviert alle
+neun Plugins. Jede Claude-Code-Session, die in diesem Repo startet, lädt sie damit
+von selbst – auch Sessions auf claude.ai/code, wo kein `/plugin install` möglich ist.
+
+Willst du dasselbe in einem anderen Projekt, kopier die Datei nach
+`<projekt>/.claude/settings.json` und streich die Plugins raus, die du dort nicht
+brauchst. Ein `false` statt `true` schaltet ein einzelnes Plugin ab, ohne die Zeile
+zu löschen.
+
 ## Änderungen ausrollen
 
 1. Datei ändern, zum Beispiel `plugins/paketierung/skills/code-review/SKILL.md`
