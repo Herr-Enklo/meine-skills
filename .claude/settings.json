@@ -1,0 +1,22 @@
+{
+  "extraKnownMarketplaces": {
+    "meine-skills": {
+      "source": {
+        "source": "github",
+        "repo": "Herr-Enklo/meine-skills"
+      },
+      "autoUpdate": true
+    }
+  },
+  "enabledPlugins": {
+    "paketierung@meine-skills": true,
+    "agency-dev@meine-skills": true,
+    "agency-ops@meine-skills": true,
+    "agency-security@meine-skills": true,
+    "agency-qa@meine-skills": true,
+    "agency-ki@meine-skills": true,
+    "agency-produkt@meine-skills": true,
+    "agency-ux@meine-skills": true,
+    "agency-iot@meine-skills": true
+  }
+}
