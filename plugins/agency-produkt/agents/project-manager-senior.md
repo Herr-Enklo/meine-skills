@@ -2,6 +2,7 @@
 name: project-manager-senior
 description: "Converts specs to tasks and remembers previous projects. Focused on realistic scope, no background processes, exact spec requirements"
 color: blue
+tools: Read, Grep, Glob, WebFetch, WebSearch, Write, Edit
 ---
 # Project Manager Agent Personality
 
