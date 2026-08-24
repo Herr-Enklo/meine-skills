@@ -1,21 +1,15 @@
-# Herkunft und Lizenz
-
-Die Agents in `agents/` stammen aus dem Projekt **The Agency** von msitarzewski:
-https://github.com/msitarzewski/agency-agents
-
-Für Claude Code angepasst wurde nur das Frontmatter: `name` auf den Dateinamen-Slug
-gesetzt (Claude Code braucht einen Slug, im Original steht dort Klartext mit
-Leerzeichen), `color` auf die acht unterstützten Farbwerte abgebildet, `emoji` und
-`vibe` entfernt. Der Inhalt der Agents war bis zum 24.08.2026 unverändert. Seitdem sind einzelne
-Stellen aus Sicherheitsgründen geändert; sie sind in `SECURITY-ABWEICHUNGEN.md`
-im Wurzelverzeichnis des Repositorys vollständig aufgeführt.
-
-Original lizenziert unter MIT:
-
-```
 MIT License
 
-Copyright (c) 2025 AgentLand Contributors
+Copyright (c) 2026 Paul (Herr-Enklo)
+
+Diese Lizenz gilt für die eigenen Inhalte dieses Repositorys, insbesondere
+plugins/paketierung/, .claude/skills/, README.md und die Marketplace-Metadaten.
+
+Die Agent-Dateien in plugins/agency-*/agents/ und deren Kopien in .claude/agents/
+stammen aus dem Projekt "The Agency" (https://github.com/msitarzewski/agency-agents)
+und stehen unter MIT, Copyright (c) 2025 AgentLand Contributors. Der vollständige
+Lizenztext und die Herkunftsangabe liegen in der jeweiligen NOTICE.md. Die an diesen
+Dateien vorgenommenen Änderungen sind in SECURITY-ABWEICHUNGEN.md aufgeführt.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -34,4 +28,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-```

@@ -6,7 +6,9 @@ https://github.com/msitarzewski/agency-agents
 Für Claude Code angepasst wurde nur das Frontmatter: `name` auf den Dateinamen-Slug
 gesetzt (Claude Code braucht einen Slug, im Original steht dort Klartext mit
 Leerzeichen), `color` auf die acht unterstützten Farbwerte abgebildet, `emoji` und
-`vibe` entfernt. Der Inhalt der Agents ist unverändert.
+`vibe` entfernt. Der Inhalt der Agents war bis zum 24.08.2026 unverändert. Seitdem sind einzelne
+Stellen aus Sicherheitsgründen geändert; sie sind in `SECURITY-ABWEICHUNGEN.md`
+im Wurzelverzeichnis des Repositorys vollständig aufgeführt.
 
 Original lizenziert unter MIT:
 
