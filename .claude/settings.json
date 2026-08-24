@@ -9,7 +9,7 @@
     }
   },
   "enabledPlugins": {
-    "paketierung@meine-skills": true,
+    "paketierung@meine-skills": false,
     "agency-dev@meine-skills": false,
     "agency-ops@meine-skills": false,
     "agency-security@meine-skills": false,

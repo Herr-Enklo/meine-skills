@@ -175,13 +175,22 @@ gleicher Tag, Branch mit dem Ordner: 68 Agent-Typen geladen, davon alle 62 aus d
 Ordner. Der Preis ist, dass die Dateien doppelt im Repo liegen, einmal als
 Plugin-Quelle und einmal als Kopie.
 
+**`.claude/skills/`** ist das Gegenstück für Skills, bisher ungetestet. Der Ordner
+enthält seit dem 24.08.2026 eine Kopie des Paketierungs-Skills. Ob Web-Sessions ihn
+laden, zeigt erst die nächste frische Session, weil Skills beim Session-Start
+eingelesen werden.
+
 ### Was in diesem Repo eingestellt ist
 
-`.claude/agents/` enthält die 62 Agents, damit Web-Sessions sie haben. Damit lokale
-Sessions sie nicht zusätzlich über die global installierten Plugins bekommen und
-dadurch doppelt führen, stehen die acht agency-Plugins in `.claude/settings.json`
-auf `false`. Das Projekt-Setting sticht die Nutzer-Einstellung. `paketierung` bleibt
-auf `true`, weil der Ordner nur Agents abdeckt, keine Skills.
+`.claude/agents/` enthält die 62 Agents und `.claude/skills/` den Paketierungs-Skill,
+damit Web-Sessions beides haben. Damit lokale Sessions sie nicht zusätzlich über die
+global installierten Plugins bekommen und dadurch doppelt führen, stehen alle neun
+Plugins in `.claude/settings.json` auf `false`. Das Projekt-Setting sticht die
+Nutzer-Einstellung, und zwar nur in diesem Repo: in anderen Projekten greifen die
+global installierten Plugins weiter.
+
+Die Kopie heißt `paketierung-code-review`, nicht `code-review`, weil es einen
+eingebauten Skill dieses Namens gibt.
 
 ### Für ein anderes Projekt
 
@@ -197,6 +206,10 @@ Nach Änderungen an den Plugin-Agents:
 ```
 rm -rf .claude/agents && mkdir -p .claude/agents && cp plugins/agency-*/agents/*.md .claude/agents/
 ```
+
+Der Skill wird von Hand nachgezogen: `plugins/paketierung/skills/code-review/SKILL.md`
+nach `.claude/skills/paketierung-code-review/SKILL.md` kopieren und die Zeile
+`name: paketierung-code-review` im Frontmatter wieder ergänzen.
 
 ## Änderungen ausrollen
 
