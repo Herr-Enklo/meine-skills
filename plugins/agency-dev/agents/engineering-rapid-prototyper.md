@@ -240,6 +240,9 @@ export function FeedbackForm() {
 import { useEffect, useState } from 'react';
 
 // Lightweight analytics helper
+// Consent first: in the EU, GA4 and any tracking call needs an opt-in before it fires.
+// Gate trackEvent behind the user's consent state; a prototype that ships without
+// that gate is a prototype that cannot go live.
 export function trackEvent(eventName: string, properties?: Record<string, any>) {
   // Send to multiple analytics providers
   if (typeof window !== 'undefined') {
