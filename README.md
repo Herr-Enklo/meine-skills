@@ -175,10 +175,12 @@ gleicher Tag, Branch mit dem Ordner: 68 Agent-Typen geladen, davon alle 62 aus d
 Ordner. Der Preis ist, dass die Dateien doppelt im Repo liegen, einmal als
 Plugin-Quelle und einmal als Kopie.
 
-**`.claude/skills/`** ist das Gegenstück für Skills, bisher ungetestet. Der Ordner
-enthält seit dem 24.08.2026 eine Kopie des Paketierungs-Skills. Ob Web-Sessions ihn
-laden, zeigt erst die nächste frische Session, weil Skills beim Session-Start
-eingelesen werden.
+**`.claude/skills/`** ist das Gegenstück für Skills und funktioniert ebenfalls.
+Getestet am 24.08.2026 mit einer neu gestarteten Web-Session auf dem Branch mit dem
+Ordner: der Skill `paketierung-code-review` war geladen. Ein Neustart der Session
+genügt, eine neue Unterhaltung ist nicht nötig, weil Skills beim Session-Start
+eingelesen werden. Der Branch muss dabei stehen bleiben, auf `main` gibt es den
+Ordner nicht.
 
 ### Was in diesem Repo eingestellt ist
 
