@@ -224,11 +224,13 @@ Agent-Instruktionen erlangen konnte. Die betroffenen Stellen sind geändert,
 Zwei Einstellungen gehören dazu. `autoUpdate` steht in `.claude/settings.json` auf
 `false`: das Repo ist öffentlich, und wer es klont, registriert den Marketplace auf
 seinem Rechner. Updates zieht man bewusst mit `/plugin marketplace update meine-skills`,
-so wie unten beschrieben. Sieben Agents, die nur analysieren und berichten, haben ein
-`tools:` im Frontmatter ohne Bash.
+so wie unten beschrieben.
 
-Offen ist die Frage, ob die übrigen 51 Agents ihren vollen Werkzeugsatz brauchen. Das
-lässt sich nur einzeln beantworten.
+Der Werkzeugsatz ist einzeln durchgegangen. 22 der 62 Agents haben ein `tools:` im
+Frontmatter, 18 davon ohne Bash. Die Regel dahinter: Wer analysiert, entwirft oder
+berichtet und dessen Umsetzung woanders liegt, braucht keine Shell. Wer baut, deployt,
+migriert, misst oder forensisch untersucht, behält sie. Die Zuordnung im Einzelnen steht
+in `SECURITY-ABWEICHUNGEN.md`.
 
 ## Änderungen ausrollen
 
