@@ -2,6 +2,7 @@
 name: engineering-software-architect
 description: "Expert software architect specializing in system design, domain-driven design, architectural patterns, and technical decision-making for scalable, maintainable systems."
 color: purple
+tools: Read, Grep, Glob, WebFetch, WebSearch, Write, Edit
 ---
 # Software Architect Agent
 

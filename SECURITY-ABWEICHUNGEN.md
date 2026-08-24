@@ -54,8 +54,30 @@ Diese sieben analysieren und berichten, sie verändern keine Systeme. Sie hatten
 `Read, Grep, Glob, WebFetch, WebSearch, Write, Edit` — lesen, recherchieren, Bericht
 schreiben, aber keine Shell.
 
-Die übrigen 51 Agents sind unverändert. Ob sie Bash brauchen, ist eine Einzelfallfrage
-und noch offen.
+Am selben Tag sind elf weitere Agents dazugekommen, deren Ergebnis ein Dokument, eine
+Analyse oder eine Entscheidung ist und bei denen die Umsetzung ausdrücklich woanders
+liegt: `engineering-software-architect`, `engineering-multi-agent-systems-architect`,
+`specialized-workflow-architect`, `security-architect`, `engineering-technical-writer`,
+`engineering-incident-response-commander`, `project-management-experiment-tracker`,
+`project-manager-senior`, `testing-test-results-analyzer`,
+`specialized-codebase-archaeologist`, `engineering-code-reviewer`.
+
+Bei `security-architect` steht die Arbeitsteilung sogar in der eigenen Beschreibung:
+"Designs the security model; hands code-level SAST/DAST and SDLC work to the AppSec
+Engineer." Dasselbe gilt für den Incident Commander, der koordiniert und Post-mortems
+moderiert, während der SRE die Systeme anfasst.
+
+Am ehesten diskutabel ist `engineering-code-reviewer`: ohne Bash kein `git diff` und
+keine Historie. Dafür liest genau dieser Agent fremden Code, und das ist der Fall, in
+dem eine Shell am meisten wert ist — für einen Angreifer. Wer die Historie braucht,
+nimmt den eingebauten `/code-review`-Skill.
+
+Die verbleibenden 40 Agents behalten den vollen Satz. Sie bauen, deployen, migrieren,
+messen oder untersuchen forensisch — bei ihnen ist die Shell die Arbeit, nicht ein
+Nebenweg. Dazu zählen bewusst auch `testing-evidence-collector` und
+`testing-reality-checker`, deren Prüfschritte auf Kommandos beruhen, sowie
+`engineering-prompt-engineer` (führt Evals aus) und `engineering-finops-engineer`
+(fragt Cloud-CLIs ab).
 
 ## Umgang mit fremden Inhalten
 
