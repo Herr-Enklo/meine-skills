@@ -5,7 +5,7 @@
         "source": "github",
         "repo": "Herr-Enklo/meine-skills"
       },
-      "autoUpdate": true
+      "autoUpdate": false
     }
   },
   "enabledPlugins": {

@@ -207,11 +207,28 @@ Nach Änderungen an den Plugin-Agents:
 
 ```
 rm -rf .claude/agents && mkdir -p .claude/agents && cp plugins/agency-*/agents/*.md .claude/agents/
+cp plugins/agency-dev/NOTICE.md .claude/agents/NOTICE.md
 ```
 
 Der Skill wird von Hand nachgezogen: `plugins/paketierung/skills/code-review/SKILL.md`
 nach `.claude/skills/paketierung-code-review/SKILL.md` kopieren und die Zeile
 `name: paketierung-code-review` im Frontmatter wieder ergänzen.
+
+## Sicherheit
+
+Ein Security-Review am 24.08.2026 hat mehrere geerbte Anweisungen in den Upstream-Agents
+gefunden, über die ein präpariertes Projekt Codeausführung oder Kontrolle über die
+Agent-Instruktionen erlangen konnte. Die betroffenen Stellen sind geändert,
+`SECURITY-ABWEICHUNGEN.md` führt jede Änderung mit Begründung auf.
+
+Zwei Einstellungen gehören dazu. `autoUpdate` steht in `.claude/settings.json` auf
+`false`: das Repo ist öffentlich, und wer es klont, registriert den Marketplace auf
+seinem Rechner. Updates zieht man bewusst mit `/plugin marketplace update meine-skills`,
+so wie unten beschrieben. Sieben Agents, die nur analysieren und berichten, haben ein
+`tools:` im Frontmatter ohne Bash.
+
+Offen ist die Frage, ob die übrigen 51 Agents ihren vollen Werkzeugsatz brauchen. Das
+lässt sich nur einzeln beantworten.
 
 ## Änderungen ausrollen
 
