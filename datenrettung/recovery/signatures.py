@@ -37,6 +37,10 @@ class Signature:
     # sofort. Wichtig bei kurzen Headern (z.B. "BM"), die sonst massenhaft
     # Fehltreffer erzeugen. Bei zu wenigen Bytes soll er ``True`` liefern.
     quick_check: Optional[Callable[[bytes], bool]] = None
+    # Optionale Funktion, die aus dem Dateianfang die passende Endung ableitet
+    # (fuer Container, deren Marke den Typ bestimmt: ftyp -> mp4/mov/heic,
+    # RIFF -> wav/avi/webp). Gibt sie None zurueck, bleibt es bei ``ext``.
+    ext_from_header: Optional[Callable[[bytes], Optional[str]]] = None
 
 
 def _le_size_at(pos: int, width: int, add: int = 0):
@@ -79,18 +83,52 @@ def _bmp_quick(head: bytes) -> bool:
     return 54 <= size <= 64 * MB
 
 
-def _wav_quick(head: bytes) -> bool:
-    # Echtes WAV traegt "WAVE" an Offset 8; damit fallen AVI und Zufall weg.
-    if len(head) < 12:
-        return True
-    return head[8:12] == b"WAVE"
-
-
 def _id3_quick(head: bytes) -> bool:
     # ID3-Tags haben die Hauptversion 2, 3 oder 4.
     if len(head) < 5:
         return True
     return head[3] in (2, 3, 4) and head[4] != 0xFF
+
+
+# ftyp-Marken (Offset 8..12) den ueblichen Endungen zuordnen.
+_FTYP_BRANDS = {
+    b"isom": "mp4", b"iso2": "mp4", b"iso4": "mp4", b"iso5": "mp4",
+    b"mp41": "mp4", b"mp42": "mp4", b"avc1": "mp4", b"dash": "mp4",
+    b"M4V ": "m4v", b"M4A ": "m4a", b"M4P ": "m4p",
+    b"qt  ": "mov",
+    b"heic": "heic", b"heix": "heic", b"hevc": "heic", b"hevx": "heic",
+    b"mif1": "heic", b"msf1": "heic", b"heim": "heic", b"heis": "heic",
+    b"3gp4": "3gp", b"3gp5": "3gp", b"3gg6": "3gp",
+    b"crx ": "cr3",
+}
+
+
+def _ftyp_ext(head: bytes) -> Optional[str]:
+    if len(head) < 12:
+        return None
+    return _FTYP_BRANDS.get(head[8:12])
+
+
+def _ftyp_quick(head: bytes) -> bool:
+    # Nur bekannte Marken behalten; "ftyp" allein ist zu unspezifisch.
+    return len(head) < 12 or head[8:12] in _FTYP_BRANDS
+
+
+def _riff_ext(head: bytes) -> Optional[str]:
+    if len(head) < 12:
+        return None
+    kind = head[8:12]
+    if kind == b"WAVE":
+        return "wav"
+    if kind == b"AVI ":
+        return "avi"
+    if kind == b"WEBP":
+        return "webp"
+    return None
+
+
+def _riff_quick(head: bytes) -> bool:
+    return len(head) < 12 or head[8:12] in (b"WAVE", b"AVI ", b"WEBP")
 
 
 # Reihenfolge = grobe Prioritaet bei ueberlappenden Headern.
@@ -120,15 +158,32 @@ SIGNATURES: list[Signature] = [
               header=b"\x1f\x8b\x08", max_size=200 * MB),
     Signature("SQLite-Datenbank", "sqlite",
               header=b"SQLite format 3\x00", max_size=200 * MB),
-    Signature("WAV-Audio", "wav",
-              header=b"RIFF", max_size=200 * MB, size_from_header=_riff_size,
-              quick_check=_wav_quick),
+    # Alte Office-Formate und weitere OLE-Dokumente (doc, xls, ppt, msg).
+    Signature("OLE-Dokument (doc/xls/ppt)", "ole",
+              header=b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1", max_size=200 * MB),
+    Signature("RTF-Dokument", "rtf",
+              header=b"{\\rtf", footer=b"}", max_size=30 * MB),
+    Signature("Photoshop-Datei", "psd",
+              header=b"8BPS", max_size=500 * MB),
+    # TIFF und die meisten Kamera-RAW-Formate (CR2, NEF, ARW, DNG, ORF ...).
+    Signature("TIFF/RAW-Bild", "tif",
+              header=b"II\x2a\x00", max_size=200 * MB),
+    Signature("TIFF/RAW-Bild", "tif",
+              header=b"MM\x00\x2a", max_size=200 * MB),
+    Signature("Matroska/WebM-Video", "mkv",
+              header=b"\x1a\x45\xdf\xa3", max_size=2048 * MB),
+    Signature("FLAC-Audio", "flac",
+              header=b"fLaC", max_size=200 * MB),
+    Signature("RIFF-Container (wav/avi/webp)", "riff",
+              header=b"RIFF", max_size=2048 * MB, size_from_header=_riff_size,
+              quick_check=_riff_quick, ext_from_header=_riff_ext),
     Signature("OGG-Audio", "ogg",
               header=b"OggS", max_size=100 * MB),
     Signature("MP3-Audio", "mp3",
               header=b"ID3", max_size=50 * MB, quick_check=_id3_quick),
-    Signature("MP4/MOV-Video", "mp4",
-              header=b"ftyp", header_offset=4, max_size=1024 * MB),
+    Signature("ISO-Base-Media (mp4/mov/heic)", "mp4",
+              header=b"ftyp", header_offset=4, max_size=2048 * MB,
+              quick_check=_ftyp_quick, ext_from_header=_ftyp_ext),
 ]
 
 

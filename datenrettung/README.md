@@ -64,8 +64,28 @@ python main.py scan --source /dev/sdb1 --out ~/gerettet --no-ntfs
 
 Ohne `--out` wird nur gezählt und aufgelistet, nichts geschrieben. Weitere
 Schalter: `--no-ntfs` und `--no-carve` schalten je ein Verfahren ab, `--all`
-listet bei NTFS auch die noch vorhandenen Dateien, `--max N` begrenzt die Zahl
-der Carving-Treffer.
+listet bei NTFS auch die noch vorhandenen Dateien, `--orphan` sucht den ganzen
+Datenträger nach MFT-Einträgen ab (findet auch nach einer Formatierung, dauert
+aber deutlich länger), `--no-partial` lässt unvollständige Dateien weg,
+`--sector 4096` stellt auf 4K-Sektoren um, `--max N` begrenzt die Zahl der
+Carving-Treffer.
+
+Nach jedem Scan zeigt das Werkzeug „Gelesen: X von Y". Diese Zeile ist die
+wichtigste Kontrolle: Steht dort ein winziger Bruchteil, wurde der Datenträger
+gar nicht vollständig gelesen (meist fehlende Administratorrechte oder ein
+Zugriffsproblem), und dann kann auch nichts gefunden werden.
+
+## Warum ein Scan Zeit braucht
+
+Ein gründlicher Scan liest den kompletten Datenträger einmal Sektor für Sektor.
+Bei 2 TB sind das mehrere Stunden, egal mit welchem Werkzeug. Ein Durchlauf, der
+nach Sekunden fertig ist, hat den Datenträger nicht wirklich gelesen. Genau
+deshalb steht die „Gelesen"-Zeile am Ende jedes Scans: Sie macht sichtbar, ob
+tatsächlich die ganze Fläche gelesen wurde.
+
+Damit ein einzelner Lesefehler den Durchlauf nicht vorzeitig beendet, überbrückt
+das Werkzeug defekte oder gesperrte Sektoren, zählt sie und liest weiter bis zum
+Ende.
 
 ## Sicherer Umgang
 
@@ -84,26 +104,41 @@ Platte ist der übliche Weg, zuerst ein Image zu ziehen (etwa mit `dd` oder
 
 ## Unterstützte Dateitypen beim Carving
 
-Bilder (JPEG, PNG, GIF, BMP), Dokumente und Archive (PDF, ZIP und damit auch
-DOCX/XLSX/PPTX, RAR, 7z, GZIP), Audio und Video (WAV, OGG, MP3, MP4/MOV) sowie
-SQLite-Datenbanken. Die Signaturen stehen in `recovery/signatures.py` und lassen
-sich dort erweitern.
+Bilder (JPEG, PNG, GIF, BMP, TIFF und darauf aufbauende Kamera-RAW-Formate wie
+CR2, NEF, ARW, DNG, WebP), Dokumente und Archive (PDF, RTF, die alten
+Office-Formate doc/xls/ppt über den OLE-Container, ZIP und damit DOCX/XLSX/PPTX,
+RAR, 7z, GZIP), Audio und Video (WAV, AVI, OGG, MP3, FLAC, MP4, MOV, HEIC,
+Matroska/WebM) sowie PSD und SQLite-Datenbanken. Container wie ftyp (MP4/MOV/HEIC)
+und RIFF (WAV/AVI/WebP) bekommen die passende Endung anhand ihrer Marke. Die
+Signaturen stehen in `recovery/signatures.py` und lassen sich dort erweitern.
+
+Fehlt einer Datei das Endmuster (etwa weil sie teilweise überschrieben wurde),
+wird sie als unvollständig bestmöglich gerettet, statt sie zu verwerfen. Solche
+Funde tragen `_unvollstaendig` im Namen.
 
 ## Grenzen
 
-Das NTFS-Modul deckt die verbreiteten Fälle ab: residente und über Data-Runs
-verteilte Dateien, fragmentierte MFT, mehrere Partitionen über MBR und GPT. Es
-wertet keine `$LogFile`-Journale aus und rekonstruiert keine beschädigten
-Dateisystem-Metadaten. FAT und exFAT werden vom NTFS-Weg nicht gelesen; dort
-bleibt das Carving.
+Das ist ein kompaktes Werkzeug, kein Ersatz für kommerzielle Recovery-Software.
+Der Unterschied liegt vor allem in drei Punkten: Kommerzielle Tools kennen
+mehrere Hundert Dateitypen, sie setzen fragmentierte Dateien wieder zusammen, und
+sie werten die Dateisystem-Strukturen tiefer aus (Journale, beschädigte
+Metadaten). Dieses Werkzeug deckt die häufigsten Typen ab und schneidet
+zusammenhängende Bereiche heraus.
 
 Beim Carving hängt die Vollständigkeit von der Fragmentierung ab. Eine am Stück
 gespeicherte Datei kommt sauber heraus; eine über die Platte verteilte kann an
 der ersten Lücke abbrechen, weil das Verfahren die Fortsetzung nicht kennt.
 
-Der Zugriff auf rohe Geräte geht von 512-Byte-Sektoren aus. Datenträger, die
-ausschließlich 4K-Sektoren melden (4Kn), werden in dieser Fassung nicht
-unterstützt.
+Das NTFS-Modul liest residente und über Data-Runs verteilte Dateien, verarbeitet
+fragmentierte MFT und mehrere Partitionen über MBR und GPT. Mit `--orphan` bzw.
+der entsprechenden Option in der Oberfläche durchsucht es den ganzen Datenträger
+nach MFT-Einträgen und findet gelöschte Dateien so auch nach einer Formatierung
+oder bei beschädigtem Boot-Sektor. `$LogFile`-Journale wertet es nicht aus. FAT
+und exFAT liest der NTFS-Weg nicht; dort bleibt das Carving.
+
+Standardmäßig wird von 512-Byte-Sektoren ausgegangen. Datenträger mit reinen
+4K-Sektoren (4Kn) lassen sich über `--sector 4096` beziehungsweise die Option
+„4K-Sektoren" verarbeiten.
 
 Ein Scan über eine große Platte liest sie einmal vollständig und dauert
 entsprechend. Für einen ersten Test empfiehlt sich ein kleines Image.

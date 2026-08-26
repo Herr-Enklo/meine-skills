@@ -20,11 +20,14 @@ _ROOT = os.path.dirname(os.path.dirname(_HERE))
 if _ROOT not in sys.path:
     sys.path.insert(0, _ROOT)
 
+from unittest import mock  # noqa: E402
+
 from datenrettung.recovery import ByteSource, Scanner, ScanOptions, extract  # noqa: E402
 from datenrettung.recovery import scanner as scanner_mod  # noqa: E402
 from datenrettung.recovery import ntfs as ntfs_mod  # noqa: E402
+from datenrettung.recovery import sources as sources_mod  # noqa: E402
 from datenrettung.tests.make_sample_image import (  # noqa: E402
-    build_carving_image, build_ntfs_image,
+    build_carving_image, build_ntfs_image, make_png,
 )
 
 
@@ -111,6 +114,94 @@ class FalsePositiveTests(unittest.TestCase):
                             f"zu viele Fehltreffer: {len(findings)}")
 
 
+class BadSectorTests(unittest.TestCase):
+    def test_defekter_sektor_beendet_scan_nicht(self):
+        # Zwei PNGs, dazwischen ein defekter Sektor. Frueher beendete der erste
+        # Lesefehler den Scan stillschweigend; jetzt wird der Sektor ueberbrueckt
+        # und beide Dateien werden gefunden.
+        png = make_png()
+        img = bytearray(2_000_000)
+        img[100_000:100_000 + len(png)] = png
+        img[1_500_000:1_500_000 + len(png)] = png
+        path = _write_temp(bytes(img))
+        self.addCleanup(os.remove, path)
+
+        bad, bad_end = 1_000_000, 1_000_512
+        real_read, real_lseek = os.read, os.lseek
+        pos = {"v": 0}
+
+        def flseek(fd, p, how):
+            r = real_lseek(fd, p, how)
+            pos["v"] = r
+            return r
+
+        def fread(fd, n):
+            p = pos["v"]
+            if p < bad_end and p + n > bad:      # Anfrage schneidet den defekten Sektor
+                raise OSError(5, "Input/output error")
+            d = real_read(fd, n)
+            pos["v"] = p + len(d)
+            return d
+
+        with mock.patch.object(sources_mod.os, "read", fread), \
+                mock.patch.object(sources_mod.os, "lseek", flseek):
+            with ByteSource(path) as src:
+                findings = Scanner(src, ScanOptions(use_ntfs=False)).scan()
+                offsets = sorted(f.offset for f in findings if f.ext == "png")
+                self.assertEqual(offsets, [100_000, 1_500_000],
+                                 "trotz defektem Sektor muessen beide PNGs gefunden werden")
+                self.assertGreaterEqual(src.bad_sectors, 1,
+                                        "defekter Sektor muss gezaehlt werden")
+
+
+class ContainerExtTests(unittest.TestCase):
+    def test_ftyp_marke_bestimmt_endung(self):
+        box = b"\x00\x00\x00\x20ftypheic\x00\x00\x00\x00mif1heic" + b"\x11" * 128
+        img = b"\x00" * 512 + box + b"\x00" * 512
+        path = _write_temp(img)
+        self.addCleanup(os.remove, path)
+        with ByteSource(path) as src:
+            findings = Scanner(src, ScanOptions(use_ntfs=False)).scan()
+            match = next((f for f in findings if f.offset == 512), None)
+            self.assertIsNotNone(match, "ftyp-Box nicht gefunden")
+            self.assertEqual(match.ext, "heic")
+
+    def test_riff_marke_bestimmt_wav(self):
+        import struct
+        payload = b"fmt " + b"\x00" * 40
+        size_field = 4 + len(payload)                 # RIFF-Groesse = Datei - 8
+        body = b"RIFF" + struct.pack("<I", size_field) + b"WAVE" + payload
+        img = b"\x00" * 512 + body + b"\x00" * 512
+        path = _write_temp(img)
+        self.addCleanup(os.remove, path)
+        with ByteSource(path) as src:
+            findings = Scanner(src, ScanOptions(use_ntfs=False)).scan()
+            match = next((f for f in findings if f.offset == 512), None)
+            self.assertIsNotNone(match, "RIFF-Container nicht gefunden")
+            self.assertEqual(match.ext, "wav")
+            self.assertEqual(match.size, len(body))
+
+
+class PartialTests(unittest.TestCase):
+    def test_jpeg_ohne_footer_wird_teilweise_gerettet(self):
+        from datenrettung.recovery import carver
+        start = b"\xff\xd8\xff\xe0" + b"\x01" * 3000     # JPEG-Header, kein FF D9
+        img = b"\x00" * 512 + start + b"\x00" * 512
+        path = _write_temp(img)
+        self.addCleanup(os.remove, path)
+
+        with ByteSource(path) as src:
+            findings = Scanner(src, ScanOptions(use_ntfs=False)).scan()
+            match = next((f for f in findings if f.ext == "jpg" and f.offset == 512), None)
+            self.assertIsNotNone(match, "unvollstaendiges JPEG nicht gerettet")
+            self.assertTrue(match.extra.get("partial"))
+
+        with ByteSource(path) as src2:
+            without = list(carver.carve(src2, recover_partial=False))
+            self.assertFalse(any(f.offset == 512 and f.ext == "jpg" for f in without),
+                             "ohne Teil-Rettung darf der Header-only-Treffer fehlen")
+
+
 class NtfsTests(unittest.TestCase):
     def test_findet_geloeschte_datei_mit_namen_und_inhalt(self):
         img, exp = build_ntfs_image()
@@ -165,6 +256,23 @@ class NtfsTests(unittest.TestCase):
             self.assertEqual(boot.cluster_size, 512)
             self.assertEqual(boot.record_size, 1024)
             self.assertEqual(boot.mft_cluster, 4)
+
+
+class OrphanMftTests(unittest.TestCase):
+    def test_orphan_scan_findet_datei_trotz_kaputtem_boot(self):
+        img, exp = build_ntfs_image()
+        broken = bytearray(img)
+        broken[3:11] = b"XXXXXXXX"                 # NTFS-Kennung zerstoeren
+        path = _write_temp(bytes(broken))
+        self.addCleanup(os.remove, path)
+        with ByteSource(path) as src:
+            self.assertEqual(ntfs_mod.find_ntfs_volumes(src), [],
+                             "Boot-Scan sollte hier nichts finden")
+            opts = ScanOptions(use_ntfs=True, use_carve=False, ntfs_orphan_scan=True)
+            findings = Scanner(src, opts).scan()
+            match = next((f for f in findings if exp["name"] in f.name), None)
+            self.assertIsNotNone(match, "Orphan-Scan hat die geloeschte Datei nicht gefunden")
+            self.assertEqual(extract(src, match), exp["data"])
 
 
 class UnitTests(unittest.TestCase):

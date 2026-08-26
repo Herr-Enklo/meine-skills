@@ -120,9 +120,20 @@ def _find_footer(source, start: int, footer: bytes, max_size: int,
     return -1
 
 
-def _resolve_size(source, start: int, sig: Signature,
-                  source_size: Optional[int]) -> Optional[int]:
-    """Bestimmt die Groesse eines Kandidaten. ``None`` = kein plausibles Ende."""
+# Obergrenze fuer eine Teil-Wiederherstellung (Footer nicht gefunden), damit ein
+# einzelner verirrter Header nicht gleich Gigabytes einsammelt.
+PARTIAL_MAX = 64 * 1024 * 1024
+
+
+def _resolve_size(source, start: int, sig: Signature, source_size: Optional[int],
+                  next_start: Optional[int],
+                  recover_partial: bool) -> Optional[tuple[int, bool]]:
+    """Bestimmt Groesse und Vollstaendigkeit eines Kandidaten.
+
+    Rueckgabe ``(size, partial)`` oder ``None``, wenn kein sinnvoller Bereich
+    bestimmbar ist. ``partial`` markiert eine unvollstaendige Datei (Footer nicht
+    gefunden), die dennoch bestmoeglich herausgeschnitten wird.
+    """
     header_len = sig.header_offset + len(sig.header)
 
     if sig.size_from_header is not None:
@@ -131,14 +142,23 @@ def _resolve_size(source, start: int, sig: Signature,
         if declared and header_len < declared <= sig.max_size:
             if source_size is not None:
                 declared = min(declared, source_size - start)
-            return declared if declared > header_len else None
+            return (declared, False) if declared > header_len else None
         return None
 
     if sig.footer is not None:
         foot_start = _find_footer(source, start + header_len, sig.footer,
                                   sig.max_size, source_size)
         if foot_start < 0:
-            return None
+            if not recover_partial:
+                return None
+            # Footer fehlt: bis zum naechsten Header bzw. einer Obergrenze retten.
+            end = start + min(sig.max_size, PARTIAL_MAX)
+            if next_start is not None:
+                end = min(end, next_start)
+            if source_size is not None:
+                end = min(end, source_size)
+            size = end - start
+            return (size, True) if size > header_len else None
         if sig.footer_size is not None:
             tail = source.read(foot_start, 64)
             end = foot_start + sig.footer_size(tail)
@@ -149,23 +169,26 @@ def _resolve_size(source, start: int, sig: Signature,
         size = end - start
         if source_size is not None:
             size = min(size, source_size - start)
-        return size if size > header_len else None
+        return (size, False) if size > header_len else None
 
     # Weder Footer noch Groessenangabe: feste Obergrenze als bestmoegliche Schaetzung.
     size = sig.max_size
     if source_size is not None:
         size = min(size, source_size - start)
-    return size if size > header_len else None
+    return (size, False) if size > header_len else None
 
 
 def carve(source, signatures: Optional[list[Signature]] = None,
           progress_cb: Optional[ProgressCb] = None,
           should_cancel: Optional[CancelCb] = None,
-          max_files: Optional[int] = None) -> Iterator[Finding]:
+          max_files: Optional[int] = None,
+          recover_partial: bool = True) -> Iterator[Finding]:
     """Durchsucht ``source`` und liefert die gefundenen Dateien als ``Finding``.
 
     Es werden keine Daten im Speicher gehalten – jeder Fund traegt nur Position
     und Groesse; die eigentlichen Bytes werden erst beim Wiederherstellen gelesen.
+    ``recover_partial`` rettet Dateien mit fehlendem Endmuster bestmoeglich als
+    unvollstaendig, statt sie zu verwerfen.
     """
     signatures = signatures or SIGNATURES
     source_size = source.size
@@ -173,7 +196,7 @@ def carve(source, signatures: Optional[list[Signature]] = None,
     candidates = find_headers(source, signatures, progress_cb, should_cancel)
     total = len(candidates)
 
-    carved_until = 0           # Ende des letzten Funds mit bekanntem Ende
+    carved_until = 0           # Ende des letzten Funds mit belegtem Ende
     produced = 0
     index = 0
     for i, (start, sig) in enumerate(candidates):
@@ -187,27 +210,38 @@ def carve(source, signatures: Optional[list[Signature]] = None,
         if start < carved_until:
             continue
 
-        size = _resolve_size(source, start, sig, source_size)
-        if not size or size <= 0:
+        next_start = candidates[i + 1][0] if i + 1 < total else None
+        resolved = _resolve_size(source, start, sig, source_size, next_start,
+                                 recover_partial)
+        if resolved is None:
+            continue
+        size, partial = resolved
+        if size <= 0:
             continue
 
         index += 1
-        # Nur footer-basierte Funde haben ein durch ein echtes Endmuster
-        # belegtes Ende und duerfen darin liegende Treffer (z.B. eingebettete
-        # Vorschaubilder) unterdruecken. Aus dem Header geratene Groessen
-        # (BMP/WAV) koennen falsch und riesig sein und duerfen nachfolgende
-        # echte Dateien nicht verschlucken.
-        if sig.footer is not None:
+        # Nur vollstaendige, footer-basierte Funde duerfen darin liegende
+        # Treffer unterdruecken. Geratene Groessen und Teilfunde nicht.
+        if sig.footer is not None and not partial:
             carved_until = start + size
 
-        name = f"{index:06d}_0x{start:X}.{sig.ext}"
+        ext = sig.ext
+        if sig.ext_from_header is not None:
+            resolved_ext = sig.ext_from_header(source.read(start, 16))
+            if resolved_ext:
+                ext = resolved_ext
+
+        suffix = "_unvollstaendig" if partial else ""
+        name = f"{index:06d}_0x{start:X}{suffix}.{ext}"
+        type_name = sig.name + (" (unvollstaendig)" if partial else "")
         yield Finding(
             kind="carve",
-            type_name=sig.name,
-            ext=sig.ext,
+            type_name=type_name,
+            ext=ext,
             name=name,
             offset=start,
             size=size,
+            extra={"partial": partial},
         )
         produced += 1
         if max_files and produced >= max_files:

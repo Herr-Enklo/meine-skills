@@ -43,7 +43,8 @@ class RecoveryApp:
         self.worker: threading.Thread | None = None
         self.cancel_flag = threading.Event()
         self.findings: list = []
-        self.sources: dict[str, str] = {}   # Anzeigename -> Pfad/Geraet
+        self.sources: dict[str, str] = {}       # Anzeigename -> Pfad/Geraet
+        self.source_sizes: dict[str, int | None] = {}  # Anzeigename -> bekannte Groesse
         self.busy = False
 
         self._build_ui()
@@ -94,12 +95,22 @@ class RecoveryApp:
         self.opt_ntfs = tk.BooleanVar(value=True)
         self.opt_carve = tk.BooleanVar(value=True)
         self.opt_all = tk.BooleanVar(value=False)
+        self.opt_orphan = tk.BooleanVar(value=False)
+        self.opt_partial = tk.BooleanVar(value=True)
+        self.opt_4kn = tk.BooleanVar(value=False)
         ttk.Checkbutton(opt_frame, text="NTFS: geloeschte Dateien (mit Namen)",
                         variable=self.opt_ntfs).grid(row=0, column=0, sticky="w", padx=6, pady=4)
         ttk.Checkbutton(opt_frame, text="File Carving (nach Signatur)",
                         variable=self.opt_carve).grid(row=0, column=1, sticky="w", padx=6, pady=4)
         ttk.Checkbutton(opt_frame, text="NTFS: auch vorhandene Dateien listen",
                         variable=self.opt_all).grid(row=0, column=2, sticky="w", padx=6, pady=4)
+        ttk.Checkbutton(opt_frame, text="Ganzen Datentraeger nach MFT absuchen (dauert laenger)",
+                        variable=self.opt_orphan).grid(row=1, column=0, columnspan=2,
+                                                       sticky="w", padx=6, pady=4)
+        ttk.Checkbutton(opt_frame, text="Unvollstaendige Dateien mitnehmen",
+                        variable=self.opt_partial).grid(row=1, column=2, sticky="w", padx=6, pady=4)
+        ttk.Checkbutton(opt_frame, text="4K-Sektoren (4Kn)",
+                        variable=self.opt_4kn).grid(row=0, column=3, sticky="w", padx=6, pady=4)
 
         # Aktionen + Fortschritt
         act_frame = ttk.Frame(self.root)
@@ -165,13 +176,16 @@ class RecoveryApp:
         # Vorhandene Image-Eintraege behalten, Laufwerke neu setzen.
         image_entries = {k: v for k, v in self.sources.items() if k.startswith("Image: ")}
         self.sources = {}
+        self.source_sizes = {}
         values = []
         for d in drives:
             label = f"{d.path}  –  {d.label}"
             self.sources[label] = d.path
+            self.source_sizes[label] = d.size
             values.append(label)
         for label, path in image_entries.items():
             self.sources[label] = path
+            self.source_sizes[label] = None
             values.append(label)
         self.source_box.configure(values=values, state="readonly")
         if values and not self.source_var.get():
@@ -189,6 +203,7 @@ class RecoveryApp:
             return
         label = f"Image: {os.path.basename(path)}"
         self.sources[label] = path
+        self.source_sizes[label] = None
         values = list(self.source_box["values"])
         if label not in values:
             values.append(label)
@@ -225,11 +240,15 @@ class RecoveryApp:
             use_ntfs=self.opt_ntfs.get(),
             use_carve=self.opt_carve.get(),
             deleted_only=not self.opt_all.get(),
+            recover_partial=self.opt_partial.get(),
+            ntfs_orphan_scan=self.opt_orphan.get(),
         )
+        known_size = self.source_sizes.get(label)
+        sector = 4096 if self.opt_4kn.get() else 512
 
         def work():
             try:
-                with ByteSource(source_path) as src:
+                with ByteSource(source_path, size=known_size, sector_size=sector) as src:
                     scanner = Scanner(src, options)
                     scanner.scan(
                         progress_cb=lambda phase, frac, count: self.queue.put(
@@ -237,10 +256,12 @@ class RecoveryApp:
                         should_cancel=self.cancel_flag.is_set,
                         on_finding=lambda f: self.queue.put(("finding", f)),
                     )
+                    stats = {"size": src.size, "read": src.bytes_read,
+                             "bad": src.bad_sectors}
                 if self.cancel_flag.is_set():
-                    self.queue.put(("cancelled",))
+                    self.queue.put(("cancelled", stats))
                 else:
-                    self.queue.put(("scan_done",))
+                    self.queue.put(("scan_done", stats))
             except PermissionError:
                 self.queue.put(("error",
                     "Zugriff verweigert. Bitte das Programm als Administrator starten "
@@ -324,9 +345,9 @@ class RecoveryApp:
         elif kind == "finding":
             self._add_finding(msg[1])
         elif kind == "scan_done":
-            self._scan_finished(cancelled=False)
+            self._scan_finished(cancelled=False, stats=msg[1] if len(msg) > 1 else None)
         elif kind == "cancelled":
-            self._scan_finished(cancelled=True)
+            self._scan_finished(cancelled=True, stats=msg[1] if len(msg) > 1 else None)
         elif kind == "error":
             self._set_busy(False)
             self.progress.configure(value=0)
@@ -360,18 +381,26 @@ class RecoveryApp:
                              values=("…", "weitere Funde ausgeblendet", "", ""))
         self.count_var.set(f"{len(self.findings)} Fund(e)")
 
-    def _scan_finished(self, cancelled: bool) -> None:
+    def _scan_finished(self, cancelled: bool, stats: dict | None = None) -> None:
         self._set_busy(False)
         self.progress.configure(value=1000 if not cancelled else 0)
-        if cancelled:
-            self.status_var.set(f"Abgebrochen. {len(self.findings)} Fund(e) bisher.")
-        else:
-            self.status_var.set(f"Scan fertig. {len(self.findings)} Fund(e).")
+        prefix = "Abgebrochen" if cancelled else "Scan fertig"
+        info = f"{prefix}. {len(self.findings)} Fund(e)."
+        if stats:
+            info += (f"  Gelesen: {format_size(stats['read'])} von "
+                     f"{format_size(stats['size'])}, {stats['bad']} defekte Sektoren.")
+        self.status_var.set(info)
         has = bool(self.findings)
         self.recover_all_btn.configure(state="normal" if has else "disabled")
         self.recover_sel_btn.configure(state="normal" if has else "disabled")
         if not has:
-            messagebox.showinfo("Kein Fund", "Es wurden keine wiederherstellbaren Dateien gefunden.")
+            hint = ("Es wurden keine wiederherstellbaren Dateien gefunden.")
+            if stats and stats["size"] and stats["read"] < stats["size"] * 0.5:
+                hint += ("\n\nEs wurde nur ein kleiner Teil des Datentraegers gelesen "
+                         f"({format_size(stats['read'])} von {format_size(stats['size'])}). "
+                         "Das deutet auf fehlende Administratorrechte oder ein "
+                         "Zugriffsproblem hin.")
+            messagebox.showinfo("Kein Fund", hint)
 
     # -- Hilfen ----------------------------------------------------------
 

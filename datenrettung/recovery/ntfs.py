@@ -213,6 +213,21 @@ class MftReader:
         _apply_fixup(raw, self.boot.bytes_per_sector)
         return raw
 
+    def phys_of(self, voff: int) -> Optional[int]:
+        """Physischer Quell-Offset einer virtuellen MFT-Position."""
+        if not self._runs:
+            return (self._linear_start or 0) + voff
+        cluster = self.boot.cluster_size
+        pos = 0
+        for lcn, count in self._runs:
+            run_bytes = count * cluster
+            if voff < pos + run_bytes:
+                if lcn is None:
+                    return None
+                return self._phys(lcn) + (voff - pos)
+            pos += run_bytes
+        return None
+
 
 def _iter_attributes(record: bytes):
     """Iteriert die Attribute eines (bereits fixup-korrigierten) Eintrags."""
@@ -303,56 +318,131 @@ def scan_ntfs(source, base_offset: int,
         record = reader.read_record(n)
         if record is None:
             continue
+        rec_off = reader.phys_of(n * reader.record_size)
+        finding = _finding_from_record(record, boot.cluster_size, base_offset,
+                                       rec_off, n, deleted_only)
+        if finding is not None:
+            yield finding
+            produced += 1
 
-        flags = struct.unpack_from("<H", record, 0x16)[0]
-        in_use = bool(flags & FLAG_IN_USE)
-        is_dir = bool(flags & FLAG_DIRECTORY)
-        if is_dir:
-            continue
-        if deleted_only and in_use:
-            continue
 
-        names: list[tuple[str, int]] = []
-        for off, atype, _length in _iter_attributes(record):
-            if atype == ATTR_FILE_NAME:
-                parsed = _parse_file_name(record, off)
-                if parsed:
-                    names.append(parsed)
-        name = _best_name(names)
-        if not name:
-            continue
+def _finding_from_record(record: bytes, cluster_size: int, base_offset: int,
+                         record_offset: Optional[int], number: int,
+                         deleted_only: bool) -> Optional[Finding]:
+    """Wertet einen einzelnen MFT-Eintrag aus und baut daraus einen ``Finding``.
 
-        data_attr = _find_data_attribute(record)
-        if data_attr is None:
-            continue
-        real_size = data_attr.get("real_size", 0)
-        if not real_size or real_size <= 0:
-            continue
+    Gemeinsam genutzt vom MFT-Durchlauf und vom geraeteweiten Orphan-Scan.
+    """
+    flags = struct.unpack_from("<H", record, 0x16)[0]
+    in_use = bool(flags & FLAG_IN_USE)
+    if flags & FLAG_DIRECTORY:
+        return None
+    if deleted_only and in_use:
+        return None
 
-        ext = name.rsplit(".", 1)[-1].lower() if "." in name else "bin"
-        safe = _safe_name(name)
-        display = f"{n:06d}_{safe}"
+    names: list[tuple[str, int]] = []
+    for off, atype, _length in _iter_attributes(record):
+        if atype == ATTR_FILE_NAME:
+            parsed = _parse_file_name(record, off)
+            if parsed:
+                names.append(parsed)
+    name = _best_name(names)
+    if not name:
+        return None
 
-        extra: dict = {
-            "base_offset": base_offset,
-            "cluster_size": boot.cluster_size,
-            "real_size": real_size,
-        }
-        if data_attr.get("resident"):
-            extra["resident_data"] = data_attr["resident_data"]
-        else:
-            extra["data_runs"] = data_attr["data_runs"]
+    data_attr = _find_data_attribute(record)
+    if data_attr is None:
+        return None
+    real_size = data_attr.get("real_size", 0)
+    if not real_size or real_size <= 0:
+        return None
 
-        yield Finding(
-            kind="ntfs",
-            type_name="NTFS-Datei" + ("" if in_use else " (geloescht)"),
-            ext=ext,
-            name=display,
-            offset=base_offset,
-            size=real_size,
-            extra=extra,
-        )
-        produced += 1
+    ext = name.rsplit(".", 1)[-1].lower() if "." in name else "bin"
+    extra: dict = {
+        "base_offset": base_offset,
+        "cluster_size": cluster_size,
+        "real_size": real_size,
+        "record_offset": record_offset,
+    }
+    if data_attr.get("resident"):
+        extra["resident_data"] = data_attr["resident_data"]
+    else:
+        extra["data_runs"] = data_attr["data_runs"]
+
+    return Finding(
+        kind="ntfs",
+        type_name="NTFS-Datei" + ("" if in_use else " (geloescht)"),
+        ext=ext,
+        name=f"{number:06d}_{_safe_name(name)}",
+        offset=record_offset if record_offset is not None else base_offset,
+        size=real_size,
+        extra=extra,
+    )
+
+
+def scan_orphan_mft(source, cluster_size: int = 4096, base_offset: int = 0,
+                    progress_cb: Optional[ProgressCb] = None,
+                    should_cancel: Optional[CancelCb] = None,
+                    deleted_only: bool = True,
+                    record_size: int = 1024) -> Iterator[Finding]:
+    """Sucht MFT-Eintraege ueber den gesamten Datentraeger.
+
+    Anders als ``scan_ntfs`` verlaesst sich dieser Durchlauf nicht auf einen
+    intakten Boot-Sektor oder eine intakte ``$MFT``. Er durchsucht die Rohdaten
+    an Sektorgrenzen nach ``FILE``-Eintraegen und wertet jeden einzeln aus. Das
+    findet geloeschte Dateien auch nach einer Formatierung, solange ihre
+    MFT-Eintraege noch vorhanden sind.
+
+    ``cluster_size`` und ``base_offset`` werden fuer nicht-residente Inhalte
+    gebraucht; sind sie unbekannt, liefern residente (kleine) Dateien trotzdem
+    zuverlaessige Ergebnisse.
+    """
+    total = source.size or 0
+    produced = 0
+    number = 0
+    seen: set[int] = set()
+
+    for chunk_off, data in source.stream(chunk_size=8 * 1024 * 1024):
+        if should_cancel and should_cancel():
+            break
+        if progress_cb and total:
+            progress_cb("Datentraeger nach MFT-Eintraegen durchsuchen",
+                        min(1.0, (chunk_off + len(data)) / total), produced)
+        # ``FILE`` nur an Sektorgrenzen pruefen – dort liegen MFT-Eintraege.
+        limit = len(data) - 4
+        i = 0
+        while i <= limit:
+            if data[i:i + 4] == b"FILE":
+                abs_off = chunk_off + i
+                if abs_off not in seen:
+                    seen.add(abs_off)
+                    finding = _try_orphan_record(source, abs_off, record_size,
+                                                 cluster_size, base_offset,
+                                                 number, deleted_only)
+                    if finding is not None:
+                        number += 1
+                        produced += 1
+                        yield finding
+            i += 512
+
+
+def _try_orphan_record(source, abs_off: int, record_size: int,
+                       cluster_size: int, base_offset: int, number: int,
+                       deleted_only: bool) -> Optional[Finding]:
+    raw = bytearray(source.read(abs_off, record_size))
+    if len(raw) < record_size or raw[0:4] != b"FILE":
+        return None
+    # Grober Plausibilitaetstest: der Update-Sequence-Offset muss im Eintrag liegen.
+    usa_offset = struct.unpack_from("<H", raw, 0x04)[0]
+    if usa_offset == 0 or usa_offset > record_size - 4:
+        return None
+    bytes_per_sector = 512
+    _apply_fixup(raw, bytes_per_sector)
+    try:
+        return _finding_from_record(raw, cluster_size, base_offset, abs_off,
+                                    number, deleted_only)
+    except Exception:
+        return None
 
 
 def _safe_name(name: str) -> str:

@@ -27,6 +27,8 @@ class ScanOptions:
     use_carve: bool = True        # Dateien ueber Signaturen finden
     deleted_only: bool = True     # bei NTFS nur geloeschte Eintraege
     max_files: Optional[int] = None  # Obergrenze fuer Carving-Treffer
+    recover_partial: bool = True  # unvollstaendige Dateien (ohne Footer) mitnehmen
+    ntfs_orphan_scan: bool = False   # ganzen Datentraeger nach MFT-Eintraegen absuchen
 
 
 class Scanner:
@@ -44,7 +46,19 @@ class Scanner:
             if on_finding:
                 on_finding(f)
 
-        # Phase 1: NTFS/MFT (liefert Originalnamen).
+        seen_records: set[int] = set()
+
+        def emit_ntfs(f: Finding) -> None:
+            # Denselben MFT-Eintrag nicht doppelt (Boot-Scan vs. Orphan-Scan).
+            rec = f.extra.get("record_offset")
+            if rec is not None:
+                if rec in seen_records:
+                    return
+                seen_records.add(rec)
+            emit(f)
+
+        # Phase 1: NTFS/MFT ueber den Boot-Sektor (liefert Originalnamen).
+        first_boot = None
         if self.options.use_ntfs:
             try:
                 volumes = ntfs.find_ntfs_volumes(self.source)
@@ -54,23 +68,42 @@ class Scanner:
                 if should_cancel and should_cancel():
                     break
                 try:
+                    boot = ntfs.BootSector(self.source.read(vol_off, 512))
+                    if first_boot is None:
+                        first_boot = (boot.cluster_size, vol_off)
                     for f in ntfs.scan_ntfs(self.source, vol_off, progress_cb,
                                             should_cancel,
                                             deleted_only=self.options.deleted_only):
-                        emit(f)
+                        emit_ntfs(f)
                 except ntfs.NtfsError:
                     continue
                 except Exception:
                     # Ein beschaedigtes Volume darf den restlichen Scan nicht stoppen.
                     continue
 
-        # Phase 2: Carving (findet auch ohne intaktes Dateisystem).
+        # Phase 2: NTFS-Eintraege ueber den ganzen Datentraeger (optional, findet
+        # auch nach Formatierung/Boot-Schaden). Cluster-Groesse und Basis vom
+        # gefundenen Volume uebernehmen, sonst uebliche Vorgaben.
+        if self.options.use_ntfs and self.options.ntfs_orphan_scan:
+            if not (should_cancel and should_cancel()):
+                cluster_size, base = first_boot or (4096, 0)
+                try:
+                    for f in ntfs.scan_orphan_mft(
+                            self.source, cluster_size=cluster_size, base_offset=base,
+                            progress_cb=progress_cb, should_cancel=should_cancel,
+                            deleted_only=self.options.deleted_only):
+                        emit_ntfs(f)
+                except Exception:
+                    pass
+
+        # Phase 3: Carving (findet auch ohne intaktes Dateisystem).
         if self.options.use_carve:
             if should_cancel and should_cancel():
                 return findings
             for f in carver.carve(self.source, progress_cb=progress_cb,
                                    should_cancel=should_cancel,
-                                   max_files=self.options.max_files):
+                                   max_files=self.options.max_files,
+                                   recover_partial=self.options.recover_partial):
                 emit(f)
 
         return findings

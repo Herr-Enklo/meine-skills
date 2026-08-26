@@ -42,20 +42,27 @@ def cmd_scan(args) -> int:
         use_carve=not args.no_carve,
         deleted_only=not args.all,
         max_files=args.max,
+        recover_partial=not args.no_partial,
+        ntfs_orphan_scan=args.orphan,
     )
 
     def progress(phase: str, frac: float, count: int) -> None:
         bar = int(frac * 30)
-        sys.stdout.write(f"\r  {phase:<24} [{'#' * bar:<30}] "
+        sys.stdout.write(f"\r  {phase:<40} [{'#' * bar:<30}] "
                          f"{frac * 100:5.1f}%  {count} Funde")
         sys.stdout.flush()
 
     try:
-        with ByteSource(args.source) as src:
+        with ByteSource(args.source, sector_size=args.sector) as src:
             print(f"Quelle: {args.source}  ({format_size(src.size)})")
+            if src.size is None:
+                print("  Achtung: Groesse unbekannt. Bei einem Geraet deutet das "
+                      "auf fehlende Rechte hin (als Administrator/root starten).")
             scanner = Scanner(src, options)
             findings = scanner.scan(progress_cb=progress)
             print()  # Zeilenumbruch nach der Fortschrittsanzeige
+            print(f"Gelesen: {format_size(src.bytes_read)} von {format_size(src.size)}"
+                  f"  |  defekte Sektoren: {src.bad_sectors}")
 
             if not findings:
                 print("Keine wiederherstellbaren Dateien gefunden.")
@@ -129,6 +136,13 @@ def build_parser() -> argparse.ArgumentParser:
     scan.add_argument("--no-carve", action="store_true", help="Carving auslassen")
     scan.add_argument("--all", action="store_true",
                       help="bei NTFS auch nicht-geloeschte Dateien listen")
+    scan.add_argument("--orphan", action="store_true",
+                      help="ganzen Datentraeger nach MFT-Eintraegen absuchen "
+                           "(findet auch nach Formatierung, dauert laenger)")
+    scan.add_argument("--no-partial", action="store_true",
+                      help="unvollstaendige Dateien (ohne Endmuster) nicht mitnehmen")
+    scan.add_argument("--sector", type=int, default=512,
+                      help="Sektorgroesse in Bytes (512 oder 4096 fuer 4Kn)")
     scan.add_argument("--max", type=int, default=None,
                       help="Obergrenze fuer Carving-Treffer")
     return parser
