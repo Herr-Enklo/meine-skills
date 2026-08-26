@@ -20,6 +20,7 @@ Physische Datentraeger mit mehreren Partitionen werden unterstuetzt: ueber
 from __future__ import annotations
 
 import struct
+from dataclasses import dataclass
 from typing import Callable, Iterator, Optional
 
 from .models import Finding
@@ -302,9 +303,15 @@ def _best_name(names: list[tuple[str, int]]) -> Optional[str]:
 def scan_ntfs(source, base_offset: int,
               progress_cb: Optional[ProgressCb] = None,
               should_cancel: Optional[CancelCb] = None,
-              deleted_only: bool = True) -> Iterator[Finding]:
-    """Durchsucht ein NTFS-Volume ab ``base_offset`` nach Eintraegen."""
-    boot = BootSector(source.read(base_offset, 512))
+              deleted_only: bool = True,
+              boot: Optional["BootSector"] = None) -> Iterator[Finding]:
+    """Durchsucht ein NTFS-Volume ab ``base_offset`` nach Eintraegen.
+
+    ``boot`` kann ein bereits (z.B. aus dem Backup-Boot-Sektor) rekonstruierter
+    Boot-Sektor sein. Fehlt er, wird er am Volume-Anfang gelesen.
+    """
+    if boot is None:
+        boot = BootSector(source.read(base_offset, 512))
     reader = MftReader(source, boot, base_offset)
     count = reader.record_count()
 
@@ -536,3 +543,139 @@ def _parse_gpt(source) -> list[int]:
         if first_lba > 0:
             offsets.append(first_lba * 512)
     return offsets
+
+
+# -- Partitionsrekonstruktion (TestDisk-Ansatz) -------------------------
+
+@dataclass
+class VolumeInfo:
+    """Ein erkanntes Volume, egal ob aus der Tabelle oder rekonstruiert."""
+    offset: int              # Byte-Offset des Volume-Anfangs auf der Quelle
+    size: Optional[int]      # Groesse in Bytes, falls bekannt
+    cluster_size: Optional[int]
+    fs_type: str             # "ntfs" oder "fat"
+    origin: str              # "tabelle", "boot", "backup", "fat-boot"
+    # Rekonstruierter Boot-Sektor. Wichtig, wenn der originale am Volume-Anfang
+    # zerstoert ist und die Kennzahlen aus der Kopie stammen.
+    boot: Optional["BootSector"] = None
+
+
+def _mft_present(source, base: int, boot: BootSector) -> bool:
+    """Prueft, ob an der aus dem Boot-Sektor erwarteten Stelle eine MFT liegt."""
+    off = base + boot.mft_cluster * boot.cluster_size
+    try:
+        return source.read(off, 4) == b"FILE"
+    except Exception:
+        return False
+
+
+def _reconstruct_ntfs(source, found_offset: int, boot: BootSector) -> Optional[VolumeInfo]:
+    """Bestimmt aus einem gefundenen NTFS-Boot-Sektor den Volume-Anfang.
+
+    Der Boot-Sektor kann der originale (am Volume-Anfang) oder die Kopie (am
+    Volume-Ende) sein. In beiden Faellen wird der echte Anfang ueber die im
+    Boot-Sektor genannte Lage der MFT bestaetigt.
+    """
+    size = boot.total_sectors * boot.bytes_per_sector
+    # Fall 1: gefundener Sektor ist der originale Boot-Sektor am Anfang.
+    if _mft_present(source, found_offset, boot):
+        return VolumeInfo(found_offset, size, boot.cluster_size, "ntfs", "boot", boot)
+    # Fall 2: gefundener Sektor ist die Kopie am Ende -> Anfang zurueckrechnen.
+    bps = boot.bytes_per_sector
+    total = boot.total_sectors
+    for k in (total, total - 1, total + 1, total - 2, total + 2):
+        base = found_offset - k * bps
+        if base < 0:
+            continue
+        if _mft_present(source, base, boot):
+            return VolumeInfo(base, size, boot.cluster_size, "ntfs", "backup", boot)
+    return None
+
+
+def _fat_size(sector: bytes) -> Optional[int]:
+    """Groesse eines FAT-Volumes aus dem Boot-Sektor, oder None wenn kein FAT."""
+    if len(sector) < 512 or sector[510:512] != b"\x55\xAA":
+        return None
+    bps = struct.unpack_from("<H", sector, 0x0B)[0]
+    if bps not in (512, 1024, 2048, 4096):
+        return None
+    is_fat32 = sector[0x52:0x57] == b"FAT32"
+    is_fat1x = sector[0x36:0x3B] in (b"FAT12", b"FAT16", b"FAT  ")
+    if not (is_fat32 or is_fat1x):
+        return None
+    total16 = struct.unpack_from("<H", sector, 0x13)[0]
+    total32 = struct.unpack_from("<I", sector, 0x20)[0]
+    total = total16 or total32
+    return total * bps if total else None
+
+
+def _ntfs_boot(sector: bytes) -> Optional[BootSector]:
+    try:
+        return BootSector(sector)
+    except NtfsError:
+        return None
+
+
+def reconstruct_volumes(source, thorough: bool = True,
+                        progress_cb: Optional[ProgressCb] = None,
+                        should_cancel: Optional[CancelCb] = None) -> list[VolumeInfo]:
+    """Rekonstruiert Volumes ueber eine Boot-Sektor-Suche (TestDisk-Ansatz).
+
+    Auch ohne intakte Partitionstabelle findet dieser Durchlauf NTFS-Volumes,
+    indem er den Datentraeger nach Boot-Sektoren (Original und Kopie) absucht und
+    aus deren BPB den Volume-Anfang und die Groesse errechnet. FAT-Volumes werden
+    erkannt und gemeldet (mangels FAT-Parser aber nicht ausgelesen).
+
+    ``thorough=True`` durchsucht die gesamte Quelle Sektor fuer Sektor.
+    ``thorough=False`` prueft nur die ueblichen Startsektoren und ist damit
+    sehr schnell, findet aber nur Standard-Layouts.
+    """
+    vols: dict[int, VolumeInfo] = {}
+
+    def add(v: Optional[VolumeInfo]) -> None:
+        if v is not None and v.offset not in vols:
+            vols[v.offset] = v
+
+    def check_sector(sector: bytes, abs_off: int) -> None:
+        if sector[3:11] == b"NTFS    ":
+            boot = _ntfs_boot(sector)
+            if boot:
+                add(_reconstruct_ntfs(source, abs_off, boot))
+        else:
+            size = _fat_size(sector)
+            if size is not None:
+                add(VolumeInfo(abs_off, size, None, "fat", "fat-boot"))
+
+    if not thorough:
+        candidates = {0, 63 * 512, 2048 * 512, 34 * 512}
+        candidates.update(find_ntfs_volumes(source))
+        for off in sorted(candidates):
+            sector = source.read(off, 512)
+            if len(sector) >= 512:
+                check_sector(sector, off)
+        return list(vols.values())
+
+    total = source.size or 0
+    for chunk_off, data in source.stream(chunk_size=8 * 1024 * 1024):
+        if should_cancel and should_cancel():
+            break
+        if progress_cb and total:
+            progress_cb("Nach Boot-Sektoren suchen",
+                        min(1.0, (chunk_off + len(data)) / total), len(vols))
+        # Seltene Signaturen gezielt anspringen, statt jeden Sektor zu pruefen.
+        for needle, delta in ((b"NTFS    ", 3), (b"FAT32", 0x52),
+                              (b"FAT16", 0x36), (b"FAT12", 0x36)):
+            start = 0
+            while True:
+                idx = data.find(needle, start)
+                if idx < 0:
+                    break
+                start = idx + 1
+                sec_start = idx - delta
+                if sec_start < 0 or sec_start + 512 > len(data):
+                    continue
+                if (chunk_off + sec_start) % 512 != 0:
+                    continue
+                check_sector(bytes(data[sec_start:sec_start + 512]), chunk_off + sec_start)
+
+    return list(vols.values())

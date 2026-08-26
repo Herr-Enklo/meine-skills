@@ -275,6 +275,53 @@ class OrphanMftTests(unittest.TestCase):
             self.assertEqual(extract(src, match), exp["data"])
 
 
+class ReconstructTests(unittest.TestCase):
+    def test_findet_volume_ohne_partitionstabelle(self):
+        # NTFS-Volume bei 1 MiB, aber keine Partitionstabelle (MBR = Nullen).
+        vol, exp = build_ntfs_image()
+        off = 1024 * 1024
+        disk = bytearray(off + len(vol) + 4096)
+        disk[off:off + len(vol)] = vol
+        path = _write_temp(bytes(disk))
+        self.addCleanup(os.remove, path)
+        with ByteSource(path) as src:
+            self.assertEqual(ntfs_mod.find_ntfs_volumes(src), [],
+                             "ohne Tabelle darf die normale Erkennung nichts finden")
+            vols = ntfs_mod.reconstruct_volumes(src, thorough=True)
+            offs = {v.offset for v in vols if v.fs_type == "ntfs"}
+            self.assertIn(off, offs, f"Volume nicht rekonstruiert: {vols}")
+
+            opts = ScanOptions(use_ntfs=True, use_carve=False, reconstruct_partitions=True)
+            findings = Scanner(src, opts).scan()
+            match = next((f for f in findings if exp["name"] in f.name), None)
+            self.assertIsNotNone(match, "Datei nach Rekonstruktion nicht gefunden")
+            self.assertEqual(extract(src, match), exp["data"])
+
+    def test_rekonstruiert_aus_backup_boot_sektor(self):
+        # Primaeren Boot-Sektor zerstoeren, Kopie ans Volume-Ende schreiben.
+        vol, exp = build_ntfs_image()
+        original_boot = bytes(vol[0:512])
+        vol = bytearray(vol)
+        vol[0:512] = b"\x00" * 512                  # primaerer Boot-Sektor weg
+        vol[63 * 512:64 * 512] = original_boot       # Kopie im letzten Sektor
+        off = 1024 * 1024
+        disk = bytearray(off + len(vol) + 4096)
+        disk[off:off + len(vol)] = vol
+        path = _write_temp(bytes(disk))
+        self.addCleanup(os.remove, path)
+        with ByteSource(path) as src:
+            vols = ntfs_mod.reconstruct_volumes(src, thorough=True)
+            backup = next((v for v in vols if v.fs_type == "ntfs" and v.offset == off), None)
+            self.assertIsNotNone(backup, f"Backup-Rekonstruktion fehlgeschlagen: {vols}")
+            self.assertEqual(backup.origin, "backup")
+
+            opts = ScanOptions(use_ntfs=True, use_carve=False, reconstruct_partitions=True)
+            findings = Scanner(src, opts).scan()
+            match = next((f for f in findings if exp["name"] in f.name), None)
+            self.assertIsNotNone(match, "Datei aus Backup-Boot-Sektor nicht gefunden")
+            self.assertEqual(extract(src, match), exp["data"])
+
+
 class UnitTests(unittest.TestCase):
     def test_parse_data_runs_einfach(self):
         # 0x11 = 1 Byte Laenge, 1 Byte Offset; Laenge 8, LCN 4.

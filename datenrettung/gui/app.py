@@ -98,6 +98,7 @@ class RecoveryApp:
         self.opt_orphan = tk.BooleanVar(value=False)
         self.opt_partial = tk.BooleanVar(value=True)
         self.opt_4kn = tk.BooleanVar(value=False)
+        self.opt_reconstruct = tk.BooleanVar(value=False)
         ttk.Checkbutton(opt_frame, text="NTFS: geloeschte Dateien (mit Namen)",
                         variable=self.opt_ntfs).grid(row=0, column=0, sticky="w", padx=6, pady=4)
         ttk.Checkbutton(opt_frame, text="File Carving (nach Signatur)",
@@ -111,6 +112,9 @@ class RecoveryApp:
                         variable=self.opt_partial).grid(row=1, column=2, sticky="w", padx=6, pady=4)
         ttk.Checkbutton(opt_frame, text="4K-Sektoren (4Kn)",
                         variable=self.opt_4kn).grid(row=0, column=3, sticky="w", padx=6, pady=4)
+        ttk.Checkbutton(opt_frame, text="Partitionstabelle rekonstruieren (Boot-Sektor-Suche)",
+                        variable=self.opt_reconstruct).grid(row=2, column=0, columnspan=3,
+                                                            sticky="w", padx=6, pady=4)
 
         # Aktionen + Fortschritt
         act_frame = ttk.Frame(self.root)
@@ -242,6 +246,7 @@ class RecoveryApp:
             deleted_only=not self.opt_all.get(),
             recover_partial=self.opt_partial.get(),
             ntfs_orphan_scan=self.opt_orphan.get(),
+            reconstruct_partitions=self.opt_reconstruct.get(),
         )
         known_size = self.source_sizes.get(label)
         sector = 4096 if self.opt_4kn.get() else 512

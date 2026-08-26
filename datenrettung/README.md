@@ -66,9 +66,10 @@ Ohne `--out` wird nur gezählt und aufgelistet, nichts geschrieben. Weitere
 Schalter: `--no-ntfs` und `--no-carve` schalten je ein Verfahren ab, `--all`
 listet bei NTFS auch die noch vorhandenen Dateien, `--orphan` sucht den ganzen
 Datenträger nach MFT-Einträgen ab (findet auch nach einer Formatierung, dauert
-aber deutlich länger), `--no-partial` lässt unvollständige Dateien weg,
-`--sector 4096` stellt auf 4K-Sektoren um, `--max N` begrenzt die Zahl der
-Carving-Treffer.
+aber deutlich länger), `--reconstruct` rekonstruiert eine verlorene
+Partitionstabelle über eine Boot-Sektor-Suche, `--no-partial` lässt
+unvollständige Dateien weg, `--sector 4096` stellt auf 4K-Sektoren um,
+`--max N` begrenzt die Zahl der Carving-Treffer.
 
 Nach jedem Scan zeigt das Werkzeug „Gelesen: X von Y". Diese Zeile ist die
 wichtigste Kontrolle: Steht dort ein winziger Bruchteil, wurde der Datenträger
@@ -135,6 +136,14 @@ der entsprechenden Option in der Oberfläche durchsucht es den ganzen Datenträg
 nach MFT-Einträgen und findet gelöschte Dateien so auch nach einer Formatierung
 oder bei beschädigtem Boot-Sektor. `$LogFile`-Journale wertet es nicht aus. FAT
 und exFAT liest der NTFS-Weg nicht; dort bleibt das Carving.
+
+Ist die Partitionstabelle verloren oder überschrieben, rekonstruiert `--reconstruct`
+die Volumes über eine Boot-Sektor-Suche (der Ansatz von TestDisk, in Python
+nachgebaut). Das Werkzeug durchsucht den Datenträger nach NTFS-Boot-Sektoren, zieht
+bei Bedarf die Kopie am Volume-Ende heran und errechnet aus dem BPB Anfang und
+Größe der Partition. Die so gefundenen Volumes werden anschließend normal über die
+MFT ausgelesen. FAT-Volumes werden dabei erkannt und gemeldet, mangels FAT-Parser
+aber nicht ausgelesen.
 
 Standardmäßig wird von 512-Byte-Sektoren ausgegangen. Datenträger mit reinen
 4K-Sektoren (4Kn) lassen sich über `--sector 4096` beziehungsweise die Option

@@ -29,6 +29,7 @@ class ScanOptions:
     max_files: Optional[int] = None  # Obergrenze fuer Carving-Treffer
     recover_partial: bool = True  # unvollstaendige Dateien (ohne Footer) mitnehmen
     ntfs_orphan_scan: bool = False   # ganzen Datentraeger nach MFT-Eintraegen absuchen
+    reconstruct_partitions: bool = False  # Volumes ueber Boot-Sektor-Suche rekonstruieren
 
 
 class Scanner:
@@ -57,23 +58,42 @@ class Scanner:
                 seen_records.add(rec)
             emit(f)
 
-        # Phase 1: NTFS/MFT ueber den Boot-Sektor (liefert Originalnamen).
+        # Phase 0: Volumes bestimmen – erst ueber die Partitionstabelle, optional
+        # zusaetzlich ueber eine Boot-Sektor-Suche (rekonstruiert auch verlorene
+        # oder beschaedigte Tabellen).
         first_boot = None
         if self.options.use_ntfs:
+            # Offset -> vorab rekonstruierter Boot-Sektor (oder None).
+            volumes: dict[int, object] = {}
+
             try:
-                volumes = ntfs.find_ntfs_volumes(self.source)
+                for off in ntfs.find_ntfs_volumes(self.source):
+                    volumes.setdefault(off, None)
             except Exception:
-                volumes = []
-            for vol_off in volumes:
+                pass
+
+            if self.options.reconstruct_partitions:
+                try:
+                    for vinfo in ntfs.reconstruct_volumes(
+                            self.source, thorough=True, progress_cb=progress_cb,
+                            should_cancel=should_cancel):
+                        if vinfo.fs_type == "ntfs":
+                            volumes[vinfo.offset] = vinfo.boot
+                except Exception:
+                    pass
+
+            # Phase 1: jedes NTFS-Volume ueber seine MFT durchsuchen.
+            for vol_off in sorted(volumes):
                 if should_cancel and should_cancel():
                     break
                 try:
-                    boot = ntfs.BootSector(self.source.read(vol_off, 512))
+                    boot = volumes[vol_off] or ntfs.BootSector(self.source.read(vol_off, 512))
                     if first_boot is None:
                         first_boot = (boot.cluster_size, vol_off)
                     for f in ntfs.scan_ntfs(self.source, vol_off, progress_cb,
                                             should_cancel,
-                                            deleted_only=self.options.deleted_only):
+                                            deleted_only=self.options.deleted_only,
+                                            boot=boot):
                         emit_ntfs(f)
                 except ntfs.NtfsError:
                     continue

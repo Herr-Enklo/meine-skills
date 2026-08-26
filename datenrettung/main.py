@@ -44,6 +44,7 @@ def cmd_scan(args) -> int:
         max_files=args.max,
         recover_partial=not args.no_partial,
         ntfs_orphan_scan=args.orphan,
+        reconstruct_partitions=args.reconstruct,
     )
 
     def progress(phase: str, frac: float, count: int) -> None:
@@ -139,6 +140,9 @@ def build_parser() -> argparse.ArgumentParser:
     scan.add_argument("--orphan", action="store_true",
                       help="ganzen Datentraeger nach MFT-Eintraegen absuchen "
                            "(findet auch nach Formatierung, dauert laenger)")
+    scan.add_argument("--reconstruct", action="store_true",
+                      help="verlorene Partitionstabelle ueber eine Boot-Sektor-Suche "
+                           "rekonstruieren (findet Volumes ohne intakte Tabelle)")
     scan.add_argument("--no-partial", action="store_true",
                       help="unvollstaendige Dateien (ohne Endmuster) nicht mitnehmen")
     scan.add_argument("--sector", type=int, default=512,
