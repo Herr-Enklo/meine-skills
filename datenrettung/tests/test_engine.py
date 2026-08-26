@@ -26,6 +26,8 @@ from datenrettung.recovery import ByteSource, Scanner, ScanOptions, extract  # n
 from datenrettung.recovery import scanner as scanner_mod  # noqa: E402
 from datenrettung.recovery import ntfs as ntfs_mod  # noqa: E402
 from datenrettung.recovery import sources as sources_mod  # noqa: E402
+from datenrettung.recovery.models import Finding  # noqa: E402
+from datenrettung.gui.sorting import order_iids  # noqa: E402
 from datenrettung.tests.make_sample_image import (  # noqa: E402
     build_carving_image, build_ntfs_image, make_png,
 )
@@ -358,6 +360,32 @@ class ReconstructTests(unittest.TestCase):
             match = next((f for f in findings if exp["name"] in f.name), None)
             self.assertIsNotNone(match, "Datei aus Backup-Boot-Sektor nicht gefunden")
             self.assertEqual(extract(src, match), exp["data"])
+
+
+class SortingTests(unittest.TestCase):
+    def _findings(self):
+        return [
+            Finding("carve", "PNG-Bild", "png", "b.png", 0, 500),
+            Finding("carve", "JPEG-Bild", "jpg", "a.jpg", 0, 1_500_000),
+            Finding("carve", "GIF-Bild", "gif", "c.gif", 0, 40),
+        ]
+
+    def test_groesse_wird_numerisch_sortiert(self):
+        f = self._findings()
+        iids = ["0", "1", "2"]
+        # Aufsteigend nach Groesse: 40, 500, 1.5M -> Indizes 2, 0, 1.
+        self.assertEqual(order_iids(f, iids, "groesse", reverse=False), ["2", "0", "1"])
+        self.assertEqual(order_iids(f, iids, "groesse", reverse=True), ["1", "0", "2"])
+
+    def test_name_wird_alphabetisch_sortiert(self):
+        f = self._findings()
+        self.assertEqual(order_iids(f, ["0", "1", "2"], "name", reverse=False),
+                         ["1", "0", "2"])  # a.jpg, b.png, c.gif
+
+    def test_ueberlaufzeile_wird_ignoriert(self):
+        f = self._findings()
+        order = order_iids(f, ["0", "1", "2", "overflow"], "groesse", reverse=False)
+        self.assertEqual(order, ["2", "0", "1"])
 
 
 class UnitTests(unittest.TestCase):

@@ -26,6 +26,7 @@ from tkinter import filedialog, messagebox, ttk
 from recovery import ByteSource, Scanner, ScanOptions
 from recovery import scanner as scanner_mod
 from recovery.drives import Drive, format_size, list_drives
+from gui.sorting import order_iids
 
 # Zur Sicherheit: so viele Zeilen zeigen wir hoechstens in der Liste an.
 # Alle Funde bleiben intern erhalten und lassen sich per "Alle" wiederherstellen.
@@ -46,6 +47,7 @@ class RecoveryApp:
         self.sources: dict[str, str] = {}       # Anzeigename -> Pfad/Geraet
         self.source_sizes: dict[str, int | None] = {}  # Anzeigename -> bekannte Groesse
         self.busy = False
+        self._sort_state: dict[str, bool] = {}   # Spalte -> zuletzt absteigend?
 
         self._build_ui()
         self._poll_queue()
@@ -137,13 +139,16 @@ class RecoveryApp:
         columns = ("typ", "name", "groesse", "quelle")
         self.tree = ttk.Treeview(res_frame, columns=columns, show="headings",
                                  selectmode="extended")
-        for col, text, width, anchor in (
-            ("typ", "Typ", 190, "w"),
-            ("name", "Name", 300, "w"),
-            ("groesse", "Groesse", 100, "e"),
-            ("quelle", "Herkunft", 170, "w"),
+        self._col_titles = {"typ": "Typ", "name": "Name",
+                            "groesse": "Groesse", "quelle": "Herkunft"}
+        for col, width, anchor in (
+            ("typ", 190, "w"),
+            ("name", 300, "w"),
+            ("groesse", 100, "e"),
+            ("quelle", 170, "w"),
         ):
-            self.tree.heading(col, text=text)
+            self.tree.heading(col, text=self._col_titles[col],
+                              command=lambda c=col: self._sort_by(c))
             self.tree.column(col, width=width, anchor=anchor)
         vsb = ttk.Scrollbar(res_frame, orient="vertical", command=self.tree.yview)
         self.tree.configure(yscrollcommand=vsb.set)
@@ -236,6 +241,10 @@ class RecoveryApp:
         self.findings = []
         self.tree.delete(*self.tree.get_children())
         self.count_var.set("")
+        # Sortier-Pfeile zuruecksetzen.
+        self._sort_state.clear()
+        for c, title in self._col_titles.items():
+            self.tree.heading(c, text=title)
         self.cancel_flag.clear()
         self._set_busy(True)
         self.progress.configure(value=0)
@@ -395,6 +404,27 @@ class RecoveryApp:
             self.tree.insert("", "end", iid="overflow",
                              values=("…", "weitere Funde ausgeblendet", "", ""))
         self.count_var.set(f"{len(self.findings)} Fund(e)")
+
+    def _sort_by(self, col: str) -> None:
+        """Sortiert die Trefferliste nach der angeklickten Spalte.
+
+        Sortiert wird nach den echten Fund-Daten, nicht nach dem angezeigten
+        Text – so ordnet „Groesse" numerisch statt alphabetisch. Die Zeilen-IDs
+        bleiben erhalten (nur die Anzeige wird umgeordnet), damit die Auswahl
+        weiterhin auf die richtigen Funde zeigt.
+        """
+        reverse = not self._sort_state.get(col, False)
+        rows = order_iids(self.findings, self.tree.get_children(""), col, reverse)
+        for pos, iid in enumerate(rows):
+            self.tree.move(iid, "", pos)
+        # Die Ueberlauf-Zeile bleibt immer unten.
+        if self.tree.exists("overflow"):
+            self.tree.move("overflow", "", "end")
+
+        self._sort_state[col] = reverse
+        for c, title in self._col_titles.items():
+            arrow = (" ▼" if reverse else " ▲") if c == col else ""
+            self.tree.heading(c, text=title + arrow)
 
     def _scan_finished(self, cancelled: bool, stats: dict | None = None) -> None:
         self._set_busy(False)
