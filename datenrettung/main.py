@@ -79,10 +79,13 @@ def cmd_scan(args) -> int:
                     sys.stdout.write(f"\r  {done}/{total}  {name[:40]:<40}")
                     sys.stdout.flush()
 
-                ok, errors = scanner_mod.recover(src, findings, args.out,
-                                                 progress_cb=rec_progress)
+                ok, skipped, errors = scanner_mod.recover(src, findings, args.out,
+                                                          progress_cb=rec_progress)
                 print()
-                print(f"{ok} Datei(en) wiederhergestellt.")
+                msg = f"{ok} Datei(en) wiederhergestellt."
+                if skipped:
+                    msg += f" {skipped} bereits vorhanden, uebersprungen."
+                print(msg)
                 if errors:
                     print(f"{len(errors)} Fehler:")
                     for e in errors[:10]:

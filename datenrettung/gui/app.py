@@ -315,13 +315,14 @@ class RecoveryApp:
         def work():
             try:
                 with ByteSource(source_path) as src:
-                    ok, errors = scanner_mod.recover(
+                    ok, skipped, errors = scanner_mod.recover(
                         src, targets, out_dir,
                         progress_cb=lambda done, total, name: self.queue.put(
                             ("recover_progress", done, total, name)),
                         should_cancel=self.cancel_flag.is_set,
                     )
-                self.queue.put(("recover_done", ok, errors, out_dir))
+                cancelled = self.cancel_flag.is_set()
+                self.queue.put(("recover_done", ok, skipped, errors, out_dir, cancelled))
             except Exception as exc:
                 self.queue.put(("error", f"Fehler beim Wiederherstellen:\n{exc}"))
 
@@ -363,14 +364,23 @@ class RecoveryApp:
             self.progress.configure(value=int(done / max(1, total) * 1000))
             self.status_var.set(f"Wiederherstellen {done}/{total}: {name}")
         elif kind == "recover_done":
-            _, ok, errors, out_dir = msg
+            _, ok, skipped, errors, out_dir, cancelled = msg
             self._set_busy(False)
-            self.progress.configure(value=1000)
-            self.status_var.set(f"Fertig: {ok} Datei(en) wiederhergestellt.")
+            self.progress.configure(value=0 if cancelled else 1000)
+            head = "Abgebrochen" if cancelled else "Fertig"
+            status = f"{head}: {ok} Datei(en) wiederhergestellt."
+            if skipped:
+                status += f" {skipped} bereits vorhanden."
+            self.status_var.set(status)
             text = f"{ok} Datei(en) wurden nach\n{out_dir}\ngeschrieben."
+            if skipped:
+                text += f"\n{skipped} bereits vorhanden, uebersprungen."
+            if cancelled:
+                text += ("\n\nAbgebrochen. Ein erneuter Klick auf "
+                         "„Alle wiederherstellen“ setzt fort, ohne neu zu scannen.")
             if errors:
                 text += f"\n\n{len(errors)} Fehler (erste 5):\n" + "\n".join(errors[:5])
-            messagebox.showinfo("Wiederherstellung abgeschlossen", text)
+            messagebox.showinfo("Wiederherstellung", text)
             self._offer_open_folder(out_dir)
 
     def _add_finding(self, finding) -> None:
@@ -415,9 +425,12 @@ class RecoveryApp:
         self.scan_btn.configure(state=state)
         self.source_box.configure(state="disabled" if busy else "readonly")
         self.cancel_btn.configure(state="normal" if busy else "disabled")
-        if busy:
-            self.recover_all_btn.configure(state="disabled")
-            self.recover_sel_btn.configure(state="disabled")
+        # Wiederherstellen-Knoepfe waehrend eines Laufs sperren, danach wieder
+        # freigeben, solange Funde vorliegen. So muss man nach einem
+        # abgebrochenen Lauf nicht erneut scannen.
+        recover_state = "disabled" if (busy or not self.findings) else "normal"
+        self.recover_all_btn.configure(state=recover_state)
+        self.recover_sel_btn.configure(state=recover_state)
 
     def _offer_open_folder(self, path: str) -> None:
         if messagebox.askyesno("Ordner oeffnen", "Ausgabeordner jetzt oeffnen?"):

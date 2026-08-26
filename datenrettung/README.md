@@ -53,6 +53,10 @@ Ausgabeordner auf einem anderen Datenträger, dann „Scannen". Die Funde
 erscheinen währenddessen in der Liste. Am Ende schreibt „Alle wiederherstellen"
 oder „Auswahl wiederherstellen" die Dateien in den Ausgabeordner.
 
+Bricht man eine Wiederherstellung ab, bleibt die Trefferliste erhalten. Ein
+erneuter Klick setzt fort und überspringt die schon geschriebenen Dateien; ein
+neuer Scan ist dafür nicht nötig.
+
 Auf der Kommandozeile geht dasselbe ohne Fenster:
 
 ```

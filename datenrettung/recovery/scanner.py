@@ -165,13 +165,21 @@ def _read_runs(source: ByteSource, runs, cluster_size: int,
 
 def recover(source: ByteSource, findings: list[Finding], output_dir: str,
             progress_cb: Optional[Callable[[int, int, str], None]] = None,
-            should_cancel: Optional[CancelCb] = None) -> tuple[int, list[str]]:
+            should_cancel: Optional[CancelCb] = None,
+            skip_existing: bool = True) -> tuple[int, int, list[str]]:
     """Schreibt die uebergebenen Funde in ``output_dir``.
 
-    Rueckgabe: ``(anzahl_erfolgreich, liste_der_fehler)``.
+    Ist ``skip_existing`` gesetzt, werden Funde uebersprungen, deren Datei schon
+    im Ausgabeordner liegt. Damit laesst sich ein abgebrochener Lauf einfach
+    fortsetzen, ohne erneut zu scannen und ohne Duplikate zu erzeugen.
+
+    Rueckgabe: ``(anzahl_geschrieben, anzahl_uebersprungen, liste_der_fehler)``.
     """
     os.makedirs(output_dir, exist_ok=True)
+    # Dateien, die schon vor diesem Lauf existierten (fuer die Fortsetzung).
+    preexisting = set(os.listdir(output_dir)) if skip_existing else set()
     ok = 0
+    skipped = 0
     errors: list[str] = []
     total = len(findings)
     used: set[str] = set()
@@ -179,6 +187,11 @@ def recover(source: ByteSource, findings: list[Finding], output_dir: str,
     for i, finding in enumerate(findings):
         if should_cancel and should_cancel():
             break
+        if skip_existing and finding.name in preexisting:
+            skipped += 1
+            if progress_cb:
+                progress_cb(i + 1, total, finding.name)
+            continue
         target = _unique_path(output_dir, finding.name, used)
         try:
             data = extract(source, finding)
@@ -190,7 +203,7 @@ def recover(source: ByteSource, findings: list[Finding], output_dir: str,
         if progress_cb:
             progress_cb(i + 1, total, os.path.basename(target))
 
-    return ok, errors
+    return ok, skipped, errors
 
 
 def _unique_path(output_dir: str, name: str, used: set[str]) -> str:

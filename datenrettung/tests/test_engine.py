@@ -385,12 +385,41 @@ class UnitTests(unittest.TestCase):
         out_dir = tempfile.mkdtemp()
         with ByteSource(path) as src:
             findings = Scanner(src, ScanOptions(use_ntfs=True, use_carve=False)).scan()
-            ok, errors = scanner_mod.recover(src, findings, out_dir)
+            ok, skipped, errors = scanner_mod.recover(src, findings, out_dir)
             self.assertGreaterEqual(ok, 1)
             self.assertEqual(errors, [])
             written = os.listdir(out_dir)
             self.assertTrue(any(exp["name"] in name for name in written),
                             f"Ausgabe fehlt, vorhanden: {written}")
+
+    def test_wiederherstellung_ist_fortsetzbar(self):
+        img, expected = build_carving_image()
+        path = _write_temp(img)
+        self.addCleanup(os.remove, path)
+        out_dir = tempfile.mkdtemp()
+        with ByteSource(path) as src:
+            findings = Scanner(src, ScanOptions(use_ntfs=False)).scan()
+            self.assertGreaterEqual(len(findings), 4)
+
+            # Erster Lauf: nach zwei verarbeiteten Funden abbrechen.
+            calls = {"n": 0}
+
+            def cancel():
+                calls["n"] += 1
+                return calls["n"] > 2
+
+            ok1, skip1, err1 = scanner_mod.recover(src, findings, out_dir,
+                                                   should_cancel=cancel)
+            self.assertEqual(err1, [])
+            self.assertEqual(ok1, 2)
+
+            # Zweiter Lauf ohne Abbruch: setzt fort, ueberspringt Vorhandenes.
+            ok2, skip2, err2 = scanner_mod.recover(src, findings, out_dir)
+            self.assertEqual(err2, [])
+            self.assertEqual(skip2, ok1, "zweiter Lauf muss die schon geschriebenen ueberspringen")
+            written = os.listdir(out_dir)
+            self.assertEqual(len(written), len(findings),
+                             f"keine Duplikate erwartet: {written}")
 
 
 if __name__ == "__main__":
