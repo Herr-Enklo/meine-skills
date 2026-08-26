@@ -106,7 +106,8 @@ Platte ist der übliche Weg, zuerst ein Image zu ziehen (etwa mit `dd` oder
 ## Unterstützte Dateitypen beim Carving
 
 Bilder (JPEG, PNG, GIF, BMP, TIFF und darauf aufbauende Kamera-RAW-Formate wie
-CR2, NEF, ARW, DNG, WebP), Dokumente und Archive (PDF, RTF, die alten
+CR2, NEF, ARW, DNG, dazu CR3, RAF und RW2, außerdem WebP, HEIC, AVIF, JPEG 2000
+und ICO), Dokumente und Archive (PDF, RTF, die alten
 Office-Formate doc/xls/ppt über den OLE-Container, ZIP und damit DOCX/XLSX/PPTX,
 RAR, 7z, GZIP), Audio und Video (WAV, AVI, OGG, MP3, FLAC, MP4, MOV, HEIC,
 Matroska/WebM) sowie PSD und SQLite-Datenbanken. Container wie ftyp (MP4/MOV/HEIC)

@@ -182,6 +182,44 @@ class ContainerExtTests(unittest.TestCase):
             self.assertEqual(match.size, len(body))
 
 
+class NewImageFormatTests(unittest.TestCase):
+    def _make_ico(self):
+        import struct
+        data = b"\xAA" * 40
+        entry = struct.pack("<BBBBHHII", 16, 16, 0, 0, 1, 32, len(data), 22)
+        return b"\x00\x00\x01\x00" + struct.pack("<H", 1) + entry + data
+
+    def test_neue_bildformate(self):
+        ico = self._make_ico()
+        avif = b"\x00\x00\x00\x20ftypavif\x00\x00\x00\x00avifmif1" + b"\x22" * 200
+        jp2 = b"\x00\x00\x00\x0cjP  \r\n\x87\n" + b"\x33" * 200
+        raf = b"FUJIFILMCCD-RAW" + b"\x44" * 200
+        rw2 = b"II\x55\x00" + b"\x55" * 200
+
+        blobs = [("ico", ico), ("avif", avif), ("jp2", jp2), ("raf", raf), ("rw2", rw2)]
+        img = bytearray(b"\x00" * 512)
+        offsets = {}
+        for ext, blob in blobs:
+            offsets[ext] = len(img)
+            img += blob
+            img += b"\x00" * 800
+
+        path = _write_temp(bytes(img))
+        self.addCleanup(os.remove, path)
+        with ByteSource(path) as src:
+            findings = Scanner(src, ScanOptions(use_ntfs=False)).scan()
+            by_ext = {}
+            for f in findings:
+                by_ext.setdefault(f.ext, []).append(f)
+            for ext in ("ico", "avif", "jp2", "raf", "rw2"):
+                self.assertIn(ext, by_ext, f"{ext} nicht gefunden")
+                match = next((f for f in by_ext[ext] if f.offset == offsets[ext]), None)
+                self.assertIsNotNone(match, f"{ext} nicht am erwarteten Offset")
+            # ICO hat eine berechenbare Groesse und muss byte-genau stimmen.
+            ico_hit = next(f for f in by_ext["ico"] if f.offset == offsets["ico"])
+            self.assertEqual(extract(src, ico_hit), ico)
+
+
 class PartialTests(unittest.TestCase):
     def test_jpeg_ohne_footer_wird_teilweise_gerettet(self):
         from datenrettung.recovery import carver

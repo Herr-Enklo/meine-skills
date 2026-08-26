@@ -137,7 +137,8 @@ def _resolve_size(source, start: int, sig: Signature, source_size: Optional[int]
     header_len = sig.header_offset + len(sig.header)
 
     if sig.size_from_header is not None:
-        head = source.read(start, 64)
+        # Genug fuer Formate, deren Groesse in einem Verzeichnis steht (z.B. ICO).
+        head = source.read(start, 4096)
         declared = sig.size_from_header(head)
         if declared and header_len < declared <= sig.max_size:
             if source_size is not None:

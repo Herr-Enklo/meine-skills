@@ -100,6 +100,7 @@ _FTYP_BRANDS = {
     b"mif1": "heic", b"msf1": "heic", b"heim": "heic", b"heis": "heic",
     b"3gp4": "3gp", b"3gp5": "3gp", b"3gg6": "3gp",
     b"crx ": "cr3",
+    b"avif": "avif", b"avis": "avif",
 }
 
 
@@ -112,6 +113,35 @@ def _ftyp_ext(head: bytes) -> Optional[str]:
 def _ftyp_quick(head: bytes) -> bool:
     # Nur bekannte Marken behalten; "ftyp" allein ist zu unspezifisch.
     return len(head) < 12 or head[8:12] in _FTYP_BRANDS
+
+
+def _ico_quick(head: bytes) -> bool:
+    # ICO-Header 00 00 01 00; das Bildzahl-Feld muss plausibel sein.
+    if len(head) < 6:
+        return True
+    count = int.from_bytes(head[4:6], "little")
+    return 1 <= count <= 50
+
+
+def _ico_size(head: bytes) -> Optional[int]:
+    """Gesamtgroesse einer ICO-Datei aus ihrem Verzeichnis (oder None)."""
+    if len(head) < 6:
+        return None
+    count = int.from_bytes(head[4:6], "little")
+    if not (1 <= count <= 50):
+        return None
+    needed = 6 + count * 16
+    if len(head) < needed:
+        return None
+    end = needed
+    for i in range(count):
+        e = 6 + i * 16
+        bytes_in_res = int.from_bytes(head[e + 8:e + 12], "little")
+        image_offset = int.from_bytes(head[e + 12:e + 16], "little")
+        if image_offset < needed:
+            return None
+        end = max(end, image_offset + bytes_in_res)
+    return end if end > needed else None
 
 
 def _riff_ext(head: bytes) -> Optional[str]:
@@ -145,6 +175,15 @@ SIGNATURES: list[Signature] = [
     Signature("BMP-Bild", "bmp",
               header=b"BM", max_size=30 * MB,
               size_from_header=_le_size_at(2, 4), quick_check=_bmp_quick),
+    Signature("ICO-Symbol", "ico",
+              header=b"\x00\x00\x01\x00", max_size=2 * MB,
+              size_from_header=_ico_size, quick_check=_ico_quick),
+    Signature("JPEG-2000-Bild", "jp2",
+              header=b"\x00\x00\x00\x0cjP  \r\n\x87\n", max_size=100 * MB),
+    Signature("Fujifilm-RAW", "raf",
+              header=b"FUJIFILMCCD-RAW", max_size=100 * MB),
+    Signature("Panasonic-RAW", "rw2",
+              header=b"II\x55\x00", max_size=100 * MB),
     Signature("PDF-Dokument", "pdf",
               header=b"%PDF-", footer=b"%%EOF", max_size=100 * MB),
     Signature("ZIP/Office-Dokument", "zip",
