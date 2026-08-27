@@ -99,6 +99,7 @@ class RecoveryApp:
         self.opt_all = tk.BooleanVar(value=False)
         self.opt_orphan = tk.BooleanVar(value=False)
         self.opt_partial = tk.BooleanVar(value=True)
+        self.opt_validate = tk.BooleanVar(value=True)
         self.opt_4kn = tk.BooleanVar(value=False)
         self.opt_reconstruct = tk.BooleanVar(value=False)
         ttk.Checkbutton(opt_frame, text="NTFS: geloeschte Dateien (mit Namen)",
@@ -115,8 +116,11 @@ class RecoveryApp:
         ttk.Checkbutton(opt_frame, text="4K-Sektoren (4Kn)",
                         variable=self.opt_4kn).grid(row=0, column=3, sticky="w", padx=6, pady=4)
         ttk.Checkbutton(opt_frame, text="Partitionstabelle rekonstruieren (Boot-Sektor-Suche)",
-                        variable=self.opt_reconstruct).grid(row=2, column=0, columnspan=3,
+                        variable=self.opt_reconstruct).grid(row=2, column=0, columnspan=2,
                                                             sticky="w", padx=6, pady=4)
+        ttk.Checkbutton(opt_frame, text="Treffer validieren",
+                        variable=self.opt_validate).grid(row=2, column=2, sticky="w",
+                                                         padx=6, pady=4)
 
         # Aktionen + Fortschritt
         act_frame = ttk.Frame(self.root)
@@ -256,6 +260,7 @@ class RecoveryApp:
             use_carve=self.opt_carve.get(),
             deleted_only=not self.opt_all.get(),
             recover_partial=self.opt_partial.get(),
+            validate=self.opt_validate.get(),
             ntfs_orphan_scan=self.opt_orphan.get(),
             reconstruct_partitions=self.opt_reconstruct.get(),
         )

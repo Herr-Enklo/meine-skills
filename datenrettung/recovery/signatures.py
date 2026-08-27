@@ -41,6 +41,10 @@ class Signature:
     # (fuer Container, deren Marke den Typ bestimmt: ftyp -> mp4/mov/heic,
     # RIFF -> wav/avi/webp). Gibt sie None zurueck, bleibt es bei ``ext``.
     ext_from_header: Optional[Callable[[bytes], Optional[str]]] = None
+    # Optionale Struktur-Validierung: bekommt den Dateianfang und die Groesse,
+    # prueft interne Merkmale (z.B. PNG-CRC, ZIP-Kompressionsmethode) und
+    # verwirft Fehltreffer. Gibt ``False`` zurueck, wird der Fund fallengelassen.
+    validator: Optional[Callable[[bytes, int], bool]] = None
 
 
 def _le_size_at(pos: int, width: int, add: int = 0):
@@ -161,20 +165,66 @@ def _riff_quick(head: bytes) -> bool:
     return len(head) < 12 or head[8:12] in (b"WAVE", b"AVI ", b"WEBP")
 
 
+# -- Struktur-Validatoren (Kategorie 3) ---------------------------------
+# Pruefen interne Merkmale eines Fundes und verwerfen Fehltreffer.
+
+def _png_valid(data: bytes, size: int) -> bool:
+    import zlib
+    if len(data) < 33 or data[:8] != b"\x89PNG\r\n\x1a\n":
+        return False
+    length = int.from_bytes(data[8:12], "big")
+    if data[12:16] != b"IHDR" or length != 13:
+        return False
+    body = data[12:16 + length]
+    want = int.from_bytes(data[16 + length:20 + length], "big")
+    return (zlib.crc32(body) & 0xFFFFFFFF) == want
+
+
+def _jpeg_valid(data: bytes, size: int) -> bool:
+    if len(data) < 4 or data[:2] != b"\xff\xd8":
+        return False
+    # Nach dem Startmarker muss ein gueltiger Marker folgen (0xFF + Typ).
+    return data[2] == 0xFF and data[3] not in (0x00, 0xFF)
+
+
+def _zip_valid(data: bytes, size: int) -> bool:
+    if len(data) < 10 or data[:4] != b"PK\x03\x04":
+        return False
+    method = int.from_bytes(data[8:10], "little")
+    return method in (0, 8, 9, 12, 14, 99)   # store, deflate, bzip2, lzma, AES
+
+
+def _bmp_valid(data: bytes, size: int) -> bool:
+    if len(data) < 14 or data[:2] != b"BM":
+        return False
+    pixel_off = int.from_bytes(data[10:14], "little")
+    return 14 <= pixel_off <= size
+
+
+def _ole_valid(data: bytes, size: int) -> bool:
+    if len(data) < 0x20 or data[:8] != b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1":
+        return False
+    if data[0x1C:0x1E] != b"\xfe\xff":           # Byte-Order-Marke
+        return False
+    return int.from_bytes(data[0x1E:0x20], "little") in (9, 12)  # 512/4096
+
+
 # Reihenfolge = grobe Prioritaet bei ueberlappenden Headern.
 SIGNATURES: list[Signature] = [
     Signature("JPEG-Bild", "jpg",
-              header=b"\xFF\xD8\xFF", footer=b"\xFF\xD9", max_size=30 * MB),
+              header=b"\xFF\xD8\xFF", footer=b"\xFF\xD9", max_size=30 * MB,
+              validator=_jpeg_valid),
     Signature("PNG-Bild", "png",
               header=b"\x89PNG\r\n\x1a\n",
-              footer=b"IEND\xaeB`\x82", max_size=30 * MB),
+              footer=b"IEND\xaeB`\x82", max_size=30 * MB, validator=_png_valid),
     Signature("GIF-Bild", "gif",
               header=b"GIF89a", footer=b"\x00\x3B", max_size=10 * MB),
     Signature("GIF-Bild", "gif",
               header=b"GIF87a", footer=b"\x00\x3B", max_size=10 * MB),
     Signature("BMP-Bild", "bmp",
               header=b"BM", max_size=30 * MB,
-              size_from_header=_le_size_at(2, 4), quick_check=_bmp_quick),
+              size_from_header=_le_size_at(2, 4), quick_check=_bmp_quick,
+              validator=_bmp_valid),
     Signature("ICO-Symbol", "ico",
               header=b"\x00\x00\x01\x00", max_size=2 * MB,
               size_from_header=_ico_size, quick_check=_ico_quick),
@@ -188,7 +238,7 @@ SIGNATURES: list[Signature] = [
               header=b"%PDF-", footer=b"%%EOF", max_size=100 * MB),
     Signature("ZIP/Office-Dokument", "zip",
               header=b"PK\x03\x04", footer=b"PK\x05\x06", max_size=200 * MB,
-              footer_size=_zip_eocd_size),
+              footer_size=_zip_eocd_size, validator=_zip_valid),
     Signature("RAR-Archiv", "rar",
               header=b"Rar!\x1a\x07", max_size=500 * MB),
     Signature("7z-Archiv", "7z",
@@ -199,7 +249,8 @@ SIGNATURES: list[Signature] = [
               header=b"SQLite format 3\x00", max_size=200 * MB),
     # Alte Office-Formate und weitere OLE-Dokumente (doc, xls, ppt, msg).
     Signature("OLE-Dokument (doc/xls/ppt)", "ole",
-              header=b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1", max_size=200 * MB),
+              header=b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1", max_size=200 * MB,
+              validator=_ole_valid),
     Signature("RTF-Dokument", "rtf",
               header=b"{\\rtf", footer=b"}", max_size=30 * MB),
     Signature("Photoshop-Datei", "psd",

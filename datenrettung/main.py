@@ -43,6 +43,7 @@ def cmd_scan(args) -> int:
         deleted_only=not args.all,
         max_files=args.max,
         recover_partial=not args.no_partial,
+        validate=not args.no_validate,
         ntfs_orphan_scan=args.orphan,
         reconstruct_partitions=args.reconstruct,
     )
@@ -148,6 +149,8 @@ def build_parser() -> argparse.ArgumentParser:
                            "rekonstruieren (findet Volumes ohne intakte Tabelle)")
     scan.add_argument("--no-partial", action="store_true",
                       help="unvollstaendige Dateien (ohne Endmuster) nicht mitnehmen")
+    scan.add_argument("--no-validate", action="store_true",
+                      help="Struktur-Validierung der Carving-Treffer abschalten")
     scan.add_argument("--sector", type=int, default=512,
                       help="Sektorgroesse in Bytes (512 oder 4096 fuer 4Kn)")
     scan.add_argument("--max", type=int, default=None,

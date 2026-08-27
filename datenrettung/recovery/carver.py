@@ -183,13 +183,15 @@ def carve(source, signatures: Optional[list[Signature]] = None,
           progress_cb: Optional[ProgressCb] = None,
           should_cancel: Optional[CancelCb] = None,
           max_files: Optional[int] = None,
-          recover_partial: bool = True) -> Iterator[Finding]:
+          recover_partial: bool = True,
+          validate: bool = True) -> Iterator[Finding]:
     """Durchsucht ``source`` und liefert die gefundenen Dateien als ``Finding``.
 
     Es werden keine Daten im Speicher gehalten – jeder Fund traegt nur Position
     und Groesse; die eigentlichen Bytes werden erst beim Wiederherstellen gelesen.
     ``recover_partial`` rettet Dateien mit fehlendem Endmuster bestmoeglich als
-    unvollstaendig, statt sie zu verwerfen.
+    unvollstaendig, statt sie zu verwerfen. ``validate`` prueft bei vollstaendigen
+    Funden interne Strukturen und verwirft Fehltreffer.
     """
     signatures = signatures or SIGNATURES
     source_size = source.size
@@ -219,6 +221,13 @@ def carve(source, signatures: Optional[list[Signature]] = None,
         size, partial = resolved
         if size <= 0:
             continue
+
+        # Struktur-Validierung: vollstaendige Funde mit interner Pruefung
+        # bestaetigen, Fehltreffer verwerfen. Teilfunde bleiben unberuehrt.
+        if validate and not partial and sig.validator is not None:
+            window = source.read(start, min(size, 8192))
+            if not sig.validator(window, size):
+                continue
 
         index += 1
         # Nur vollstaendige, footer-basierte Funde duerfen darin liegende

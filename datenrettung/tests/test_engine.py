@@ -184,6 +184,34 @@ class ContainerExtTests(unittest.TestCase):
             self.assertEqual(match.size, len(body))
 
 
+class ValidationTests(unittest.TestCase):
+    def test_verstuemmeltes_png_wird_verworfen(self):
+        from datenrettung.recovery import carver
+        good = make_png()
+        # Gueltige Signatur und Footer, aber kaputter IHDR-Chunk (falsche CRC).
+        bad = (b"\x89PNG\r\n\x1a\n" + b"\x00\x00\x00\x0dJUNK" + b"\x00" * 40
+               + b"IEND\xaeB`\x82")
+        img = bytearray(b"\x00" * 512)
+        good_off = len(img)
+        img += good + b"\x00" * 700
+        bad_off = len(img)
+        img += bad + b"\x00" * 700
+        path = _write_temp(bytes(img))
+        self.addCleanup(os.remove, path)
+
+        with ByteSource(path) as src:
+            withval = Scanner(src, ScanOptions(use_ntfs=False)).scan()
+            offs = {f.offset for f in withval if f.ext == "png"}
+            self.assertIn(good_off, offs, "gueltiges PNG muss gefunden werden")
+            self.assertNotIn(bad_off, offs, "kaputtes PNG muss verworfen werden")
+
+        with ByteSource(path) as src2:
+            without = [f for f in carver.carve(src2, validate=False)
+                       if f.ext == "png"]
+            offs2 = {f.offset for f in without}
+            self.assertIn(bad_off, offs2, "ohne Validierung wuerde es durchrutschen")
+
+
 class NewImageFormatTests(unittest.TestCase):
     def _make_ico(self):
         import struct

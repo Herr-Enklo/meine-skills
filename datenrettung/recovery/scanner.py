@@ -28,6 +28,7 @@ class ScanOptions:
     deleted_only: bool = True     # bei NTFS nur geloeschte Eintraege
     max_files: Optional[int] = None  # Obergrenze fuer Carving-Treffer
     recover_partial: bool = True  # unvollstaendige Dateien (ohne Footer) mitnehmen
+    validate: bool = True         # Carving-Treffer per Struktur-Pruefung bestaetigen
     ntfs_orphan_scan: bool = False   # ganzen Datentraeger nach MFT-Eintraegen absuchen
     reconstruct_partitions: bool = False  # Volumes ueber Boot-Sektor-Suche rekonstruieren
 
@@ -123,7 +124,8 @@ class Scanner:
             for f in carver.carve(self.source, progress_cb=progress_cb,
                                    should_cancel=should_cancel,
                                    max_files=self.options.max_files,
-                                   recover_partial=self.options.recover_partial):
+                                   recover_partial=self.options.recover_partial,
+                                   validate=self.options.validate):
                 emit(f)
 
         return findings
