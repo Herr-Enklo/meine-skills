@@ -127,6 +127,15 @@ def _resident_attr(atype: int, content: bytes) -> bytes:
     return bytes(attr)
 
 
+def _standard_information_content(created: int, modified: int, accessed: int) -> bytes:
+    content = bytearray(0x48)
+    struct.pack_into("<Q", content, 0x00, created)
+    struct.pack_into("<Q", content, 0x08, modified)
+    struct.pack_into("<Q", content, 0x10, modified)   # MFT-Aenderung
+    struct.pack_into("<Q", content, 0x18, accessed)
+    return bytes(content)
+
+
 def _file_name_content(name: str, parent_ref: int = 5) -> bytes:
     name_utf16 = name.encode("utf-16-le")
     content = bytearray(0x42 + len(name_utf16))
@@ -194,14 +203,25 @@ def build_ntfs_image(file_name: str = "geheim.txt",
     runs = bytes([0x11, mft_clusters, MFT_LCN, 0x00])
     _put_attrs(rec0, [_nonresident_data_attr(runs, mft_bytes, mft_clusters - 1)])
 
-    # Eintrag 2: geloeschte Datei (Flag 0 = nicht in Benutzung).
+    # Bekannter Aenderungszeitpunkt (2021-06-15 12:00:00 UTC) als NTFS-FILETIME.
+    import datetime
+    mod_dt = datetime.datetime(2021, 6, 15, 12, 0, 0, tzinfo=datetime.timezone.utc)
+    epoch = datetime.datetime(1601, 1, 1, tzinfo=datetime.timezone.utc)
+    modified_ft = int((mod_dt - epoch).total_seconds() * 10_000_000)
+
+    # Eintrag 2: geloeschte Datei im Ordner "Ordner" (MFT-Eintrag 3).
     rec2 = _blank_record(flags=0x00)
     _put_attrs(rec2, [
-        _resident_attr(0x30, _file_name_content(file_name)),
+        _resident_attr(0x10, _standard_information_content(modified_ft, modified_ft, modified_ft)),
+        _resident_attr(0x30, _file_name_content(file_name, parent_ref=3)),
         _resident_attr(0x80, file_data),
     ])
 
-    records = [rec0, _blank_record(0x00), rec2, _blank_record(0x00)]
+    # Eintrag 3: Verzeichnis "Ordner" unter der Wurzel (Eintrag 5).
+    rec3 = _blank_record(flags=0x03)                    # in Benutzung + Verzeichnis
+    _put_attrs(rec3, [_resident_attr(0x30, _file_name_content("Ordner", parent_ref=5))])
+
+    records = [rec0, _blank_record(0x00), rec2, rec3]
     for i, rec in enumerate(records):
         pos = mft_offset + i * RECORD_SIZE
         image[pos:pos + RECORD_SIZE] = rec
@@ -211,7 +231,105 @@ def build_ntfs_image(file_name: str = "geheim.txt",
         "name": file_name,
         "data": file_data,
         "mft_offset": mft_offset,
+        "path": f"Ordner/{file_name}",
+        "modified": "2021-06-15 12:00:00",
     }
+    return bytes(image), expected
+
+
+def build_fat_image(file_name_83: bytes = b"HALLO   TXT",
+                    file_data: bytes = b"FAT geloeschte Datei.\n"
+                    ) -> tuple[bytes, dict]:
+    """Baut ein winziges FAT12-Volume mit einer geloeschten Datei im Wurzelverzeichnis."""
+    bps = 512
+    total_sectors = 16
+    image = bytearray(total_sectors * bps)
+
+    boot = bytearray(bps)
+    boot[3:11] = b"MSDOS5.0"
+    struct.pack_into("<H", boot, 0x0B, bps)             # Bytes/Sektor
+    boot[0x0D] = 1                                        # Sektoren/Cluster
+    struct.pack_into("<H", boot, 0x0E, 1)               # reservierte Sektoren
+    boot[0x10] = 1                                        # Anzahl FATs
+    struct.pack_into("<H", boot, 0x11, 16)              # Wurzeleintraege
+    struct.pack_into("<H", boot, 0x13, total_sectors)   # Gesamtsektoren
+    struct.pack_into("<H", boot, 0x16, 1)               # Sektoren/FAT
+    struct.pack_into("<H", boot, bps - 2, 0xAA55)       # Boot-Signatur
+    image[0:bps] = boot
+
+    # Layout: reservierte(1) + FAT(1) + Wurzel(1) -> erster Datensektor = 3.
+    root_offset = (1 + 1) * bps                          # Sektor 2
+    data_offset = 3 * bps                                # Cluster 2
+
+    entry = bytearray(32)
+    entry[0:11] = b"\xe5ALLO   TXT"                      # geloescht (0xE5)
+    entry[0x0B] = 0x20                                    # Archiv
+    struct.pack_into("<H", entry, 0x14, 0)              # Cluster high
+    struct.pack_into("<H", entry, 0x16, 24576)          # Zeit 12:00:00
+    struct.pack_into("<H", entry, 0x18, 21199)          # Datum 2021-06-15
+    struct.pack_into("<H", entry, 0x1A, 2)              # Startcluster
+    struct.pack_into("<I", entry, 0x1C, len(file_data))  # Groesse
+    image[root_offset:root_offset + 32] = entry
+
+    image[data_offset:data_offset + len(file_data)] = file_data
+
+    expected = {
+        "name": "_ALLO.TXT",
+        "data": file_data,
+        "modified": "2021-06-15 12:00:00",
+    }
+    return bytes(image), expected
+
+
+def build_exfat_image(name: str = "geheim.txt",
+                      file_data: bytes = b"exFAT geloeschte Datei.\n"
+                      ) -> tuple[bytes, dict]:
+    """Baut ein winziges exFAT-Volume mit einer geloeschten Datei im Wurzelverzeichnis."""
+    bps = 512
+    image = bytearray(32 * bps)
+
+    boot = bytearray(bps)
+    boot[3:11] = b"EXFAT   "
+    struct.pack_into("<Q", boot, 0x48, 32)              # Volume-Laenge (Sektoren)
+    struct.pack_into("<I", boot, 0x50, 4)               # FAT-Sektor
+    struct.pack_into("<I", boot, 0x54, 1)               # FAT-Laenge
+    struct.pack_into("<I", boot, 0x58, 8)               # Cluster-Heap-Sektor
+    struct.pack_into("<I", boot, 0x5C, 8)               # Cluster-Anzahl
+    struct.pack_into("<I", boot, 0x60, 2)               # Wurzel-Cluster
+    boot[0x6C] = 9                                        # Bytes/Sektor-Shift (512)
+    boot[0x6D] = 0                                        # Sektoren/Cluster-Shift (1)
+    boot[0x6E] = 1                                        # Anzahl FATs
+    struct.pack_into("<H", boot, bps - 2, 0xAA55)
+    image[0:bps] = boot
+
+    root_off = 8 * bps                                   # Cluster 2
+    data_off = 9 * bps                                   # Cluster 3
+    mtime = 1389322240                                   # 2021-06-15 12:00:00
+
+    file_entry = bytearray(32)
+    file_entry[0] = 0x05                                  # File-Eintrag, geloescht
+    file_entry[1] = 2                                     # zwei Folgeeintraege
+    struct.pack_into("<H", file_entry, 0x04, 0x20)      # Archiv
+    struct.pack_into("<I", file_entry, 0x0C, mtime)     # LastModified
+
+    stream = bytearray(32)
+    stream[0] = 0x40                                     # Stream-Extension, geloescht
+    stream[1] = 0x02                                     # NoFatChain (zusammenhaengend)
+    stream[3] = len(name)                                # Namenslaenge
+    struct.pack_into("<I", stream, 0x14, 3)             # Startcluster
+    struct.pack_into("<Q", stream, 0x18, len(file_data))  # Datenlaenge
+
+    name_entry = bytearray(32)
+    name_entry[0] = 0x41                                 # Namens-Eintrag, geloescht
+    name_utf16 = name.encode("utf-16-le")
+    name_entry[2:2 + len(name_utf16)] = name_utf16
+
+    image[root_off:root_off + 32] = file_entry
+    image[root_off + 32:root_off + 64] = stream
+    image[root_off + 64:root_off + 96] = name_entry
+    image[data_off:data_off + len(file_data)] = file_data
+
+    expected = {"name": name, "data": file_data, "modified": "2021-06-15 12:00:00"}
     return bytes(image), expected
 
 

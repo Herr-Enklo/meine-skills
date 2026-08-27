@@ -39,23 +39,34 @@ def cmd_list(_args) -> int:
 def cmd_scan(args) -> int:
     options = ScanOptions(
         use_ntfs=not args.no_ntfs,
+        use_fat=not args.no_fat,
         use_carve=not args.no_carve,
         deleted_only=not args.all,
         max_files=args.max,
+        recover_partial=not args.no_partial,
+        validate=not args.no_validate,
+        ntfs_orphan_scan=args.orphan,
+        reconstruct_partitions=args.reconstruct,
+        use_usn=args.usn,
     )
 
     def progress(phase: str, frac: float, count: int) -> None:
         bar = int(frac * 30)
-        sys.stdout.write(f"\r  {phase:<24} [{'#' * bar:<30}] "
+        sys.stdout.write(f"\r  {phase:<40} [{'#' * bar:<30}] "
                          f"{frac * 100:5.1f}%  {count} Funde")
         sys.stdout.flush()
 
     try:
-        with ByteSource(args.source) as src:
+        with ByteSource(args.source, sector_size=args.sector) as src:
             print(f"Quelle: {args.source}  ({format_size(src.size)})")
+            if src.size is None:
+                print("  Achtung: Groesse unbekannt. Bei einem Geraet deutet das "
+                      "auf fehlende Rechte hin (als Administrator/root starten).")
             scanner = Scanner(src, options)
             findings = scanner.scan(progress_cb=progress)
             print()  # Zeilenumbruch nach der Fortschrittsanzeige
+            print(f"Gelesen: {format_size(src.bytes_read)} von {format_size(src.size)}"
+                  f"  |  defekte Sektoren: {src.bad_sectors}")
 
             if not findings:
                 print("Keine wiederherstellbaren Dateien gefunden.")
@@ -71,10 +82,13 @@ def cmd_scan(args) -> int:
                     sys.stdout.write(f"\r  {done}/{total}  {name[:40]:<40}")
                     sys.stdout.flush()
 
-                ok, errors = scanner_mod.recover(src, findings, args.out,
-                                                 progress_cb=rec_progress)
+                ok, skipped, errors = scanner_mod.recover(src, findings, args.out,
+                                                          progress_cb=rec_progress)
                 print()
-                print(f"{ok} Datei(en) wiederhergestellt.")
+                msg = f"{ok} Datei(en) wiederhergestellt."
+                if skipped:
+                    msg += f" {skipped} bereits vorhanden, uebersprungen."
+                print(msg)
                 if errors:
                     print(f"{len(errors)} Fehler:")
                     for e in errors[:10]:
@@ -126,9 +140,25 @@ def build_parser() -> argparse.ArgumentParser:
                       help="Image-Datei oder Geraet (z.B. disk.dd, \\\\.\\C:, /dev/sda)")
     scan.add_argument("--out", help="Ausgabeordner (auf anderem Datentraeger!)")
     scan.add_argument("--no-ntfs", action="store_true", help="NTFS-Scan auslassen")
+    scan.add_argument("--no-fat", action="store_true", help="FAT/exFAT-Undelete auslassen")
     scan.add_argument("--no-carve", action="store_true", help="Carving auslassen")
     scan.add_argument("--all", action="store_true",
                       help="bei NTFS auch nicht-geloeschte Dateien listen")
+    scan.add_argument("--orphan", action="store_true",
+                      help="ganzen Datentraeger nach MFT-Eintraegen absuchen "
+                           "(findet auch nach Formatierung, dauert laenger)")
+    scan.add_argument("--reconstruct", action="store_true",
+                      help="verlorene Partitionstabelle ueber eine Boot-Sektor-Suche "
+                           "rekonstruieren (findet Volumes ohne intakte Tabelle)")
+    scan.add_argument("--usn", action="store_true",
+                      help="USN-Journal auswerten: Namen und Zeit geloeschter Dateien "
+                           "(informativ, kein Inhalt)")
+    scan.add_argument("--no-partial", action="store_true",
+                      help="unvollstaendige Dateien (ohne Endmuster) nicht mitnehmen")
+    scan.add_argument("--no-validate", action="store_true",
+                      help="Struktur-Validierung der Carving-Treffer abschalten")
+    scan.add_argument("--sector", type=int, default=512,
+                      help="Sektorgroesse in Bytes (512 oder 4096 fuer 4Kn)")
     scan.add_argument("--max", type=int, default=None,
                       help="Obergrenze fuer Carving-Treffer")
     return parser

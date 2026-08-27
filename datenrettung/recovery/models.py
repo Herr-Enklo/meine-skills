@@ -34,6 +34,20 @@ class Finding:
     def describe_source(self) -> str:
         if self.kind == "carve":
             return f"Carving @ 0x{self.offset:X}"
+        if self.kind == "fat":
+            return "FAT"
+        if self.kind == "exfat":
+            return "exFAT"
+        if self.kind == "usn":
+            return "USN-Journal"
         if self.extra.get("resident_data") is not None:
             return "NTFS (im MFT-Eintrag)"
         return "NTFS (Cluster)"
+
+    def modified(self) -> str:
+        """Aenderungszeit fuer die Anzeige, oder leer."""
+        return self.extra.get("modified") or ""
+
+    def path(self) -> str:
+        """Vollstaendiger Pfad, falls rekonstruiert, sonst der Name."""
+        return self.extra.get("path") or self.name
