@@ -47,6 +47,7 @@ def cmd_scan(args) -> int:
         validate=not args.no_validate,
         ntfs_orphan_scan=args.orphan,
         reconstruct_partitions=args.reconstruct,
+        use_usn=args.usn,
     )
 
     def progress(phase: str, frac: float, count: int) -> None:
@@ -149,6 +150,9 @@ def build_parser() -> argparse.ArgumentParser:
     scan.add_argument("--reconstruct", action="store_true",
                       help="verlorene Partitionstabelle ueber eine Boot-Sektor-Suche "
                            "rekonstruieren (findet Volumes ohne intakte Tabelle)")
+    scan.add_argument("--usn", action="store_true",
+                      help="USN-Journal auswerten: Namen und Zeit geloeschter Dateien "
+                           "(informativ, kein Inhalt)")
     scan.add_argument("--no-partial", action="store_true",
                       help="unvollstaendige Dateien (ohne Endmuster) nicht mitnehmen")
     scan.add_argument("--no-validate", action="store_true",

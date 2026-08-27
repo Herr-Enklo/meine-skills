@@ -12,7 +12,7 @@ import os
 from dataclasses import dataclass
 from typing import Callable, Optional
 
-from . import carver, fat, ntfs
+from . import carver, fat, ntfs, usn
 from .models import Finding
 from .sources import ByteSource
 
@@ -37,6 +37,7 @@ class ScanOptions:
     validate: bool = True         # Carving-Treffer per Struktur-Pruefung bestaetigen
     ntfs_orphan_scan: bool = False   # ganzen Datentraeger nach MFT-Eintraegen absuchen
     reconstruct_partitions: bool = False  # Volumes ueber Boot-Sektor-Suche rekonstruieren
+    use_usn: bool = False         # USN-Journal auswerten (Namen geloeschter Dateien)
 
 
 class Scanner:
@@ -126,6 +127,26 @@ class Scanner:
                 except Exception:
                     pass
 
+        # Phase 2a: USN-Journal auswerten (Namen geloeschter Dateien). Nur ueber
+        # die MFT (guenstig) an jedem gefundenen NTFS-Volume.
+        if self.options.use_usn and not (should_cancel and should_cancel()):
+            try:
+                usn_offsets = ntfs.find_ntfs_volumes(self.source)
+            except Exception:
+                usn_offsets = []
+            for off in usn_offsets:
+                if should_cancel and should_cancel():
+                    break
+                try:
+                    for f in usn.scan_usn(self.source, off,
+                                          only_delete=self.options.deleted_only,
+                                          progress_cb=progress_cb,
+                                          should_cancel=should_cancel,
+                                          allow_carve=False):
+                        emit(f)
+                except Exception:
+                    continue
+
         # Phase 2b: FAT/exFAT-Undelete an allen Partitionsanfaengen (und an
         # rekonstruierten Volumes, falls die Tabelle fehlt).
         if self.options.use_fat and not (should_cancel and should_cancel()):
@@ -169,6 +190,18 @@ def extract(source: ByteSource, finding: Finding) -> bytes:
     # Carving sowie FAT/exFAT-Undelete liefern einen zusammenhaengenden Bereich.
     if finding.kind in ("carve", "fat", "exfat"):
         return source.read(finding.offset, finding.size)
+
+    # USN-Funde tragen keinen Inhalt, nur Metadaten -> als Textnotiz ausgeben.
+    if finding.kind == "usn":
+        ex = finding.extra
+        lines = [
+            "Geloeschte Datei laut USN-Journal",
+            f"Name:         {ex.get('usn_name', '')}",
+            f"Zeit:         {ex.get('modified') or 'unbekannt'}",
+            f"Grund:        {ex.get('reason', '')}",
+            f"MFT-Referenz: {ex.get('usn_ref', '')}",
+        ]
+        return ("\n".join(lines) + "\n").encode("utf-8")
 
     if finding.kind == "ntfs":
         extra = finding.extra

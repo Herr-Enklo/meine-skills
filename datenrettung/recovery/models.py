@@ -38,6 +38,8 @@ class Finding:
             return "FAT"
         if self.kind == "exfat":
             return "exFAT"
+        if self.kind == "usn":
+            return "USN-Journal"
         if self.extra.get("resident_data") is not None:
             return "NTFS (im MFT-Eintrag)"
         return "NTFS (Cluster)"

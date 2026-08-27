@@ -103,6 +103,7 @@ class RecoveryApp:
         self.opt_validate = tk.BooleanVar(value=True)
         self.opt_4kn = tk.BooleanVar(value=False)
         self.opt_reconstruct = tk.BooleanVar(value=False)
+        self.opt_usn = tk.BooleanVar(value=False)
         ttk.Checkbutton(opt_frame, text="NTFS: geloeschte Dateien (mit Namen)",
                         variable=self.opt_ntfs).grid(row=0, column=0, sticky="w", padx=6, pady=4)
         ttk.Checkbutton(opt_frame, text="FAT/exFAT: geloeschte Dateien",
@@ -124,6 +125,9 @@ class RecoveryApp:
         ttk.Checkbutton(opt_frame, text="Treffer validieren",
                         variable=self.opt_validate).grid(row=2, column=2, sticky="w",
                                                          padx=6, pady=4)
+        ttk.Checkbutton(opt_frame, text="USN-Journal (Namen geloeschter Dateien)",
+                        variable=self.opt_usn).grid(row=3, column=1, columnspan=2,
+                                                    sticky="w", padx=6, pady=4)
 
         # Aktionen + Fortschritt
         act_frame = ttk.Frame(self.root)
@@ -268,6 +272,7 @@ class RecoveryApp:
             validate=self.opt_validate.get(),
             ntfs_orphan_scan=self.opt_orphan.get(),
             reconstruct_partitions=self.opt_reconstruct.get(),
+            use_usn=self.opt_usn.get(),
         )
         known_size = self.source_sizes.get(label)
         sector = 4096 if self.opt_4kn.get() else 512

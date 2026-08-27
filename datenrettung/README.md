@@ -148,8 +148,12 @@ Das NTFS-Modul liest residente und über Data-Runs verteilte Dateien, verarbeite
 fragmentierte MFT und mehrere Partitionen über MBR und GPT. Mit `--orphan` bzw.
 der entsprechenden Option in der Oberfläche durchsucht es den ganzen Datenträger
 nach MFT-Einträgen und findet gelöschte Dateien so auch nach einer Formatierung
-oder bei beschädigtem Boot-Sektor. `$LogFile`- und `$UsnJrnl`-Journale wertet es
-nicht aus.
+oder bei beschädigtem Boot-Sektor. Mit `--usn` bzw. der entsprechenden Option
+wertet es das USN-Change-Journal (`$UsnJrnl`) aus und listet die Namen und
+Zeitpunkte gelöschter Dateien — auch dann, wenn der MFT-Eintrag schon
+wiederverwendet wurde. Diese Funde sind informativ: Sie zeigen, was gelöscht
+wurde, enthalten aber keinen Dateiinhalt. Das `$LogFile`-Journal wertet es nicht
+aus.
 
 FAT12/16/32 und exFAT werden über einen eigenen Undelete-Weg gelesen (Namen,
 Pfade, Zeitstempel). Die Cluster-Kette gelöschter Dateien ist meist freigegeben,
@@ -182,6 +186,7 @@ datenrettung/
     signatures.py         Datei-Signaturen und Struktur-Validatoren fürs Carving
     carver.py             Carving-Engine
     ntfs.py               NTFS-/MFT-Parser und Partitionsrekonstruktion
+    usn.py                USN-Change-Journal ($UsnJrnl) auswerten
     fat.py                FAT12/16/32-Undelete
     exfat.py              exFAT-Undelete
     scanner.py            Orchestrierung und Wiederherstellung

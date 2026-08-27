@@ -26,6 +26,7 @@ from datenrettung.recovery import ByteSource, Scanner, ScanOptions, extract  # n
 from datenrettung.recovery import scanner as scanner_mod  # noqa: E402
 from datenrettung.recovery import ntfs as ntfs_mod  # noqa: E402
 from datenrettung.recovery import sources as sources_mod  # noqa: E402
+from datenrettung.recovery import usn as usn_mod  # noqa: E402
 from datenrettung.recovery.models import Finding  # noqa: E402
 from datenrettung.gui.sorting import order_iids  # noqa: E402
 from datenrettung.tests.make_sample_image import (  # noqa: E402
@@ -364,6 +365,60 @@ class ExfatTests(unittest.TestCase):
             self.assertEqual(match.extra.get("path"), exp["name"])
             self.assertEqual(match.extra.get("modified"), exp["modified"])
             self.assertEqual(extract(src, match), exp["data"])
+
+
+def _make_usn(name, reason, timestamp, ref=100, parent=5):
+    import struct
+    name16 = name.encode("utf-16-le")
+    name_off = 0x3C
+    rec_len = (name_off + len(name16) + 7) & ~7
+    rec = bytearray(rec_len)
+    struct.pack_into("<I", rec, 0, rec_len)
+    struct.pack_into("<H", rec, 4, 2)          # MajorVersion
+    struct.pack_into("<Q", rec, 0x08, ref)
+    struct.pack_into("<Q", rec, 0x10, parent)
+    struct.pack_into("<Q", rec, 0x20, timestamp)
+    struct.pack_into("<I", rec, 0x28, reason)
+    struct.pack_into("<H", rec, 0x38, len(name16))
+    struct.pack_into("<H", rec, 0x3A, name_off)
+    rec[name_off:name_off + len(name16)] = name16
+    return bytes(rec)
+
+
+def _filetime(year, month, day, hour=0, minute=0, second=0):
+    import datetime
+    epoch = datetime.datetime(1601, 1, 1, tzinfo=datetime.timezone.utc)
+    dt = datetime.datetime(year, month, day, hour, minute, second,
+                           tzinfo=datetime.timezone.utc)
+    return int((dt - epoch).total_seconds() * 10_000_000)
+
+
+class UsnTests(unittest.TestCase):
+    CREATE = 0x00000100 | 0x80000000
+    DELETE = 0x00000200 | 0x80000000
+    MOD_FT = _filetime(2021, 6, 15, 12, 0, 0)   # -> "2021-06-15 12:00:00"
+
+    def test_parser_filtert_loeschungen(self):
+        buf = (_make_usn("neu.txt", self.CREATE, self.MOD_FT)
+               + _make_usn("weg.txt", self.DELETE, self.MOD_FT, ref=101))
+        only_del = list(usn_mod.parse_usn_records(buf, only_delete=True))
+        self.assertEqual([r["name"] for r in only_del], ["weg.txt"])
+        alle = list(usn_mod.parse_usn_records(buf, only_delete=False))
+        self.assertEqual(len(alle), 2)
+
+    def test_scan_usn_carving(self):
+        rec = _make_usn("geloescht.docx", self.DELETE, self.MOD_FT, ref=202)
+        img = b"\x00" * 1024 + rec + b"\x00" * 700
+        path = _write_temp(img)
+        self.addCleanup(os.remove, path)
+        with ByteSource(path) as src:
+            findings = list(usn_mod.scan_usn(src, 0, only_delete=True))
+            match = next((f for f in findings if f.kind == "usn"), None)
+            self.assertIsNotNone(match, "USN-Datensatz nicht herausgeschnitten")
+            self.assertEqual(match.extra.get("usn_name"), "geloescht.docx")
+            self.assertEqual(match.extra.get("modified"), "2021-06-15 12:00:00")
+            text = extract(src, match)
+            self.assertIn(b"geloescht.docx", text)
 
 
 class OrphanMftTests(unittest.TestCase):
