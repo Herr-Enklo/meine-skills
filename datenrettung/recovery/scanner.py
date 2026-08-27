@@ -12,9 +12,14 @@ import os
 from dataclasses import dataclass
 from typing import Callable, Optional
 
-from . import carver, ntfs
+from . import carver, fat, ntfs
 from .models import Finding
 from .sources import ByteSource
+
+try:                              # exFAT wird separat ergaenzt; optional laden
+    from . import exfat as _EXFAT
+except Exception:                 # pragma: no cover
+    _EXFAT = None
 
 ProgressCb = Callable[[str, float, int], None]
 CancelCb = Callable[[], bool]
@@ -24,6 +29,7 @@ FindingCb = Callable[[Finding], None]
 @dataclass
 class ScanOptions:
     use_ntfs: bool = True         # geloeschte Dateien ueber die MFT finden
+    use_fat: bool = True          # FAT/exFAT-Undelete (SD-Karten, USB-Sticks)
     use_carve: bool = True        # Dateien ueber Signaturen finden
     deleted_only: bool = True     # bei NTFS nur geloeschte Eintraege
     max_files: Optional[int] = None  # Obergrenze fuer Carving-Treffer
@@ -116,6 +122,27 @@ class Scanner:
                         emit_ntfs(f)
                 except Exception:
                     pass
+
+        # Phase 2b: FAT/exFAT-Undelete an allen Partitionsanfaengen.
+        if self.options.use_fat and not (should_cancel and should_cancel()):
+            for off in ntfs.partition_offsets(self.source):
+                if should_cancel and should_cancel():
+                    break
+                try:
+                    if fat.is_fat(self.source, off):
+                        for f in fat.scan_fat(self.source, off,
+                                              deleted_only=self.options.deleted_only,
+                                              progress_cb=progress_cb,
+                                              should_cancel=should_cancel):
+                            emit(f)
+                    elif _EXFAT and _EXFAT.is_exfat(self.source, off):
+                        for f in _EXFAT.scan_exfat(self.source, off,
+                                                   deleted_only=self.options.deleted_only,
+                                                   progress_cb=progress_cb,
+                                                   should_cancel=should_cancel):
+                            emit(f)
+                except Exception:
+                    continue
 
         # Phase 3: Carving (findet auch ohne intaktes Dateisystem).
         if self.options.use_carve:

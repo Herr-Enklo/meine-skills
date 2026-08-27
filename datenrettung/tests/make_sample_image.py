@@ -237,6 +237,50 @@ def build_ntfs_image(file_name: str = "geheim.txt",
     return bytes(image), expected
 
 
+def build_fat_image(file_name_83: bytes = b"HALLO   TXT",
+                    file_data: bytes = b"FAT geloeschte Datei.\n"
+                    ) -> tuple[bytes, dict]:
+    """Baut ein winziges FAT12-Volume mit einer geloeschten Datei im Wurzelverzeichnis."""
+    bps = 512
+    total_sectors = 16
+    image = bytearray(total_sectors * bps)
+
+    boot = bytearray(bps)
+    boot[3:11] = b"MSDOS5.0"
+    struct.pack_into("<H", boot, 0x0B, bps)             # Bytes/Sektor
+    boot[0x0D] = 1                                        # Sektoren/Cluster
+    struct.pack_into("<H", boot, 0x0E, 1)               # reservierte Sektoren
+    boot[0x10] = 1                                        # Anzahl FATs
+    struct.pack_into("<H", boot, 0x11, 16)              # Wurzeleintraege
+    struct.pack_into("<H", boot, 0x13, total_sectors)   # Gesamtsektoren
+    struct.pack_into("<H", boot, 0x16, 1)               # Sektoren/FAT
+    struct.pack_into("<H", boot, bps - 2, 0xAA55)       # Boot-Signatur
+    image[0:bps] = boot
+
+    # Layout: reservierte(1) + FAT(1) + Wurzel(1) -> erster Datensektor = 3.
+    root_offset = (1 + 1) * bps                          # Sektor 2
+    data_offset = 3 * bps                                # Cluster 2
+
+    entry = bytearray(32)
+    entry[0:11] = b"\xe5ALLO   TXT"                      # geloescht (0xE5)
+    entry[0x0B] = 0x20                                    # Archiv
+    struct.pack_into("<H", entry, 0x14, 0)              # Cluster high
+    struct.pack_into("<H", entry, 0x16, 24576)          # Zeit 12:00:00
+    struct.pack_into("<H", entry, 0x18, 21199)          # Datum 2021-06-15
+    struct.pack_into("<H", entry, 0x1A, 2)              # Startcluster
+    struct.pack_into("<I", entry, 0x1C, len(file_data))  # Groesse
+    image[root_offset:root_offset + 32] = entry
+
+    image[data_offset:data_offset + len(file_data)] = file_data
+
+    expected = {
+        "name": "_ALLO.TXT",
+        "data": file_data,
+        "modified": "2021-06-15 12:00:00",
+    }
+    return bytes(image), expected
+
+
 if __name__ == "__main__":
     img, exp = build_carving_image()
     print(f"Carving-Image: {len(img)} Bytes, {len(exp)} Dateien eingebettet")

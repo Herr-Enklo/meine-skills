@@ -29,7 +29,7 @@ from datenrettung.recovery import sources as sources_mod  # noqa: E402
 from datenrettung.recovery.models import Finding  # noqa: E402
 from datenrettung.gui.sorting import order_iids  # noqa: E402
 from datenrettung.tests.make_sample_image import (  # noqa: E402
-    build_carving_image, build_ntfs_image, make_png,
+    build_carving_image, build_ntfs_image, build_fat_image, make_png,
 )
 
 
@@ -335,6 +335,20 @@ class NtfsTests(unittest.TestCase):
             self.assertEqual(boot.cluster_size, 512)
             self.assertEqual(boot.record_size, 1024)
             self.assertEqual(boot.mft_cluster, 4)
+
+
+class FatTests(unittest.TestCase):
+    def test_fat_undelete_mit_name_zeit_und_inhalt(self):
+        img, exp = build_fat_image()
+        path = _write_temp(img)
+        self.addCleanup(os.remove, path)
+        with ByteSource(path) as src:
+            findings = Scanner(src, ScanOptions(use_ntfs=False, use_carve=False)).scan()
+            match = next((f for f in findings if f.kind == "fat"), None)
+            self.assertIsNotNone(match, "geloeschte FAT-Datei nicht gefunden")
+            self.assertEqual(match.extra.get("path"), exp["name"])
+            self.assertEqual(match.extra.get("modified"), exp["modified"])
+            self.assertEqual(extract(src, match), exp["data"])
 
 
 class OrphanMftTests(unittest.TestCase):

@@ -607,6 +607,33 @@ def find_ntfs_volumes(source) -> list[int]:
     return offsets
 
 
+def partition_offsets(source) -> list[int]:
+    """Byte-Offsets aller Partitionsanfaenge (MBR/GPT) inklusive Offset 0.
+
+    Typunabhaengig – dient der FAT/exFAT-Erkennung, die nicht nur NTFS sucht.
+    """
+    offsets = [0]
+    seen = {0}
+
+    def add(off: int) -> None:
+        if off > 0 and off not in seen:
+            seen.add(off)
+            offsets.append(off)
+
+    sector0 = source.read(0, 512)
+    if len(sector0) >= 512 and sector0[510:512] == b"\x55\xAA":
+        gpt = False
+        for start_lba, ptype in _parse_mbr(sector0):
+            if ptype == 0xEE:
+                gpt = True
+                continue
+            add(start_lba * 512)
+        if gpt:
+            for off in _parse_gpt(source):
+                add(off)
+    return offsets
+
+
 def _parse_mbr(sector0: bytes) -> list[tuple[int, int]]:
     """Liefert ``(start_lba, partitionstyp)`` der vier MBR-Eintraege."""
     result = []

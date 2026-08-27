@@ -39,6 +39,7 @@ def cmd_list(_args) -> int:
 def cmd_scan(args) -> int:
     options = ScanOptions(
         use_ntfs=not args.no_ntfs,
+        use_fat=not args.no_fat,
         use_carve=not args.no_carve,
         deleted_only=not args.all,
         max_files=args.max,
@@ -138,6 +139,7 @@ def build_parser() -> argparse.ArgumentParser:
                       help="Image-Datei oder Geraet (z.B. disk.dd, \\\\.\\C:, /dev/sda)")
     scan.add_argument("--out", help="Ausgabeordner (auf anderem Datentraeger!)")
     scan.add_argument("--no-ntfs", action="store_true", help="NTFS-Scan auslassen")
+    scan.add_argument("--no-fat", action="store_true", help="FAT/exFAT-Undelete auslassen")
     scan.add_argument("--no-carve", action="store_true", help="Carving auslassen")
     scan.add_argument("--all", action="store_true",
                       help="bei NTFS auch nicht-geloeschte Dateien listen")

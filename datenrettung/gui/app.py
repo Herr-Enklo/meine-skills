@@ -95,6 +95,7 @@ class RecoveryApp:
         opt_frame = ttk.LabelFrame(self.root, text="3. Optionen")
         opt_frame.pack(fill="x", **pad)
         self.opt_ntfs = tk.BooleanVar(value=True)
+        self.opt_fat = tk.BooleanVar(value=True)
         self.opt_carve = tk.BooleanVar(value=True)
         self.opt_all = tk.BooleanVar(value=False)
         self.opt_orphan = tk.BooleanVar(value=False)
@@ -104,10 +105,12 @@ class RecoveryApp:
         self.opt_reconstruct = tk.BooleanVar(value=False)
         ttk.Checkbutton(opt_frame, text="NTFS: geloeschte Dateien (mit Namen)",
                         variable=self.opt_ntfs).grid(row=0, column=0, sticky="w", padx=6, pady=4)
+        ttk.Checkbutton(opt_frame, text="FAT/exFAT: geloeschte Dateien",
+                        variable=self.opt_fat).grid(row=0, column=1, sticky="w", padx=6, pady=4)
         ttk.Checkbutton(opt_frame, text="File Carving (nach Signatur)",
-                        variable=self.opt_carve).grid(row=0, column=1, sticky="w", padx=6, pady=4)
+                        variable=self.opt_carve).grid(row=0, column=2, sticky="w", padx=6, pady=4)
         ttk.Checkbutton(opt_frame, text="NTFS: auch vorhandene Dateien listen",
-                        variable=self.opt_all).grid(row=0, column=2, sticky="w", padx=6, pady=4)
+                        variable=self.opt_all).grid(row=3, column=0, sticky="w", padx=6, pady=4)
         ttk.Checkbutton(opt_frame, text="Ganzen Datentraeger nach MFT absuchen (dauert laenger)",
                         variable=self.opt_orphan).grid(row=1, column=0, columnspan=2,
                                                        sticky="w", padx=6, pady=4)
@@ -240,8 +243,9 @@ class RecoveryApp:
         if not source_path:
             messagebox.showwarning("Keine Quelle", "Bitte zuerst ein Laufwerk oder Image waehlen.")
             return
-        if not (self.opt_ntfs.get() or self.opt_carve.get()):
-            messagebox.showwarning("Keine Methode", "Bitte mindestens NTFS oder Carving aktivieren.")
+        if not (self.opt_ntfs.get() or self.opt_fat.get() or self.opt_carve.get()):
+            messagebox.showwarning("Keine Methode",
+                                   "Bitte mindestens ein Verfahren aktivieren.")
             return
 
         self.findings = []
@@ -257,6 +261,7 @@ class RecoveryApp:
 
         options = ScanOptions(
             use_ntfs=self.opt_ntfs.get(),
+            use_fat=self.opt_fat.get(),
             use_carve=self.opt_carve.get(),
             deleted_only=not self.opt_all.get(),
             recover_partial=self.opt_partial.get(),
