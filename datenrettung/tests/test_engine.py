@@ -285,6 +285,17 @@ class NtfsTests(unittest.TestCase):
             self.assertIsNotNone(match, "geloeschte Datei in Partition nicht gefunden")
             self.assertEqual(extract(src, match), exp["data"])
 
+    def test_zeitstempel_und_pfad_werden_rekonstruiert(self):
+        img, exp = build_ntfs_image()
+        path = _write_temp(img)
+        self.addCleanup(os.remove, path)
+        with ByteSource(path) as src:
+            findings = Scanner(src, ScanOptions(use_ntfs=True, use_carve=False)).scan()
+            match = next((f for f in findings if exp["name"] in f.name), None)
+            self.assertIsNotNone(match)
+            self.assertEqual(match.extra.get("path"), exp["path"])
+            self.assertEqual(match.extra.get("modified"), exp["modified"])
+
     def test_boot_sektor_kennzahlen(self):
         img, _ = build_ntfs_image()
         path = _write_temp(img)

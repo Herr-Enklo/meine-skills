@@ -136,16 +136,18 @@ class RecoveryApp:
         # Ergebnisliste
         res_frame = ttk.LabelFrame(self.root, text="Gefundene Dateien")
         res_frame.pack(fill="both", expand=True, **pad)
-        columns = ("typ", "name", "groesse", "quelle")
+        columns = ("typ", "name", "groesse", "geaendert", "quelle")
         self.tree = ttk.Treeview(res_frame, columns=columns, show="headings",
                                  selectmode="extended")
-        self._col_titles = {"typ": "Typ", "name": "Name",
-                            "groesse": "Groesse", "quelle": "Herkunft"}
+        self._col_titles = {"typ": "Typ", "name": "Name/Pfad",
+                            "groesse": "Groesse", "geaendert": "Geaendert",
+                            "quelle": "Herkunft"}
         for col, width, anchor in (
-            ("typ", 190, "w"),
+            ("typ", 170, "w"),
             ("name", 300, "w"),
-            ("groesse", 100, "e"),
-            ("quelle", 170, "w"),
+            ("groesse", 90, "e"),
+            ("geaendert", 140, "w"),
+            ("quelle", 150, "w"),
         ):
             self.tree.heading(col, text=self._col_titles[col],
                               command=lambda c=col: self._sort_by(c))
@@ -398,11 +400,11 @@ class RecoveryApp:
         if index < MAX_ROWS:
             self.tree.insert(
                 "", "end", iid=str(index),
-                values=(finding.type_name, finding.name,
-                        format_size(finding.size), finding.describe_source()))
+                values=(finding.type_name, finding.name, format_size(finding.size),
+                        finding.modified(), finding.describe_source()))
         elif index == MAX_ROWS:
             self.tree.insert("", "end", iid="overflow",
-                             values=("…", "weitere Funde ausgeblendet", "", ""))
+                             values=("…", "weitere Funde ausgeblendet", "", "", ""))
         self.count_var.set(f"{len(self.findings)} Fund(e)")
 
     def _sort_by(self, col: str) -> None:

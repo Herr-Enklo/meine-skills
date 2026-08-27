@@ -15,6 +15,8 @@ def sort_key(finding, col: str):
         return finding.type_name.lower()
     if col == "name":
         return finding.name.lower()
+    if col == "geaendert":
+        return finding.extra.get("modified") or ""
     return finding.describe_source().lower()
 
 

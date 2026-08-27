@@ -131,7 +131,8 @@ class Scanner:
 
 def extract(source: ByteSource, finding: Finding) -> bytes:
     """Liest die Bytes eines Funds aus der Quelle."""
-    if finding.kind == "carve":
+    # Carving sowie FAT/exFAT-Undelete liefern einen zusammenhaengenden Bereich.
+    if finding.kind in ("carve", "fat", "exfat"):
         return source.read(finding.offset, finding.size)
 
     if finding.kind == "ntfs":

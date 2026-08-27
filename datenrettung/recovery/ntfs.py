@@ -19,6 +19,7 @@ Physische Datentraeger mit mehreren Partitionen werden unterstuetzt: ueber
 
 from __future__ import annotations
 
+import datetime
 import struct
 from dataclasses import dataclass
 from typing import Callable, Iterator, Optional
@@ -29,9 +30,25 @@ ProgressCb = Callable[[str, float, int], None]
 CancelCb = Callable[[], bool]
 
 # Attributtypen
+ATTR_STANDARD_INFORMATION = 0x10
 ATTR_FILE_NAME = 0x30
 ATTR_DATA = 0x80
 ATTR_END = 0xFFFFFFFF
+
+# Wurzelverzeichnis der MFT (".") – Endpunkt der Pfad-Rekonstruktion.
+ROOT_RECORD = 5
+
+
+def filetime_to_iso(value: int) -> Optional[str]:
+    """Wandelt einen NTFS-Zeitstempel (100-ns-Einheiten seit 1601) in Text um."""
+    if not value:
+        return None
+    try:
+        seconds = value / 10_000_000 - 11644473600
+        dt = datetime.datetime.fromtimestamp(seconds, tz=datetime.timezone.utc)
+        return dt.strftime("%Y-%m-%d %H:%M:%S")
+    except (OverflowError, OSError, ValueError):
+        return None
 
 # MFT-Eintrags-Flags
 FLAG_IN_USE = 0x01
@@ -246,8 +263,8 @@ def _iter_attributes(record: bytes):
         off += length
 
 
-def _parse_file_name(record: bytes, off: int) -> Optional[tuple[str, int]]:
-    """Liest Name und Namensraum aus einem ``$FILE_NAME``-Attribut."""
+def _parse_file_name(record: bytes, off: int) -> Optional[dict]:
+    """Liest Name, Namensraum und Elternreferenz aus ``$FILE_NAME``."""
     non_resident = record[off + 0x08]
     if non_resident:
         return None
@@ -255,6 +272,8 @@ def _parse_file_name(record: bytes, off: int) -> Optional[tuple[str, int]]:
     base = off + content_off
     if base + 0x42 > len(record):
         return None
+    # Elternreferenz: die unteren 48 Bit sind die Datensatznummer des Ordners.
+    parent_ref = struct.unpack_from("<Q", record, base + 0x00)[0] & 0xFFFFFFFFFFFF
     name_len = record[base + 0x40]
     namespace = record[base + 0x41]
     name_bytes = record[base + 0x42: base + 0x42 + name_len * 2]
@@ -262,7 +281,23 @@ def _parse_file_name(record: bytes, off: int) -> Optional[tuple[str, int]]:
         name = name_bytes.decode("utf-16-le", errors="replace")
     except Exception:
         return None
-    return name, namespace
+    return {"name": name, "namespace": namespace, "parent": parent_ref}
+
+
+def _parse_standard_information(record: bytes, off: int) -> dict:
+    """Liest die Zeitstempel aus ``$STANDARD_INFORMATION``."""
+    content_off = struct.unpack_from("<H", record, off + 0x14)[0]
+    base = off + content_off
+    if base + 0x20 > len(record):
+        return {}
+    created = struct.unpack_from("<Q", record, base + 0x00)[0]
+    modified = struct.unpack_from("<Q", record, base + 0x08)[0]
+    accessed = struct.unpack_from("<Q", record, base + 0x18)[0]
+    return {
+        "created": filetime_to_iso(created),
+        "modified": filetime_to_iso(modified),
+        "accessed": filetime_to_iso(accessed),
+    }
 
 
 def _find_data_attribute(record: bytes) -> Optional[dict]:
@@ -286,18 +321,18 @@ def _find_data_attribute(record: bytes) -> Optional[dict]:
     return None
 
 
-def _best_name(names: list[tuple[str, int]]) -> Optional[str]:
-    """Waehlt aus mehreren ``$FILE_NAME``-Eintraegen den besten Namen.
+def _best_name_entry(names: list[dict]) -> Optional[dict]:
+    """Waehlt aus mehreren ``$FILE_NAME``-Eintraegen den besten aus.
 
     Win32-Namen werden dem verkuerzten DOS-8.3-Namen vorgezogen.
     """
     if not names:
         return None
     for wanted in (NS_WIN32_DOS, NS_WIN32, NS_POSIX):
-        for name, ns in names:
-            if ns == wanted:
-                return name
-    return names[0][0]
+        for entry in names:
+            if entry["namespace"] == wanted:
+                return entry
+    return names[0]
 
 
 def scan_ntfs(source, base_offset: int,
@@ -315,6 +350,10 @@ def scan_ntfs(source, base_offset: int,
     reader = MftReader(source, boot, base_offset)
     count = reader.record_count()
 
+    # Erst alle Eintraege durchgehen: Namensindex fuer die Pfad-Rekonstruktion
+    # aufbauen (auch Ordner und noch vorhandene Eintraege) und Funde sammeln.
+    name_map: dict[int, tuple[str, int]] = {}
+    findings: list[Finding] = []
     produced = 0
     for n in range(count):
         if should_cancel and should_cancel():
@@ -325,12 +364,64 @@ def scan_ntfs(source, base_offset: int,
         record = reader.read_record(n)
         if record is None:
             continue
+        entry = _record_name_entry(record)
+        if entry:
+            name_map[n] = entry
         rec_off = reader.phys_of(n * reader.record_size)
         finding = _finding_from_record(record, boot.cluster_size, base_offset,
                                        rec_off, n, deleted_only)
         if finding is not None:
-            yield finding
+            findings.append(finding)
             produced += 1
+
+    # Pfade aufloesen und die Funde ausgeben.
+    for finding in findings:
+        _apply_path(finding, name_map)
+        yield finding
+
+
+def _record_name_entry(record: bytes) -> Optional[tuple[str, int]]:
+    """Bester Name und Elternreferenz eines Eintrags fuer den Namensindex."""
+    names = []
+    for off, atype, _length in _iter_attributes(record):
+        if atype == ATTR_FILE_NAME:
+            parsed = _parse_file_name(record, off)
+            if parsed:
+                names.append(parsed)
+    best = _best_name_entry(names)
+    if not best:
+        return None
+    return best["name"], best["parent"]
+
+
+def _resolve_path(name_map: dict, parent: Optional[int]) -> str:
+    """Baut den Ordnerpfad ueber die Elternreferenzen zusammen."""
+    parts: list[str] = []
+    seen: set[int] = set()
+    while parent is not None and parent != ROOT_RECORD and parent not in seen:
+        seen.add(parent)
+        entry = name_map.get(parent)
+        if not entry:
+            break
+        parts.append(entry[0])
+        parent = entry[1]
+        if len(parts) > 64:        # Schutz vor Zyklen
+            break
+    return "/".join(reversed(parts))
+
+
+def _apply_path(finding: Finding, name_map: dict) -> None:
+    """Setzt den vollstaendigen Pfad eines NTFS-Funds anhand des Namensindex."""
+    if finding.kind != "ntfs":
+        return
+    raw = finding.extra.get("name_raw")
+    if not raw:
+        return
+    folder = _resolve_path(name_map, finding.extra.get("parent"))
+    full = f"{folder}/{raw}" if folder else raw
+    finding.extra["path"] = full
+    number = finding.name.split("_", 1)[0]
+    finding.name = f"{number}_{_safe_name(full)}"
 
 
 def _finding_from_record(record: bytes, cluster_size: int, base_offset: int,
@@ -347,15 +438,19 @@ def _finding_from_record(record: bytes, cluster_size: int, base_offset: int,
     if deleted_only and in_use:
         return None
 
-    names: list[tuple[str, int]] = []
+    names: list[dict] = []
+    times: dict = {}
     for off, atype, _length in _iter_attributes(record):
         if atype == ATTR_FILE_NAME:
             parsed = _parse_file_name(record, off)
             if parsed:
                 names.append(parsed)
-    name = _best_name(names)
-    if not name:
+        elif atype == ATTR_STANDARD_INFORMATION and not times:
+            times = _parse_standard_information(record, off)
+    best = _best_name_entry(names)
+    if not best:
         return None
+    name = best["name"]
 
     data_attr = _find_data_attribute(record)
     if data_attr is None:
@@ -370,6 +465,11 @@ def _finding_from_record(record: bytes, cluster_size: int, base_offset: int,
         "cluster_size": cluster_size,
         "real_size": real_size,
         "record_offset": record_offset,
+        "parent": best.get("parent"),
+        "name_raw": name,
+        "created": times.get("created"),
+        "modified": times.get("modified"),
+        "accessed": times.get("accessed"),
     }
     if data_attr.get("resident"):
         extra["resident_data"] = data_attr["resident_data"]

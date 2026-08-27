@@ -127,6 +127,15 @@ def _resident_attr(atype: int, content: bytes) -> bytes:
     return bytes(attr)
 
 
+def _standard_information_content(created: int, modified: int, accessed: int) -> bytes:
+    content = bytearray(0x48)
+    struct.pack_into("<Q", content, 0x00, created)
+    struct.pack_into("<Q", content, 0x08, modified)
+    struct.pack_into("<Q", content, 0x10, modified)   # MFT-Aenderung
+    struct.pack_into("<Q", content, 0x18, accessed)
+    return bytes(content)
+
+
 def _file_name_content(name: str, parent_ref: int = 5) -> bytes:
     name_utf16 = name.encode("utf-16-le")
     content = bytearray(0x42 + len(name_utf16))
@@ -194,14 +203,25 @@ def build_ntfs_image(file_name: str = "geheim.txt",
     runs = bytes([0x11, mft_clusters, MFT_LCN, 0x00])
     _put_attrs(rec0, [_nonresident_data_attr(runs, mft_bytes, mft_clusters - 1)])
 
-    # Eintrag 2: geloeschte Datei (Flag 0 = nicht in Benutzung).
+    # Bekannter Aenderungszeitpunkt (2021-06-15 12:00:00 UTC) als NTFS-FILETIME.
+    import datetime
+    mod_dt = datetime.datetime(2021, 6, 15, 12, 0, 0, tzinfo=datetime.timezone.utc)
+    epoch = datetime.datetime(1601, 1, 1, tzinfo=datetime.timezone.utc)
+    modified_ft = int((mod_dt - epoch).total_seconds() * 10_000_000)
+
+    # Eintrag 2: geloeschte Datei im Ordner "Ordner" (MFT-Eintrag 3).
     rec2 = _blank_record(flags=0x00)
     _put_attrs(rec2, [
-        _resident_attr(0x30, _file_name_content(file_name)),
+        _resident_attr(0x10, _standard_information_content(modified_ft, modified_ft, modified_ft)),
+        _resident_attr(0x30, _file_name_content(file_name, parent_ref=3)),
         _resident_attr(0x80, file_data),
     ])
 
-    records = [rec0, _blank_record(0x00), rec2, _blank_record(0x00)]
+    # Eintrag 3: Verzeichnis "Ordner" unter der Wurzel (Eintrag 5).
+    rec3 = _blank_record(flags=0x03)                    # in Benutzung + Verzeichnis
+    _put_attrs(rec3, [_resident_attr(0x30, _file_name_content("Ordner", parent_ref=5))])
+
+    records = [rec0, _blank_record(0x00), rec2, rec3]
     for i, rec in enumerate(records):
         pos = mft_offset + i * RECORD_SIZE
         image[pos:pos + RECORD_SIZE] = rec
@@ -211,6 +231,8 @@ def build_ntfs_image(file_name: str = "geheim.txt",
         "name": file_name,
         "data": file_data,
         "mft_offset": mft_offset,
+        "path": f"Ordner/{file_name}",
+        "modified": "2021-06-15 12:00:00",
     }
     return bytes(image), expected
 
