@@ -281,6 +281,58 @@ def build_fat_image(file_name_83: bytes = b"HALLO   TXT",
     return bytes(image), expected
 
 
+def build_exfat_image(name: str = "geheim.txt",
+                      file_data: bytes = b"exFAT geloeschte Datei.\n"
+                      ) -> tuple[bytes, dict]:
+    """Baut ein winziges exFAT-Volume mit einer geloeschten Datei im Wurzelverzeichnis."""
+    bps = 512
+    image = bytearray(32 * bps)
+
+    boot = bytearray(bps)
+    boot[3:11] = b"EXFAT   "
+    struct.pack_into("<Q", boot, 0x48, 32)              # Volume-Laenge (Sektoren)
+    struct.pack_into("<I", boot, 0x50, 4)               # FAT-Sektor
+    struct.pack_into("<I", boot, 0x54, 1)               # FAT-Laenge
+    struct.pack_into("<I", boot, 0x58, 8)               # Cluster-Heap-Sektor
+    struct.pack_into("<I", boot, 0x5C, 8)               # Cluster-Anzahl
+    struct.pack_into("<I", boot, 0x60, 2)               # Wurzel-Cluster
+    boot[0x6C] = 9                                        # Bytes/Sektor-Shift (512)
+    boot[0x6D] = 0                                        # Sektoren/Cluster-Shift (1)
+    boot[0x6E] = 1                                        # Anzahl FATs
+    struct.pack_into("<H", boot, bps - 2, 0xAA55)
+    image[0:bps] = boot
+
+    root_off = 8 * bps                                   # Cluster 2
+    data_off = 9 * bps                                   # Cluster 3
+    mtime = 1389322240                                   # 2021-06-15 12:00:00
+
+    file_entry = bytearray(32)
+    file_entry[0] = 0x05                                  # File-Eintrag, geloescht
+    file_entry[1] = 2                                     # zwei Folgeeintraege
+    struct.pack_into("<H", file_entry, 0x04, 0x20)      # Archiv
+    struct.pack_into("<I", file_entry, 0x0C, mtime)     # LastModified
+
+    stream = bytearray(32)
+    stream[0] = 0x40                                     # Stream-Extension, geloescht
+    stream[1] = 0x02                                     # NoFatChain (zusammenhaengend)
+    stream[3] = len(name)                                # Namenslaenge
+    struct.pack_into("<I", stream, 0x14, 3)             # Startcluster
+    struct.pack_into("<Q", stream, 0x18, len(file_data))  # Datenlaenge
+
+    name_entry = bytearray(32)
+    name_entry[0] = 0x41                                 # Namens-Eintrag, geloescht
+    name_utf16 = name.encode("utf-16-le")
+    name_entry[2:2 + len(name_utf16)] = name_utf16
+
+    image[root_off:root_off + 32] = file_entry
+    image[root_off + 32:root_off + 64] = stream
+    image[root_off + 64:root_off + 96] = name_entry
+    image[data_off:data_off + len(file_data)] = file_data
+
+    expected = {"name": name, "data": file_data, "modified": "2021-06-15 12:00:00"}
+    return bytes(image), expected
+
+
 if __name__ == "__main__":
     img, exp = build_carving_image()
     print(f"Carving-Image: {len(img)} Bytes, {len(exp)} Dateien eingebettet")

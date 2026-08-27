@@ -768,6 +768,11 @@ def reconstruct_volumes(source, thorough: bool = True,
             boot = _ntfs_boot(sector)
             if boot:
                 add(_reconstruct_ntfs(source, abs_off, boot))
+        elif sector[3:11] == b"EXFAT   ":
+            bps_shift = sector[0x6C]
+            vol_len = struct.unpack_from("<Q", sector, 0x48)[0]
+            size = (vol_len << bps_shift) if 9 <= bps_shift <= 12 else None
+            add(VolumeInfo(abs_off, size, None, "exfat", "exfat-boot"))
         else:
             size = _fat_size(sector)
             if size is not None:
@@ -790,8 +795,8 @@ def reconstruct_volumes(source, thorough: bool = True,
             progress_cb("Nach Boot-Sektoren suchen",
                         min(1.0, (chunk_off + len(data)) / total), len(vols))
         # Seltene Signaturen gezielt anspringen, statt jeden Sektor zu pruefen.
-        for needle, delta in ((b"NTFS    ", 3), (b"FAT32", 0x52),
-                              (b"FAT16", 0x36), (b"FAT12", 0x36)):
+        for needle, delta in ((b"NTFS    ", 3), (b"EXFAT   ", 3),
+                              (b"FAT32", 0x52), (b"FAT16", 0x36), (b"FAT12", 0x36)):
             start = 0
             while True:
                 idx = data.find(needle, start)

@@ -69,6 +69,7 @@ class Scanner:
         # zusaetzlich ueber eine Boot-Sektor-Suche (rekonstruiert auch verlorene
         # oder beschaedigte Tabellen).
         first_boot = None
+        recon_fat_offsets: set[int] = set()   # rekonstruierte FAT/exFAT-Volumes
         if self.options.use_ntfs:
             # Offset -> vorab rekonstruierter Boot-Sektor (oder None).
             volumes: dict[int, object] = {}
@@ -86,6 +87,8 @@ class Scanner:
                             should_cancel=should_cancel):
                         if vinfo.fs_type == "ntfs":
                             volumes[vinfo.offset] = vinfo.boot
+                        else:
+                            recon_fat_offsets.add(vinfo.offset)
                 except Exception:
                     pass
 
@@ -123,9 +126,12 @@ class Scanner:
                 except Exception:
                     pass
 
-        # Phase 2b: FAT/exFAT-Undelete an allen Partitionsanfaengen.
+        # Phase 2b: FAT/exFAT-Undelete an allen Partitionsanfaengen (und an
+        # rekonstruierten Volumes, falls die Tabelle fehlt).
         if self.options.use_fat and not (should_cancel and should_cancel()):
-            for off in ntfs.partition_offsets(self.source):
+            fat_offsets = list(dict.fromkeys(
+                ntfs.partition_offsets(self.source) + sorted(recon_fat_offsets)))
+            for off in fat_offsets:
                 if should_cancel and should_cancel():
                     break
                 try:

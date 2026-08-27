@@ -29,7 +29,8 @@ from datenrettung.recovery import sources as sources_mod  # noqa: E402
 from datenrettung.recovery.models import Finding  # noqa: E402
 from datenrettung.gui.sorting import order_iids  # noqa: E402
 from datenrettung.tests.make_sample_image import (  # noqa: E402
-    build_carving_image, build_ntfs_image, build_fat_image, make_png,
+    build_carving_image, build_ntfs_image, build_fat_image, build_exfat_image,
+    make_png,
 )
 
 
@@ -346,6 +347,20 @@ class FatTests(unittest.TestCase):
             findings = Scanner(src, ScanOptions(use_ntfs=False, use_carve=False)).scan()
             match = next((f for f in findings if f.kind == "fat"), None)
             self.assertIsNotNone(match, "geloeschte FAT-Datei nicht gefunden")
+            self.assertEqual(match.extra.get("path"), exp["name"])
+            self.assertEqual(match.extra.get("modified"), exp["modified"])
+            self.assertEqual(extract(src, match), exp["data"])
+
+
+class ExfatTests(unittest.TestCase):
+    def test_exfat_undelete_mit_name_zeit_und_inhalt(self):
+        img, exp = build_exfat_image()
+        path = _write_temp(img)
+        self.addCleanup(os.remove, path)
+        with ByteSource(path) as src:
+            findings = Scanner(src, ScanOptions(use_ntfs=False, use_carve=False)).scan()
+            match = next((f for f in findings if f.kind == "exfat"), None)
+            self.assertIsNotNone(match, "geloeschte exFAT-Datei nicht gefunden")
             self.assertEqual(match.extra.get("path"), exp["name"])
             self.assertEqual(match.extra.get("modified"), exp["modified"])
             self.assertEqual(extract(src, match), exp["data"])

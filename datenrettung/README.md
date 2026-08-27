@@ -10,23 +10,31 @@ den untersuchten Datenträger schreibt.
 
 ## Wie es Dateien findet
 
-Es kombiniert zwei Verfahren, weil sie unterschiedliche Stärken haben.
+Es kombiniert mehrere Verfahren, weil sie unterschiedliche Stärken haben.
 
 Der NTFS-Weg liest die Master File Table des Dateisystems. Wird eine Datei
 gelöscht, markiert Windows ihren Eintrag nur als frei; Name, Größe und der
 Verweis auf die Datencluster bleiben zunächst erhalten. Solange der Eintrag
-nicht überschrieben wurde, lässt sich die Datei mit ihrem Originalnamen und der
-richtigen Größe zurückholen.
+nicht überschrieben wurde, lässt sich die Datei mit ihrem Originalnamen zurückholen.
+Dabei werden auch der Ordnerpfad (über die Elternverweise der MFT) und die
+Zeitstempel aus `$STANDARD_INFORMATION` rekonstruiert.
+
+Der FAT/exFAT-Weg macht dasselbe für Wechselmedien wie SD-Karten und USB-Sticks.
+Er liest die Verzeichniseinträge, erkennt gelöschte Einträge (erstes Namensbyte
+`0xE5` bei FAT, gelöschtes InUse-Bit bei exFAT) und rekonstruiert Name, Pfad,
+Größe und Zeit. Der Inhalt wird unter der Annahme zusammenhängender Speicherung
+ab dem Startcluster gelesen.
 
 Das File-Carving braucht kein intaktes Dateisystem. Es durchsucht die Rohdaten
 nach bekannten Signaturen: Ein JPEG beginnt mit `FF D8 FF` und endet mit
 `FF D9`, ein PNG mit `89 50 4E 47`, eine PDF mit `%PDF`. Zwischen Anfang und
-Ende wird der Bereich herausgeschnitten. Das funktioniert auch nach einer
-Formatierung, verliert aber Dateinamen und Ordnerstruktur, und stark
-fragmentierte Dateien können unvollständig sein.
+Ende wird der Bereich herausgeschnitten. Vollständige Treffer werden über ihre
+interne Struktur geprüft (etwa die PNG-CRC oder die ZIP-Kompressionsmethode), um
+Fehltreffer zu verwerfen. Das funktioniert auch nach einer Formatierung, verliert
+aber Dateinamen, und stark fragmentierte Dateien können unvollständig sein.
 
-Im Standard laufen beide Verfahren nacheinander: erst NTFS für die Namen, dann
-Carving für alles, was die MFT nicht mehr hergibt.
+Im Standard laufen die Verfahren nacheinander: erst die Dateisysteme (NTFS,
+FAT/exFAT) für Namen und Pfade, dann Carving für alles Übrige.
 
 ## Voraussetzungen
 
@@ -67,7 +75,8 @@ python main.py scan --source /dev/sdb1 --out ~/gerettet --no-ntfs
 ```
 
 Ohne `--out` wird nur gezählt und aufgelistet, nichts geschrieben. Weitere
-Schalter: `--no-ntfs` und `--no-carve` schalten je ein Verfahren ab, `--all`
+Schalter: `--no-ntfs`, `--no-fat` und `--no-carve` schalten je ein Verfahren ab,
+`--no-validate` schaltet die Struktur-Prüfung der Carving-Treffer aus, `--all`
 listet bei NTFS auch die noch vorhandenen Dateien, `--orphan` sucht den ganzen
 Datenträger nach MFT-Einträgen ab (findet auch nach einer Formatierung, dauert
 aber deutlich länger), `--reconstruct` rekonstruiert eine verlorene
@@ -139,16 +148,21 @@ Das NTFS-Modul liest residente und über Data-Runs verteilte Dateien, verarbeite
 fragmentierte MFT und mehrere Partitionen über MBR und GPT. Mit `--orphan` bzw.
 der entsprechenden Option in der Oberfläche durchsucht es den ganzen Datenträger
 nach MFT-Einträgen und findet gelöschte Dateien so auch nach einer Formatierung
-oder bei beschädigtem Boot-Sektor. `$LogFile`-Journale wertet es nicht aus. FAT
-und exFAT liest der NTFS-Weg nicht; dort bleibt das Carving.
+oder bei beschädigtem Boot-Sektor. `$LogFile`- und `$UsnJrnl`-Journale wertet es
+nicht aus.
+
+FAT12/16/32 und exFAT werden über einen eigenen Undelete-Weg gelesen (Namen,
+Pfade, Zeitstempel). Die Cluster-Kette gelöschter Dateien ist meist freigegeben,
+deshalb wird zusammenhängende Speicherung angenommen; fragmentierte Dateien
+kommen dann unvollständig heraus. Die verkürzten Langnamen (LFN) gelöschter
+FAT-Einträge lassen sich nur näherungsweise rekonstruieren.
 
 Ist die Partitionstabelle verloren oder überschrieben, rekonstruiert `--reconstruct`
 die Volumes über eine Boot-Sektor-Suche (der Ansatz von TestDisk, in Python
-nachgebaut). Das Werkzeug durchsucht den Datenträger nach NTFS-Boot-Sektoren, zieht
-bei Bedarf die Kopie am Volume-Ende heran und errechnet aus dem BPB Anfang und
-Größe der Partition. Die so gefundenen Volumes werden anschließend normal über die
-MFT ausgelesen. FAT-Volumes werden dabei erkannt und gemeldet, mangels FAT-Parser
-aber nicht ausgelesen.
+nachgebaut). Das Werkzeug durchsucht den Datenträger nach NTFS-, FAT- und
+exFAT-Boot-Sektoren, zieht bei NTFS bei Bedarf die Kopie am Volume-Ende heran und
+errechnet aus dem BPB Anfang und Größe der Partition. Die so gefundenen Volumes
+werden anschließend über ihr Dateisystem ausgelesen.
 
 Standardmäßig wird von 512-Byte-Sektoren ausgegangen. Datenträger mit reinen
 4K-Sektoren (4Kn) lassen sich über `--sector 4096` beziehungsweise die Option
@@ -165,13 +179,16 @@ datenrettung/
   recovery/
     sources.py            lesender Byte-Zugriff auf Image oder Gerät
     drives.py             Laufwerke auflisten (Windows/Linux/macOS)
-    signatures.py         Datei-Signaturen fürs Carving
+    signatures.py         Datei-Signaturen und Struktur-Validatoren fürs Carving
     carver.py             Carving-Engine
-    ntfs.py               NTFS-/MFT-Parser
+    ntfs.py               NTFS-/MFT-Parser und Partitionsrekonstruktion
+    fat.py                FAT12/16/32-Undelete
+    exfat.py              exFAT-Undelete
     scanner.py            Orchestrierung und Wiederherstellung
     models.py             gemeinsamer Fund-Typ
   gui/
     app.py                tkinter-Oberfläche
+    sorting.py            Sortier-Logik der Trefferliste (tkinter-frei, testbar)
   tests/
     make_sample_image.py  baut synthetische Test-Images
     test_engine.py        Tests für Carving und NTFS
