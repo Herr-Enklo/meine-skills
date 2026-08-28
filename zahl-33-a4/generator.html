@@ -1,0 +1,482 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>zahl-33</title>
+<style>
+  @page { size: A4 portrait; margin: 0; }
+  html,body{margin:0;padding:0;background:#fff}
+  canvas,img{display:block;aspect-ratio:2480/3508}
+  @media screen{ canvas,img{width:100vw;height:auto} }
+  @media print{ canvas,img{width:210mm;height:297mm} }
+</style>
+<canvas id="c" width="2480" height="3508"></canvas>
+<script>
+'use strict';
+const W=2480, H=3508;
+const cv=document.getElementById('c');
+const ctx=cv.getContext('2d');
+
+const params=new URLSearchParams(location.search);
+if(params.get('raw')){ // 1:1 pixel mode for screenshots
+  const st=document.createElement('style');
+  st.textContent='@media screen{canvas,img{width:2480px;height:3508px}}';
+  document.head.appendChild(st);
+}
+
+/* ---------- seeded rng ---------- */
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const SEED=parseInt(params.get('seed')||'3307');
+let R=mulberry32(SEED);
+const rand=(a,b)=>a+(b-a)*R();
+const rint=(a,b)=>Math.floor(rand(a,b+1));
+const D2R=Math.PI/180;
+
+function hsl(h,s,l,a=1){return `hsla(${h},${s}%,${l}%,${a})`}
+
+/* ---------- background ---------- */
+function background(){
+  let g=ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,'#f4f1e8');
+  g.addColorStop(0.5,'#efece1');
+  g.addColorStop(1,'#e6e3d3');
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+
+  g=ctx.createRadialGradient(W*0.22,H*0.10,0, W*0.22,H*0.10,H*1.05);
+  g.addColorStop(0,'rgba(255,255,252,0.55)');
+  g.addColorStop(0.5,'rgba(255,255,250,0.10)');
+  g.addColorStop(1,'rgba(190,186,160,0.18)');
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+
+  ctx.save();
+  ctx.filter='blur(90px)';
+  for(let i=0;i<12;i++){
+    const x=rand(-100,W+100), y=rand(-100,H+100);
+    const r=rand(150,420);
+    const h=rand(70,150), s=rand(10,24), l=rand(60,80);
+    ctx.fillStyle=hsl(h,s,l,rand(0.05,0.10));
+    ctx.beginPath(); ctx.arc(x,y,r,0,7); ctx.fill();
+  }
+  ctx.filter='blur(120px)';
+  ctx.fillStyle='rgba(96,110,88,0.10)';
+  ctx.beginPath(); ctx.ellipse(W*0.05,H*0.02,420,260,0.4,0,7); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(W*0.97,H*0.03,380,240,-0.4,0,7); ctx.fill();
+  ctx.fillStyle='rgba(120,105,80,0.08)';
+  ctx.beginPath(); ctx.ellipse(W*0.5,H*1.02,900,300,0,0,7); ctx.fill();
+  ctx.restore();
+
+  g=ctx.createRadialGradient(W/2,H/2,H*0.25, W/2,H/2,H*0.78);
+  g.addColorStop(0,'rgba(0,0,0,0)');
+  g.addColorStop(1,'rgba(70,68,50,0.10)');
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+}
+
+/* ---------- leaf colors ---------- */
+function leafTone(kind){
+  if(kind===2) return {h:rand(78,95), s:rand(26,34), l:rand(60,69)};
+  if(kind===1) return {h:rand(158,172), s:rand(8,13), l:rand(58,66)};
+  if(kind===3) return {h:rand(126,148), s:rand(12,18), l:rand(44,52)};
+  return {h:rand(118,150), s:rand(8,16), l:rand(54,70)};
+}
+function pickKind(s){
+  if(s<0.14) return 2;
+  const r=R();
+  if(r<0.10) return 1;
+  if(r<0.26) return 3;
+  return 0;
+}
+
+/* ---------- one leaf ---------- */
+function leaf(x,y,r,rot,tone,opts={}){
+  const shadow = opts.shadow!==false;
+  ctx.save();
+  ctx.translate(x,y); ctx.rotate(rot);
+  ctx.transform(1, rand(-0.07,0.07), rand(-0.07,0.07), 1, 0, 0); // slight organic skew
+
+  const squish=rand(0.76,1.0);
+  const wob=[rand(0.90,1.10),rand(0.90,1.10),rand(0.90,1.10),rand(0.90,1.10)];
+  const p=new Path2D();
+  const k=0.5523;
+  const rx=r, ry=r*squish;
+  p.moveTo(rx*wob[0],0);
+  p.bezierCurveTo(rx*wob[0], ry*k, rx*k, ry*wob[1], 0, ry*wob[1]);
+  p.bezierCurveTo(-rx*k, ry*wob[1], -rx*wob[2], ry*k, -rx*wob[2], 0);
+  p.bezierCurveTo(-rx*wob[2], -ry*k, -rx*k, -ry*wob[3], 0, -ry*wob[3]);
+  p.bezierCurveTo(rx*k, -ry*wob[3], rx*wob[0], -ry*k, rx*wob[0], 0);
+  p.closePath();
+
+  const {h,s,l}=tone;
+  const base=hsl(h,s,l);
+  if(shadow){
+    // pass 1: soft ambient shadow
+    ctx.shadowColor='rgba(56,62,48,'+(opts.shadowAlpha??0.34)+')';
+    ctx.shadowBlur=r*0.36+18;
+    ctx.shadowOffsetX=r*0.12+8;
+    ctx.shadowOffsetY=r*0.20+13;
+    ctx.fillStyle=base; ctx.fill(p);
+    // pass 2: tight contact shadow
+    ctx.shadowColor='rgba(50,56,42,0.20)';
+    ctx.shadowBlur=8;
+    ctx.shadowOffsetX=3;
+    ctx.shadowOffsetY=6;
+  }
+  ctx.fillStyle=base;
+  ctx.fill(p);
+  ctx.shadowColor='transparent';
+
+  ctx.clip(p);
+  // flat matte surface: soft directional light, only a hint of centre bloom
+  let g=ctx.createRadialGradient(-r*0.15,-r*0.22,r*0.1, 0,0,r*1.3);
+  g.addColorStop(0,hsl(h,Math.max(5,s-5),Math.min(92,l+7),0.5));
+  g.addColorStop(0.6,hsl(h,s,l,0));
+  ctx.fillStyle=g; ctx.fillRect(-r*1.2,-r*1.2,r*2.4,r*2.4);
+  g=ctx.createLinearGradient(-r*0.9,-r*0.9,r*0.9,r*0.9);
+  g.addColorStop(0,'rgba(255,255,250,0.20)');
+  g.addColorStop(0.45,'rgba(255,255,250,0)');
+  g.addColorStop(0.75,hsl(h,s+4,Math.max(18,l-14),0.10));
+  g.addColorStop(1,hsl(h,s+6,Math.max(16,l-26),0.22));
+  ctx.fillStyle=g; ctx.fillRect(-r*1.2,-r*1.2,r*2.4,r*2.4);
+  g=ctx.createRadialGradient(rand(-0.3,0.3)*r,rand(-0.35,0.15)*r,0, 0,0,r);
+  g.addColorStop(0,'rgba(240,246,238,'+rand(0.08,0.16)+')');
+  g.addColorStop(1,'rgba(240,246,238,0)');
+  ctx.fillStyle=g; ctx.fillRect(-r*1.2,-r*1.2,r*2.4,r*2.4);
+
+  // uneven powdery patches
+  for(let i=0,n=rint(2,4);i<n;i++){
+    const px=rand(-0.55,0.55)*r, py=rand(-0.55,0.55)*r, pr=rand(0.3,0.65)*r;
+    g=ctx.createRadialGradient(px,py,0,px,py,pr);
+    if(R()<0.5){
+      g.addColorStop(0,hsl(h,s+5,Math.max(18,l-14),rand(0.05,0.10)));
+    }else{
+      g.addColorStop(0,'rgba(245,248,240,'+rand(0.05,0.09)+')');
+    }
+    g.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=g; ctx.fillRect(-r*1.2,-r*1.2,r*2.4,r*2.4);
+  }
+
+  // veins: midrib from the attachment plus arching side veins, fading outward
+  const darkVeins = R()<0.6;
+  const veinCol = a2 => darkVeins ? hsl(h,s+8,Math.max(16,l-20),a2) : hsl(h,Math.max(4,s-4),Math.min(94,l+12),a2);
+  ctx.lineCap='round';
+  ctx.strokeStyle=veinCol(0.20);
+  ctx.lineWidth=Math.max(1.0,r*0.018);
+  ctx.beginPath();
+  ctx.moveTo(-r*0.88,rand(-0.04,0.04)*r);
+  ctx.quadraticCurveTo(rand(-0.2,0.1)*r,rand(-0.08,0.08)*r, r*0.7,rand(-0.1,0.1)*r);
+  ctx.stroke();
+  const origX=-r*rand(0.55,0.7);
+  const nv=rint(4,6);
+  for(let i=0;i<nv;i++){
+    const sgn=i%2?1:-1;
+    const fx=rand(0.15,0.85);
+    const endX=origX + (r*0.85-origX)*fx + rand(-0.1,0.1)*r;
+    const endY=sgn*ry*rand(0.45,0.8)*(0.35+0.65*fx);
+    const c1x=origX*0.4+endX*0.6, c1y=endY*rand(0.25,0.45);
+    // inner (clearer) half
+    ctx.strokeStyle=veinCol(rand(0.10,0.16));
+    ctx.lineWidth=Math.max(0.8,r*0.012);
+    ctx.beginPath();
+    ctx.moveTo(origX+rand(-0.05,0.05)*r, rand(-0.04,0.04)*r);
+    ctx.quadraticCurveTo(c1x,c1y,(origX+endX)/2+r*0.06, endY*0.55);
+    ctx.stroke();
+    // outer (fading) half
+    ctx.strokeStyle=veinCol(rand(0.04,0.08));
+    ctx.beginPath();
+    ctx.moveTo((origX+endX)/2+r*0.06, endY*0.55);
+    ctx.quadraticCurveTo(endX*0.9, endY*0.85, endX, endY);
+    ctx.stroke();
+  }
+
+  // matte micro-stipple
+  for(let i=0,n=Math.round(r*1.2);i<n;i++){
+    const a=rand(0,6.28), rr=Math.sqrt(R())*r*0.94;
+    ctx.fillStyle=R()<0.5?'rgba(250,252,246,0.045)':hsl(h,s+6,l-16,0.04);
+    ctx.beginPath(); ctx.arc(Math.cos(a)*rr,Math.sin(a)*rr*squish,rand(0.7,2.2),0,7); ctx.fill();
+  }
+
+  // thin pale margin just inside the darker rim, following the silhouette
+  ctx.strokeStyle='rgba(228,226,182,0.30)';
+  ctx.lineWidth=Math.max(2.2,r*0.06);
+  ctx.stroke(p);
+  ctx.strokeStyle=hsl(h,s+10,Math.max(14,l-30),0.42);
+  ctx.lineWidth=Math.max(1.4,r*0.026);
+  ctx.stroke(p);
+  ctx.strokeStyle='rgba(255,255,250,0.30)';
+  ctx.lineWidth=Math.max(1,r*0.02);
+  ctx.save();
+  ctx.beginPath();
+  ctx.ellipse(0,0,rx*0.96,ry*0.96, 0, 195*D2R, 300*D2R);
+  ctx.stroke();
+  ctx.restore();
+
+  if(opts.notch!==false && R()<0.7){
+    g=ctx.createRadialGradient(-r*0.95,0,0,-r*0.95,0,r*0.35);
+    g.addColorStop(0,'rgba(226,228,205,0.5)');
+    g.addColorStop(1,'rgba(226,228,205,0)');
+    ctx.fillStyle=g; ctx.fillRect(-r*1.2,-r*0.6,r*0.9,r*1.2);
+  }
+  ctx.restore();
+}
+
+/* ---------- bud pair ---------- */
+function budTip(x,y,rot,size){
+  ctx.save(); ctx.translate(x,y); ctx.rotate(rot);
+  ctx.shadowColor='rgba(56,62,48,0.30)'; ctx.shadowBlur=10; ctx.shadowOffsetX=5; ctx.shadowOffsetY=8;
+  for(const sgn of [1,-1]){
+    ctx.save(); ctx.rotate(sgn*rand(20,34)*D2R);
+    const t=leafTone(2);
+    const g=ctx.createLinearGradient(0,0,size,0);
+    g.addColorStop(0,hsl(t.h,t.s,t.l+6));
+    g.addColorStop(1,hsl(t.h,t.s+6,t.l-8));
+    ctx.fillStyle=g;
+    ctx.beginPath();
+    ctx.ellipse(size*0.55,0,size*0.62,size*0.34,0,0,7);
+    ctx.fill();
+    ctx.restore();
+  }
+  ctx.restore();
+}
+
+/* ---------- stems ---------- */
+function stem(pts,w0,w1){
+  for(const pass of [0,1]){
+    for(let i=1;i<pts.length;i++){
+      const t=i/(pts.length-1);
+      const w=(w0+(w1-w0)*t)*(pass?0.6:1);
+      ctx.strokeStyle=pass? 'rgba(208,208,180,0.95)':'rgba(122,126,98,0.6)';
+      ctx.lineCap='round'; ctx.lineWidth=w;
+      ctx.beginPath();
+      ctx.moveTo(pts[i-1].x,pts[i-1].y);
+      ctx.lineTo(pts[i].x,pts[i].y);
+      ctx.stroke();
+    }
+  }
+}
+
+/* ---------- arc helpers ---------- */
+function arcPts(cx,cy,rx,ry,a0,a1,n){
+  const pts=[];
+  for(let i=0;i<=n;i++){
+    const a=(a0+(a1-a0)*i/n)*D2R;
+    pts.push({
+      x:cx+rx*Math.cos(a),
+      y:cy+ry*Math.sin(a),
+      t:Math.atan2(ry*Math.cos(a), -rx*Math.sin(a))
+    });
+  }
+  return pts;
+}
+function resample(pts){
+  let L=0; const cum=[0];
+  for(let i=1;i<pts.length;i++){
+    L+=Math.hypot(pts[i].x-pts[i-1].x, pts[i].y-pts[i-1].y);
+    cum.push(L);
+  }
+  return {pts,cum,L};
+}
+function at(rs,d){
+  const {pts,cum,L}=rs;
+  const dd=Math.max(0,Math.min(L,d));
+  let i=1; while(i<cum.length && cum[i]<dd) i++;
+  const f=(dd-cum[i-1])/((cum[i]-cum[i-1])||1);
+  const a=pts[i-1], b=pts[Math.min(i,pts.length-1)];
+  return {x:a.x+(b.x-a.x)*f, y:a.y+(b.y-a.y)*f, t:a.t+(b.t-a.t)*f};
+}
+
+function sizeProfile(s){
+  const a=0.52, m=1.0, b=0.72;
+  if(s<0.5){ const u=s/0.5; return a+(m-a)*Math.sin(u*Math.PI/2)**1.1 }
+  const u=(s-0.5)/0.5; return m+(b-m)*(1-Math.cos(u*Math.PI))/2;
+}
+
+function garland(rs,rMid,tipFirst){
+  const items=[];
+  let d=0;
+  while(d<rs.L){
+    const s=tipFirst? d/rs.L : 1-d/rs.L;
+    const f=sizeProfile(s);
+    const r=rMid*f*rand(0.85,1.12)*(R()<0.07?1.2:1);
+    const p=at(rs,d);
+    const perp=p.t+Math.PI/2;
+    const off=rand(-0.12,0.12)*r;
+    items.push({
+      x:p.x+Math.cos(perp)*off,
+      y:p.y+Math.sin(perp)*off,
+      r, rot:p.t+rand(-0.5,0.5), s,
+      kind: pickKind(s)
+    });
+    if(R()<0.35 && s>0.2 && s<0.85){
+      items.push({
+        x:p.x+Math.cos(perp)*rand(0.5,0.8)*r*(R()<0.5?1:-1),
+        y:p.y+Math.sin(perp)*rand(0.5,0.8)*r,
+        r:r*rand(0.6,0.76), rot:p.t+rand(-0.9,0.9), s,
+        kind:R()<0.25?3:0, under:true
+      });
+    }
+    d+=Math.max(26, r*rand(0.58,0.7));
+  }
+  return items;
+}
+
+/* young leaves + bud just beyond the open ends */
+function tipExtension(cx,cy,rx,ry,aEdge,dir){
+  const stemPts=arcPts(cx,cy,rx,ry,aEdge,aEdge+dir*12,8);
+  stem(stemPts,6,3);
+  const steps=[5,10], sizes=[46,34];
+  for(let i=0;i<2;i++){
+    const a=(aEdge+dir*steps[i])*D2R;
+    const x=cx+rx*Math.cos(a), y=cy+ry*Math.sin(a);
+    const t=Math.atan2(ry*Math.cos(a), -rx*Math.sin(a));
+    leaf(x,y,sizes[i]*rand(0.9,1.1), t+rand(-0.4,0.4), leafTone(2), {shadowAlpha:0.3});
+  }
+  const a=(aEdge+dir*11)*D2R;
+  const x=cx+rx*Math.cos(a), y=cy+ry*Math.sin(a);
+  const t=Math.atan2(ry*Math.cos(a), -rx*Math.sin(a));
+  budTip(x,y, dir>0? t : t+Math.PI, 28);
+}
+
+function drawDigit3(cx,cy,ry,rx){
+  // smaller top bowl, larger bottom bowl, like a typographic 3
+  const ryT=ry*0.93, ryB=ry*1.04;
+  const rxT=rx, rxB=rx*1.06;
+  const cyT=cy-ryT*0.945, cyB=cy+ryB*0.945;
+  const topPts=arcPts(cx,cyT,rxT,ryT,205,448,90);
+  const botPts=arcPts(cx,cyB,rxB,ryB,263,515,90);
+  const topRS=resample(topPts), botRS=resample(botPts);
+  const rMid=118;
+
+  // grounding shadow
+  ctx.save();
+  ctx.filter='blur(46px)';
+  ctx.strokeStyle='rgba(70,76,56,0.26)';
+  ctx.lineWidth=rMid*2.0; ctx.lineCap='round'; ctx.lineJoin='round';
+  ctx.beginPath();
+  for(let i=0;i<topPts.length;i++){const p=topPts[i]; i?ctx.lineTo(p.x+30,p.y+50):ctx.moveTo(p.x+30,p.y+50)}
+  ctx.stroke();
+  ctx.beginPath();
+  for(let i=0;i<botPts.length;i++){const p=botPts[i]; i?ctx.lineTo(p.x+30,p.y+50):ctx.moveTo(p.x+30,p.y+50)}
+  ctx.stroke();
+  ctx.restore();
+
+  stem(topPts, 8, 14);
+  stem(botPts, 14, 8);
+
+  // bridge leaves closing the waist between the two bowls
+  {
+    const pe=topPts[topPts.length-1], ps=botPts[0];
+    const mx=(pe.x+ps.x)/2, my=(pe.y+ps.y)/2;
+    for(let i=0;i<3;i++){
+      leaf(mx+rand(-0.5,0.5)*rMid, my+rand(-0.45,0.45)*rMid, rMid*rand(0.55,0.75),
+           rand(0,6.28), leafTone(R()<0.3?3:0), {shadowAlpha:0.26});
+    }
+  }
+
+  const gTop=garland(topRS,rMid,true);
+  const gBot=garland(botRS,rMid,false);
+  gTop.sort((a,b)=> b.s-a.s || (a.under?-1:1));
+  gBot.sort((a,b)=> b.s-a.s || (a.under?-1:1));
+  for(const g of [gTop,gBot]){
+    for(const it of g){
+      leaf(it.x,it.y,it.r,it.rot,leafTone(it.kind),{shadowAlpha: it.under?0.26:0.34});
+    }
+  }
+  tipExtension(cx,cyT,rxT,ryT,205,-1);
+  tipExtension(cx,cyB,rxB,ryB,515,+1);
+}
+
+/* ---------- hanging sprig ---------- */
+function hangSprig(x,yStart,len,r0,drift){
+  const n=Math.max(7,Math.round(len/52)), pts=[];
+  for(let i=0;i<=n;i++){
+    const t=i/n;
+    const a=Math.PI/2 + drift*(t-0.2);
+    pts.push({x:x+drift*len*0.4*t*t + Math.sin(t*5+x)*12, y:yStart+len*t, t:a});
+  }
+  stem(pts.slice(0,n),8,4);
+  for(let i=0;i<=n;i++){
+    const t=i/n;
+    const r=r0*(1-0.2*t)*rand(0.84,1.16);
+    if(r<12) continue;
+    leaf(pts[i].x,pts[i].y,r,pts[i].t+rand(-0.5,0.5),leafTone(t>0.82?2:(R()<0.18?3:0)),{shadowAlpha:0.3});
+    if(R()<0.25){
+      leaf(pts[i].x+rand(-0.7,0.7)*r, pts[i].y+rand(-0.3,0.5)*r, r*rand(0.55,0.72),
+           pts[i].t+rand(-0.9,0.9), leafTone(R()<0.25?3:0), {shadowAlpha:0.24});
+    }
+  }
+  const last=pts[n];
+  budTip(last.x,last.y,last.t,r0*0.3);
+}
+
+/* ---------- corner sprig ---------- */
+function sprig(x,y,ang,len,r0){
+  const n=8, pts=[];
+  const bend=rand(-0.3,0.3);
+  for(let i=0;i<=n;i++){
+    const t=i/n;
+    const a=ang+bend*t;
+    pts.push({x:x+Math.cos(a)*len*t, y:y+Math.sin(a)*len*t, t:a});
+  }
+  stem(pts.slice(0,n),6,3);
+  for(let i=0;i<=n;i++){
+    const t=i/n;
+    const r=r0*(1-0.35*t)*rand(0.9,1.1);
+    if(r<10) continue;
+    leaf(pts[i].x,pts[i].y,r,pts[i].t+rand(-0.4,0.4),leafTone(t>0.72?2:(R()<0.2?3:0)),{shadowAlpha:0.28});
+  }
+  const last=pts[n];
+  budTip(last.x,last.y,last.t,r0*0.28);
+}
+
+/* ---------- film grain + gentle contrast ---------- */
+function finish(){
+  const m=document.createElement('canvas'); m.width=124; m.height=175;
+  const mc=m.getContext('2d');
+  const mid=mc.createImageData(124,175);
+  for(let i=0;i<mid.data.length;i+=4){
+    const v=120+Math.floor(Math.random()*60);
+    mid.data[i]=v; mid.data[i+1]=v; mid.data[i+2]=v; mid.data[i+3]=255;
+  }
+  mc.putImageData(mid,0,0);
+  ctx.save();
+  ctx.globalAlpha=0.06; ctx.globalCompositeOperation='overlay';
+  ctx.drawImage(m,0,0,W,H);
+  ctx.restore();
+
+  const id=ctx.getImageData(0,0,W,H); const d=id.data;
+  for(let i=0;i<d.length;i+=4){
+    const n=(Math.random()-0.5)*9;
+    d[i]  =d[i]  +n+(d[i]  -128)*0.05;
+    d[i+1]=d[i+1]+n+(d[i+1]-128)*0.05;
+    d[i+2]=d[i+2]+n+(d[i+2]-128)*0.05;
+  }
+  ctx.putImageData(id,0,0);
+}
+
+/* ---------- compose ---------- */
+background();
+
+// hanging sprigs from the top edge, echoing the reference photo (slightly out of focus)
+ctx.save(); ctx.filter='blur(2.5px)';
+hangSprig(285,-70,330,84, rand(-0.3,0.3));
+hangSprig(1235,-80,400,86, rand(-0.25,0.25));
+hangSprig(2200,-70,350,84, rand(-0.3,0.3));
+ctx.restore();
+
+const cy=1685, ry=612, rx=460, c2c=1180;
+for(const [dx,ang] of [[-c2c/2,-1.0],[c2c/2,0.8]]){
+  ctx.save();
+  ctx.translate(W/2+dx,cy); ctx.rotate(ang*D2R); ctx.translate(-(W/2+dx),-cy);
+  drawDigit3(W/2+dx, cy, ry, rx);
+  ctx.restore();
+}
+
+// bottom corner sprigs, slightly soft
+ctx.save(); ctx.filter='blur(1.8px)';
+sprig(330,3270, rand(-0.2,0.15), 240, 58);
+sprig(2150,3300, rand(3.05,3.35), 240, 58);
+ctx.restore();
+
+finish();
+
+const img=new Image();
+img.onload=()=>{ cv.remove(); document.body.appendChild(img); document.title='RENDER_DONE'; };
+img.src=cv.toDataURL('image/jpeg',0.93);
+</script>
