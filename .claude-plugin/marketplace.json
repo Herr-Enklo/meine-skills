@@ -10,6 +10,11 @@
       "description": "Skills für das Paketierungsprojekt"
     },
     {
+      "name": "grill-me",
+      "source": "./plugins/grill-me",
+      "description": "Kritisches Nachfragen zu Plänen, Entscheidungen und Ideen"
+    },
+    {
       "name": "agency-dev",
       "source": "./plugins/agency-dev",
       "description": "Entwicklung und Architektur: Architekten, Code-Review, Frontend, Backend, Git, Doku"
