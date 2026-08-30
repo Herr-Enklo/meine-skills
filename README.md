@@ -8,6 +8,7 @@ Auswahl an Agents, versioniert und auf jedem Rechner installierbar.
 ```
 /plugin marketplace add Herr-Enklo/meine-skills
 /plugin install paketierung@meine-skills
+/plugin install grill-me@meine-skills
 ```
 
 Danach `/reload-plugins`, falls die Installation das meldet.
@@ -33,6 +34,7 @@ Beschreibung Platz im Systemprompt jeder Session.
 | Plugin | Inhalt | Umfang |
 |---|---|---|
 | `paketierung` | Skills für das Paketierungsprojekt | 1 Skill |
+| `grill-me` | Kritisches Nachfragen zu Plänen, Entscheidungen und Ideen | 1 Skill |
 | `agency-dev` | Entwicklung und Architektur | 12 Agents |
 | `agency-ops` | Betrieb und Infrastruktur | 9 Agents |
 | `agency-security` | Sicherheit | 10 Agents |
@@ -48,6 +50,7 @@ Skills rufst du als Slash-Befehl auf:
 
 ```
 /paketierung:code-review <PR-URL oder Dateipfad>
+/grill-me:grill-me <Plan oder Idee>
 ```
 
 Agents sprichst du im Gespräch an oder lässt Claude sie selbst auswählen:
