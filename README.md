@@ -33,7 +33,7 @@ Beschreibung Platz im Systemprompt jeder Session.
 
 | Plugin | Inhalt | Umfang |
 |---|---|---|
-| `paketierung` | Skills für das Paketierungsprojekt | 1 Skill |
+| `paketierung` | Skills für das Paketierungsprojekt | 2 Skills |
 | `grill-me` | Kritisches Nachfragen zu Plänen, Entscheidungen und Ideen | 1 Skill |
 | `agency-dev` | Entwicklung und Architektur | 12 Agents |
 | `agency-ops` | Betrieb und Infrastruktur | 9 Agents |
@@ -50,6 +50,7 @@ Skills rufst du als Slash-Befehl auf:
 
 ```
 /paketierung:code-review <PR-URL oder Dateipfad>
+/paketierung:empirum-msi-deinstallation
 /grill-me:grill-me <Plan oder Idee>
 ```
 
@@ -187,7 +188,7 @@ Ordner nicht.
 
 ### Was in diesem Repo eingestellt ist
 
-`.claude/agents/` enthält die 62 Agents und `.claude/skills/` den Paketierungs-Skill,
+`.claude/agents/` enthält die 62 Agents und `.claude/skills/` die Paketierungs-Skills,
 damit Web-Sessions beides haben. Damit lokale Sessions sie nicht zusätzlich über die
 global installierten Plugins bekommen und dadurch doppelt führen, stehen alle neun
 Plugins in `.claude/settings.json` auf `false`. Das Projekt-Setting sticht die
@@ -213,9 +214,11 @@ rm -rf .claude/agents && mkdir -p .claude/agents && cp plugins/agency-*/agents/*
 cp plugins/agency-dev/NOTICE.md .claude/agents/NOTICE.md
 ```
 
-Der Skill wird von Hand nachgezogen: `plugins/paketierung/skills/code-review/SKILL.md`
+Die Skills werden von Hand nachgezogen: `plugins/paketierung/skills/code-review/SKILL.md`
 nach `.claude/skills/paketierung-code-review/SKILL.md` kopieren und die Zeile
-`name: paketierung-code-review` im Frontmatter wieder ergänzen.
+`name: paketierung-code-review` im Frontmatter wieder ergänzen,
+`plugins/paketierung/skills/empirum-msi-deinstallation/SKILL.md` unverändert nach
+`.claude/skills/empirum-msi-deinstallation/SKILL.md`.
 
 ## Sicherheit
 
