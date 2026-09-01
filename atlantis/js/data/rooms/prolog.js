@@ -402,6 +402,7 @@
       { id: 'tor', name: 'Tor zur Straße', rect: [896, 296, 64, 200], at: [880, 500, 'r'], look: (g) => g.flag('kessler_geflohen') ? 'Das Tor zur Straße. Von hier fährt der Bus nach Boston, von Boston der Zug nach New York.' : 'Das Tor zur Straße.',
         before: async (g) => {
           if (!g.flag('kessler_geflohen')) { await g.say('falk', 'Ich habe hier noch zu tun.'); return false; }
+          if (g.has('schluessel')) { g.drop('schluessel'); await g.say('falk', 'Hanks Schlüssel lege ich beim Pförtner ab. Sonst gibt es Ärger, hat er gesagt.'); }
           g.set('prolog_fertig');
           g.objective('Nach New York fahren und Livia Marsh finden.', { silent: true });
           await ATL.story.openMap(g, 'whitmore');

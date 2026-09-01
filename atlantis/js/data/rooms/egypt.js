@@ -795,7 +795,7 @@
         before: async (g) => { await sailBack(g); return false; } },
       { id: 'tempel', name: 'Treppe in den Tempel', rect: [586, 322, 116, 130], at: [644, 512, 'u'], z: 2, cond: (g) => g.flag('tuer_offen') && !g.flag('sand_faelle'), to: 'eg_temple', pos: [90, 500], dir: 'r',
         look: 'Stufen, die in den Sand hinabführen. Unten ist es dunkel.',
-        before: async (g) => { if (!g.has('oellampe') && !g.flag('lampe_brennt') && !g.flag('tempel_besucht')) { await g.say('falk', 'Da unten ist es stockdunkel. Ich sollte Hassans Lampe dabeihaben, bevor ich hinuntergehe.'); await g.say('falk', 'Andererseits: Man sieht auch im Dunkeln, wie dunkel es ist.'); } return true; } },
+        before: async (g) => { if (!g.has('oellampe') && !g.flag('lampe_brennt') && !g.flag('eg_tempel_besucht')) { await g.say('falk', 'Da unten ist es stockdunkel. Ich sollte Hassans Lampe dabeihaben, bevor ich hinuntergehe.'); await g.say('falk', 'Andererseits: Man sieht auch im Dunkeln, wie dunkel es ist.'); } return true; } },
     ],
     actors: [
       { id: 'livia', x: 400, y: 505, dir: 'r', at: [460, 520, 'l'], cond: (g) => g.flag('livia_in_sais'), look: (g) => g.flag('eg_nacht') ? 'Livia. Sie hat im Sand gesessen und gewartet, und sie sieht aus, als hätte sie nicht damit gerechnet, dass es länger dauert.' : 'Livia. Sie zeichnet die Mauerreste in ein Notizbuch, als könnten sie weglaufen.',
@@ -989,8 +989,8 @@
     ],
     async enter(g) {
       g.dark = g.flag('lampe_brennt') ? 0.22 : 0.85;
-      if (g.flag('tempel_besucht')) return;
-      g.set('tempel_besucht');
+      if (g.flag('eg_tempel_besucht')) return;
+      g.set('eg_tempel_besucht');
       await g.say('falk', 'Stufen, dann ebener Boden. Und Dunkelheit, die man anfassen kann.');
       if (g.has('oellampe')) await g.say('falk', 'Hassans Lampe. Jetzt wäre der Moment.');
       else await g.say('falk', 'Ohne Licht komme ich hier keinen Schritt weiter. Hassan hatte eine Lampe im Boot.');
@@ -1039,7 +1039,7 @@
       // Altar mit Siegel
       A.rect(ctx, 640, 360, 140, 80, '#6a5a48'); A.rect(ctx, 634, 354, 152, 10, '#7a6a58'); A.rect(ctx, 634, 432, 152, 10, '#5a4a38');
       A.hieroglyphs(ctx, 650, 372, 120, 48, 'rgba(40,30,20,0.4)', 81);
-      if (!g.flag('siegel_genommen')) { A.glow(ctx, 710, 344, 90, 'rgba(255,210,100,0.8)', 0.45); A.ell(ctx, 710, 350, 26, 9, '#3a2c1e'); A.seal(ctx, 710, 342, 22, 'sun', '#e0b84a'); }
+      if (!g.flag('sonnensiegel_genommen')) { A.glow(ctx, 710, 344, 90, 'rgba(255,210,100,0.8)', 0.45); A.ell(ctx, 710, 350, 26, 9, '#3a2c1e'); A.seal(ctx, 710, 342, 22, 'sun', '#e0b84a'); }
       else A.ell(ctx, 710, 350, 26, 9, '#3a2c1e');
       // Sand nach dem Fall
       if (shut) { A.dune(ctx, 300, 500, '#c8a868', 9, 30); A.poly(ctx, [700, 470, 960, 470, 960, 600, 660, 600], '#c8a868'); A.dune(ctx, 960, 560, 'rgba(200,168,104,0.6)', 12, 20); }
@@ -1063,14 +1063,14 @@
         take: 'Sie zerfallen, wenn ich sie anfasse. Das ist Arbeit für zehn Jahre und ein Institut, nicht für einen Mann mit einer Öllampe.', use: 'Ich rühre sie nicht an. Ich bin Archäologe, kein Plünderer. Meistens.', open: 'Eine Rolle zerbröselt zwischen zwei Fingern. Ich lasse den Rest.',
         useWith: { oellampe: 'Eine Lampe an zweitausend Jahre altem Papyrus. Nein.', default: 'Die Rollen bleiben, wo sie sind.' } },
       { id: 'altar', name: 'Altar', rect: [634, 354, 152, 90], at: [710, 490, 'u'],
-        look: (g) => g.flag('siegel_genommen') ? 'Der Altar. Die Vertiefung, in der das Siegel lag, ist leer. Der Sand hat aufgehört zu rieseln, größtenteils.' : 'Ein Altar aus Stein, mit Hieroglyphen an der Vorderseite. Darauf, in einer Vertiefung, eine goldene Scheibe. Sie glänzt, als wäre gestern jemand hier gewesen.',
+        look: (g) => g.flag('sonnensiegel_genommen') ? 'Der Altar. Die Vertiefung, in der das Siegel lag, ist leer. Der Sand hat aufgehört zu rieseln, größtenteils.' : 'Ein Altar aus Stein, mit Hieroglyphen an der Vorderseite. Darauf, in einer Vertiefung, eine goldene Scheibe. Sie glänzt, als wäre gestern jemand hier gewesen.',
         push: 'Er ist aus dem Fels gehauen.', use: 'Ich opfere nichts.', useWith: { default: 'Das lege ich nicht auf einen Altar.' } },
-      { id: 'siegel', name: 'Siegel der Sonne', rect: [682, 316, 56, 40], at: [710, 490, 'u'], cond: (g) => !g.flag('siegel_genommen'),
+      { id: 'siegel', name: 'Siegel der Sonne', rect: [682, 316, 56, 40], at: [710, 490, 'u'], cond: (g) => !g.flag('sonnensiegel_genommen'),
         look: 'Eine goldene Scheibe mit einer Sonne, acht Strahlen. Sie liegt in einer Vertiefung, die genau für sie gemacht ist. Das ist selten ein gutes Zeichen.',
         take: async (g) => {
           await g.scene(async () => {
             g.hero.anim = 'reach'; await g.wait(500);
-            g.take('sonnensiegel'); g.set('siegel_genommen'); g.repaint();
+            g.take('sonnensiegel'); g.set('sonnensiegel_genommen'); g.repaint();
             g.hero.anim = 'stand';
             await g.say('falk', 'Schwerer, als sie aussieht. Auf der Rückseite acht Kerben. Das Siegel der Sonne.');
             g.fx('stone');

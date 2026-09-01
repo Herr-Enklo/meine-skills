@@ -875,9 +875,9 @@
   }
 
   async function takeSeal(g) {
-    if (g.flag('siegel_genommen')) return 'Ich habe es schon.';
+    if (g.flag('stiersiegel_genommen')) return 'Ich habe es schon.';
     g.hero.anim = 'reach'; await g.wait(500); g.hero.anim = 'stand';
-    g.set('siegel_genommen'); g.take('stiersiegel'); g.repaint();
+    g.set('stiersiegel_genommen'); g.take('stiersiegel'); g.repaint();
     await g.say('falk', 'Dunkle Bronze, ein Stierkopf, und auf der Rückseite acht Kerben. Wie beim Siegel der Sonne.');
     await g.say('falk', 'Zwei von drei. Livia wird unerträglich sein.');
     await kesslerArrives(g);
@@ -885,7 +885,7 @@
 
   async function pourRaki(g) {
     if (g.flag('maul_offen')) return 'Das Maul ist offen und bleibt es. Den Raki spare ich mir.';
-    if (g.flag('siegel_genommen')) return 'Nicht nötig. Ich habe, was ich wollte.';
+    if (g.flag('stiersiegel_genommen')) return 'Nicht nötig. Ich habe, was ich wollte.';
     await g.say('falk', 'Ich gieße den Raki in die Schale. Ein Trankopfer. Meine Großmutter wäre entsetzt.');
     g.drop('raki'); g.fx('water');
     await g.wait(600); g.fx('stone');
@@ -972,7 +972,7 @@
       ctx.fillStyle = A.rgrad(ctx, 792, 508, 40, 96, ['rgba(0,0,0,0)', 'rgba(60,45,30,0.5)']); A.ell(ctx, 792, 508, 96, 34, ctx.fillStyle);
       for (let i = 0; i < 12; i++) { const a = (i / 12) * Math.PI * 2; A.rr(ctx, 792 + Math.cos(a) * 100 - 8, 508 + Math.sin(a) * 38 - 5, 16, 10, 3, A.shade('#5a4a38', (i % 3) * 0.08)); }
       // Kessler am Boden
-      if (g.flag('kessler_liegt') && !g.flag('kessler_weg')) {
+      if (g.flag('kessler_liegt') && !g.flag('kessler_kreta_weg')) {
         A.ell(ctx, 330, 500, 90, 10, 'rgba(0,0,0,0.3)');
         A.rect(ctx, 236, 486, 66, 16, '#2a2a34'); A.ell(ctx, 232, 494, 10, 6, '#111');
         A.rr(ctx, 290, 476, 110, 30, 12, '#3a3a44'); A.rr(ctx, 296, 470, 60, 14, 6, '#3a3a44');
@@ -991,7 +991,7 @@
       { id: 'stierkopf', name: 'Bronzestier', rect: [236, 50, 488, 260], at: [480, 490, 'u'],
         look: async (g) => { await g.say('falk', 'Ein Stierkopf aus Bronze, drei Meter hoch, die Hörner bis an die Decke. Die Augen sind schwarzer Stein. So etwas hat kein Museum. So etwas hat auch kein Minoer gegossen, nicht in dieser Größe.'); await g.say('falk', 'Und trotzdem: die Form ist minoisch. Wie die Trinkgefäße aus Heraklion, nur zehnmal größer, und mit einem Maul, das zu ist.'); g.codex('stier'); },
         use: 'Ich streichle keine Bronze.', talk: 'Er hat schon Leute gesehen, die ihn angeredet haben. Er hat keinem geantwortet.', take: 'Drei Tonnen. Nein.', push: 'Er ist mit der Wand verwachsen. Oder die Wand mit ihm.' },
-      { id: 'maul', name: 'Maul des Stiers', rect: [424, 296, 112, 40], at: [480, 490, 'u'], cond: (g) => !g.flag('siegel_genommen'),
+      { id: 'maul', name: 'Maul des Stiers', rect: [424, 296, 112, 40], at: [480, 490, 'u'], cond: (g) => !g.flag('stiersiegel_genommen'),
         look: (g) => g.flag('maul_offen') ? 'Das Maul steht offen, die Doppelaxt zwischen den Zähnen. Dahinter, auf der Zunge: das Siegel.' : 'Das Maul ist geschlossen, Bronze auf Bronze. Dazwischen ein Spalt, kaum fingerbreit. Etwas glänzt darin. Unter dem Maul läuft eine Rinne hinab in die Schale auf dem Altar.',
         open: (g) => g.flag('maul_offen') ? 'Es ist offen. Weiter geht es nicht, und weiter muss es nicht.' : 'Ich ziehe an der Unterlippe. Zwei Tonnen Bronze und ein Scharnier, das nicht für Hände gebaut ist. Es gibt nicht nach.',
         pull: (g) => g.flag('maul_offen') ? 'Es ist offen.' : 'Ich ziehe. Bronze. Es gibt nicht nach, nicht einen Millimeter.', push: 'Es ist zu. Drücken macht es nicht offener.',
@@ -1005,7 +1005,7 @@
           schaufel: 'Der Spaten ist aus Stahl, aber der Spalt ist zu schmal.', wolle: 'Ich könnte einen Faden hineinfädeln. Und dann?', flasche: 'Nicht ins Maul. In die Schale.',
           default: 'Das hilft dem Maul nicht auf.',
         } },
-      { id: 'siegel', name: 'Siegel des Stiers', rect: [456, 304, 48, 22], at: [480, 490, 'u'], cond: (g) => g.flag('maul_offen') && !g.flag('siegel_genommen'),
+      { id: 'siegel', name: 'Siegel des Stiers', rect: [456, 304, 48, 22], at: [480, 490, 'u'], cond: (g) => g.flag('maul_offen') && !g.flag('stiersiegel_genommen'),
         paint: (ctx) => { A.seal(ctx, 484, 316, 12, 'bull', '#9a7a4a'); },
         look: 'Eine Scheibe aus dunkler Bronze mit einem Stierkopf. Sie liegt auf der Zunge des Stiers wie eine Münze für den Fährmann.',
         take: takeSeal, use: takeSeal, pull: takeSeal },
@@ -1030,10 +1030,10 @@
         look: 'Die zweite Fackel. Sie flackert. Irgendwo zieht Luft, und ich weiß nicht, woher.',
         take: 'Ich lasse sie im Halter.', use: 'Sie brennt. Das reicht.', useWith: { oellampe: 'Sie brennt schon.', default: 'Das verbrenne ich nicht.' } },
       { id: 'grube', name: 'Schacht', rect: [688, 468, 208, 82], at: [670, 530, 'r'],
-        look: (g) => g.flag('kessler_grube') ? (g.flag('kessler_weg') ? 'Der Schacht. Leer. Er ist herausgeklettert. Zäh, das muss man ihm lassen.' : 'Kessler liegt vier Meter tiefer auf einem Sims und flucht auf Deutsch. Der Sturz hat ihm nichts gebrochen, außer dem Stolz. Er wird eine Weile brauchen.') : 'Ein Schacht im Boden, rund, mit glattem Rand. Ich werfe einen Stein hinein. Er braucht lange. Kein Geländer; die Minoer hatten keine Anwälte.',
+        look: (g) => g.flag('kessler_grube') ? (g.flag('kessler_kreta_weg') ? 'Der Schacht. Leer. Er ist herausgeklettert. Zäh, das muss man ihm lassen.' : 'Kessler liegt vier Meter tiefer auf einem Sims und flucht auf Deutsch. Der Sturz hat ihm nichts gebrochen, außer dem Stolz. Er wird eine Weile brauchen.') : 'Ein Schacht im Boden, rund, mit glattem Rand. Ich werfe einen Stein hinein. Er braucht lange. Kein Geländer; die Minoer hatten keine Anwälte.',
         use: 'Ich springe nicht in Löcher, deren Boden ich nicht gesehen habe.', take: 'Ein Loch nimmt man nicht mit.', open: 'Es ist offen. Das ist das Problem.',
         useWith: { seil: 'Zehn Meter Seil. Der Stein war länger unterwegs. Nein.', wolle: 'Ich lasse den Faden nicht in den Schacht. Er soll mich hinausführen, nicht hinunter.', muenzen: 'Ich werfe keine Münzen in Löcher. Das ist ein Brunnen, keine Grube.', default: 'Das werfe ich nicht hinunter.' } },
-      { id: 'kessler_liegt', name: 'Kessler', rect: [230, 460, 200, 60], at: [330, 540, 'u'], cond: (g) => g.flag('kessler_liegt') && !g.flag('kessler_weg'),
+      { id: 'kessler_liegt', name: 'Kessler', rect: [230, 460, 200, 60], at: [330, 540, 'u'], cond: (g) => g.flag('kessler_liegt') && !g.flag('kessler_kreta_weg'),
         look: 'Kessler. Er atmet. Er wird einen Kopf haben wie eine Kirchenglocke und eine Geschichte für Vesper. Beides gönne ich ihm.',
         take: 'Ich nehme ihn nicht mit. Er ist schwer und schlecht gelaunt.', use: 'Ich lasse ihn liegen. Er hat es sich ausgesucht.', push: 'Er rollt ein Stück und schnarcht weiter.', talk: 'Er schnarcht. Das ist die beste Unterhaltung, die ich von ihm bekomme.',
         useWith: { seil: 'Ich könnte ihn fesseln. Aber ich brauche das Seil vielleicht noch, und er braucht Stunden, bis er aufwacht.', raki: 'Ein Schluck würde ihn wecken. Dann hätte ich zwei Probleme.', default: 'Das lasse ich ihm nicht da.' } },
@@ -1118,7 +1118,7 @@
         g.objective('Das Siegel des Stiers aus dem Maul des Bronzestiers holen.');
       });
     },
-    leave(g) { if (g.flag('kessler_kreta')) g.set('kessler_weg'); },
+    leave(g) { if (g.flag('kessler_kreta')) g.set('kessler_kreta_weg'); },
   });
 
   ATL.dialogs.define('kessler_halle', {
