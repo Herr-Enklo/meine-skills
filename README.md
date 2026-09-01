@@ -44,6 +44,12 @@ Beschreibung Platz im Systemprompt jeder Session.
 | `agency-ux` | Design und Frontend-Qualität | 6 Agents |
 | `agency-iot` | IoT und Embedded | 3 Agents |
 
+## Weitere Projekte im Repo
+
+`atlantis/` enthält „Die Siegel von Atlantis“, ein Zeigen-und-Klicken-Abenteuer für den
+Browser ohne Build-Schritt. `atlantis/README.md` beschreibt Bedienung, Aufbau und Tests.
+`datenrettung/` ist ein Werkzeug zur Wiederherstellung gelöschter Dateien, siehe dessen README.
+
 ## Skills und Agents aufrufen
 
 Skills rufst du als Slash-Befehl auf:
