@@ -41,7 +41,7 @@
     return open(g, (box, close) => {
       box.appendChild(U.el('h2', { text: opts.title || 'Das Tor der drei Siegel' }));
       box.appendChild(U.el('p', { text: opts.hint || 'Klick auf einen Ring dreht ihn im Uhrzeigersinn, Rechtsklick dagegen. Der Zeiger oben markiert die Lesestelle.' }));
-      const cv = U.el('canvas', { width: 520, height: 520 });
+      const cv = U.el('canvas', { width: 440, height: 440 });
       box.appendChild(cv);
       const row = U.el('div', { class: 'row' });
       const bq = U.el('button', { text: 'Zurücktreten' });
@@ -49,13 +49,13 @@
       row.appendChild(bq);
       box.appendChild(row);
       const c = cv.getContext('2d');
-      const cx = 260, cy = 260;
-      const radii = [[235, 175], [170, 110], [105, 45]];
+      const cx = 220, cy = 220;
+      const radii = [[200, 150], [145, 95], [90, 40]];
       const colors = ['#8a7350', '#7a6248', '#6a5540'];
       let solved = false;
       const draw = () => {
-        c.clearRect(0, 0, 520, 520);
-        A.circle(c, cx, cy, 250, '#1d160e');
+        c.clearRect(0, 0, 440, 440);
+        A.circle(c, cx, cy, 212, '#1d160e');
         for (let ring = 0; ring < 3; ring++) {
           const [ro, ri] = radii[ring];
           c.fillStyle = A.rgrad(c, cx, cy, ri, ro, [A.shade(colors[ring], -0.2), colors[ring], A.shade(colors[ring], -0.3)]);
@@ -70,14 +70,14 @@
             c.fillStyle = ok ? '#ffe28a' : '#e6cf98';
             SYMBOLS[i].draw(c, sx, sy, (ro - ri) * 0.32);
           }
-          A.seal(c, cx, cy, 42, ['sun', 'bull', 'flood'][2], '#d8b04a');
+          A.seal(c, cx, cy, 36, 'flood', '#d8b04a');
         }
         // Siegel in den Ringen anzeigen (Beschriftung)
         c.fillStyle = '#f1d998'; c.font = '13px Georgia'; c.textAlign = 'center';
-        for (let ring = 0; ring < 3; ring++) c.fillText(names[ring], cx, cy + (radii[ring][0] + radii[ring][1]) / 2 - 30 + 4 + 0);
+        for (let ring = 0; ring < 3; ring++) c.fillText(names[ring], cx, cy + radii[ring][1] + 12);
         // Zeiger
         A.poly(c, [cx - 12, 8, cx + 12, 8, cx, 30], solved ? '#ffe28a' : '#e0b84a');
-        if (solved) { c.fillStyle = '#ffe28a'; c.font = '20px Georgia'; c.fillText('Die Ringe rasten ein.', cx, 505); }
+        if (solved) { c.fillStyle = '#ffe28a'; c.font = '20px Georgia'; c.fillText('Die Ringe rasten ein.', cx, 432); }
       };
       draw();
       const ringAt = (x, y) => {
@@ -89,7 +89,7 @@
         ev.preventDefault();
         if (solved) return;
         const rect = cv.getBoundingClientRect();
-        const x = ((ev.clientX - rect.left) / rect.width) * 520, y = ((ev.clientY - rect.top) / rect.height) * 520;
+        const x = ((ev.clientX - rect.left) / rect.width) * 440, y = ((ev.clientY - rect.top) / rect.height) * 440;
         const r = ringAt(x, y);
         if (r < 0) return;
         rot[r] = (rot[r] + dirn + 8) % 8;

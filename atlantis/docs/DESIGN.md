@@ -206,7 +206,8 @@ Ablauf:
 3. Akrotiri: Fresken (Kodex), in Vespers Zelt `brecheisen`. Tor: die drei Siegel damit benutzen
    (drei Flags oder ein Zähler), dann Tor benutzen → `g.puzzle('dial', { solution:
    ATL.story.solution(g) })`. Hinweis auf `solontext` im Inventar. Erfolg → Tor öffnet sich,
-   Zwischensequenz: Vesper, Kessler mit Livia. Vesper erklärt kurz sein Ziel („Was die Atlanter
+   die drei Siegel fallen aus den Ringen und Falk nimmt sie wieder an sich (sie werden im
+   Finale in der Konsole gebraucht). Zwischensequenz: Vesper, Kessler mit Livia. Vesper erklärt kurz sein Ziel („Was die Atlanter
    konnten, gehört dem, der es sich nimmt.“), nimmt das `medaillon` (Falk verliert es), schickt
    Falk voraus. `livia_gefangen`, `th_fertig`.
 4. Abstieg: Hebebühne mit leerem Sockel. `perle` in den Sockel → Summen, Hebel ziehen →

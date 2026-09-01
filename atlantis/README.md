@@ -18,7 +18,9 @@ cd atlantis
 python3 -m http.server 8000
 ```
 
-Dann `http://localhost:8000/` aufrufen.
+Dann `http://localhost:8000/` aufrufen. `dist/atlantis.html` ist dieselbe Fassung als einzelne
+Datei mit eingebettetem CSS und JS, zum Weitergeben oder Öffnen ohne Webserver
+(neu erzeugen mit `node tools/bundle.mjs`).
 
 Bedienung wie bei den Klassikern: unten ein Verb wählen (Gib, Öffne, Schließe, Nimm, Schau an,
 Rede mit, Benutze, Drücke, Ziehe), dann ein Objekt in der Szene oder im Inventar anklicken.
@@ -29,7 +31,7 @@ es sechs Speicherplätze im Browserspeicher.
 
 ## Umfang
 
-Sieben Kapitel mit 32 Räumen: Whitmore College, New York, Alexandria und Sais, Kreta,
+Sieben Kapitel mit 33 Räumen: Whitmore College, New York, Alexandria und Sais, Kreta,
 Eridu, Thera, Atlantis. Rätsel mit Gegenständen, Gesprächen, einem Labyrinth, Keilschrift,
 einem Ringschloss und einem Faustkampf. Die Lösung des Ringschlosses ist je Spielstand anders.
 
