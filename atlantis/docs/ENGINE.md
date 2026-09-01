@@ -75,6 +75,10 @@ Standardantwort („Das geht nicht.“ usw.). Ein Handler bekommt `(g, ziel, geg
   useWith: { schluessel: async (g) => { ... } } }      // Ausgänge nehmen die gleichen Verben wie Hotspots
 ```
 
+Überlappen sich Hotspot und Ausgang, gewinnt beim Klick der höhere `z`-Wert; Standard ist 1
+für Hotspots, 0 für Ausgänge, 5 für Figuren. Ein Ausgang, der über einem Hotspot liegen soll,
+bekommt also zum Beispiel `z: 2`.
+
 Ein Ausgang zurück zur Reisekarte sieht so aus:
 
 ```js
