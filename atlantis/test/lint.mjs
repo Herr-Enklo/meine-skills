@@ -47,7 +47,7 @@ const report = await page.evaluate(() => {
     }
     for (const a of def.actors || []) {
       if (!ATL.chars.get(a.id)) out.push(`${id}: unbekannte Figur ${a.id}`);
-      if (typeof a.talk === 'string' && !ATL.dialogs.get(a.talk)) out.push(`${id}/${a.id}: Dialog fehlt: ${a.talk}`);
+      if (typeof a.talk === 'string' && !/\s/.test(a.talk) && !ATL.dialogs.get(a.talk)) out.push(`${id}/${a.id}: Dialog fehlt: ${a.talk}`);
       for (const key of ['useWith', 'giveWith']) if (a[key]) for (const it in a[key]) if (it !== 'default' && !ATL.items.get(it)) out.push(`${id}/${a.id}: ${key} mit unbekanntem Gegenstand ${it}`);
     }
     if (def.start) { const c = grid.nearestFree(def.start[0], def.start[1]); const p = grid.toPoint(c[0], c[1]); if (Math.hypot(p[0] - def.start[0], p[1] - def.start[1]) > 40) out.push(`${id}: start liegt nicht auf begehbarem Boden`); }

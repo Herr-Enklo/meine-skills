@@ -137,7 +137,7 @@
       if (!a.visible) { a.setPos(x, y, dir); return true; }
       if (this.fast) { a.setPos(x, y, dir); return true; }
       const path = this.grid ? this.grid.findPath(a.x, a.y, x, y) : [[x, y]];
-      if (!path) { return false; }
+      if (!path) { if (id === 'falk' && !this.cutscene) await this.say('falk', 'Da komme ich nicht hin.'); return false; }
       const ok = await a.walkPath(path);
       if (ok && dir) a.dir = dir;
       return ok;
@@ -441,7 +441,8 @@
       }
     }
     async runHandler(h, t, itemId) {
-      if (typeof h === 'string') await this.say('falk', h);
+      if (typeof h === 'string' && ATL.dialogs && ATL.dialogs.get(h)) await this.dialog(h);
+      else if (typeof h === 'string') await this.say('falk', h);
       else if (Array.isArray(h)) await this.talk(h);
       else if (typeof h === 'function') { const r = await h(this, t, itemId); if (typeof r === 'string') await this.say('falk', r); }
     }

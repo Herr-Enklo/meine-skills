@@ -93,7 +93,7 @@ actors: [
   { id: 'amina', x: 600, y: 480, dir: 'l', cond: (g) => !g.flag('amina_weg'),
     name: 'Amina',                     // optional, sonst Name aus chars.js
     look: 'Die Bibliothekarin.',
-    talk: (g) => g.dialog('amina'),    // Dialog-Kennung oder Funktion
+    talk: 'amina',                     // Dialog-Kennung, Text (Falk sagt ihn) oder Funktion (g) => g.dialog('amina')
     at: [560, 500, 'r'],               // optional: wo Falk stehen bleibt
     giveWith: { katalogkarte: async (g) => { ... } },
     useWith: { ... } }
