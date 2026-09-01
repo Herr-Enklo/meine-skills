@@ -350,7 +350,6 @@
           await g.dialog('livia_wiedersehen');
           return false;
         } },
-      { id: 'fenster_exit', name: 'Fenster', rect: [0, 0, 0, 0], cond: () => false },
     ],
     actors: [
       { id: 'livia', x: 150, y: 490, dir: 'r', cond: (g) => g.flag('livia_getroffen') && !g.flag('livia_auf_buehne'), talk: (g) => g.dialog('livia_wiedersehen'), look: 'Livia Marsh. Sechs Jahre, und sie sieht aus, als wäre es letzte Woche gewesen. Ich vermutlich nicht.' },

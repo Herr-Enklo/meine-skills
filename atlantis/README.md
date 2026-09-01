@@ -58,6 +58,10 @@ Schritt Raum, Inventar und Flags. Er braucht Node, dazu global installiert `play
 ./run-tests.sh --chapter=Kreta       # ein Kapitel mit vorbereitetem Spielstand
 ./run-tests.sh --shots               # dazu ein Screenshot je Raum
 node test/preview.mjs                # Screenshots im normalen Spielmodus
+node test/lint.mjs                   # statische Prüfung aller Räume (Ausgänge, Laufpunkte, Symbole)
 ```
+
+Für die drei Node-Skripte muss `NODE_PATH` auf das globale `node_modules` zeigen
+(`NODE_PATH=$(npm root -g)`), `run-tests.sh` setzt das selbst.
 
 Die Schrittlisten in `test/steps_*.mjs` sind zugleich die Komplettlösung.

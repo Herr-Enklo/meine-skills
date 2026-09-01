@@ -71,7 +71,7 @@
     setRoomName(n) { document.title = n ? n + ' – Die Siegel von Atlantis' : 'Die Siegel von Atlantis'; }
     updateSentence() {
       const g = this.g;
-      if (g.cutscene) { $('#sentence').innerHTML = '&nbsp;'; return; }
+      if (g.cutscene || g.inDialog) { $('#sentence').innerHTML = '&nbsp;'; return; }
       $('#sentence').textContent = g.roomDef ? g.sentence() : '';
     }
     refreshVerbs() {

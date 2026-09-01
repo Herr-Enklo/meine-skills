@@ -407,6 +407,7 @@
         if (!ok || ticket !== this.walkTicket) { if (ticket === this.walkTicket) { this.busy = false; this.phase = null; } return; }
         if (at[2]) this.hero.dir = at[2];
         else if (t.kind === 'actor') this.hero.faceTo(t.actor.x, t.actor.y);
+        if (t.kind === 'actor' && (verb === 'talk' || verb === 'give') && !d.noTurn) t.actor.faceTo(this.hero.x, this.hero.y);
         else if (t.rect) this.hero.faceTo(t.rect[0] + t.rect[2] / 2, Math.min(this.hero.y, t.rect[1] + t.rect[3] / 2));
       } else if (!this.roomDef.noHero && verb === 'look' && !d.noFace && t.rect) {
         this.hero.faceTo(t.rect[0] + t.rect[2] / 2, Math.min(this.hero.y - 1, t.rect[1] + t.rect[3] / 2));
@@ -436,6 +437,7 @@
       } finally {
         if (ticket === this.walkTicket || this.phase === 'running') { this.busy = false; this.phase = null; }
         this.resetVerb();
+        if (this.onActionDone) this.onActionDone();
       }
     }
     async runHandler(h, t, itemId) {
@@ -473,7 +475,7 @@
           else await this.say('falk', U.pick(DEFAULTS[verb]));
         }
       } catch (e) { console.error(e); }
-      finally { this.busy = false; this.phase = null; this.resetVerb(); }
+      finally { this.busy = false; this.phase = null; this.resetVerb(); if (this.onActionDone) this.onActionDone(); }
     }
     async clickItem(itemId) {
       if (this.inDialog || this.cutscene || (this.busy && this.phase !== 'walking')) return;

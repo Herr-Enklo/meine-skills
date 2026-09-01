@@ -396,7 +396,6 @@
       { id: 'statue', name: 'Statue', rect: [610, 360, 60, 115], at: [640, 500, 'u'], look: 'Ezra Whitmore, Gründer des Colleges. Er sieht aus, als hätte er Hank eingestellt.', use: 'Ich lasse ihn stehen.' },
       { id: 'baum', name: 'Ahorn', rect: [60, 280, 130, 200], at: [140, 500, 'u'], look: 'Ein alter Ahorn. Im Herbst rot, im Mai voller Vögel.' },
       { id: 'gebaeude', name: 'Institutsgebäude', rect: [0, 110, 960, 130], at: [480, 470, 'u'], look: 'Das Institut für Archäologie. Backstein, 1902, undichtes Dach.' },
-      { id: 'kessler_platz', name: 'Kessler', rect: [0, 0, 0, 0], cond: () => false },
     ],
     exits: [
       { id: 'durchgang', name: 'Durchgang zum Institut', rect: [400, 240, 160, 180], at: [480, 460, 'u'], to: 'p_hall', pos: [80, 500], dir: 'r', look: 'Der Durchgang zurück ins Institut.' },

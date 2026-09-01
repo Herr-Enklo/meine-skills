@@ -73,11 +73,11 @@ html, body {
 .inv-item.selected { border-color: #ffd98a; box-shadow: 0 0 6px #b08a40 inset; }
 .inv-item canvas { width: 44px; height: 44px; image-rendering: auto; }
 #dialog {
-  position: absolute; left: 0; top: 0; right: 0; bottom: 0; background: var(--panel-bg);
-  display: flex; flex-direction: column; padding: 4px 16px; overflow-y: auto; gap: 2px;
+  position: absolute; left: 0; top: -28px; right: 0; bottom: 0; background: var(--panel-bg);
+  display: flex; flex-direction: column; padding: 6px 16px 4px 16px; overflow-y: auto; gap: 1px; z-index: 2;
 }
 #dialog .opt {
-  color: #d8bf86; font-size: 18px; cursor: pointer; padding: 2px 4px; line-height: 1.25;
+  color: #d8bf86; font-size: 17px; cursor: pointer; padding: 1px 4px; line-height: 1.2;
 }
 #dialog .opt:hover { color: #fff4d0; }
 #dialog .opt::before { content: "• "; color: #7a5a2c; }
