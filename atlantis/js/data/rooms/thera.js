@@ -543,6 +543,11 @@
   async function gateOpens(g) {
     g.set('tor_offen'); g.repaint(); g.fx('stone');
     await g.message('Die Ringe drehen sich ein letztes Mal von selbst, dann fährt ein Riss durch den Stein. Das Tor teilt sich in der Mitte und weicht zurück, als wäre es nie schwer gewesen.', 3200);
+    g.fx('drop');
+    await g.message('Die drei Siegel lösen sich aus ihren Vertiefungen und fallen in den Staub.', 2200);
+    g.hero.anim = 'crouch'; await g.wait(500); g.hero.anim = 'stand';
+    g.take('sonnensiegel', { silent: true }); g.take('stiersiegel', { silent: true }); g.take('flutsiegel'); g.set('siegel_zurueck');
+    await g.say('falk', 'Das Tor gibt sie wieder her. Als wären sie nur der Schlüssel gewesen, nicht der Preis.');
     await g.say('falk', 'Ein Gang. Dahinter Dunkelheit, und Luft, die nach heißem Stein riecht.');
     await g.say('falk', 'Livia hätte das sehen sollen.');
     await g.scene(async () => {

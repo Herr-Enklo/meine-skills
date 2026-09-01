@@ -1,0 +1,1095 @@
+/* Atlantis: Finale und Epilog. Sechs Räume unter Thera: äußerer Ring, Tempel des Poseidon,
+   Zellen, das Herz, Flucht, Boot bei Sonnenuntergang. */
+(function (ATL) {
+  const A = ATL.A;
+  const R = ATL.rooms.define;
+  const TAU = Math.PI * 2;
+  const TEAL = 'rgba(90,240,210,0.8)';
+
+  // ---------------------------------------------------------------- Hilfen
+  // Höhlenhintergrund: dunkles Blaugrün, Decke mit Tropfsteinen
+  const cave = (ctx, w, h, seed) => {
+    ctx.fillStyle = A.grad(ctx, 0, 0, 0, h, ['#050c14', '#0a1c26', '#0d2a30']);
+    ctx.fillRect(0, 0, w, h);
+    const r = ATL.U.rng(seed || 3);
+    for (let x = -20; x < w + 40; x += 18 + r() * 30) {
+      const d = 30 + r() * 90, ww = 8 + r() * 18;
+      A.poly(ctx, [x - ww, 0, x + ww, 0, x + (r() - 0.5) * 8, d], '#06131a');
+    }
+  };
+  // Orichalkum-Adern in der Mauer
+  const veins = (ctx, x, y, w, h, seed, n) => {
+    const r = ATL.U.rng(seed || 9);
+    for (let i = 0; i < (n || 8); i++) {
+      const px = x + r() * w, py = y + r() * h;
+      A.glow(ctx, px, py, 40 + r() * 60, 'rgba(70,220,190,0.5)', 0.35);
+      A.path(ctx, [px - 20, py + 4, px - 6, py - 3, px + 8, py + 5, px + 22, py - 2], 'rgba(120,255,225,0.55)', 1.5);
+    }
+  };
+  // Leuchtender Kanal (statischer Teil)
+  const canal = (ctx, x, y, w, h) => {
+    A.rect(ctx, x, y, w, h, '#03151c');
+    ctx.fillStyle = A.grad(ctx, 0, y, 0, y + h, ['#0a4a4c', '#1a9a90', '#0c5a58']);
+    ctx.fillRect(x + 4, y + 4, w - 8, h - 8);
+    A.glow(ctx, x + w / 2, y + h / 2, Math.max(w, h) * 0.6, 'rgba(60,220,200,0.6)', 0.35);
+    A.rect(ctx, x, y, w, 4, '#1e3a3c'); A.rect(ctx, x, y + h - 4, w, 4, '#1e3a3c');
+  };
+  // Silhouette eines geflügelten Pferds
+  const horse = (ctx, x, y, s, color) => {
+    ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
+    A.ell(ctx, 0, 0, 30, 14, color);
+    A.poly(ctx, [18, -6, 34, -30, 44, -28, 40, -16, 32, -8, 26, 4], color);
+    A.poly(ctx, [40, -30, 56, -26, 50, -18, 42, -20], color);
+    A.line(ctx, -18, 8, -26, 32, color, 5); A.line(ctx, -8, 10, -10, 34, color, 5);
+    A.line(ctx, 12, 10, 18, 34, color, 5); A.line(ctx, 22, 8, 32, 30, color, 5);
+    A.poly(ctx, [-30, -2, -46, 6, -40, 16, -28, 8], color);
+    A.poly(ctx, [-6, -10, -30, -60, 4, -44, 26, -70, 18, -20], color);
+    ctx.restore();
+  };
+  // Der tote Maschinenkrebs
+  const crab = (ctx, x, y, open) => {
+    const m = '#3a5a5c', d = '#22393c';
+    for (let i = 0; i < 4; i++) {
+      const k = i * 26;
+      A.line(ctx, x - 40 + k, y + 10, x - 80 + k, y + 34 + (i % 2) * 8, d, 7);
+      A.line(ctx, x + 40 + k * 0.6, y + 10, x + 90 + k * 0.6, y + 30 + (i % 2) * 10, d, 7);
+    }
+    ctx.fillStyle = A.grad(ctx, x - 80, y - 60, x + 80, y + 20, ['#4a6c6e', m, d]);
+    A.ell(ctx, x, y - 10, 82, 46, ctx.fillStyle);
+    A.ell(ctx, x, y - 26, 60, 22, d);
+    A.line(ctx, x - 70, y - 30, x - 118, y - 62, m, 10); A.poly(ctx, [x - 126, y - 78, x - 100, y - 60, x - 130, y - 50], d);
+    A.line(ctx, x + 70, y - 30, x + 110, y - 52, m, 10); A.poly(ctx, [x + 122, y - 66, x + 96, y - 52, x + 124, y - 40], d);
+    for (let i = 0; i < 5; i++) A.rect(ctx, x - 50 + i * 24, y - 44, 12, 5, '#5a7c7c');
+    A.circle(ctx, x - 24, y - 20, 6, '#111'); A.circle(ctx, x + 24, y - 20, 6, '#111');
+    if (open) {
+      A.poly(ctx, [x - 30, y - 6, x + 30, y - 6, x + 36, y + 20, x - 36, y + 20], '#0a1416');
+      A.poly(ctx, [x - 30, y - 6, x + 30, y - 6, x + 44, y - 40, x - 12, y - 40], '#5a7c7c');
+    } else {
+      A.rr(ctx, x - 30, y - 8, 60, 26, 4, '#2c4648'); A.circle(ctx, x, y + 5, 3, '#7aa');
+      A.glow(ctx, x, y + 5, 40, 'rgba(90,255,210,0.5)', 0.4);
+    }
+  };
+  // Königsstatue mit Namensschild
+  const kingStatue = (ctx, x, baseY, h, name, pressed) => {
+    A.statue(ctx, x, baseY, h, '#6f8a88', 'crown');
+    const w = h * 0.3;
+    // ausgestreckte Hand
+    A.line(ctx, x + w * 0.35, baseY - h * 0.62, x + w * 0.85, baseY - h * (pressed ? 0.5 : 0.58), '#7a9694', 4);
+    A.circle(ctx, x + w * 0.85, baseY - h * (pressed ? 0.5 : 0.58), 3.5, '#8aa6a4');
+    A.rr(ctx, x - 29, baseY + 4, 58, 16, 3, '#1a2c30', '#4a8a84', 1);
+    A.text(ctx, name, x, baseY + 16, { font: '11px Georgia', color: '#8fe0d0', align: 'center' });
+  };
+
+  Object.assign(ATL.codex, {
+    kritias: { title: 'Das Ende des Kritias', origin: 'Platon, Kritias 121b–c', text: 'Der Kritias endet mitten im Satz. Zuvor erzählt Platon, wie die Atlanter über Generationen ihr göttliches Erbe verloren und habgierig wurden. Zeus beschloss, sie zu strafen, rief die Götter zusammen und begann zu sprechen. Dort bricht der Text ab.\nOb Platon den Dialog nie beendete oder ob der Schluss verloren ging, ist unbekannt. Der Untergang der Insel selbst wird nur im Timaios geschildert, in wenigen Zeilen.' },
+  });
+
+  // ---------------------------------------------------------------- Äußerer Ring
+  R({
+    id: 'at_outer', name: 'Äußerer Ring von Atlantis', ambient: 'atlantis', width: 1600,
+    start: [200, 520, 'r'],
+    walk: [[40, 450, 520, 450, 520, 485, 745, 485, 745, 450, 1600, 450, 1600, 585, 40, 585]],
+    scale: { y0: 420, s0: 0.78, y1: 585, s1: 1.05 },
+    paint(ctx, g) {
+      cave(ctx, 1600, 600, 5);
+      // Ferne Ringe der Stadt hinter der Mauer
+      for (let i = 0; i < 3; i++) A.ell(ctx, 800, 150, 760 - i * 200, 46 - i * 10, null, `rgba(60,200,180,${0.14 + i * 0.06})`, 3);
+      A.stars(ctx, 1600, 260, 120, 21, 'rgba(120,255,230,0.35)');
+      // Zyklopenmauer
+      A.stones(ctx, 0, 150, 1600, 240, '#2a4a50', 31, 64);
+      A.rect(ctx, 0, 150, 1600, 10, '#3a5e62');
+      veins(ctx, 0, 160, 1600, 220, 12, 16);
+      for (let x = 150; x < 1600; x += 300) A.column(ctx, x, 392, 250, 34, '#587c7c', 'atlantis');
+      // Kanal hinter dem Gehweg
+      canal(ctx, 0, 392, 1600, 56);
+      // Seitenkanal, den die Brücke überspannt
+      canal(ctx, 1100, 392, 200, 208);
+      // Gehweg
+      ctx.fillStyle = A.grad(ctx, 0, 448, 0, 600, ['#3e5c5e', '#22383a']);
+      ctx.fillRect(0, 448, 1100, 152); ctx.fillRect(1300, 448, 300, 152);
+      for (let x = 0; x < 1600; x += 90) { if (x >= 1100 && x < 1300) continue; A.line(ctx, x, 448, x - 30, 600, 'rgba(0,0,0,0.25)', 1); }
+      for (let y = 470; y < 600; y += 34) { A.line(ctx, 0, y, 1100, y, 'rgba(0,0,0,0.2)', 1); A.line(ctx, 1300, y, 1600, y, 'rgba(0,0,0,0.2)', 1); }
+      A.rect(ctx, 0, 446, 1100, 6, '#5a7e7e'); A.rect(ctx, 1300, 446, 300, 6, '#5a7e7e');
+      A.rect(ctx, 1096, 448, 6, 152, '#1a2c2e'); A.rect(ctx, 1298, 448, 6, 152, '#1a2c2e');
+      // Geröll links: der Gang zur Hebebühne
+      A.rect(ctx, 0, 120, 60, 480, '#101c20');
+      for (let i = 0; i < 14; i++) A.rock(ctx, -10 + (i * 37) % 90, 300 + (i * 53) % 260, 40 + (i % 3) * 18, 30 + (i % 2) * 14, '#4a5a58', i + 3);
+      // Brücke
+      if (g.flag('bruecke_unten')) {
+        ctx.fillStyle = A.grad(ctx, 0, 448, 0, 600, ['#587a78', '#2e4a4a']);
+        ctx.fillRect(1100, 452, 200, 148);
+        for (let i = 0; i < 6; i++) A.line(ctx, 1100 + i * 40, 452, 1100 + i * 40, 600, 'rgba(0,0,0,0.3)', 2);
+        A.rect(ctx, 1100, 448, 200, 6, '#7aa09c');
+      } else {
+        ctx.save(); ctx.translate(1300, 452); ctx.rotate(-1.35);
+        ctx.fillStyle = A.grad(ctx, 0, 0, 200, 0, ['#587a78', '#2e4a4a']);
+        ctx.fillRect(0, -12, 200, 24);
+        for (let i = 0; i < 6; i++) A.line(ctx, i * 40, -12, i * 40, 12, 'rgba(0,0,0,0.3)', 2);
+        ctx.restore();
+        A.chain(ctx, 1252, 260, 1290, 150, '#6a8a88');
+      }
+      A.rect(ctx, 1290, 140, 22, 310, '#3e5c5e'); A.rect(ctx, 1286, 136, 30, 10, '#5a7e7e');
+      // Podest mit drei Sockeln
+      A.rect(ctx, 976, 372, 50, 78, '#3a5658'); A.rect(ctx, 970, 366, 62, 10, '#587c7c');
+      for (let i = 0; i < 3; i++) { A.circle(ctx, 986 + i * 15, 384, 5, '#0a1618'); if (g.flag('bruecke_unten')) { A.circle(ctx, 986 + i * 15, 384, 4, '#5fd8b0'); A.glow(ctx, 986 + i * 15, 384, 20, TEAL, 0.5); } }
+      A.rr(ctx, 978, 400, 46, 30, 3, '#2e4648'); A.spirals(ctx, 980, 404, 44, 20, 'rgba(120,255,225,0.5)');
+      // Tor zum Tempel rechts
+      A.rect(ctx, 1430, 130, 170, 320, '#1a2c30');
+      A.arch(ctx, 1450, 170, 130, 280, '#5a8a84', '#03080c');
+      A.glow(ctx, 1515, 330, 120, 'rgba(90,240,210,0.6)', 0.3);
+      A.text(ctx, 'ΠΟΣΕΙΔΩΝ', 1515, 160, { font: 'bold 16px Georgia', color: '#8fe0d0', align: 'center' });
+      // Maschinenkrebs
+      crab(ctx, 630, 440, g.flag('krebs_offen'));
+      // Metalltafel am Boden
+      if (!g.flag('schriftrolle_genommen')) { A.rr(ctx, 336, 536, 40, 22, 3, '#4fb0a0'); for (let i = 0; i < 3; i++) A.line(ctx, 341, 541 + i * 6, 371, 541 + i * 6, '#1a4a40', 1.2); }
+      A.vignette(ctx, 1600, 600, 0.55);
+      A.grain(ctx, 1600, 600, 4, 0.05);
+    },
+    animate(ctx, t, g) {
+      A.waterAnim(ctx, 0, 396, 1600, 48, t, 'rgba(160,255,235,0.14)');
+      A.waterAnim(ctx, 1104, 396, 192, 200, t * 0.8, 'rgba(160,255,235,0.14)');
+      const p = 0.5 + Math.sin(t * 1.5) * 0.15;
+      for (let x = 150; x < 1600; x += 300) A.glow(ctx, x, 260, 70, 'rgba(90,240,210,0.5)', p * 0.4);
+      if (!g.flag('krebs_offen')) A.glow(ctx, 630, 445, 30 + Math.sin(t * 3) * 6, 'rgba(90,255,210,0.7)', 0.4);
+    },
+    hotspots: [
+      { id: 'geroell', name: 'Geröll', rect: [0, 280, 70, 300], at: [90, 520, 'l'],
+        look: 'Der Gang zur Hebebühne. Oder das, was davon übrig ist: Brocken, so groß wie Schreibtische.',
+        use: 'Ich habe es versucht. Die kleinen Steine bewegen sich, die großen nicht.', push: 'Ich habe es versucht. Die kleinen Steine bewegen sich, die großen nicht.', pull: 'Da rührt sich nichts.',
+        useWith: { schaufel: 'Das ist kein Sand. Das ist ein Berg.', brecheisen: 'Damit hebele ich einen Brocken heraus, und drei rutschen nach.', default: 'Das hilft gegen einen Berg nicht.' } },
+      { id: 'kanal', name: 'Kanal', rect: [70, 392, 1030, 56], at: [500, 480, 'u'],
+        look: async (g) => { await g.say('falk', 'Wasser, das von selbst leuchtet. Es fließt, ohne dass ich ein Gefälle sehe.'); if (!g.flag('kanal_kommentar')) { g.set('kanal_kommentar'); await g.say('falk', 'Platon schreibt von Ringen aus Wasser und Land um die Stadt. Das hier wäre der äußere.'); g.codex('ringe'); } },
+        use: 'Ich stecke die Hand nicht in Wasser, das leuchtet.', take: 'Womit? Und wozu?',
+        useWith: { flasche: 'Nein. Ich weiß nicht, was das ist, und ich will es nicht trinken.', default: 'Ins Wasser? Lieber nicht.' } },
+      { id: 'mauer', name: 'Zyklopenmauer', rect: [70, 150, 1030, 240], at: [500, 480, 'u'],
+        look: 'Blöcke, so groß wie Lastwagen, ohne Mörtel gesetzt. In den Fugen leuchten Adern von etwas Grünem. Orichalkum, würde Vesper sagen.',
+        take: 'Ein Block wiegt mehr als das Institut.', use: 'Ich klopfe. Es klingt nach Stein.', push: 'Sie steht seit ein paar tausend Jahren. Sie bleibt.' },
+      { id: 'saeulen', name: 'Säulen', rect: [130, 130, 40, 260], at: [150, 480, 'u'],
+        look: 'Säulen, wie ich sie noch nirgends gesehen habe. Kein Kapitell, keine Kannelierung, nur diese schrägen Rillen, die leuchten.' },
+      { id: 'decke', name: 'Höhlendecke', rect: [70, 0, 1500, 130], noWalk: true,
+        look: 'Tropfsteine, hoch oben. Die Höhle ist größer als jede Kathedrale. Und sie hat ein Echo, das mir nicht gefällt.' },
+      { id: 'schriftrolle', name: 'Metalltafel', rect: [330, 528, 52, 34], at: [356, 560, 'u'], cond: (g) => !g.flag('schriftrolle_genommen'),
+        look: 'Eine dünne Tafel aus grünlichem Metall, halb unter Staub. Mit Zeichen darauf.',
+        take: async (g) => { g.set('schriftrolle_genommen'); g.take('schriftrolle'); g.repaint(); await g.say('falk', 'Leicht wie Blech, aber ich kann sie nicht biegen. Zeilen aus Spiralen und Punkten.'); await g.say('falk', 'Keine Schrift, die ich kenne. Livia hat sich mit so etwas beschäftigt. Wenn ich sie finde.'); g.codex('ringe'); },
+        use: (g) => g.hs('schriftrolle').take(g) },
+      { id: 'krebs', name: 'Maschinenkrebs', rect: [510, 360, 250, 120], at: [630, 512, 'u'],
+        look: (g) => g.flag('krebs_offen') ? 'Der Krebs. Die Klappe steht offen, die Fassung ist leer.' : 'Eine Maschine in Form eines Krebses, so groß wie ein Auto. Sie liegt schief, ein Bein im Kanal. Unter dem Panzer leuchtet etwas.',
+        take: 'Er wiegt mehr als ich. Und er hat Scheren.',
+        use: (g) => g.flag('krebs_offen') ? 'Er ist tot. Toter geht nicht.' : 'Ich taste den Panzer ab. Da ist eine Klappe, aber sie sitzt fest. Verklemmt, seit wer weiß wann.',
+        open: (g) => g.flag('krebs_offen') ? 'Sie ist schon offen.' : 'Die Klappe sitzt fest. Mit bloßen Händen reiße ich mir nur die Nägel ab.',
+        push: 'Er rührt sich nicht. Zum Glück.', pull: 'Er rührt sich nicht. Zum Glück.',
+        talk: 'Er hat keine Ohren. Jedenfalls keine, die ich erkenne.',
+        useWith: {
+          brecheisen: async (g) => {
+            if (g.flag('krebs_offen')) return 'Die Klappe ist offen. Da ist nichts mehr.';
+            await g.say('falk', 'Das Brecheisen in den Spalt, und dann mit Gewicht…');
+            g.fx('stone'); g.anim('falk', 'reach'); await g.wait(600); g.anim('falk', 'stand');
+            g.set('krebs_offen'); g.repaint();
+            await g.say('falk', 'Die Klappe springt auf. Darunter drei Perlen in einer Fassung, jede so groß wie die aus der Figur.');
+            g.take('perlen'); g.set('perlen', 3);
+            await g.say('falk', 'Sie sind warm. Sie summen. Ich nehme sie, bevor ich mir das überlege.');
+            g.codex('orichalkum');
+          },
+          taschenmesser: 'Die Klinge bricht ab, bevor die Klappe nachgibt.', schaufel: 'Der Spaten biegt sich. Ich brauche etwas Stabileres.', seil: 'Ich könnte ihn festbinden. Er läuft aber nicht weg.',
+          default: 'Damit komme ich an die Klappe nicht heran.' } },
+      { id: 'podest', name: 'Podest mit drei Sockeln', rect: [966, 360, 70, 90], at: [1000, 508, 'u'],
+        look: (g) => g.flag('bruecke_unten') ? 'Das Podest. Drei Perlen in drei Fassungen, alle leuchten.' : 'Ein Podest aus Stein, kniehoch. Oben drei leere Fassungen, so groß wie Haselnüsse. Darunter eine Spirale.',
+        use: (g) => g.flag('bruecke_unten') ? 'Es tut, was es soll.' : 'Drei leere Fassungen. Drei Fassungen brauchen drei Dinge, die hineinpassen.',
+        push: 'Das Podest ist Teil des Bodens.', pull: 'Das Podest ist Teil des Bodens.', take: 'Es ist aus dem Fels gehauen.',
+        useWith: {
+          perlen: async (g) => {
+            await g.say('falk', 'Eine Perle in jede Fassung.');
+            g.drop('perlen'); g.set('perlen', 0); g.fx('glow');
+            await g.wait(500);
+            g.set('bruecke_unten'); g.repaint(); g.unblockWalk('bruecke');
+            g.fx('stone');
+            await g.message('Ketten rasseln. Die Brücke senkt sich, langsam, und legt sich über den Kanal.', 2600);
+            await g.say('falk', 'Drei Perlen, eine Brücke. Vesper hätte gesagt: Das ist erst der Anfang.');
+            g.objective('Über die Brücke in den Tempel gehen.');
+          },
+          muenzen: 'Falsche Währung.', flasche: 'Das Podest hat keinen Durst.',
+          default: 'Das passt nicht in die Fassungen.' } },
+      { id: 'bruecke', name: 'Brücke', rect: [1100, 150, 220, 300], at: [1060, 520, 'r'],
+        look: (g) => g.flag('bruecke_unten') ? 'Die Brücke liegt. Stein, breit genug für einen Wagen.' : 'Eine Brücke aus Stein, hochgezogen wie eine Zugbrücke. Die Ketten führen in die Wand. Kein Hebel, keine Winde.',
+        pull: (g) => g.flag('bruecke_unten') ? 'Sie liegt schon.' : 'Ich ziehe an der Kette. Ich könnte genauso gut an der Mauer ziehen.',
+        use: (g) => g.flag('bruecke_unten') ? 'Ich gehe einfach hinüber.' : 'Von hier aus komme ich nicht hin. Und springen? Zehn Meter, und unten leuchtendes Wasser.',
+        push: 'Das Ding wiegt Tonnen.',
+        useWith: { seil: 'Zu weit und zu hoch. Und woran sollte ich es festmachen?', default: 'Das bringt die Brücke nicht herunter.' } },
+      { id: 'seitenkanal', name: 'Seitenkanal', rect: [1100, 452, 200, 148], at: [1060, 520, 'r'], cond: (g) => !g.flag('bruecke_unten'),
+        look: 'Ein Kanal, der vom Hauptkanal abzweigt und unter dem Gehweg verschwindet. Tief, und das Wasser leuchtet.', use: 'Schwimmen? In dem Zeug? Nein.' },
+    ],
+    get exits() {
+      const g = ATL.game;
+      const unten = !!(g && g.state && g.flag('bruecke_unten'));
+      return [
+        { id: 'tor', name: 'Tor zum Tempel', rect: [1440, 160, 150, 290], at: [1515, 500, 'u'], to: 'at_middle', pos: [480, 560], dir: 'u', noWalk: !unten,
+          look: 'Ein Torbogen, hoch wie ein Haus, mit griechischen Buchstaben darüber. Poseidon. Dahinter Licht.',
+          before: async (g) => { if (g.flag('bruecke_unten')) return true; await g.say('falk', 'Da komme ich nicht hin. Die Brücke ist oben.'); return false; } },
+      ];
+    },
+    async enter(g) {
+      if (!g.flag('bruecke_unten')) g.blockWalk('bruecke', [1100, 440, 1300, 440, 1300, 600, 1100, 600]);
+      if (g.flag('at_angekommen')) return;
+      g.set('at_angekommen');
+      await g.scene(async () => {
+        await g.message('Unter Thera. Tiefer, als der Berg hoch ist.', 2400);
+        g.fx('stone');
+        await g.message('Der Staub legt sich. Hinter Falk liegt der Gang zur Hebebühne unter Geröll.', 2600);
+        g.face('falk', 'l');
+        await g.say('falk', 'Das war der Rückweg. Vesper wird einen anderen kennen. Er kennt immer einen anderen.');
+        g.face('falk', 'r');
+        await g.say('falk', 'Und das hier… Eine Mauer, ein Kanal, und Wasser, das leuchtet.');
+        await g.say('falk', 'Platon hat das beschrieben. Ringe aus Wasser und Land. Ich habe es für einen Satzbauplan gehalten.');
+        await g.say('falk', 'Livia ist irgendwo da vorn. Mit Kessler. Das ist die einzige Richtung, die es gibt.');
+        g.objective('Einen Weg über den Kanal zum Tempel finden. Livia ist bei Vespers Leuten.');
+      });
+    },
+  });
+
+  // ---------------------------------------------------------------- Tempel des Poseidon
+  const KINGS = [
+    ['atlas', 'Atlas', 'Ἄτλας', 'Atlas, der Erstgeborene. Poseidon machte ihn zum König über die ganze Insel. Nach ihm heißt sie, sagt Platon, und das Meer um sie herum.'],
+    ['gadeiros', 'Gadeiros', 'Γάδειρος', 'Gadeiros, der Zwilling des Atlas. Auf Griechisch Eumelos. Er bekam den Landstrich gegenüber Gadeira, dem heutigen Cádiz.'],
+    ['ampheres', 'Ampheres', 'Ἀμφήρης', 'Ampheres, der Ältere des zweiten Paars. Bei Platon nur ein Name in einer Liste. Hier hat er ein Gesicht.'],
+    ['euaimon', 'Euaimon', 'Εὐαίμων', 'Euaimon, Zwilling des Ampheres. Platon nennt ihn, sonst niemand.'],
+    ['mneseus', 'Mneseus', 'Μνησεύς', 'Mneseus, drittes Paar, der Ältere. Der Name klingt nach Erinnerung. Vielleicht Zufall, vielleicht nicht.'],
+    ['autochthon', 'Autochthon', 'Αὐτόχθων', 'Autochthon, „der aus der Erde Geborene“. So nannten sich auch die Athener, die bei Platon gegen Atlantis kämpfen.'],
+    ['elasippos', 'Elasippos', 'Ἐλάσιππος', 'Elasippos, „der Pferdetreiber“. Viertes Paar. Poseidon war auch der Gott der Pferde.'],
+    ['mestor', 'Mestor', 'Μήστωρ', 'Mestor, Zwilling des Elasippos. „Der Ratgeber“. Er sieht nicht aus, als hätte man ihn oft gefragt.'],
+    ['azaes', 'Azaes', 'Ἀζάης', 'Azaes, fünftes Paar, der Ältere. Über ihn steht bei Platon nicht mehr als der Name.'],
+    ['diaprepes', 'Diaprepes', 'Διαπρεπής', 'Diaprepes, der Jüngste. „Der Hervorragende“. Ein großer Name für den Letzten in der Reihe.'],
+  ];
+  const KING_X = [75, 135, 195, 255, 315, 675, 735, 795, 855, 915];
+  const pressKing = async (g, id, name) => {
+    if (g.flag('koenige_offen')) return 'Die Hand ist unten, die Tür ist offen. Das reicht.';
+    const seq = g.flag('koenige_seq') || '';
+    g.fx('click');
+    if (id === 'atlas' && seq === '') {
+      g.set('koenige_seq', 'atlas'); g.repaint();
+      await g.say('falk', 'Die Hand des Atlas senkt sich ein Stück. Hinter der Wand klickt etwas und bleibt stehen.');
+      return;
+    }
+    if (id === 'atlas' && seq === 'atlas') return 'Die Hand ist unten. Sie wartet auf jemanden.';
+    if (id === 'gadeiros' && seq === 'atlas') {
+      g.set('koenige_seq', 'fertig'); g.set('koenige_offen'); g.repaint();
+      g.fx('stone');
+      await g.message('Ein tiefes Rollen im Stein. Im Sockel des Standbilds öffnet sich ein Durchgang.', 2600);
+      await g.say('falk', 'Der Erstgeborene, mit seinem Zwilling an der Hand. Solon hat das notiert. Ich habe es für Poesie gehalten.');
+      g.codex('zehnkoenige');
+      g.objective(g.flag('livia_frei') ? 'Mit Livia ins Innere gehen. Vesper wartet.' : 'Livia aus den Zellen holen, dann ins Innere.');
+      return;
+    }
+    g.set('koenige_seq', ''); g.repaint();
+    g.fx('fail');
+    if (seq === 'atlas') await g.say('falk', `Die Hand des ${name} geht hinunter, dann ein dumpfer Schlag: Beide Hände heben sich wieder. Falscher Zwilling.`);
+    else await g.say('falk', `Die Hand des ${name} senkt sich, klickt, und hebt sich sofort wieder. Das war nicht der Anfang.`);
+  };
+
+  R({
+    id: 'at_middle', name: 'Tempel des Poseidon', ambient: 'atlantis',
+    start: [480, 560, 'u'],
+    walk: [[30, 452, 930, 452, 940, 585, 20, 585]],
+    scale: { y0: 420, s0: 0.78, y1: 585, s1: 1.05 },
+    paint(ctx, g) {
+      cave(ctx, 960, 600, 7);
+      // Wände aus Orichalkum-Platten
+      ctx.fillStyle = A.grad(ctx, 0, 100, 0, 450, ['#123034', '#1c4448', '#122c30']);
+      ctx.fillRect(0, 100, 960, 350);
+      for (let x = 0; x < 960; x += 80) for (let y = 100; y < 450; y += 70) A.rr(ctx, x + 2, y + 2, 76, 66, 4, null, 'rgba(120,255,225,0.12)', 1);
+      veins(ctx, 0, 110, 960, 320, 14, 10);
+      A.meander(ctx, 0, 104, 960, 14, 'rgba(120,255,225,0.35)');
+      // Seitengang zu den Zellen
+      A.rect(ctx, 0, 250, 56, 200, '#03080c');
+      A.poly(ctx, [0, 250, 56, 262, 56, 450, 0, 450], '#050d12');
+      A.rect(ctx, 52, 246, 8, 206, '#2a4a4e');
+      // Sockel des Standbilds mit dem Tor ins Innere
+      ctx.fillStyle = A.grad(ctx, 400, 0, 560, 0, ['#2a4a4c', '#4a7270', '#2a4a4c']);
+      ctx.fillRect(400, 296, 160, 154);
+      A.rect(ctx, 392, 290, 176, 10, '#5a8280');
+      if (g.flag('koenige_offen')) { A.arch(ctx, 448, 318, 64, 132, '#6a9a94', '#02090c'); A.glow(ctx, 480, 400, 60, 'rgba(90,240,210,0.7)', 0.35); }
+      else { A.arch(ctx, 448, 318, 64, 132, '#6a9a94', '#1e3c40'); for (let i = 0; i < 4; i++) A.line(ctx, 452, 360 + i * 22, 508, 360 + i * 22, 'rgba(0,0,0,0.3)', 2); A.spirals(ctx, 452, 336, 56, 16, 'rgba(120,255,225,0.4)'); }
+      // Wagen mit sechs geflügelten Pferden und Poseidon
+      const sil = '#0b1e24';
+      A.glow(ctx, 480, 150, 220, 'rgba(70,200,180,0.5)', 0.3);
+      for (let i = 0; i < 3; i++) { horse(ctx, 300 + i * 26, 250 - i * 22, 0.8 - i * 0.1, sil); horse(ctx, 660 - i * 26, 250 - i * 22, 0.8 - i * 0.1, sil); }
+      A.rr(ctx, 420, 210, 120, 70, 10, sil); A.circle(ctx, 432, 282, 18, sil); A.circle(ctx, 528, 282, 18, sil);
+      A.circle(ctx, 432, 282, 6, '#1e3c40'); A.circle(ctx, 528, 282, 6, '#1e3c40');
+      A.statue(ctx, 480, 226, 200, '#1a3a40', 'trident');
+      A.glow(ctx, 480, 100, 60, 'rgba(90,240,210,0.6)', 0.3);
+      // Die zehn Könige
+      const seq = g.flag('koenige_seq') || '';
+      KINGS.forEach((k, i) => kingStatue(ctx, KING_X[i], 420, 96, k[2], g.flag('koenige_offen') ? (i < 2) : (seq === 'atlas' && i === 0)));
+      // Altar und Säule der Gesetze
+      A.rect(ctx, 580, 402, 62, 48, '#1a2628'); A.rect(ctx, 576, 396, 70, 10, '#2e4244');
+      A.rect(ctx, 584, 388, 54, 8, '#3a4e50'); A.ell(ctx, 611, 388, 20, 5, '#101a1c');
+      A.meander(ctx, 582, 414, 58, 10, 'rgba(120,255,225,0.35)');
+      A.column(ctx, 362, 450, 130, 22, '#6a8e8a', 'atlantis');
+      A.text(ctx, 'ΝΟΜΟΙ', 362, 304, { font: 'bold 9px Georgia', color: '#8fe0d0', align: 'center' });
+      // Boden mit Perspektive
+      A.floorTiles(ctx, 960, 450, 600, '#2e4e50', '#142628', 12, 480);
+      A.rect(ctx, 0, 448, 960, 6, '#5a8280');
+      A.rect(ctx, 0, 452, 960, 4, 'rgba(0,0,0,0.3)');
+      A.vignette(ctx, 960, 600, 0.5);
+      A.grain(ctx, 960, 600, 5, 0.05);
+    },
+    animate(ctx, t, g) {
+      const p = 0.45 + Math.sin(t * 1.2) * 0.15;
+      A.glow(ctx, 480, 140, 160, 'rgba(90,240,210,0.5)', p * 0.5);
+      if (g.flag('koenige_offen')) A.glow(ctx, 480, 410, 50 + Math.sin(t * 2) * 8, 'rgba(90,255,220,0.8)', 0.5);
+    },
+    get hotspots() {
+      const list = KINGS.map((k, i) => ({
+        id: 'koenig_' + k[0], name: 'Statue: ' + k[1], rect: [KING_X[i] - 26, 322, 52, 116], at: [KING_X[i], 470, 'u'],
+        look: async (g) => { await g.say('falk', k[3]); g.codex('zehnkoenige'); },
+        push: (g) => pressKing(g, k[0], k[1]),
+        use: (g) => pressKing(g, k[0], k[1]),
+        pull: 'Die Hand lässt sich nicht ziehen. Nur drücken.',
+        take: 'Die Statue ist mannshoch und aus Stein.',
+        talk: 'Er hat mich seit dreitausend Jahren nicht gehört. Warum jetzt.',
+      }));
+      list.push(
+        { id: 'poseidon', name: 'Standbild des Poseidon', rect: [300, 60, 360, 236], at: [480, 480, 'u'],
+          look: async (g) => { await g.say('falk', 'Poseidon auf seinem Wagen. Sechs geflügelte Pferde, der Dreizack, und er so hoch, dass sein Kopf die Decke berührt.'); await g.say('falk', 'Genau so steht es im Kritias. Wort für Wort. Entweder hat Platon das hier gesehen, oder jemand hat Platon gelesen.'); g.codex('poseidon'); },
+          use: 'Ich habe keinen Stier zu opfern.', take: 'Ich nehme nichts mit, was höher ist als ein Haus.', talk: 'Er ist beschäftigt. Er erschüttert die Erde.' },
+        { id: 'altar', name: 'Altar', rect: [572, 380, 78, 70], at: [611, 480, 'u'],
+          look: async (g) => { await g.say('falk', 'Ein Altar aus schwarzem Stein, in der Mitte eine Schale. Hier, sagt Platon, opferten die Könige einen Stier und schworen auf die Gesetze.'); await g.say('falk', 'Die Schale ist trocken. Der letzte Schwur ist lange her.'); g.codex('stier'); },
+          use: 'Ich habe nichts zu opfern und nichts zu schwören.', take: 'Er ist Teil des Bodens.', open: 'Ein Altar ist keine Kiste.',
+          useWith: { flasche: 'Wasser statt Stierblut. Poseidon würde sich bedanken. Oder nicht.', default: 'Das gehört nicht auf einen Altar.' } },
+        { id: 'saeule', name: 'Säule der Gesetze', rect: [346, 296, 34, 154], at: [362, 480, 'u'],
+          look: async (g) => { await g.say('falk', 'Eine Säule aus dem grünen Metall, eng beschrieben. „Nomoi“, Gesetze. Platon sagt, die Könige hätten ihre Gesetze auf einer Säule aus Orichalkum bewahrt, mitten im Tempel.'); await g.say('falk', 'Den Rest kann ich nicht lesen. Livia vielleicht. Sie liest alles, was nicht wegläuft.'); g.codex('orichalkum'); },
+          use: 'Ich lese, was ich kann. Das ist wenig.', take: 'Sie ist mit dem Boden verwachsen.', push: 'Sie steht.', pull: 'Sie steht.' },
+        { id: 'sockel', name: 'Sockel des Standbilds', rect: [392, 290, 176, 26], at: [480, 480, 'u'],
+          look: (g) => g.flag('koenige_offen') ? 'Der Sockel. Der Durchgang darin steht offen.' : 'Der Sockel des Standbilds. Darin ein Torbogen ohne Tür, aber mit Stein dahinter. Kein Griff, kein Schloss.' },
+        { id: 'wand', name: 'Wand', rect: [60, 100, 340, 190], at: [230, 480, 'u'],
+          look: 'Platten aus dem grünen Metall, an den Fugen verschweißt. Innen Orichalkum, schreibt Platon, außen Silber. Silber sehe ich keins. Vielleicht war Vesper schneller.' },
+        { id: 'decke', name: 'Decke', rect: [0, 0, 960, 60], noWalk: true, look: 'Die Decke ist so hoch, dass Poseidons Dreizack sie gerade berührt. Man hat sie also nach ihm gebaut, nicht ihn nach ihr.' },
+      );
+      return list;
+    },
+    exits: [
+      { id: 'zurueck', name: 'Zurück zum äußeren Ring', rect: [380, 556, 200, 44], at: [480, 575, 'd'], to: 'at_outer', pos: [1500, 540], dir: 'l', look: 'Der Torbogen zurück zum Ring und zur Brücke.' },
+      { id: 'seitentuer', name: 'Seitengang', rect: [0, 246, 60, 206], at: [70, 500, 'l'], to: 'at_prison', pos: [110, 520], dir: 'r',
+        look: (g) => g.flag('livia_frei') ? 'Der Gang zu den Zellen. Leer jetzt.' : 'Ein Seitengang, unbeleuchtet. Von dort kamen die Stimmen.' },
+      { id: 'tuer_innen', name: 'Durchgang ins Innere', rect: [446, 316, 68, 134], at: [480, 480, 'u'], to: 'at_inner', pos: [140, 520], dir: 'r',
+        look: (g) => g.flag('koenige_offen') ? 'Ein Durchgang im Sockel des Standbilds. Dahinter ist es hell, und es summt.' : 'Ein Torbogen im Sockel, mit Stein dahinter. Die Halle der Zehn, hätte Solon gesagt. Die Zehn stehen rechts und links.',
+        before: async (g) => {
+          if (!g.flag('koenige_offen')) { await g.say('falk', 'Stein. Kein Griff, kein Schloss. Nur zehn Könige, die zusehen.'); return false; }
+          if (!g.flag('livia_frei')) { await g.say('falk', 'Nicht ohne Livia. Ich habe sie gehört, aus dem Seitengang.'); return false; }
+          return true;
+        },
+        open: (g) => g.flag('koenige_offen') ? g.travel(g.hs('tuer_innen')) : 'Da ist nichts zu öffnen. Es ist eine Wand in Form eines Tors.',
+        push: (g) => g.flag('koenige_offen') ? 'Er ist offen.' : 'Ich drücke gegen Stein. Der Stein gewinnt.' },
+    ],
+    actors: [
+      { id: 'livia', x: 560, y: 505, dir: 'l', cond: (g) => g.flag('livia_frei'), talk: (g) => g.dialog('livia_tempel'),
+        look: 'Livia. Sie sieht die Statuen an, als wollte sie sie später abfragen.',
+        giveWith: { schriftrolle: (g) => g.dialog('livia_tafel'), default: 'Livia hebt eine Braue. Das heißt nein.' } },
+    ],
+    async enter(g) {
+      if (g.flag('tempel_besucht')) return;
+      g.set('tempel_besucht');
+      await g.scene(async () => {
+        await g.walk('falk', 480, 520, 'u');
+        await g.say('falk', 'Der Tempel des Poseidon. Platon hat nicht übertrieben. Er hat untertrieben.');
+        await g.say('falk', 'Zehn Statuen. Fünf rechts, fünf links. Und in der Mitte er, auf dem Wagen.');
+        await g.wait(400);
+        await g.message('Aus dem Seitengang links: eine Männerstimme, kurz und laut. Dann eine Frau, die ihm antwortet, ruhig und deutlich.', 3000);
+        await g.say('falk', 'Livia. Und der andere war Kessler.');
+        await g.say('falk', 'Vesper hat sie irgendwo eingesperrt, um mich in Bewegung zu halten. Er denkt in Hebeln.');
+        g.objective('Livia aus dem Seitengang holen. Und herausfinden, wie die Halle der Zehn aufgeht.');
+      });
+    },
+  });
+
+  ATL.dialogs.define('livia_tempel', {
+    nodes: {
+      root: {
+        options: [
+          { text: 'Was jetzt?', cond: (g) => !g.flag('koenige_offen'),
+            say: [['livia', 'Solon. „Der Erstgeborene öffne die Halle der Zehn, mit seinem Zwilling an der Hand.“'], ['livia', 'Atlas ist der Erstgeborene. Gadeiros sein Zwilling. Und die Statuen haben Hände, Adrian. Ausgestreckte.'], ['falk', 'Erst Atlas, dann Gadeiros.'], ['livia', 'Ich würde es so versuchen.']] },
+          { text: 'Was jetzt?', cond: (g) => g.flag('koenige_offen'),
+            say: [['livia', 'Vesper ist da drin. Mit dem Medaillon und mit dem, was er für seine Bestimmung hält.'], ['livia', 'Ich gehe mit. Ich habe zwölf Jahre auf diesen Raum gewartet, ich sehe ihn mir an.'], ['falk', 'Das ist keine Grabung, Livia.'], ['livia', 'Doch. Nur ohne Genehmigung.']] },
+          { text: 'Die zehn Könige. Erzähl.', once: true,
+            say: [['livia', 'Fünf Zwillingspaare, sagt der Kritias. Poseidon und eine Sterbliche, Kleito. Atlas bekam die Mitte, die anderen die Ränder.'], ['livia', 'Abwechselnd alle fünf und alle sechs Jahre kamen sie hier zusammen, jagten einen Stier ohne Waffen, opferten ihn über der Säule mit den Gesetzen und richteten übereinander.'], ['falk', 'Und dann?'], ['livia', 'Dann wurden sie gierig. Zeus rief die Götter zusammen, um sie zu strafen. Und da bricht der Text ab. Mitten im Satz.']],
+            action: (g) => { g.codex('zehnkoenige'); g.codex('kritias'); } },
+          { text: 'Die Metalltafel, die ich gefunden habe.', cond: (g) => g.has('schriftrolle') && !g.flag('rolle_gelesen'), silent: true, action: (g) => g.dialog('livia_tafel') },
+          { text: 'Gehen wir.', end: true, say: [['livia', 'Nach dir.']] },
+        ],
+      },
+    },
+  });
+
+  // ---------------------------------------------------------------- Zellen
+  const kesslerHier = (g) => !g.flag('kessler_abgelenkt') && !g.flag('kessler_besiegt');
+  const freeLivia = async (g) => {
+    await g.say('falk', 'Die Perle sitzt locker in der Fassung. Ich ziehe sie heraus…');
+    g.fx('click'); g.set('livia_frei'); g.repaint();
+    await g.message('Die Lichtlinien flackern, werden dünn und erlöschen. Das Summen hört auf.', 2400);
+    await g.say('falk', 'Sie wird heiß, dann grau. Dann zerfällt sie mir in der Hand zu Staub.');
+    await g.scene(async () => {
+      await g.walk('livia', 640, 505, 'l');
+      g.face('falk', 'livia');
+      await g.say('livia', 'Du hast dir Zeit gelassen.');
+      await g.say('falk', 'Ich hatte eine Brücke zu senken.');
+      if (g.flag('kessler_besiegt')) {
+        g.fx('step');
+        await g.message('Hinter ihnen kommt Kessler auf die Beine. Er sieht die beiden an, sieht das erloschene Gitter, und geht ohne ein Wort in den Gang.' + (g.has('figur') ? '' : ' Die Figur nimmt er mit.'), 3400);
+        g.set('kessler_aus_zellen'); if (!g.has('figur')) g.set('figur_weg'); g.repaint();
+        await g.say('livia', 'Er holt Verstärkung. Vesper.');
+      } else {
+        await g.say('livia', 'Kessler ist in den Gang, zu Vesper. Mit meiner Figur unter dem Arm.');
+      }
+      await g.say('livia', 'Vesper hat unterwegs geredet. Die ganze Fahrt, das ganze Tor hinunter. Die Maschine im Inneren. Er nennt sie die Vollendung.');
+      await g.say('falk', 'Die Vollendung.');
+      await g.say('livia', 'Er glaubt, sie macht aus einem Menschen etwas, das mehr ist. Er hat den Kritias gelesen wie eine Gebrauchsanweisung.');
+      if (g.has('schriftrolle')) { await g.say('livia', 'Und du hast etwas in der Tasche, das nach Metall klingt. Zeig her, wenn es Schrift ist.'); }
+      else await g.say('livia', 'Wenn du unterwegs Schrift siehst, Tafeln, Zeichen: Ich lese schneller als Vesper.');
+      g.objective(g.flag('koenige_offen') ? 'Mit Livia zurück in den Tempel und durch den Durchgang im Sockel.' : 'Mit Livia zurück in den Tempel. Die Halle der Zehn öffnen: der Erstgeborene, dann sein Zwilling.');
+    });
+  };
+
+  R({
+    id: 'at_prison', name: 'Zellen', ambient: 'atlantis',
+    start: [110, 520, 'r'],
+    walk: [[60, 452, 900, 452, 930, 585, 30, 585]],
+    scale: { y0: 420, s0: 0.78, y1: 585, s1: 1.05 },
+    paint(ctx, g) {
+      cave(ctx, 960, 600, 11);
+      A.stones(ctx, 0, 90, 960, 360, '#243e44', 37, 48);
+      veins(ctx, 0, 100, 960, 300, 17, 6);
+      // drei Zellen als Nischen
+      for (let c = 0; c < 3; c++) {
+        const x = 120 + c * 220;
+        A.rect(ctx, x, 220, 180, 225, '#040b0e');
+        ctx.fillStyle = A.grad(ctx, 0, 220, 0, 445, ['#02070a', '#0e2228']); ctx.fillRect(x + 6, 226, 168, 219);
+        A.rect(ctx, x + 6, 420, 168, 25, '#1a3236');
+        // Pfeiler mit Knoten
+        for (const px of [x - 8, x + 172]) { A.rect(ctx, px, 210, 16, 240, '#3a5a5c'); for (let y = 240; y < 440; y += 40) A.circle(ctx, px + 8, y, 4, c === 2 && !g.flag('livia_frei') ? '#8fe0d0' : '#1a2c30'); }
+      }
+      A.text(ctx, 'Ι', 210, 200, { font: '18px Georgia', color: '#5fa89c', align: 'center' });
+      A.text(ctx, 'ΙΙ', 430, 200, { font: '18px Georgia', color: '#5fa89c', align: 'center' });
+      A.text(ctx, 'ΙΙΙ', 650, 200, { font: '18px Georgia', color: '#5fa89c', align: 'center' });
+      // Sockel mit Perle
+      A.rect(ctx, 752, 386, 34, 64, '#3a5658'); A.rect(ctx, 748, 380, 42, 8, '#587c7c');
+      A.circle(ctx, 769, 400, 7, '#0a1618');
+      if (!g.flag('livia_frei')) { A.circle(ctx, 769, 400, 6, '#5fd8b0'); A.glow(ctx, 769, 400, 40, TEAL, 0.6); A.path(ctx, [762, 400, 745, 380, 740, 300, 742, 240], 'rgba(120,255,225,0.5)', 1.5); }
+      // Gang nach hinten
+      A.rect(ctx, 830, 170, 130, 280, '#03080c');
+      A.poly(ctx, [830, 170, 960, 150, 960, 450, 830, 450], '#050d12');
+      for (let i = 0; i < 5; i++) A.rect(ctx, 840 + i * 10, 300 + i * 30, 120 - i * 10, 4, 'rgba(60,120,120,0.25)');
+      A.rect(ctx, 826, 166, 8, 284, '#2a4a4e');
+      // Boden
+      A.floorTiles(ctx, 960, 450, 600, '#2a4648', '#122224', 12, 480);
+      A.rect(ctx, 0, 448, 960, 6, '#4e7472');
+      // Kiste, auf der Kessler saß
+      A.crate(ctx, 380, 470, 70, 46, '#3a3a40', 'MERIDIAN');
+      A.lantern(ctx, 350, 470, 0, true);
+      A.vignette(ctx, 960, 600, 0.55);
+      A.grain(ctx, 960, 600, 8, 0.05);
+    },
+    animate(ctx, t) { A.glow(ctx, 350, 458, 60 + Math.sin(t * 9) * 4, 'rgba(255,200,100,0.6)', 0.35); },
+    animateFront(ctx, t, g) {
+      if (g.flag('livia_frei')) return;
+      const x = 560;
+      for (let i = 0; i <= 14; i++) {
+        const a = 0.45 + Math.sin(t * 18 + i * 1.7) * 0.25;
+        A.line(ctx, x + 6 + i * 12, 226, x + 6 + i * 12, 445, `rgba(140,255,230,${a})`, 1.5);
+      }
+      for (let j = 0; j < 4; j++) A.line(ctx, x + 6, 260 + j * 50 + Math.sin(t * 3 + j) * 3, x + 174, 260 + j * 50 + Math.sin(t * 3 + j) * 3, 'rgba(140,255,230,0.35)', 1);
+      A.glow(ctx, 650, 330, 120, 'rgba(90,240,210,0.5)', 0.25 + Math.sin(t * 6) * 0.05);
+    },
+    hotspots: [
+      { id: 'zelle1', name: 'Zelle I', rect: [120, 220, 180, 225], at: [210, 480, 'u'], look: 'Eine leere Zelle. Die Pfeiler sind dunkel. Wer hier gesessen hat, ist lange fort.', use: 'Ich habe nicht vor, einzuziehen.', open: 'Sie ist offen. Sie hat keine Tür, nur zwei tote Pfeiler.' },
+      { id: 'zelle2', name: 'Zelle II', rect: [340, 220, 180, 225], at: [430, 480, 'u'], look: 'Leer. An der Rückwand Kratzer, in Reihen. Jemand hat Tage gezählt, vor sehr langer Zeit.', use: 'Nein.', open: 'Sie steht offen.' },
+      { id: 'gitter', name: 'Energiegitter', rect: [560, 220, 180, 160], at: [650, 490, 'u'], cond: (g) => !g.flag('livia_frei'),
+        look: 'Linien aus Licht, dicht wie Harfensaiten, von Pfeiler zu Pfeiler. Sie summen. Dahinter Livia.',
+        use: 'Ich halte die Hand hin. Die Haare auf dem Arm stellen sich auf. Weiter gehe ich nicht.', open: 'Kein Schloss, keine Tür. Nur Licht.', push: 'Ich drücke nicht gegen Licht, das summt.', pull: 'Nichts zum Anfassen.', take: 'Wie nimmt man Licht?',
+        useWith: { brecheisen: 'Ich halte das Eisen an die Linien. Es wird warm. Sehr schnell sehr warm. Nein.', seil: 'Das Seil würde durchgebrannt sein, bevor es unten ist.', flasche: 'Wasser gegen Strom. Ich habe Physik gehabt.', default: 'Das bringt gegen das Gitter nichts.' } },
+      { id: 'sockel', name: 'Sockel mit Perle', rect: [744, 376, 50, 76], at: [769, 500, 'u'], cond: (g) => !g.flag('livia_frei'),
+        look: 'Ein Sockel neben dem Gitter, kniehoch. In der Fassung eine Perle, und von ihr laufen Lichtfäden in die Pfeiler.',
+        take: async (g) => {
+          if (kesslerHier(g)) { await g.say('kessler', 'Finger weg, Falk.'); await g.walk('falk', 690, 520, 'r'); await g.say('falk', 'Er sieht nicht hin. Er sieht nur mich an. Solange das so ist, komme ich an die Perle nicht heran.'); return; }
+          await freeLivia(g);
+        },
+        use: (g) => g.hs('sockel').take(g), pull: (g) => g.hs('sockel').take(g), push: 'Drücken bringt nichts. Sie muss heraus.' },
+      { id: 'gang', name: 'Dunkler Gang', rect: [830, 160, 130, 290], at: [880, 500, 'u'],
+        look: (g) => kesslerHier(g) ? 'Ein Gang, der tiefer führt. Stufen, dann Dunkelheit. Von dort kam vorhin eine Stimme, ruhig und gebildet. Vesper.' : 'Der Gang, in dem Kessler verschwunden ist. Er führt ins Innere, auf einem anderen Weg.',
+        use: (g) => g.flag('livia_frei') ? 'Wir nehmen den Weg durch den Tempel. Da weiß ich, was mich erwartet.' : 'Nicht, solange Livia hier hinter Licht sitzt.',
+        useWith: {
+          bimsstein: async (g) => {
+            if (!kesslerHier(g)) return 'Ich werfe einen Stein in einen leeren Gang. Da hört keiner zu. Ich hebe ihn auf.';
+            await g.say('falk', 'Bimsstein. Leicht, aber laut, wenn er auf Stein fällt.');
+            g.drop('bimsstein'); g.fx('whoosh');
+            await g.scene(async () => {
+              g.anim('falk', 'reach'); await g.wait(300); g.anim('falk', 'stand');
+              await g.wait(400); g.fx('stone');
+              await g.message('Der Stein klappert die Stufen hinunter, poltert, kommt irgendwo unten zur Ruhe.', 2600);
+              g.face('kessler', 'r');
+              await g.say('kessler', 'Was war das.');
+              await g.say('falk', 'Ihr Chef, würde ich sagen. Er ruft.');
+              await g.say('kessler', 'Bleiben Sie, wo Sie sind.');
+              await g.walk('kessler', 420, 500, 'l');
+              g.anim('kessler', 'crouch'); await g.wait(400); g.anim('kessler', 'stand');
+              await g.message('Kessler nimmt die Figur von der Kiste, wie ein Mann, der seinen Hut nicht vergisst.', 2600);
+              g.set('figur_weg'); g.set('kessler_abgelenkt'); g.repaint();
+              await g.walk('kessler', 880, 480, 'u');
+              await g.walk('kessler', 900, 300, 'u');
+              g.hide('kessler');
+              await g.wait(600);
+              await g.message('Von unten, gedämpft: „Kessler. Kommen Sie. Ich brauche Sie hier.“ Schritte, die sich entfernen.', 3000);
+              await g.say('livia', 'Er kommt nicht zurück. Vesper ruft nur einmal.');
+              await g.say('falk', 'Dann ist jetzt Zeit für die Perle.');
+            });
+          },
+          stein: (g) => g.hs('gang').useWith.bimsstein(g),
+          muenzen: 'Ich könnte Münzen werfen. Aber die brauche ich vielleicht noch für die Rückfahrt.',
+          default: 'Das werfe ich nicht in einen Gang, den ich nicht kenne.' } },
+      { id: 'kiste', name: 'Kiste', rect: [378, 466, 74, 52], at: [415, 540, 'u'],
+        look: (g) => g.has('figur') || g.flag('figur_weg') ? 'Eine Kiste der Meridian-Gesellschaft. Vesper reist mit Gepäck.' : 'Eine Kiste der Meridian-Gesellschaft. Darauf steht die Wächterfigur.',
+        open: 'Zugenagelt. Und Kessler hat darauf gesessen, das reicht als Siegel.', take: 'Zu groß, und es ist nicht meine.' },
+      { id: 'figur', name: 'Wächterfigur', rect: [400, 428, 30, 42], at: [415, 540, 'u'], z: 470, cond: (g) => !g.flag('figur_weg') && !g.has('figur'),
+        paint: (ctx) => { A.rr(ctx, 408, 440, 14, 30, 4, '#6a7a6a'); A.circle(ctx, 415, 438, 7, '#7a8a7a'); A.poly(ctx, [415, 435, 424, 433, 421, 440], '#6a7a6a'); },
+        look: 'Livias Figur aus Thera. Der Mann mit dem Fischkopf. Sie ist leer, ich weiß es, ich habe sie geleert.',
+        take: (g) => { if (kesslerHier(g)) return 'Kessler sitzt daneben. Er würde es merken, und er merkt Dinge mit den Fäusten.'; g.take('figur'); g.repaint(); return 'Livias Figur. Leer, aber ihr. Ich nehme sie mit.'; } },
+      { id: 'kessler_boden', name: 'Kessler', rect: [430, 490, 110, 50], at: [400, 540, 'r'], z: 515, cond: (g) => g.flag('kessler_besiegt') && !g.flag('kessler_aus_zellen'),
+        paint: (ctx) => { A.rr(ctx, 440, 502, 90, 26, 8, '#3a3a44'); A.circle(ctx, 536, 514, 12, '#e0b090'); A.rect(ctx, 528, 502, 16, 6, '#2a2a2a'); A.line(ctx, 445, 528, 425, 540, '#2a2a34', 9); A.line(ctx, 460, 528, 440, 542, '#2a2a34', 9); },
+        look: 'Kessler, am Boden. Er atmet. Ich habe nicht vor, das zu ändern.', talk: 'Er hört mich nicht. Und wenn, hätte er nichts Nettes zu sagen.', take: 'Nein.', use: 'Ich lasse ihn liegen.', push: 'Er ist schwer genug, so wie er liegt.' },
+      { id: 'laterne', name: 'Laterne', rect: [340, 440, 20, 34], at: [330, 530, 'r'], look: 'Eine Petroleumlaterne von Vespers Leuten. Das einzige Licht hier, das nicht summt.', take: 'Sie gehört Kessler. Ich lasse ihm sein Licht.' },
+    ],
+    exits: [
+      { id: 'ausgang', name: 'Zurück zum Tempel', rect: [0, 240, 60, 340], at: [70, 520, 'l'], to: 'at_middle', pos: [110, 500], dir: 'r', look: 'Der Gang zurück in den Tempel.' },
+    ],
+    actors: [
+      { id: 'kessler', x: 470, y: 505, dir: 'l', cond: (g) => kesslerHier(g) && !g.flag('livia_frei'), talk: (g) => g.dialog('kessler_zellen'), at: [380, 530, 'r'],
+        look: 'Kessler. Er sitzt auf der Kiste wie ein Mann, der dafür bezahlt wird, zu sitzen. Und das wird er.',
+        giveWith: { muenzen: 'Kessler sieht die Münzen an, dann mich. Er lacht nicht einmal.', visitenkarte: async (g) => { await g.say('kessler', 'Die Karte meines Chefs. Behalten Sie sie. Er hat mehr davon.'); }, default: 'Kessler hebt die Hand. Er will nichts von mir.' } },
+      { id: 'livia', x: 650, y: 428, dir: 'd', cond: (g) => !g.flag('livia_frei'), at: [650, 490, 'u'],
+        talk: (g) => g.dialog(g.flag('livia_frei') ? 'livia_tempel' : 'livia_zelle'),
+        look: (g) => g.flag('livia_frei') ? 'Livia. Sie reibt sich die Handgelenke, obwohl niemand sie gefesselt hat.' : 'Livia, hinter Linien aus Licht. Sie steht, als wäre die Zelle ihre Idee gewesen.',
+        giveWith: { schriftrolle: async (g) => { if (!g.flag('livia_frei')) return 'Durch das Gitter? Die Tafel wäre geschmolzen, bevor sie drüben ist.'; await g.dialog('livia_tafel'); }, flasche: async (g) => { if (!g.flag('livia_frei')) return 'Durch das Gitter geht nichts.'; await g.say('livia', 'Danke. Kessler hat mir Wasser angeboten. Ich habe abgelehnt, aus Prinzip.'); }, default: (g) => g.flag('livia_frei') ? 'Livia schüttelt den Kopf.' : 'Durch das Gitter geht nichts.' } },
+    ],
+    async enter(g) {
+      if (g.flag('zellen_besucht')) return;
+      g.set('zellen_besucht');
+      await g.scene(async () => {
+        await g.say('kessler', 'Dr. Falk. Sie haben die Brücke gefunden. Herr Vesper hat es vorhergesagt, auf die Minute.');
+        await g.say('livia', 'Adrian.');
+        await g.say('falk', 'Livia. Du siehst aus, als hättest du dich eingesperrt, um in Ruhe zu lesen.');
+        await g.say('livia', 'Ich habe die Wände gelesen. Sie sind interessanter als Kessler.');
+        await g.say('kessler', 'Das Gitter bleibt an, bis Herr Vesper es anders sagt. Und Herr Vesper sagt es anders, wenn Sie getan haben, was er will.');
+        g.objective('Livia aus der Zelle holen. Das Gitter hängt an etwas, und Kessler passt auf.');
+      });
+    },
+  });
+
+  ATL.dialogs.define('kessler_zellen', {
+    nodes: {
+      root: {
+        options: [
+          { text: 'Lassen Sie sie frei.', once: true, say: [['kessler', 'Nein.'], ['kessler', 'Herr Vesper sagt, Sie arbeiten besser, wenn Sie einen Grund haben. Sie ist der Grund.']] },
+          { text: 'Wo ist Vesper?', once: true, say: [['kessler', 'Im Inneren. Er wartet auf Sie. Er sagt, Sie finden die Tür, weil Sie der Einzige sind, der das Griechisch liest.'], ['falk', 'Und Sie? Lesen Sie nicht?'], ['kessler', 'Ich lese Gesichter. Ihres sagt, dass Sie etwas vorhaben.']] },
+          { text: 'Was ist mit der Figur?', once: true, cond: (g) => !g.has('figur'), say: [['kessler', 'Die bleibt bei mir. Herr Vesper sammelt. Sie ist leer, das wissen Sie besser als ich.'], ['falk', 'Ich weiß, was drin war.'], ['kessler', 'Das weiß Herr Vesper auch. Deshalb steckt es jetzt oben in der Hebebühne.']] },
+          { text: 'Ich regle das anders.', end: true, silent: true,
+            action: async (g) => {
+              await g.say('falk', 'Ich regle das anders.');
+              await g.say('kessler', 'Das haben Sie auf Kreta auch gesagt.');
+              const won = await g.puzzle('fight', { enemy: 'Kessler', enemyHp: 120, enemyDamage: 25 });
+              if (won) {
+                g.fx('punch');
+                await g.message('Kessler geht zu Boden, schwer, und bleibt liegen.', 2200);
+                g.set('kessler_besiegt'); g.hide('kessler'); g.repaint();
+                await g.say('falk', 'Er atmet. Gut. Ich bin Archäologe, kein Boxer. Auch wenn es gerade anders aussah.');
+                await g.say('livia', 'Die Perle, Adrian. Im Sockel.');
+              } else {
+                g.fx('punch');
+                await g.message('Falk geht zu Boden. Kessler wartet, bis er wieder steht.', 2200);
+                await g.say('kessler', 'Noch einmal? Ich habe Zeit. Herr Vesper zahlt nach Stunden.');
+                await g.say('falk', 'Gleich. Ich sortiere nur meine Zähne.');
+              }
+            } },
+          { text: 'Wir sprechen uns noch.', end: true, say: [['kessler', 'Sicher.']] },
+        ],
+      },
+    },
+  });
+  ATL.dialogs.define('livia_zelle', {
+    nodes: {
+      root: {
+        options: [
+          { text: 'Bist du in Ordnung?', once: true, say: [['livia', 'Ja. Kessler ist ein Rohling, aber ein sorgfältiger. Er hat mich nicht angefasst, er hat mich nur eingesperrt.'], ['livia', 'Und Vesper hat sich entschuldigt. Zweimal. Das war das Schlimmste.']] },
+          { text: 'Wie komme ich an das Gitter?', say: (g) => [['livia', 'Es hängt an der Perle im Sockel, rechts. Kessler hat sie hineingesetzt, dann ging das Licht an. Nimm sie heraus, dann geht es aus.'], ...(kesslerHier(g) ? [['livia', 'Aber nicht, solange er hinsieht. Und er sieht immer hin.']] : [])] },
+          { text: 'Was will Vesper?', once: true, say: [['livia', 'Die Maschine im Inneren. Er nennt sie die Vollendung. Er hat es mir unterwegs erklärt, dreimal, in ganzen Sätzen.'], ['livia', 'Er glaubt, die Atlanter hätten damit aus Menschen etwas Besseres gemacht. Er will der Erste seit dreitausend Jahren sein.'], ['falk', 'Und was hält ihn auf?'], ['livia', 'Kein Strom. Und drei Siegel, die er nicht hat. Die hast du.']] },
+          { text: 'Ich hole dich da raus.', end: true, say: [['livia', 'Ich warte. Es ist nicht so, als hätte ich Termine.']] },
+        ],
+      },
+    },
+  });
+  ATL.dialogs.define('livia_tafel', {
+    nodes: {
+      root: {
+        say: [
+          ['livia', 'Zeig her. Spiralen, Punkte, die Reihen von rechts nach links…'],
+          ['livia', 'Ich habe zwölf Jahre auf diese Zeichen gestarrt, auf Scherben von Thera. Hier sind sie ganz.'],
+          ['falk', 'Und?'],
+          ['livia', 'Ungefähr: „Wer in den Kreis tritt, wird vollendet. Das Herz nimmt nur, wen die Zehn gesegnet haben. Die anderen macht es zu dem, was in ihnen ist.“'],
+          ['falk', 'Zu dem, was in ihnen ist.'],
+          ['livia', 'Ungeheuer, würde ich übersetzen. Das Wort hat einen Fischschwanz.'],
+          ['livia', 'Ich behalte die Tafel. Wenn wir hier herauskommen, ist das der wichtigste Fund seit dem Stein von Rosette. Wenn.'],
+        ],
+        action: (g) => { g.drop('schriftrolle'); g.set('rolle_gelesen'); g.codex('apkallu'); },
+      },
+    },
+  });
+
+  // ---------------------------------------------------------------- Das Herz
+  const SEALS = { sonnensiegel: ['sun', 'der Sonne'], stiersiegel: ['bull', 'des Stiers'], flutsiegel: ['flood', 'der Flut'] };
+  const setSeal = async (g, id) => {
+    if (g.flag('finale')) return 'Dafür ist es zu spät.';
+    if (!g.flag('strom')) { await g.say('vesper', 'Zuerst der Strom, Dr. Falk. Ein Schlüssel in einem toten Schloss ist nur Metall.'); return; }
+    const [kind, name] = SEALS[id];
+    g.drop(id); g.set('siegel_' + kind); const n = g.inc('siegel_gesetzt');
+    g.fx('glow'); g.repaint();
+    await g.say('falk', `Das Siegel ${name} rastet ein. Es wird warm, und die Ringe ziehen an.`);
+    if (n === 1) await g.say('vesper', 'Eins.');
+    else if (n === 2) await g.say('vesper', 'Zwei. Sie sehen, es geht. Es ging immer, es fehlte nur jemand, der es tut.');
+    else await finale(g);
+  };
+  const finale = async (g) => {
+    g.set('finale');
+    await g.scene(async () => {
+      g.fx('hum');
+      await g.message('Das dritte Siegel rastet ein. Die Ringe drehen sich schneller, und das Summen wird zu einem Ton.', 2800);
+      await g.say('vesper', 'Da ist er. Der Ton. Ich habe ihn in Berlin beschrieben, 1931, vor einem Saal, der gelacht hat.');
+      await g.walk('vesper', 700, 500, 'l');
+      await g.say('vesper', 'Kessler. An den Hebel.');
+      await g.walk('kessler', 475, 508, 'l');
+      await g.say('vesper', 'Dr. Marsh, Dr. Falk. Sie werden das bezeugen. Deshalb sind Sie hier, nicht nur wegen der Siegel. Ein Wunder ohne Zeugen ist ein Gerücht.');
+      if (g.flag('rolle_gelesen')) {
+        await g.say('livia', 'Vesper. Die Tafel. „Das Herz nimmt nur, wen die Zehn gesegnet haben. Die anderen macht es zu dem, was in ihnen ist.“');
+        await g.say('vesper', 'Priesterprosa, Dr. Marsh. Wer eine Maschine baut, schreibt Warnungen an die Tür. Für die anderen.');
+      } else {
+        await g.say('livia', 'Vesper. Niemand weiß, was diese Maschine tut. Nicht Sie, nicht ich.');
+        await g.say('vesper', 'Ich weiß es seit sieben Jahren, Dr. Marsh. Sie haben nur nicht zugehört.');
+      }
+      await g.say('vesper', 'Man hat mich ausgelacht. Das ist eine Art Segen. Man geht danach anders durch Türen.');
+      g.place('vesper', 700, 432, 'd'); g.set('vesper_in_kammer'); g.repaint();
+      g.fx('door');
+      await g.message('Vesper tritt in die Kammer. Die Tür schließt sich hinter ihm ohne ein Geräusch.', 2400);
+      await g.say('vesper', 'Kessler. Wenn ich es sage.');
+      await g.say('vesper', 'Oder Sie, Dr. Falk. Ich lasse Ihnen die Wahl. Es ist Ihr Fund, so gut wie meiner.');
+    });
+    await g.dialog('vesper_hebel');
+    await g.scene(async () => {
+      if (g.flag('falk_zieht')) {
+        await g.walk('kessler', 545, 512, 'l');
+        await g.walk('falk', 455, 505, 'u');
+        await g.say('vesper', 'Jetzt.');
+        g.anim('falk', 'reach'); await g.wait(500); g.anim('falk', 'stand');
+        await g.message('Falk legt die Hand auf den Hebel und zieht.', 1800);
+      } else {
+        await g.say('vesper', 'Jetzt.');
+        g.anim('kessler', 'reach'); await g.wait(500); g.anim('kessler', 'stand');
+        await g.message('Kessler zieht den Hebel.', 1600);
+      }
+      g.fx('thunder'); g.fx('hum'); g.set('ueberladung', 0.15);
+      await g.message('Licht füllt die Kammer, weiß, dann grün. Vesper steht darin mit erhobenen Händen.', 2600);
+      await g.say('vesper', 'Es ist warm. Es ist… ja. So muss es gewesen sein. So muss es…');
+      for (let k = 2; k <= 6; k++) { g.set('ueberladung', k / 10); await g.wait(220); }
+      g.fx('hum');
+      await g.message('Dann verändert sich das Licht. Es wird rot. Und die Gestalt hinter dem Glas verändert sich mit ihm.', 2800);
+      await g.say('vesper', 'Kessler. Der Hebel. Zurück, bitte.');
+      await g.say('kessler', 'Er rührt sich nicht, Herr Vesper.');
+      for (let k = 7; k <= 10; k++) { g.set('ueberladung', k / 10); await g.wait(220); }
+      await g.message('Hinter dem Glas richtet sich etwas auf, das zu groß für die Kammer ist. Es hat Vespers Stimme, aber sie kommt von zu vielen Stellen zugleich.', 3400);
+      await g.say('vesper', 'Dr. Marsh. Was genau steht auf der Tafel. Ich möchte es jetzt hören.');
+      await g.say('livia', g.flag('rolle_gelesen') ? '„Zu dem, was in ihnen ist.“' : 'Ich weiß es nicht, Vesper. Niemand weiß es.');
+      await g.say('vesper', 'Ah. Das ist eine gute Übersetzung.');
+      g.fx('thunder');
+      g.set('vesper_vernichtet'); g.hide('vesper'); g.set('kammer_zerstoert'); g.set('ueberladung', 0.5); g.repaint();
+      await g.message('Das Glas zerspringt. Ein Windstoß, heiß und grün, dann nichts. In der Kammer liegt Asche, und ein Paar Brillengläser.', 3200);
+      await g.wait(500);
+      g.actor('kessler').speed = 260;
+      await g.message('Kessler sieht die Kammer an, sieht die beiden, und rennt in den Gang.', 2200);
+      await g.walk('kessler', 930, 480, 'r'); g.hide('kessler'); g.set('kessler_geflohen_herz');
+      g.fx('thunder');
+      await g.message('Die Ringe drehen sich, ohne dass jemand sie hält. Der Ton wird höher. Von der Decke lösen sich Platten.', 2800);
+      await g.say('livia', 'Raus. Jetzt. Der Gang, den Kessler genommen hat.');
+      await g.say('falk', 'Nach dir.');
+      g.objective('Raus hier.', { silent: true });
+      await g.goto('at_escape', 120, 530, 'r');
+    });
+  };
+
+  R({
+    id: 'at_inner', name: 'Das Herz', ambient: 'atlantis',
+    start: [140, 520, 'r'],
+    walk: [[40, 452, 920, 452, 940, 585, 30, 585]],
+    scale: { y0: 420, s0: 0.78, y1: 585, s1: 1.05 },
+    paint(ctx, g) {
+      cave(ctx, 960, 600, 13);
+      ctx.fillStyle = A.grad(ctx, 0, 90, 0, 450, ['#0c2226', '#163a3e', '#0e2a2e']);
+      ctx.fillRect(0, 90, 960, 360);
+      for (let x = 0; x < 960; x += 60) A.line(ctx, x, 90, x, 450, 'rgba(120,255,225,0.08)', 1);
+      for (let y = 90; y < 450; y += 60) A.line(ctx, 0, y, 960, y, 'rgba(120,255,225,0.08)', 1);
+      veins(ctx, 0, 100, 960, 300, 19, 8);
+      // Adern von der Maschine zur Kammer und Konsole
+      A.path(ctx, [480, 340, 480, 420, 390, 420, 390, 440], g.flag('strom') ? 'rgba(120,255,225,0.7)' : 'rgba(60,110,110,0.5)', 3);
+      A.path(ctx, [600, 260, 640, 260, 640, 330], g.flag('strom') ? 'rgba(120,255,225,0.7)' : 'rgba(60,110,110,0.5)', 3);
+      A.path(ctx, [240, 420, 330, 420], g.flag('strom') ? 'rgba(120,255,225,0.7)' : 'rgba(60,110,110,0.5)', 3);
+      // Kanal mit Wasserrad und Gitter
+      canal(ctx, 30, 398, 220, 52);
+      A.rect(ctx, 26, 380, 8, 70, '#3a5a5c'); A.rect(ctx, 246, 380, 8, 70, '#3a5a5c');
+      A.rect(ctx, 60, 384, 60, 66, '#0a1a1e');
+      for (let i = 0; i < 6; i++) A.rect(ctx, 62 + i * 10, 384, 3, 66, '#587c7c');
+      if (!g.flag('strom')) for (let i = 0; i < 9; i++) A.rock(ctx, 56 + (i * 23) % 60, 386 + (i * 17) % 40, 22 + (i % 3) * 8, 18 + (i % 2) * 8, '#5a5a52', i + 40);
+      A.rect(ctx, 150, 360, 8, 60, '#2e4648'); A.rect(ctx, 204, 360, 8, 60, '#2e4648'); A.rect(ctx, 146, 356, 70, 6, '#4a6a6c');
+      // Konsole
+      ctx.fillStyle = A.grad(ctx, 0, 380, 0, 450, ['#4a6e6c', '#22383a']);
+      A.poly(ctx, [330, 396, 450, 396, 460, 450, 320, 450], ctx.fillStyle);
+      A.rect(ctx, 326, 388, 128, 10, '#5a8280');
+      for (let i = 0; i < 3; i++) {
+        const kind = ['sun', 'bull', 'flood'][i];
+        A.circle(ctx, 355 + i * 35, 420, 13, '#0a1618');
+        if (g.flag('siegel_' + kind)) A.seal(ctx, 355 + i * 35, 420, 12, kind, kind === 'sun' ? '#e0b84a' : kind === 'bull' ? '#b8956a' : '#6fa8c8');
+      }
+      // Medaillon und Figur auf der Konsole
+      if (!g.has('medaillon')) { A.circle(ctx, 435, 404, 7, '#4a7a78'); A.circle(ctx, 435, 404, 5, null, '#8fe0d0', 1); }
+      if (!g.has('figur')) { A.rr(ctx, 336, 372, 9, 22, 3, '#6a7a6a'); A.circle(ctx, 340, 371, 5, '#7a8a7a'); }
+      // Hebel
+      A.rect(ctx, 460, 400, 8, 50, '#3a4a4c');
+      A.line(ctx, 464, 402, g.flag('finale') ? 500 : 478, 356, '#8a9a9a', 5); A.circle(ctx, g.flag('finale') ? 500 : 478, 356, 5, '#b03a3a');
+      // Kammer
+      A.rect(ctx, 636, 184, 128, 266, '#1e3c40'); A.rect(ctx, 630, 178, 140, 12, '#4a6e6c'); A.rect(ctx, 630, 440, 140, 12, '#4a6e6c');
+      A.rect(ctx, 648, 194, 104, 250, g.flag('kammer_zerstoert') ? '#1a0a08' : '#061a1e');
+      if (g.flag('kammer_zerstoert')) { A.ell(ctx, 700, 436, 44, 6, '#3a3a3a'); A.circle(ctx, 692, 434, 4, null, '#aaa', 1); A.circle(ctx, 702, 434, 4, null, '#aaa', 1); }
+      // Boden
+      A.floorTiles(ctx, 960, 450, 600, '#24403e', '#101e1e', 14, 480);
+      A.rect(ctx, 0, 448, 960, 6, '#5a8280');
+      A.rect(ctx, 0, 250, 40, 200, '#03080c');
+      A.vignette(ctx, 960, 600, 0.5);
+      A.grain(ctx, 960, 600, 6, 0.05);
+    },
+    paintFront(ctx, g) {
+      if (g.flag('kammer_zerstoert')) {
+        for (let i = 0; i < 12; i++) A.poly(ctx, [640 + (i * 41) % 110, 440 - (i * 29) % 240, 650 + (i * 41) % 110, 450 - (i * 29) % 240, 646 + (i * 41) % 110, 462 - (i * 29) % 240], 'rgba(160,255,240,0.25)');
+        return;
+      }
+      ctx.fillStyle = 'rgba(120,255,235,0.14)'; ctx.fillRect(650, 196, 100, 246);
+      A.line(ctx, 660, 200, 660, 438, 'rgba(255,255,255,0.25)', 3);
+      A.line(ctx, 740, 200, 740, 438, 'rgba(255,255,255,0.12)', 2);
+      A.rect(ctx, 648, 194, 104, 3, '#8fe0d0');
+    },
+    animate(ctx, t, g) {
+      const strom = g.flag('strom');
+      const u = g.flag('ueberladung') || 0;
+      const rot = strom ? t * (0.5 + u * 3) : 0;
+      const col = (a) => u > 0 ? `rgba(${Math.round(90 + 165 * u)},${Math.round(200 - 160 * u)},${Math.round(180 - 150 * u)},${a})` : `rgba(90,200,180,${a})`;
+      A.glow(ctx, 480, 200, 200, col(0.6), strom ? 0.35 + Math.sin(t * 2) * 0.1 + u * 0.3 : 0.12);
+      for (let i = 3; i >= 0; i--) {
+        const r = 52 + i * 28;
+        A.gear(ctx, 480, 200, r, 10 + i * 6, i % 2 ? '#2e5658' : '#3a6a6a', rot * (i % 2 ? -1 : 1) / (i + 1));
+        A.circle(ctx, 480, 200, r - 9, '#0b1e24');
+      }
+      A.crystal(ctx, 464, 206, 32, 36, u > 0 ? `rgb(${Math.round(90 + 165 * u)},${Math.round(230 - 180 * u)},${Math.round(200 - 160 * u)})` : (strom ? '#8fffe0' : '#3a6a66'));
+      A.waterAnim(ctx, 34, 402, 212, 44, t * (strom ? 2 : 0.3), 'rgba(160,255,235,0.14)');
+      A.gear(ctx, 180, 400, 34, 10, '#4a6e6c', strom ? t * 2.2 : 0.3);
+      A.circle(ctx, 180, 400, 6, '#1a2c30');
+      if (g.flag('vesper_in_kammer') && !g.flag('vesper_vernichtet')) A.glow(ctx, 700, 320, 120, u > 0.5 ? 'rgba(255,60,30,0.9)' : 'rgba(120,255,230,0.8)', 0.3 + u * 0.5);
+      if (u > 0) { ctx.fillStyle = `rgba(255,40,20,${u * 0.35})`; ctx.fillRect(0, 0, 960, 600); A.glow(ctx, 700, 320, 300, 'rgba(255,60,30,0.9)', u * 0.6); }
+      if (strom) for (let i = 0; i < 3; i++) if (g.flag('siegel_' + ['sun', 'bull', 'flood'][i])) A.glow(ctx, 355 + i * 35, 420, 24 + Math.sin(t * 4 + i) * 4, TEAL, 0.5);
+    },
+    hotspots: [
+      { id: 'maschine', name: 'Die Maschine', rect: [320, 40, 320, 330], at: [480, 490, 'u'],
+        look: (g) => g.flag('strom') ? 'Ringe aus Metall, ineinander, und sie drehen sich. In der Mitte ein Kristall, der leuchtet wie die Perlen. Der Ton kommt von ihm.' : 'Ringe aus dem grünen Metall, ineinander gelagert wie die Ringe der Stadt. Sie stehen still. In der Mitte ein Kristall, dunkel.',
+        use: 'Ich fasse nichts an, das größer ist als ein Haus und summt.', push: 'Nein.', take: 'Nein.', talk: 'Sie antwortet nicht. Sie summt nur. Ich weiß nicht, ob das besser ist.' },
+      { id: 'kanal', name: 'Kanal', rect: [30, 398, 220, 52], at: [140, 490, 'u'],
+        look: (g) => g.flag('strom') ? 'Der Kanal. Das Wasser schießt jetzt durch das Gitter und treibt das Rad.' : 'Ein Kanal, der aus der Wand kommt und in die Wand geht. Das Wasser steht fast. Vor dem Rad ein Gitter, und im Gitter Geröll.' },
+      { id: 'gitter', name: 'Gitter voller Geröll', rect: [56, 380, 68, 70], at: [90, 490, 'u'], cond: (g) => !g.flag('strom'),
+        look: 'Ein Gitter quer im Kanal, Stäbe aus Metall. Davor hat sich Geröll verkeilt, Brocken, die von der Decke gekommen sind. Das Wasser kommt kaum durch.',
+        use: 'Ich greife hinein und ziehe. Die kleinen Steine kommen, die großen sitzen fest. Ich brauche einen Hebel oder Zug.',
+        pull: (g) => g.hs('gitter').use(g), push: 'Ich drücke das Geröll nur tiefer ins Gitter.', take: 'Die kleinen Steine, ja. Die großen nicht.', open: 'Es ist kein Tor, es ist ein Sieb.',
+        useWith: {
+          brecheisen: async (g) => {
+            await g.say('falk', 'Das Brecheisen unter den größten Brocken, und dann Hebel…');
+            g.anim('falk', 'crouch'); await g.wait(500); g.anim('falk', 'stand');
+            g.fx('stone'); g.fx('water');
+            g.set('strom'); g.repaint();
+            await g.message('Das Geröll rutscht, das Wasser schießt durch, das Rad dreht sich. Ein Ruck geht durch den Boden, und die Ringe beginnen sich zu bewegen.', 3000);
+            g.fx('hum');
+            await g.say('vesper', 'Sehen Sie. Dreitausend Jahre, und es läuft an wie ein Motor nach dem Winter.');
+            await g.say('falk', 'Ein Wasserrad. Alles hier ist ein Wasserrad mit besserer Beleuchtung.');
+            g.objective('Die drei Siegel in die Konsole setzen. Vesper wartet darauf, und Kessler steht vor dem Gang.');
+          },
+          seil: async (g) => {
+            await g.say('falk', 'Ich schlinge das Seil um den größten Brocken, stemme mich gegen die Wand und ziehe…');
+            g.anim('falk', 'reach'); await g.wait(600); g.anim('falk', 'stand');
+            g.fx('stone'); g.fx('water');
+            g.set('strom'); g.repaint();
+            await g.message('Der Brocken kippt, das Geröll rutscht nach, das Wasser schießt durch. Das Rad dreht sich, und die Ringe beginnen sich zu bewegen.', 3000);
+            g.fx('hum');
+            await g.say('vesper', 'Sehen Sie. Dreitausend Jahre, und es läuft an wie ein Motor nach dem Winter.');
+            await g.say('falk', 'Ein Wasserrad. Alles hier ist ein Wasserrad mit besserer Beleuchtung.');
+            g.objective('Die drei Siegel in die Konsole setzen. Vesper wartet darauf, und Kessler steht vor dem Gang.');
+          },
+          schaufel: 'Die Brocken sind zu groß für den Spaten. Er biegt sich nur.', taschenmesser: 'Ein Taschenmesser gegen einen Felsbrocken. Nein.', default: 'Damit bekomme ich das Geröll nicht aus dem Gitter.' } },
+      { id: 'gitter_frei', name: 'Gitter', rect: [56, 380, 68, 70], at: [90, 490, 'u'], cond: (g) => g.flag('strom'), look: 'Das Gitter, jetzt frei. Das Wasser rauscht hindurch.', use: 'Ich lasse die Hände draußen.' },
+      { id: 'rad', name: 'Wasserrad', rect: [140, 350, 80, 100], at: [180, 490, 'u'],
+        look: (g) => g.flag('strom') ? 'Das Rad dreht sich. Von seiner Achse laufen Adern in die Wand und weiter zu den Ringen.' : 'Ein Rad im Kanal, aus dem grünen Metall, mit Schaufeln. Es steht. Das Wasser, das es drehen sollte, kommt nicht durch das Gitter.',
+        use: (g) => g.flag('strom') ? 'Es läuft. Ich lasse die Finger davon.' : 'Ich drücke gegen das Rad. Es bewegt sich eine Handbreit und steht wieder. Das Wasser muss es drehen, nicht ich.',
+        push: (g) => g.hs('rad').use(g), pull: (g) => g.hs('rad').use(g), take: 'Es ist an der Wand festgemacht, und es ist so groß wie ich.',
+        useWith: { seil: 'Am Rad ist nichts, was ich ziehen müsste. Das Problem ist das Gitter davor.', brecheisen: 'Das Rad ist in Ordnung. Das Geröll im Gitter ist das Problem.', default: 'Das Rad braucht Wasser, nichts anderes.' } },
+      { id: 'konsole', name: 'Konsole', rect: [318, 366, 146, 86], at: [390, 500, 'u'],
+        look: (g) => { const n = g.flag('siegel_gesetzt') || 0; return `Eine schräge Platte mit drei runden Schlitzen, jeder mit acht Kerben. ${n ? n + ' davon ' + (n === 1 ? 'ist' : 'sind') + ' belegt.' : 'Alle leer.'} Daneben Livias Medaillon in einer Mulde, und ein Hebel.`; },
+        use: (g) => !g.flag('strom') ? 'Die Schlitze sind dunkel. Ohne Strom passiert hier nichts.' : (g.flag('siegel_gesetzt') || 0) < 3 ? 'Drei Schlitze. Acht Kerben. Ich habe drei Scheiben mit acht Kerben in der Tasche, und Vesper weiß es.' : 'Es läuft.',
+        open: 'Es ist eine Konsole, kein Schrank.', take: 'Sie ist Teil des Bodens.', push: 'Ich drücke. Nichts.',
+        useWith: {
+          sonnensiegel: (g) => setSeal(g, 'sonnensiegel'), stiersiegel: (g) => setSeal(g, 'stiersiegel'), flutsiegel: (g) => setSeal(g, 'flutsiegel'),
+          solontext: 'Solons Text hat mich bis hierher gebracht. Für die Konsole hilft er nicht.',
+          brecheisen: async (g) => { await g.say('falk', 'Ich könnte die Konsole zerschlagen.'); await g.say('vesper', 'Könnten Sie. Dann bleiben wir alle hier, für immer. Ich habe Zeit, Dr. Falk. Sie haben Dr. Marsh.'); },
+          default: 'Das passt in keinen der Schlitze.' } },
+      { id: 'hebel', name: 'Hebel', rect: [456, 346, 52, 60], at: [450, 500, 'u'],
+        look: 'Ein Hebel aus Metall, mit rotem Knauf. Das Einzige hier, das aussieht, als hätte ein Mensch es gebaut.',
+        pull: (g) => !g.flag('strom') ? 'Er bewegt sich nicht. Nichts hier bewegt sich ohne Strom.' : (g.flag('siegel_gesetzt') || 0) < 3 ? 'Er bewegt sich nicht. Drei Schlitze, drei Siegel. Ich habe noch nicht alle gesetzt.' : 'Zu spät dafür.',
+        use: (g) => g.hs('hebel').pull(g), push: 'Er will gezogen werden, nicht gedrückt.', take: 'Er ist festgeschraubt. Von wem auch immer.' },
+      { id: 'medaillon', name: 'Medaillon', rect: [426, 394, 20, 20], at: [430, 500, 'u'], cond: (g) => !g.has('medaillon'),
+        look: 'Livias Medaillon, in einer Mulde in der Konsole. Es sitzt dort, als wäre es dafür gemacht. Es ist dafür gemacht.',
+        take: async (g) => { if (g.flag('vesper_vernichtet')) { g.take('medaillon'); g.repaint(); return 'Ich nehme es. Es gehört Livia.'; } await g.say('vesper', 'Lassen Sie es liegen, Dr. Falk. Es ist der Schlüssel, und ich habe ihn schon gedreht.'); } },
+      { id: 'kammer', name: 'Verwandlungskammer', rect: [630, 178, 140, 274], at: [700, 500, 'u'],
+        look: (g) => g.flag('kammer_zerstoert') ? 'Die Kammer. Zersprungenes Glas, Asche, und ein Paar Brillengläser ohne Gestell.' : 'Eine Kammer aus etwas wie Glas, mannshoch, mit einer Tür. Innen Adern, die zur Maschine laufen. Man soll da hineintreten. Ich nicht.',
+        open: (g) => g.flag('kammer_zerstoert') ? 'Sie hat keine Tür mehr.' : 'Die Tür hat keinen Griff. Sie öffnet sich, wenn die Maschine es will, nehme ich an.',
+        use: 'Nein. Was auch immer das tut, ich will es nicht an mir ausprobieren.', push: 'Sie steht fest.', take: 'Nein.' },
+      { id: 'gang_innen', name: 'Gang', rect: [900, 200, 60, 250], at: [900, 500, 'u'],
+        look: (g) => g.flag('kessler_geflohen_herz') ? 'Der Gang, in dem Kessler verschwunden ist. Er führt nach oben, hoffe ich.' : 'Ein Gang, der nach oben führt. Vespers Weg. Kessler steht davor wie eine Tür mit Fäusten.',
+        use: (g) => g.flag('kessler_geflohen_herz') ? 'Gleich.' : 'Kessler steht davor. Er hat nicht vor, Platz zu machen.' },
+    ],
+    exits: [
+      { id: 'zurueck', name: 'Zurück zum Tempel', rect: [0, 250, 40, 330], at: [60, 520, 'l'], to: 'at_middle', pos: [480, 480], dir: 'd', cond: (g) => !g.flag('finale'),
+        look: 'Der Durchgang zurück in den Tempel.' },
+    ],
+    actors: [
+      { id: 'vesper', x: 505, y: 495, dir: 'l', cond: (g) => !g.flag('vesper_vernichtet'), talk: (g) => g.dialog('vesper_herz'), at: [420, 528, 'r'],
+        look: 'Konrad Vesper. Grauer Anzug, saubere Brille, keine Eile. Er sieht die Maschine an wie ein Mann sein Haus.',
+        giveWith: { visitenkarte: async (g) => { await g.say('vesper', 'Meine Karte. Behalten Sie sie. Sie werden noch jemandem erklären müssen, wer ich war.'); }, default: async (g) => { await g.say('vesper', 'Nein danke, Dr. Falk. Ich habe alles, was ich brauche. Bis auf Ihre Siegel.'); } } },
+      { id: 'kessler', x: 830, y: 505, dir: 'l', cond: (g) => !g.flag('kessler_geflohen_herz'), at: [760, 530, 'r'],
+        look: 'Kessler, vor dem Gang. Er hat sich nicht gerührt, seit wir hereingekommen sind.',
+        talk: async (g) => { await g.say('falk', 'Kessler.'); await g.say('kessler', 'Falk.'); await g.say('falk', 'Das war ein gutes Gespräch.'); },
+        giveWith: { default: 'Kessler nimmt nichts an. Er ist im Dienst.' } },
+      { id: 'livia', x: 200, y: 548, dir: 'r', cond: (g) => g.flag('livia_frei'), talk: (g) => g.dialog('livia_herz'), at: [260, 555, 'l'],
+        look: 'Livia. Sie sieht die Maschine an und nicht Vesper. Das ist ihre Art, ihn zu beleidigen.',
+        giveWith: { schriftrolle: (g) => g.dialog('livia_tafel'), default: 'Livia schüttelt den Kopf. Nicht jetzt.' } },
+    ],
+    async enter(g) {
+      if (g.flag('vesper_begruesst')) return;
+      g.set('vesper_begruesst');
+      await g.scene(async () => {
+        await g.walk('falk', 300, 520, 'r');
+        await g.walk('livia', 200, 548, 'r');
+        await g.say('vesper', 'Dr. Falk. Dr. Marsh. Ich hatte gehofft, Sie kommen zusammen. Es spart Erklärungen.');
+        await g.say('falk', 'Sie haben Livia eingesperrt.');
+        await g.say('vesper', 'Ich habe sie in Sicherheit gebracht. Kessler ist nicht subtil, aber er ist zuverlässig.');
+        await g.say('livia', 'Er hat mich in eine Zelle gesetzt, Adrian. Das nennt er Sicherheit.');
+        await g.say('vesper', 'Sehen Sie sich um. Das ist das Herz. Platon nennt es nicht, weil Solon es nie gesehen hat. Die Priester in Sais wussten davon. Sie haben es ihm verschwiegen.');
+        await g.say('vesper', 'Die Ringe, die Kammer, die Konsole. Und drei Schlitze, in die drei Siegel passen. Sie haben sie in der Tasche.');
+        await g.say('falk', 'Und wenn ich sie behalte?');
+        await g.say('vesper', 'Dann bleiben wir alle hier. Der Weg zur Hebebühne ist verschüttet, Sie haben es gesehen. Der andere Weg führt durch diesen Raum, und Kessler steht davor.');
+        await g.say('vesper', 'Aber zuerst: Die Maschine hat keinen Strom. Das Rad im Kanal steht. Sie sind der Praktiker unter uns, Dr. Falk. Ich bin nur der, der weiß, warum.');
+        await g.say('falk', 'Sie wissen sehr viel, Vesper. Für einen Mann, der nichts anfassen will.');
+        g.objective('Die Maschine hat keinen Strom. Das Wasserrad im Kanal steht still.');
+      });
+    },
+  });
+
+  ATL.dialogs.define('vesper_herz', {
+    nodes: {
+      root: {
+        options: [
+          { text: 'Was ist die Vollendung?', once: true,
+            say: (g) => [['vesper', 'Der Kritias sagt, die Atlanter seien Kinder eines Gottes gewesen. Über Generationen habe sich das Göttliche in ihnen verdünnt. Diese Maschine hat es aufgefrischt.'], ['vesper', 'Wer hineintrat, kam als das heraus, was er hätte sein sollen.'], ...(g.flag('rolle_gelesen') ? [['livia', 'Wer von den Zehn gesegnet war. So steht es auf der Tafel. Alle anderen macht sie zu Ungeheuern.'], ['vesper', 'Priesterprosa, Dr. Marsh. Wer eine Maschine baut, schreibt Warnungen an die Tür. Für die anderen.']] : [['falk', 'Und wer sagt, dass sie das noch tut?'], ['vesper', 'Niemand. Deshalb probiert man es aus.']])] },
+          { text: 'Das Medaillon.', once: true, say: [['vesper', 'Dr. Marshs Medaillon, ja. Es liegt in der Konsole, wo es hingehört. Sie hat es zwölf Jahre als Schmuck getragen. Es ist ein Schlüssel.'], ['livia', 'Ich habe es getragen, damit Sie es nicht bekommen.'], ['vesper', 'Und nun habe ich es doch. So geht es mit Schmuck.']] },
+          { text: 'Warum ich?', once: true, say: [['vesper', 'Weil Sie nicht glauben. Ein Gläubiger hätte die Siegel angebetet. Sie haben sie gefunden.'], ['vesper', 'Das ist der Unterschied zwischen Dr. Marsh und Ihnen, und er hat mich hierhergebracht.']] },
+          { text: 'Kessler hat mir von Ihnen erzählt.', once: true, cond: (g) => g.flag('kessler_besiegt'), say: [['vesper', 'Und mir von Ihnen. Er ist nachtragend. Ich bin es nicht, ich bin nur gründlich.']] },
+          { text: 'Ich habe genug gehört.', end: true, say: (g) => [['vesper', g.flag('strom') ? 'Dann die Siegel, Dr. Falk. Alle drei.' : 'Dann fangen Sie an. Das Rad, Dr. Falk.']] },
+        ],
+      },
+    },
+  });
+  ATL.dialogs.define('livia_herz', {
+    nodes: {
+      root: {
+        options: [
+          { text: 'Was meinst du?', say: (g) => !g.flag('strom') ? [['livia', 'Er hat recht mit dem Rad. Ohne Wasser läuft hier nichts. Das Gitter davor ist voll Geröll, ich habe es gesehen.'], ['livia', 'Und dann? Ich weiß es nicht, Adrian. Ich wollte immer wissen, ob es das gibt. Ich habe nie gefragt, was es tut.']] : [['livia', 'Er will hinein. Das sieht man ihm an. Er hat sein Leben lang gewartet, dass jemand die Tür aufmacht.'], ['livia', 'Ich würde ihn lassen. Das ist nicht christlich, aber es ist ehrlich.']] },
+          { text: 'Die Tafel.', once: true, cond: (g) => g.flag('rolle_gelesen'), say: [['livia', '„Die anderen macht es zu dem, was in ihnen ist.“ Ich habe mir das dreimal übersetzt. Es bleibt dasselbe.'], ['falk', 'Und was ist in Vesper?'], ['livia', 'Ich möchte es nicht herausfinden. Aber ich glaube, er wird es tun.']] },
+          { text: 'Gut.', end: true, say: [['livia', 'Pass auf dich auf. Ich sage das nur einmal.']] },
+        ],
+      },
+    },
+  });
+  ATL.dialogs.define('vesper_hebel', {
+    nodes: {
+      root: {
+        say: [['vesper', 'Nun, Dr. Falk?']],
+        options: [
+          { text: 'Ich ziehe den Hebel.', flag: 'falk_zieht', end: true, say: [['livia', 'Adrian…'], ['falk', 'Er geht sowieso hinein. Dann will ich wenigstens die Hand am Hebel haben, wenn es schiefgeht.'], ['vesper', 'Sehen Sie, Dr. Marsh. Deshalb er.']] },
+          { text: 'Ich weigere mich.', end: true, say: [['falk', 'Nein. Nicht ich.'], ['vesper', 'Wie Sie wollen. Es ändert nichts, außer wer sich später erinnert. Kessler.']] },
+        ],
+      },
+    },
+  });
+
+  // ---------------------------------------------------------------- Flucht
+  R({
+    id: 'at_escape', name: 'Flucht', ambient: 'atlantis',
+    start: [120, 530, 'r'],
+    walk: [[40, 470, 940, 470, 940, 585, 40, 585]],
+    scale: { y0: 420, s0: 0.85, y1: 585, s1: 1.0 },
+    paint(ctx, g) {
+      ctx.fillStyle = A.grad(ctx, 0, 0, 0, 600, ['#0a0608', '#1c0e0c', '#2a1410']);
+      ctx.fillRect(0, 0, 960, 600);
+      // Lavaröhre: Wände, die nach rechts zulaufen
+      A.poly(ctx, [0, 0, 960, 0, 960, 130, 700, 190, 400, 210, 0, 160], '#14090a');
+      A.poly(ctx, [0, 160, 400, 210, 400, 470, 0, 600], '#2a1612');
+      A.poly(ctx, [400, 210, 700, 190, 700, 470, 400, 470], '#3a1e18');
+      A.stones(ctx, 0, 160, 400, 320, '#3a2420', 44, 40);
+      A.stones(ctx, 400, 200, 300, 270, '#42281f', 45, 30);
+      A.stones(ctx, 700, 190, 260, 280, '#3a2420', 46, 40);
+      veins(ctx, 0, 180, 700, 260, 23, 6);
+      // Boden
+      ctx.fillStyle = A.grad(ctx, 0, 460, 0, 600, ['#3a2820', '#1a100c']); ctx.fillRect(0, 460, 960, 140);
+      for (let x = 0; x < 960; x += 70) A.line(ctx, x, 470, x - 40, 600, 'rgba(0,0,0,0.3)', 1);
+      // Hebebühne
+      A.rect(ctx, 790, 80, 160, 390, '#050304');
+      ctx.fillStyle = A.grad(ctx, 0, 80, 0, 470, ['#02090c', '#0a1c20']); ctx.fillRect(796, 86, 148, 384);
+      A.rect(ctx, 784, 80, 8, 390, '#3a5658'); A.rect(ctx, 948, 80, 8, 390, '#3a5658');
+      for (let y = 100; y < 460; y += 40) { A.rect(ctx, 786, y, 4, 8, '#8fe0d0'); A.rect(ctx, 950, y, 4, 8, '#8fe0d0'); }
+      A.rect(ctx, 796, 452, 148, 16, '#4a6e6c'); A.rect(ctx, 796, 468, 148, 60, '#22383a');
+      A.rect(ctx, 850, 384, 40, 68, '#3a5658'); A.circle(ctx, 870, 396, 7, '#0a1618'); A.circle(ctx, 870, 396, 6, '#5fd8b0'); A.glow(ctx, 870, 396, 40, TEAL, 0.6);
+      A.line(ctx, 910, 452, 928, 410, '#8a9a9a', 5); A.circle(ctx, 928, 410, 5, '#b03a3a');
+      A.vignette(ctx, 960, 600, 0.55);
+      A.grain(ctx, 960, 600, 7, 0.06);
+    },
+    animate(ctx, t, g) {
+      const rt = g.roomTime;
+      // fallende Steine
+      for (let i = 0; i < 10; i++) {
+        const x = (i * 197 + 40) % 900, y = ((rt * (260 + (i % 4) * 60) + i * 137) % 760) - 120;
+        A.rock(ctx, x, y, 14 + (i % 3) * 8, 12 + (i % 2) * 6, '#5a3a30', i + 60);
+      }
+      // Staub
+      A.dust(ctx, 0, 100, 960, 400, t, 60, 'rgba(200,160,120,0.25)');
+      // steigendes Wasser
+      const lvl = Math.min(150, rt * 28);
+      if (lvl > 0) { ctx.fillStyle = 'rgba(20,120,110,0.7)'; ctx.fillRect(0, 600 - lvl, 960, lvl); A.waterAnim(ctx, 0, 600 - lvl, 960, lvl, t * 2, 'rgba(160,255,235,0.2)'); A.glow(ctx, 480, 600, 300, 'rgba(60,220,200,0.5)', 0.3); }
+      const sh = Math.sin(t * 40) * 2;
+      ctx.fillStyle = `rgba(255,120,60,${0.05 + Math.abs(sh) * 0.02})`; ctx.fillRect(0, 0, 960, 600);
+    },
+    hotspots: [],
+    async enter(g) {
+      await g.scene(async () => {
+        g.place('livia', 70, 545, 'r');
+        const hs = g.hero.speed, ls = g.actor('livia').speed;
+        g.hero.speed = 280; g.actor('livia').speed = 270;
+        g.fx('thunder');
+        await g.message('Der Gang, den Kessler genommen hat, führt nach oben. Hinter ihnen bricht der Ton der Maschine ab, und dann bricht alles andere.', 3000);
+        const p1 = g.walk('falk', 400, 530, 'r');
+        const p2 = g.walk('livia', 350, 548, 'r');
+        await Promise.all([p1, p2]);
+        g.fx('stone');
+        await g.say('livia', 'Wasser. Der Kanal. Die Ringe laufen aus.');
+        await g.say('falk', 'Nicht stehen bleiben.');
+        const p3 = g.walk('falk', 760, 520, 'r');
+        const p4 = g.walk('livia', 720, 545, 'r');
+        await Promise.all([p3, p4]);
+        g.fx('thunder');
+        await g.say('falk', 'Die Hebebühne. Von hier bin ich gekommen. Die Perle steckt noch im Sockel.');
+        await g.say('livia', 'Dann steck du jetzt den Hebel um.');
+        g.hero.speed = hs; g.actor('livia').speed = ls;
+        await g.walk('falk', 830, 500, 'r'); await g.walk('livia', 810, 520, 'r');
+        g.hero.fixedScale = g.hero.scale; g.actor('livia').fixedScale = g.actor('livia').scale;
+        g.anim('falk', 'reach'); await g.wait(400); g.anim('falk', 'stand');
+        g.fx('hum');
+        await g.message('Die Bühne ruckt, summt, und hebt sich. Unter ihr steigt das Wasser, grün und leuchtend, und löscht das Licht von Atlantis aus.', 3200);
+        for (let i = 1; i <= 14 && !g.fast; i++) { g.hero.offsetY = -i * 30; g.actor('livia').offsetY = -i * 30; await g.wait(110); }
+        await g.wait(300);
+        await g.goto('at_epilog', 380, 508, 'r');
+      });
+    },
+    leave(g) { g.hero.offsetY = 0; g.hero.fixedScale = null; const l = g.actor('livia'); l.offsetY = 0; l.fixedScale = null; },
+  });
+
+  // ---------------------------------------------------------------- Epilog
+  R({
+    id: 'at_epilog', name: 'Vor Thera', ambient: 'thera',
+    start: [380, 508, 'r'],
+    walk: [[340, 500, 640, 500, 640, 520, 340, 520]],
+    scale: { y0: 400, s0: 0.8, y1: 585, s1: 0.8 },
+    paint(ctx, g) {
+      A.sky(ctx, 960, 320, '#2a1e4a', '#f0a050');
+      ctx.fillStyle = A.grad(ctx, 0, 180, 0, 320, ['rgba(255,150,60,0)', 'rgba(255,170,80,0.55)']); ctx.fillRect(0, 180, 960, 140);
+      A.stars(ctx, 960, 140, 50, 27, 'rgba(255,240,220,0.5)');
+      A.sun(ctx, 640, 296, 34, '#ffe0a0');
+      A.clouds(ctx, 960, 120, 5, 8, 'rgba(120,60,90,0.55)');
+      A.clouds(ctx, 960, 200, 4, 9, 'rgba(255,190,120,0.35)');
+      // Thera als Silhouette: Steilküste rechts
+      A.mountains(ctx, 960, 318, '#1a1220', 33, 60, 60);
+      A.poly(ctx, [620, 318, 700, 250, 760, 236, 840, 228, 900, 240, 960, 226, 960, 320], '#120c18');
+      A.poly(ctx, [700, 250, 760, 236, 770, 318, 700, 318], '#1a1020');
+      for (let i = 0; i < 7; i++) A.rect(ctx, 790 + i * 22, 236 - (i % 2) * 4, 5, 6, '#e8e0d0');
+      // Rauch über Akrotiri
+      for (let i = 0; i < 8; i++) A.ell(ctx, 720 + i * 10 - (i * i), 226 - i * 22, 26 + i * 8, 14 + i * 4, `rgba(120,110,120,${0.5 - i * 0.05})`);
+      // Meer
+      A.sea(ctx, 0, 318, 960, 282, '#6a3a5a', '#101828', 6);
+      A.glow(ctx, 640, 330, 180, 'rgba(255,190,110,0.7)', 0.45); A.glow(ctx, 640, 390, 90, 'rgba(255,190,110,0.5)', 0.3);
+      // Boot, hinterer Rand
+      A.rect(ctx, 330, 462, 340, 10, '#8a6a48');
+      A.rect(ctx, 630, 430, 5, 40, '#5a4a3a');
+      A.grain(ctx, 960, 600, 12, 0.04);
+    },
+    paintFront(ctx) {
+      A.boat(ctx, 320, 472, 360, '#7a5a3a');
+      A.rect(ctx, 338, 478, 324, 10, '#5a4030');
+      A.text(ctx, 'ΑΓΙΟΣ ΝΙΚΟΛΑΟΣ', 500, 520, { font: 'bold 11px Georgia', color: '#e8dcc0', align: 'center' });
+      A.line(ctx, 640, 480, 700, 500, '#5a4a3a', 4);
+      A.vignette(ctx, 960, 600, 0.4);
+    },
+    animate(ctx, t) { A.waterAnim(ctx, 0, 330, 960, 270, t, 'rgba(255,220,180,0.12)'); },
+    hotspots: [],
+    actors: [{ id: 'stavros', x: 600, y: 508, dir: 'l' }],
+    async enter(g) {
+      await g.scene(async () => {
+        g.place('livia', 440, 512, 'l');
+        g.face('falk', 'r');
+        await g.message('Abends. Stavros hat nicht gefragt, woher der Staub kam. Er hat gefragt, ob sie bezahlen können.', 3000);
+        await g.wait(600);
+        await g.say('stavros', 'Über Akrotiri steht eine Wolke. Das Tor der Deutschen ist weg, sagt der Junge vom Kiosk. Der ganze Hang.');
+        await g.say('falk', 'Dann war es das mit dem Tor.');
+        await g.say('stavros', 'Und die Deutschen?');
+        await g.say('falk', 'Einer ist in Piräus, wenn er schnell war. Der andere ist nirgends mehr.');
+        await g.wait(500);
+        g.face('livia', 'l'); g.face('falk', 'r');
+        await g.say('livia', 'Und? Glaubst du jetzt an Atlantis?');
+        await g.say('falk', 'Ich glaube an Platon. Er hat gesagt, es sei nur eine Geschichte.');
+        await g.say('livia', 'Das hat er nicht gesagt. Er hat Kritias sagen lassen, es sei wahr.');
+        await g.say('falk', 'Und dann hat er mitten im Satz aufgehört. Das ist die ehrlichste Stelle im ganzen Buch.');
+        await g.say('livia', 'Du bist unmöglich, Adrian.');
+        await g.say('falk', 'Ich bin Archäologe. Das ist dasselbe, nur mit Spaten.');
+        g.codex('platon');
+        await g.wait(800);
+        // Abspann
+        await g.message('Die Meridian-Gesellschaft löste sich im Winter 1938 auf. Ihr Vorsitzender galt als verschollen. Niemand suchte lange.', 3400);
+        if (g.has('figur')) { await g.message('Kessler wurde zuletzt in Piräus gesehen, auf einem Frachter nach Genua. Er reiste ohne Gepäck.', 3000); await g.message('Die Wächterfigur steht wieder auf dem Dachboden in Whitmore. Diesmal ohne Perle. Hank hat den Schlüssel.', 3200); }
+        else await g.message('Kessler wurde zuletzt in Piräus gesehen, auf einem Frachter nach Genua. Er hatte eine Steinfigur unter dem Arm und wollte sie nicht verkaufen.', 3600);
+        await g.message('Livia Marsh kehrte im Herbst mit einer Genehmigung nach Thera zurück. Der Hang bei Akrotiri war ein Hang. Sie grub trotzdem und fand Bimsstein.', 3600);
+        await g.message('Adrian Falk hielt in Whitmore eine Vorlesung über den Kritias. Er nannte ihn eine Erfindung. Er sagte es sehr überzeugend, und er sah dabei aus dem Fenster.', 3800);
+        await g.message('Die Metalltafel liegt in einer Schublade in Vermont. Livia übersetzt noch.', 2800);
+        await g.message('Die Mythen, die beide hierher geführt haben, sind echt: Platons Atlantis, Solon in Sais, Thot und Maat, das Labyrinth, die Flut, die Apkallu, der Berg Thera. Der Kodex im Tagebuch nennt zu jedem die Quelle.', 4600);
+        await g.message('Die Handlung ist erfunden. Die Insel auch. Wahrscheinlich.', 2800);
+        await g.wait(400);
+        await g.message('ENDE', 2600);
+        g.set('at_fertig');
+        g.objective(null);
+        await g.goto('title');
+        if (g.ui && !g.fast) g.ui.toggleMenu(true);
+      });
+    },
+  });
+})(window.ATL);

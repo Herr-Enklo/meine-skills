@@ -113,6 +113,7 @@
       a.room = this.roomDef ? this.roomDef.id : null;
       a.visible = true;
       a.hidden = false;
+      a.offsetY = 0;
       if (this.grid && !a.fixedScale) a.scale = this.scaleAt(y);
       return a;
     }
@@ -250,7 +251,7 @@
       this.hero.stop();
       if (!opts.noFade) await this.fadeOut(opts.fadeMs);
       if (this.roomDef && this.roomDef.leave) this.roomDef.leave(this);
-      for (const id in this.actors) if (id !== 'falk') { const a = this.actors[id]; if (a.room !== roomId) { a.visible = false; a.speech = null; } }
+      for (const id in this.actors) if (id !== 'falk') { const a = this.actors[id]; if (a.room !== roomId) { a.visible = false; a.speech = null; a.offsetY = 0; a.fixedScale = null; } }
       this.roomDef = def;
       this.state.room = roomId;
       this.roomTime = 0;

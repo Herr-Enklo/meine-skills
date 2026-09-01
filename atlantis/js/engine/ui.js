@@ -109,7 +109,7 @@
     }
     setCutscene(on) {
       $('#panel').style.opacity = on ? 0.35 : 1;
-      $('#panel').style.pointerEvents = on ? 'none' : 'auto';
+      for (const sel of ['#verbs', '#inventory', '#sentence']) $(sel).style.pointerEvents = on ? 'none' : 'auto';
       this.updateSentence();
     }
     showDialogPanel() {
