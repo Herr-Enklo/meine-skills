@@ -213,10 +213,9 @@
     }
   }
 
-  // Zeichnet eine Figur; Ursprung ist der Fußpunkt.
-  function drawActor(ctx, a, t) {
+  // Zeichnet die Figur selbst (ohne Schatten) mit Fußpunkt bei (ox, oy).
+  function drawRaw(ctx, a, t, ox, oy, s) {
     const L = a.def.look;
-    const s = a.scale * (L.height || 1);
     const dir = a.dir;
     const view = dir === 'd' ? 'front' : dir === 'u' ? 'back' : 'side';
     const walking = a.anim === 'walk';
@@ -230,11 +229,8 @@
     const isDress = L.topStyle === 'dress' || L.topStyle === 'robe';
 
     ctx.save();
-    ctx.translate(a.x, a.y + (a.offsetY || 0));
+    ctx.translate(ox, oy);
     ctx.scale(s * (dir === 'l' ? -1 : 1), s);
-    // Schatten
-    ctx.fillStyle = 'rgba(0,0,0,0.28)';
-    ell(ctx, 0, 0, 22 * build, 6); ctx.fill();
     ctx.translate(0, crouch);
 
     const hip = -68;
@@ -346,8 +342,50 @@
     ctx.restore();
   }
 
+  // Figur mit Kontur, Schattierung und Raumlicht über Zwischenleinwände zeichnen.
+  const OC = document.createElement('canvas'), OL = document.createElement('canvas');
+  function drawActor(ctx, a, t, tint) {
+    const L = a.def.look;
+    const s = a.scale * (L.height || 1);
+    const build = L.build === 'heavy' ? 1.25 : L.build === 'slim' ? 0.88 : 1;
+    const fx = a.x, fy = a.y + (a.offsetY || 0);
+    // Bodenschatten
+    ctx.fillStyle = 'rgba(0,0,0,0.30)';
+    ell(ctx, fx, fy, 24 * s * build, 6 * s); ctx.fill();
+    ctx.fillStyle = 'rgba(0,0,0,0.18)';
+    ell(ctx, fx, fy, 34 * s * build, 9 * s); ctx.fill();
+    const w = Math.ceil(150 * s) + 12, h = Math.ceil(185 * s) + 12;
+    if (OC.width !== w || OC.height !== h) { OC.width = w; OC.height = h; OL.width = w; OL.height = h; }
+    const oc = OC.getContext('2d');
+    oc.clearRect(0, 0, w, h);
+    const ox = w / 2, oy = h - 6;
+    drawRaw(oc, a, t, ox, oy, s);
+    // Schattierung: oben etwas heller, unten dunkler, dazu Raumlicht
+    oc.globalCompositeOperation = 'source-atop';
+    const grd = oc.createLinearGradient(0, oy - 165 * s, 0, oy);
+    grd.addColorStop(0, 'rgba(255,255,255,0.07)'); grd.addColorStop(0.5, 'rgba(0,0,0,0)'); grd.addColorStop(1, 'rgba(0,0,0,0.30)');
+    oc.fillStyle = grd; oc.fillRect(0, 0, w, h);
+    const side = oc.createLinearGradient(0, 0, w, 0);
+    side.addColorStop(0, 'rgba(0,0,0,0.16)'); side.addColorStop(0.35, 'rgba(0,0,0,0)'); side.addColorStop(0.7, 'rgba(255,255,255,0.05)'); side.addColorStop(1, 'rgba(0,0,0,0.12)');
+    oc.fillStyle = side; oc.fillRect(0, 0, w, h);
+    if (tint) { oc.fillStyle = tint; oc.fillRect(0, 0, w, h); }
+    oc.globalCompositeOperation = 'source-over';
+    // Kontur: Silhouette in acht Richtungen versetzt, dunkel eingefärbt
+    const ol = OL.getContext('2d');
+    ol.clearRect(0, 0, w, h);
+    const d = 1.4;
+    for (let i = 0; i < 8; i++) { const ang = (i / 8) * Math.PI * 2; ol.drawImage(OC, Math.cos(ang) * d, Math.sin(ang) * d); }
+    ol.globalCompositeOperation = 'source-in';
+    ol.fillStyle = 'rgba(22,14,10,0.9)'; ol.fillRect(0, 0, w, h);
+    ol.globalCompositeOperation = 'source-over';
+    const dx = Math.round(fx - ox), dy = Math.round(fy - oy);
+    ctx.drawImage(OL, dx, dy);
+    ctx.drawImage(OC, dx, dy);
+  }
+
   ATL.Actor = Actor;
   ATL.drawActor = drawActor;
+  ATL.drawActorRaw = drawRaw;
   ATL.BASE_H = BASE_H;
   ATL.shade = shade;
 })(window.ATL);

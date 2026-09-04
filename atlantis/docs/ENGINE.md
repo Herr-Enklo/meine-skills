@@ -31,6 +31,11 @@ ATL.rooms.define({
   async enter(g) { ... },     // nach dem Einblenden; hier laufen Zwischensequenzen beim ersten Betreten
   leave(g) { ... },           // beim Verlassen
   noHero: true,               // Spielfigur nicht zeichnen (Karte, Titel)
+  atmos: ['sea', 'birds'],    // optional: Klangatmosphären (sea wind cave birds city market fire lava machine water room); sonst Vorgabe je Raum in audio.js
+  surface: 'sand',            // optional: Bodenart für Schritte (stone wood sand grass water metal)
+  grade: { color: '#ffc058', alpha: 0.16 },  // optional: Farbstimmung über der Szene (null = keine); sonst Vorgabe je ambient in fx.js
+  actorTint: 'rgba(60,190,210,0.3)',        // optional: Raumlicht auf den Figuren (null = keins)
+  particles: { n: 30, color: 'rgba(255,200,120,A)', size: 2, vy: -12, vx: 4, alpha: 0.4, twinkle: true },  // optional: Partikel (A = Platzhalter für die Deckkraft)
 });
 ```
 

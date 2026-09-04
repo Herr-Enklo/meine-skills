@@ -147,6 +147,7 @@
     toggleMenu(force) {
       this.menuOpen = force === undefined ? !this.menuOpen : force;
       $('#menu').classList.toggle('hidden', !this.menuOpen);
+      $('#menu').classList.toggle('title-mode', !!(this.g.roomDef && this.g.roomDef.id === 'title'));
       if (this.menuOpen) this.renderMenu();
     }
     renderMenu(mode) {

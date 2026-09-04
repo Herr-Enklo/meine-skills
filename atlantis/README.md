@@ -29,6 +29,15 @@ Text, Esc öffnet das Menü mit Speichern und Laden, T das Tagebuch mit Aufgaben
 Der Spielstand wird nach jeder Aktion automatisch gesichert („Fortsetzen“ im Menü), dazu gibt
 es sechs Speicherplätze im Browserspeicher.
 
+## Bild und Ton
+
+Figuren werden mit Kontur, Schattierung und dem Licht des jeweiligen Raums gezeichnet, Szenen
+bekommen je Kapitel eine Farbstimmung und Partikel (Staub, Asche, Funken, Sandkörner). Die Musik
+ist generativ: jedes Kapitel hat Tonart, Tempo, Klangfarbe und Akkordfolge, die Melodie entsteht
+beim Spielen und zitiert immer wieder das Thema des Spiels. Dazu kommen Atmosphären je Raum
+(Meer, Wind, Vögel, Höhle, Markt, Maschinen) und Schritte je Bodenart. Ton lässt sich im Menü
+abschalten.
+
 ## Umfang
 
 Sieben Kapitel mit 33 Räumen: Whitmore College, New York, Alexandria und Sais, Kreta,

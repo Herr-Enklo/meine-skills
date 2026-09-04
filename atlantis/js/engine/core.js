@@ -277,6 +277,7 @@
       }
       this.updateCamera(true);
       if (def.ambient !== undefined) ATL.audio.playAmbient(def.ambient);
+      ATL.audio.setRoom(def);
       if (this.ui) { this.ui.setRoomName(def.name); this.ui.refreshInventory(); }
       this.hover = null;
       if (!opts.noFade) await this.fadeIn(opts.fadeMs);
@@ -535,6 +536,9 @@
         if (a.visible && a.room === this.roomDef.id) a.update(dt, (y) => this.scaleAt(y));
       }
       this.updateCamera(false);
+      // Schritte der Spielfigur
+      const hp = Math.floor(this.hero.phase / Math.PI);
+      if (this.hero.anim === 'walk' && this.hero.visible && hp !== this.lastStep) { this.lastStep = hp; if (!this.fast) ATL.audio.step(); }
       if (this.roomDef.update) this.roomDef.update(this, dt);
     }
     draw() {
@@ -554,15 +558,18 @@
           else ents.push({ y: h.z, draw: () => h.paint(ctx, this, t) });
         }
       }
+      const tint = ATL.fx ? ATL.fx.tintFor(def) : null;
       for (const id in this.actors) {
         const a = this.actors[id];
-        if (a.visible && !a.hidden && a.room === def.id) ents.push({ y: a.y + (a.zOffset || 0), draw: () => ATL.drawActor(ctx, a, t) });
+        if (a.visible && !a.hidden && a.room === def.id) ents.push({ y: a.y + (a.zOffset || 0), draw: () => ATL.drawActor(ctx, a, t, tint) });
       }
       ents.sort((p, q) => p.y - q.y);
       for (const e of ents) e.draw();
       if (this.hasFront) ctx.drawImage(this.fg, 0, 0);
       if (def.animateFront) def.animateFront(ctx, t, this);
+      if (ATL.fx) ATL.fx.drawParticles(ctx, def, t, def.width || this.W, this.H);
       ctx.restore();
+      if (ATL.fx) ATL.fx.drawGrade(ctx, def, this.W, this.H);
       if (this.dark > 0) { ctx.fillStyle = `rgba(0,0,0,${this.dark})`; ctx.fillRect(0, 0, this.W, this.H); }
       // Sprechtexte
       for (const id in this.actors) {

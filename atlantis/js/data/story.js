@@ -66,7 +66,27 @@
       A.vignette(ctx, 960, 600, 0.6);
       A.grain(ctx, 960, 600, 3, 0.04);
     },
-    animate(ctx, t) { A.waterAnim(ctx, 0, 330, 960, 270, t, 'rgba(180,220,255,0.1)'); },
+    animate(ctx, t) { A.waterAnim(ctx, 0, 330, 960, 270, t, 'rgba(180,220,255,0.1)'); A.glow(ctx, 480, 300, 140 + Math.sin(t * 0.8) * 12, 'rgba(255,210,140,0.5)', 0.35); },
+    overlayPaint(ctx, t) {
+      ctx.save();
+      ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+      ctx.font = 'italic 22px Georgia, serif';
+      ctx.fillStyle = 'rgba(240,220,180,0.85)';
+      ctx.fillText('Ein Abenteuer in sieben Kapiteln', 62, 92);
+      ctx.font = 'bold 64px "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif';
+      const g = ctx.createLinearGradient(0, 100, 0, 220);
+      g.addColorStop(0, '#fff2c8'); g.addColorStop(0.5, '#e0b84a'); g.addColorStop(1, '#8a5a1a');
+      ctx.shadowColor = 'rgba(0,0,0,0.8)'; ctx.shadowBlur = 18; ctx.shadowOffsetY = 4;
+      ctx.fillStyle = g;
+      ctx.fillText('Die Siegel', 60, 160);
+      ctx.fillText('von Atlantis', 60, 228);
+      ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+      ctx.strokeStyle = 'rgba(255,230,160,0.35)'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(62, 246); ctx.lineTo(430, 246); ctx.stroke();
+      ctx.font = '15px Georgia, serif'; ctx.fillStyle = 'rgba(220,200,160,0.7)';
+      ctx.fillText('1938. Ein Archäologe, eine Mythologin, drei Siegel.', 62, 270);
+      ctx.restore();
+    },
   });
 
   S.newGame = async function (g) {
