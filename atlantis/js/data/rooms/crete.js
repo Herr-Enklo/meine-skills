@@ -197,17 +197,18 @@
       A.sky(ctx, 960, 270, '#5f9fd8', '#d6ebf6');
       A.clouds(ctx, 960, 70, 4, 12);
       A.sun(ctx, 130, 64, 24);
-      A.mountains(ctx, 960, 275, '#a9b8c6', 31, 55, 150);
-      A.mountains(ctx, 960, 285, '#8ea0ad', 35, 30, 110);
+      // Bergkette bis zum Horizont (Fuß der Berge liegt auf der Wasserlinie)
+      A.mountains(ctx, 960, 262, '#a9b8c6', 31, 70, 150);
+      A.mountains(ctx, 960, 262, '#8ea0ad', 35, 38, 110);
       A.sea(ctx, 0, 262, 960, 96, '#2b6f9e', '#1c7fa6', 21);
       A.poly(ctx, [700, 268, 960, 262, 960, 300, 720, 300], 'rgba(255,255,255,0.05)');
-      // Boote im Wasser
+      // Boote im Wasser: das große mit Mast, das kleine weiter draußen (beide links, wo das Meer frei liegt)
+      A.boat(ctx, 8, 306, 46, '#3a6a8a');
+      A.ell(ctx, 31, 317, 26, 2.5, 'rgba(0,0,0,0.18)');
       A.boat(ctx, 60, 318, 120, '#7a5a3a', true);
-      A.boat(ctx, 220, 330, 80, '#3a6a8a');
       A.ell(ctx, 120, 346, 70, 4, 'rgba(0,0,0,0.15)');
-      // Ferne Segel, klein und blass
-      A.poly(ctx, [24, 288, 24, 274, 33, 288], 'rgba(235,240,240,0.75)'); A.rect(ctx, 19, 288, 18, 2, '#7f96a6');
-      A.poly(ctx, [522, 286, 522, 274, 530, 286], 'rgba(235,240,240,0.7)'); A.rect(ctx, 518, 286, 16, 2, '#7f96a6');
+      // Fernes Segel, klein und blass, in der Lücke zwischen Haus und Kapelle
+      A.poly(ctx, [362, 288, 362, 276, 370, 288], 'rgba(235,240,240,0.75)'); A.rect(ctx, 358, 288, 14, 2, '#7f96a6');
       // Kaimauer und Dorfstraße
       A.stones(ctx, 0, 350, 960, 26, '#b9a98a', 33, 22);
       A.rect(ctx, 0, 374, 960, 6, '#8a7a60');
@@ -235,11 +236,16 @@
       A.rect(ctx, 438, 162, 4, 26, '#f2ede2'); A.rect(ctx, 432, 170, 16, 4, '#f2ede2');
       A.door(ctx, 418, 300, 44, 80, '#2f62ad', { frame: '#e0d8c8', arch: true, planks: false });
       A.rect(ctx, 400, 260, 14, 22, '#2f62ad'); A.rect(ctx, 466, 260, 14, 22, '#2f62ad');
-      A.rect(ctx, 512, 260, 34, 120, '#f2ede2'); A.rect(ctx, 518, 270, 22, 30, '#0d1a2a'); A.circle(ctx, 529, 288, 6, '#8a7a50');
+      // Glockenstuhl neben der Kapelle: Pfeiler mit Giebel und Kreuz, Glocke in der Öffnung
+      A.rect(ctx, 512, 260, 34, 120, '#f2ede2'); A.rect(ctx, 540, 260, 6, 120, 'rgba(0,0,0,0.1)');
+      A.rect(ctx, 508, 256, 42, 6, '#e6dfd0'); A.poly(ctx, [508, 256, 550, 256, 529, 244], '#e6dfd0');
+      A.rect(ctx, 528, 232, 2, 12, '#e0d8c8'); A.rect(ctx, 525, 235, 8, 2, '#e0d8c8');
+      A.rect(ctx, 518, 270, 22, 30, '#0d1a2a'); A.line(ctx, 529, 270, 529, 278, '#5a4a30', 2); A.circle(ctx, 529, 288, 6, '#8a7a50'); A.circle(ctx, 529, 293, 1.5, '#5a4a30');
       house(ctx, 610, 150, 280, 230, { seed: 9, windows: [[650, 200], [820, 200]], door: [722, 250, 62, 130] });
       A.rr(ctx, 700, 190, 106, 30, 4, '#3a2a1a');
       A.text(ctx, 'ΤΑΒΕΡΝΑ', 753, 212, { font: 'bold 18px Georgia', color: '#e8d090', align: 'center' });
-      A.rect(ctx, 706, 224, 30, 22, '#6b4a2b'); A.rect(ctx, 770, 224, 30, 22, '#6b4a2b');
+      // Wandlaternen an Haken links und rechts der Tavernentür
+      for (const lx of [704, 802]) { A.line(ctx, lx, 232, lx, 240, '#3a2a1a', 2); A.line(ctx, lx - 8, 232, lx + 8, 232, '#3a2a1a', 2); A.lantern(ctx, lx, 262, 0, false); }
       A.bush(ctx, 610, 384, 50, '#7a4a5a', 6); A.bush(ctx, 890, 386, 46, '#a04a5a', 7);
       // Bougainvillea an den Hauswänden, Töpfe mit Basilikum, Katze in der Sonne
       bougainvillea(ctx, 200, 176, 200, 21);
@@ -357,7 +363,7 @@
         look: 'Netze zum Trocknen, mit Korkschwimmern. Yannis flickt sie mit einer Holznadel, die älter ist als ich.',
         take: 'Yannis säße heute Abend ohne Netz da. Nein.', use: 'Ich kann nicht flicken. Ich kann nicht einmal stopfen.',
         pull: 'Die Maschen halten. Gute Arbeit.' },
-      { id: 'boote', name: 'Boote', rect: [40, 290, 260, 66], at: [160, 440, 'u'],
+      { id: 'boote', name: 'Boote', rect: [4, 290, 296, 66], at: [160, 440, 'u'],
         look: 'Zwei Fischerboote, das Segel eingeholt. Mit dem größeren sind wir gekommen. Der Kapitän wartet, sagt er. Er hat es dreimal gesagt.',
         use: 'Erst das Siegel. Dann das Boot.', take: 'Ich kann kein Boot in die Tasche stecken.' },
       { id: 'meer', name: 'Meer', rect: [300, 262, 660, 90], at: [480, 440, 'u'],
@@ -488,6 +494,23 @@
   });
 
   // ---------------------------------------------------------------- Taverne
+  // Theke mit Gläsern, Olivenschale, Tavli-Brett und Tonkrug. Wird als z-sortierter Hotspot gezeichnet
+  // (Fußlinie 484): Maria steht dahinter, Falk davor.
+  function tavernaCounter(ctx) {
+    A.rect(ctx, 700, 402, 260, 80, '#5a3f28');
+    A.rect(ctx, 700, 396, 260, 10, '#8a6a48');
+    A.rect(ctx, 700, 480, 260, 4, 'rgba(0,0,0,0.35)');
+    for (let i = 0; i < 4; i++) A.rr(ctx, 712 + i * 62, 414, 48, 56, 3, null, 'rgba(0,0,0,0.3)', 2);
+    A.rr(ctx, 730, 380, 10, 18, 2, 'rgba(220,230,240,0.85)'); A.rr(ctx, 746, 382, 10, 16, 2, 'rgba(220,230,240,0.85)');
+    A.ell(ctx, 900, 392, 18, 6, '#8a7350'); for (let i = 0; i < 5; i++) A.ell(ctx, 892 + i * 4, 388 - (i % 2) * 3, 3, 4, i % 2 ? '#3a4a2a' : '#5a6a3a');
+    A.rr(ctx, 788, 380, 64, 16, 2, '#d8b070', '#4a3320', 2);
+    for (let i = 0; i < 12; i++) { const tx = 791 + i * 5 + (i > 5 ? 3 : 0); A.poly(ctx, [tx, 381, tx + 4, 381, tx + 2, 387], i % 2 ? '#7a2e2e' : '#3a2a1a'); A.poly(ctx, [tx, 395, tx + 4, 395, tx + 2, 389], i % 2 ? '#3a2a1a' : '#7a2e2e'); }
+    A.rect(ctx, 819, 380, 2, 16, '#4a3320');
+    for (let i = 0; i < 5; i++) A.circle(ctx, 796 + i * 9, 384 + (i % 2) * 8, 2, i % 2 ? '#f0e8d8' : '#2a1a10');
+    A.rect(ctx, 856, 386, 6, 6, '#f4f0e8'); A.rect(ctx, 864, 385, 6, 6, '#f4f0e8'); A.circle(ctx, 859, 389, 1, '#222'); A.circle(ctx, 866, 387, 1, '#222'); A.circle(ctx, 868, 389, 1, '#222');
+    A.amphora(ctx, 878, 398, 28, '#b0703f');
+  }
+
   R({
     id: 'cr_taverna', name: 'Taverne', ambient: 'crete',
     start: [266, 470, 'd'],
@@ -547,13 +570,15 @@
         for (let i = 0; i < 9; i++) { const bx = 712 + i * 25, col = ['#dfe8e0', '#7a2e2e', '#c8a050', '#4a6a3a', '#2f62ad'][(i + r) % 5]; A.rr(ctx, bx, 128 + r * 62, 14, 38, 4, col); A.rect(ctx, bx + 4, 120 + r * 62, 6, 10, A.shade(col, -0.3)); }
       }
       A.rect(ctx, 872, 40, 60, 58, '#a08040'); A.rr(ctx, 878, 46, 48, 46, 3, '#3a2a4a'); A.circle(ctx, 902, 62, 9, '#e8c890'); A.rect(ctx, 892, 70, 20, 20, '#7a2e2e');
-      A.ell(ctx, 902, 106, 8, 4, '#8a6a30');
+      // Öllämpchen auf einem kleinen Wandbrett unter der Ikone
+      A.rect(ctx, 888, 108, 28, 4, '#6b4a2b'); A.poly(ctx, [912, 112, 916, 112, 916, 122], '#6b4a2b');
+      A.ell(ctx, 902, 106, 8, 4, '#8a6a30'); A.ell(ctx, 902, 103, 5, 2.5, '#5a4020'); A.circle(ctx, 908, 103, 1.5, '#ffd070');
       // Wanduhr und Glücksauge über der Tür, Porträt über dem Regal
       A.rr(ctx, 256, 74, 44, 58, 4, '#4a3320'); A.circle(ctx, 278, 98, 19, '#efe6d0'); A.circle(ctx, 278, 98, 19, null, '#2a1a10', 2);
       for (let i = 0; i < 12; i++) { const a = (i / 12) * Math.PI * 2; A.line(ctx, 278 + Math.cos(a) * 15, 98 + Math.sin(a) * 15, 278 + Math.cos(a) * 17, 98 + Math.sin(a) * 17, '#2a1a10', i % 3 ? 1 : 2); }
       A.line(ctx, 278, 98, 270, 88, '#2a1a10', 2); A.line(ctx, 278, 98, 288, 106, '#2a1a10', 1.5); A.circle(ctx, 278, 98, 1.5, '#2a1a10');
       A.rect(ctx, 270, 120, 16, 9, '#2a1a10'); A.circle(ctx, 278, 126, 2.5, '#c8a050');
-      A.line(ctx, 278, 138, 278, 146, '#8a7a50', 1); A.circle(ctx, 278, 150, 5.5, '#2f62ad'); A.circle(ctx, 278, 150, 3.8, '#f0f0f0'); A.circle(ctx, 278, 150, 2.4, '#5a9ad8'); A.circle(ctx, 278, 150, 1.2, '#101010');
+      A.line(ctx, 278, 132, 278, 146, '#8a7a50', 1); A.circle(ctx, 278, 150, 5.5, '#2f62ad'); A.circle(ctx, 278, 150, 3.8, '#f0f0f0'); A.circle(ctx, 278, 150, 2.4, '#5a9ad8'); A.circle(ctx, 278, 150, 1.2, '#101010');
       A.rect(ctx, 794, 46, 48, 58, '#8a6a30'); A.rect(ctx, 798, 50, 40, 50, '#c8b898'); A.rect(ctx, 806, 76, 24, 24, '#3a3a3a'); A.circle(ctx, 818, 68, 9, '#c8a888'); A.rect(ctx, 812, 71, 12, 3, '#5a4a3a'); A.rect(ctx, 809, 56, 18, 6, '#6a5a4a');
       // Fässer
       A.barrel(ctx, 560, 302, 62, 82, '#7a5a3a'); A.barrel(ctx, 626, 302, 62, 82, '#6f5034'); A.barrel(ctx, 592, 222, 60, 80, '#8a6a4a');
@@ -583,19 +608,6 @@
       A.grain(ctx, 960, 600, 6, 0.04);
     },
     paintFront(ctx, g) {
-      // Theke (Vorderseite, vor Maria)
-      A.rect(ctx, 700, 402, 260, 80, '#5a3f28');
-      A.rect(ctx, 700, 396, 260, 10, '#8a6a48');
-      for (let i = 0; i < 4; i++) A.rr(ctx, 712 + i * 62, 414, 48, 56, 3, null, 'rgba(0,0,0,0.3)', 2);
-      A.rr(ctx, 730, 380, 10, 18, 2, 'rgba(220,230,240,0.85)'); A.rr(ctx, 746, 382, 10, 16, 2, 'rgba(220,230,240,0.85)');
-      A.ell(ctx, 900, 392, 18, 6, '#8a7350'); for (let i = 0; i < 5; i++) A.ell(ctx, 892 + i * 4, 388 - (i % 2) * 3, 3, 4, i % 2 ? '#3a4a2a' : '#5a6a3a');
-      // Tavli-Brett mit Würfeln und Tonkrug auf der Theke
-      A.rr(ctx, 788, 380, 64, 16, 2, '#d8b070', '#4a3320', 2);
-      for (let i = 0; i < 12; i++) { const tx = 791 + i * 5 + (i > 5 ? 3 : 0); A.poly(ctx, [tx, 381, tx + 4, 381, tx + 2, 387], i % 2 ? '#7a2e2e' : '#3a2a1a'); A.poly(ctx, [tx, 395, tx + 4, 395, tx + 2, 389], i % 2 ? '#3a2a1a' : '#7a2e2e'); }
-      A.rect(ctx, 819, 380, 2, 16, '#4a3320');
-      for (let i = 0; i < 5; i++) A.circle(ctx, 796 + i * 9, 384 + (i % 2) * 8, 2, i % 2 ? '#f0e8d8' : '#2a1a10');
-      A.rect(ctx, 856, 386, 6, 6, '#f4f0e8'); A.rect(ctx, 864, 385, 6, 6, '#f4f0e8'); A.circle(ctx, 859, 389, 1, '#222'); A.circle(ctx, 866, 387, 1, '#222'); A.circle(ctx, 868, 389, 1, '#222');
-      A.amphora(ctx, 878, 398, 28, '#b0703f');
       // Amphore am linken Bildrand
       A.ell(ctx, 20, 596, 22, 5, 'rgba(0,0,0,0.3)'); A.amphora(ctx, 22, 598, 84, '#a86a3c');
     },
@@ -634,7 +646,9 @@
         look: 'Eine Wanduhr. Sie geht nach, zwanzig Minuten. Auf Kreta ist das pünktlich.' },
       { id: 'fotos', name: 'Fotografien', rect: [336, 214, 88, 92], at: [380, 500, 'u'],
         look: 'Fotografien, sepia: Männer mit Hacken vor einer Mauer, 1901. Einer davon ist Bramwell, sagt Bramwell. Er zeigt jedes Mal auf einen anderen.' },
-      { id: 'tavli', name: 'Tavli-Brett', rect: [786, 378, 86, 20], at: [800, 520, 'u'],
+      { id: 'tavli', name: 'Tavli-Brett', rect: [786, 378, 86, 20], at: [800, 520, 'u'], z: 484,
+        // Zeichnet die ganze Theke samt Aufsatz: z-sortiert, damit Maria dahinter und Falk davor steht
+        paint: (ctx) => tavernaCounter(ctx),
         look: 'Ein Tavli-Brett, aufgeklappt, die Würfel daneben. Maria gewinnt, heißt es. Gegen jeden, auch gegen den Popen.' },
     ],
     exits: [
@@ -778,7 +792,8 @@
       A.rect(ctx, 96, 118, 392, 26, '#262626');
       A.rect(ctx, 96, 144, 392, 12, '#b34a3a');
       A.rect(ctx, 100, 156, 384, 8, '#d8c8a8');
-      A.rect(ctx, 110, 164, 364, 236, 'rgba(0,0,0,0.22)');
+      // Schatten des Portikus auf der Rückwand (nur auf der Mauer, nicht im Himmel darüber)
+      A.rect(ctx, 110, 196, 364, 204, 'rgba(0,0,0,0.22)');
       // Freskenreste an der Rückwand des Portikus (Lilien, blaues Band, vom Stein angefressen)
       const frag = (x, y, w, h, seed) => {
         const r = ATL.U.rng(seed);
@@ -788,10 +803,14 @@
         for (let i = 0; i < 6; i++) A.ell(ctx, x + r() * w, y + r() * h, 6 + r() * 10, 4 + r() * 8, A.shade('#c9b99b', -0.28));
       };
       frag(164, 232, 54, 62, 61); frag(262, 296, 56, 44, 62); frag(364, 250, 54, 40, 63);
-      for (const x of [140, 240, 340, 440]) A.column(ctx, x, 400, 236, 40, '#b8402e', 'minoan');
+      // Stylobat: zwei Stufen, auf denen die Säulen stehen
+      A.rect(ctx, 92, 400, 400, 18, '#cfc2a4'); A.rect(ctx, 92, 400, 400, 3, '#e4d9c0'); A.rect(ctx, 92, 415, 400, 3, 'rgba(0,0,0,0.18)');
+      A.rect(ctx, 84, 418, 416, 18, '#c0b294'); A.rect(ctx, 84, 418, 416, 3, '#dcd0b6'); A.rect(ctx, 84, 433, 416, 3, 'rgba(0,0,0,0.2)');
+      for (const x of [140, 240, 340, 440]) { A.ell(ctx, x, 401, 20, 4, 'rgba(0,0,0,0.25)'); A.column(ctx, x, 400, 236, 40, '#b8402e', 'minoan'); }
       horns(ctx, 452, 118, 52, '#e0d6c4');
-      // Stierfresko rechts des Portikus
-      A.rect(ctx, 508, 196, 244, 154, '#8a7a60');
+      // Stierfresko rechts des Portikus (schmaler als der Abgang breit ist, damit sich beides nicht überschneidet)
+      A.rect(ctx, 592, 196, 160, 133, '#8a7a60');
+      ctx.save(); ctx.translate(598, 202); ctx.scale(148 / 232, 121 / 142); ctx.translate(-514, -202);
       A.fresco(ctx, 514, 202, 232, 142, 3, ['#e6d2a8', '#d8c090', '#cfb383']);
       A.rect(ctx, 514, 202, 232, 142, 'rgba(220,200,160,0.5)');
       A.rect(ctx, 514, 202, 232, 14, '#2f5f8a'); A.rect(ctx, 514, 330, 232, 14, '#2f5f8a');
@@ -804,6 +823,7 @@
       A.line(ctx, 616, 250, 606, 268, '#b34a3a', 5);
       A.line(ctx, 708, 284, 728, 306, '#efe4c8', 5); A.line(ctx, 728, 306, 722, 326, '#efe4c8', 5); A.circle(ctx, 704, 280, 6, '#efe4c8');
       A.line(ctx, 548, 296, 540, 320, '#efe4c8', 5); A.circle(ctx, 550, 288, 6, '#efe4c8');
+      ctx.restore();
       // Thronsaal (Nische rechts) und Kulthörner auf der Mauer
       A.rect(ctx, 760, 232, 136, 168, '#2c2418');
       A.rect(ctx, 768, 240, 120, 100, '#b34a3a'); A.rect(ctx, 768, 240, 120, 100, 'rgba(0,0,0,0.35)');
@@ -826,14 +846,16 @@
       A.line(ctx, 700, 412, 718, 406, '#4a3a2a', 3); A.line(ctx, 694, 434, 694, 440, '#4a3a2a', 3);
       A.circle(ctx, 646, 436, 9, '#2a2a2a'); A.circle(ctx, 646, 436, 3, '#8a8a8a');
       A.crate(ctx, 720, 410, 38, 30, '#a08a60', 'K 12'); A.crate(ctx, 724, 384, 30, 26, '#a89060', '7');
-      // Abgang zur Krypta (Mitte)
+      // Abgang zur Krypta (Mitte): Türöffnung, dahinter Stufen, die nach unten ins Dunkel führen
       A.rect(ctx, 480, 300, 100, 140, '#100c08');
-      for (let i = 0; i < 6; i++) A.rect(ctx, 484, 318 + i * 20, 92, 18, A.shade('#7a6a56', -i * 0.14));
-      A.rect(ctx, 474, 292, 112, 10, '#8a7a60');
-      A.chain(ctx, 478, 330, 582, 330, '#777');
-      A.rect(ctx, 588, 296, 6, 60, '#5a4a3a'); A.rect(ctx, 466, 296, 6, 60, '#5a4a3a');
-      // Magazin mit Pithoi links
-      A.rect(ctx, 40, 326, 230, 110, '#8a7a60'); A.rect(ctx, 40, 326, 230, 6, '#6a5a44');
+      for (let i = 0; i < 6; i++) A.rect(ctx, 484 + i * 3, 418 - i * 20, 92 - i * 6, 18, A.shade('#7a6a56', -i * 0.14));
+      A.rect(ctx, 474, 292, 112, 10, '#8a7a60'); A.rect(ctx, 474, 300, 6, 140, '#7a6a52'); A.rect(ctx, 580, 300, 6, 140, '#6a5a44');
+      // Kniehohe Kette der Britischen Schule vor dem Abgang, an zwei Pfosten
+      for (const px of [466, 588]) { A.rect(ctx, px, 380, 6, 56, '#5a4a3a'); A.rect(ctx, px - 1, 378, 8, 4, '#7a6a5a'); A.ell(ctx, px + 3, 436, 7, 2.5, 'rgba(0,0,0,0.3)'); }
+      A.chain(ctx, 472, 412, 588, 414, '#777');
+      // Magazin mit Pithoi links: niedrige Mauer eines Vorratsraums vor dem Portikus
+      A.stones(ctx, 40, 326, 230, 110, '#b3a388', 29, 24); A.rect(ctx, 40, 322, 230, 6, '#d8ccb0');
+      A.rect(ctx, 40, 428, 230, 8, 'rgba(0,0,0,0.18)');
       const pithos = (x, y, w, h, color, lid) => {
         const jar = () => { ctx.beginPath(); ctx.moveTo(x + w * 0.26, y + 6); ctx.lineTo(x + w * 0.74, y + 6); ctx.quadraticCurveTo(x + w * 1.06, y + h * 0.3, x + w * 0.86, y + h * 0.72); ctx.quadraticCurveTo(x + w * 0.76, y + h * 0.96, x + w * 0.62, y + h); ctx.lineTo(x + w * 0.38, y + h); ctx.quadraticCurveTo(x + w * 0.24, y + h * 0.96, x + w * 0.14, y + h * 0.72); ctx.quadraticCurveTo(x - w * 0.06, y + h * 0.3, x + w * 0.26, y + 6); ctx.closePath(); };
         jar(); ctx.fillStyle = color; ctx.fill();
@@ -862,7 +884,7 @@
       for (let i = 0; i < 14; i++) A.circle(ctx, 908 + r() * 44, 412 + r() * 24, 2.5, i % 3 ? '#e07898' : '#f0a8c0');
       for (const gx of [300, 424, 606, 704, 862]) A.grass(ctx, gx, 441, 30, gx, '#7a8a48');
       // Schild
-      A.rect(ctx, 902, 330, 6, 106, '#5a4a3a'); A.rect(ctx, 866, 300, 78, 40, '#e8e0d0'); A.rect(ctx, 866, 300, 78, 40, 'rgba(0,0,0,0)');
+      A.rect(ctx, 902, 330, 6, 106, '#5a4a3a'); A.rr(ctx, 866, 300, 78, 40, 2, '#e8e0d0', '#6a5a48', 1.5);
       A.text(ctx, 'ΚΝΩΣΟΣ', 905, 318, { font: 'bold 12px Georgia', color: '#3a2a1a', align: 'center' });
       A.text(ctx, 'B.S.A.', 905, 332, { font: '10px Georgia', color: '#3a2a1a', align: 'center' });
       A.vignette(ctx, 960, 600, 0.3);
@@ -891,7 +913,7 @@
       { id: 'saeulen', name: 'Säulen', rect: [96, 110, 392, 300], at: [290, 470, 'u'],
         look: async (g) => { await g.say('falk', 'Säulen, rot bemalt, oben breiter als unten. Zedernstämme, verkehrt herum gesetzt, sagt Evans, damit sie nicht wieder austreiben. Diese hier sind aus Beton.'); await g.say('falk', 'Evans hat rekonstruiert, was er zu wissen glaubte. Das Ergebnis ist ein Palast, wie ihn ein Engländer von 1900 gebaut hätte, wenn er Minoer gewesen wäre.'); g.codex('knossos'); },
         take: 'Beton. Evans hat für die Ewigkeit gebaut, mindestens.', push: 'Beton mit Eisen drin. Nicht mit mir.', use: 'Ich lehne mich an. Der Schatten ist das Beste an dieser Säule.' },
-      { id: 'fresko', name: 'Stierfresko', rect: [508, 196, 244, 154], at: [630, 470, 'u'],
+      { id: 'fresko', name: 'Stierfresko', rect: [592, 196, 160, 133], at: [630, 470, 'u'],
         look: async (g) => {
           await g.say('falk', 'Das Stierfresko. Ein Stier im gestreckten Galopp, ein Springer über seinem Rücken, einer an den Hörnern, einer dahinter, der ihn auffängt. Die Frauen weiß, der Mann rot, wie es die Ägypter auch gemalt haben.');
           await g.say('falk', 'Evans hat es aus Bruchstücken zusammengesetzt. Wie viel davon minoisch ist und wie viel Evans, weiß niemand so genau. Es ist trotzdem das beste Bild, das wir von ihnen haben.');
@@ -929,7 +951,7 @@
         look: '„Knossos. Ausgrabung der Britischen Schule in Athen. Zutritt nur mit Erlaubnis.“ Livia hat eine Erlaubnis, sagt sie. Sie hat sie nicht gezeigt.', take: 'Das Schild bleibt. Ohne Schild wäre der Zutritt nicht verboten, und das wäre ein Verlust.' },
       { id: 'olivenhain', name: 'Olivenhain', rect: [0, 300, 960, 42], at: [480, 470, 'u'],
         look: 'Olivenbäume bis zum Horizont. Die Minoer hatten hier Magazine voll Öl. Manche Dinge auf dieser Insel ändern sich nicht.' },
-      { id: 'kette', name: 'Kette', rect: [466, 296, 128, 50], at: [530, 470, 'u'],
+      { id: 'kette', name: 'Kette', rect: [462, 376, 136, 64], at: [530, 470, 'u'],
         look: 'Eine Kette vor dem Abgang, kniehoch. Sie bedeutet: nicht hinuntergehen. Sie hindert niemanden daran.', pull: 'Sie hängt an zwei Pfosten. Ich steige darüber, das ist einfacher.', take: 'Eine Kette der Britischen Schule. Nein.' },
       { id: 'grabung', name: 'Grabungsausrüstung', rect: [594, 378, 164, 62], at: [676, 470, 'u'],
         look: 'Schubkarre, Sieb, Kisten mit Nummern. Die Britische Schule ist im Urlaub, das Werkzeug nicht.' },
@@ -1005,6 +1027,9 @@
       ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(0, 430, 960, 8);
       // Treppe nach oben (links), Licht von oben
       A.rect(ctx, 30, 70, 140, 360, '#0e0b08');
+      // Tageslicht am oberen Ende der Treppe, Wange an der Wand, dann die Stufen
+      ctx.fillStyle = A.grad(ctx, 0, 70, 0, 300, ['rgba(255,240,210,0.3)', 'rgba(255,240,210,0)']); ctx.fillRect(110, 70, 60, 230);
+      A.rect(ctx, 160, 74, 10, 356, '#2a2419');
       A.stairs(ctx, 40, 430, 120, 9, 18, '#5a5044', 'l');
       A.rect(ctx, 30, 66, 140, 8, '#2a2218');
       A.lightBeam(ctx, 60, 80, 170, 360, 'rgba(255,240,210,0.14)');
@@ -1042,13 +1067,15 @@
       A.cobweb(ctx, 552, 96, 44, 'tl', 'rgba(255,255,255,0.22)'); A.cobweb(ctx, 722, 102, 36, 'tr', 'rgba(255,255,255,0.2)'); A.cobweb(ctx, 246, 202, 26, 'tl', 'rgba(255,255,255,0.18)');
       A.rubble(ctx, 822, 408, 110, 30, 44, '#5c5042'); A.rubble(ctx, 178, 414, 60, 22, 45, '#5c5042');
       // Bodenplatte / Öffnung mit Treppe und Bronzering
+      // Platte und Öffnung folgen der Bodenperspektive (oben schmaler als unten)
       if (!offen) {
-        A.rect(ctx, 600, 440, 150, 70, '#5e5242');
-        ctx.strokeStyle = 'rgba(0,0,0,0.6)'; ctx.lineWidth = 3; ctx.strokeRect(600, 440, 150, 70);
+        A.poly(ctx, [606, 440, 744, 440, 750, 510, 600, 510], '#5e5242', 'rgba(0,0,0,0.6)', 3);
       } else {
-        A.rect(ctx, 596, 436, 158, 78, '#050403');
+        A.poly(ctx, [602, 436, 748, 436, 754, 514, 596, 514], '#050403');
+        ctx.save(); A.poly(ctx, [602, 436, 748, 436, 754, 514, 596, 514]); ctx.clip();
         for (let i = 0; i < 6; i++) A.rect(ctx, 600 + i * 5, 440 + i * 12, 150 - i * 10, 12, A.shade('#4a4034', -i * 0.13));
-        A.rect(ctx, 596, 436, 158, 4, '#2a2219');
+        ctx.restore();
+        A.rect(ctx, 602, 436, 146, 4, '#2a2219');
         A.circle(ctx, 620, 452, 9, null, '#5f8a6a', 4); A.rect(ctx, 616, 440, 8, 8, '#4f7a5a');
         if (g.flag('faden')) { A.path(ctx, [620, 458, 640, 470, 660, 490, 690, 506], '#d8c8a8', 1.5); }
       }
