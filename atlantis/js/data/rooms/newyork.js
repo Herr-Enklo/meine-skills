@@ -85,11 +85,12 @@
       A.rect(ctx, 300, 462, 26, 8, '#222'); for (let i = 0; i < 4; i++) A.rect(ctx, 303 + i * 6, 464, 3, 4, '#444');
       A.ell(ctx, 420, 545, 26, 9, '#3a3a40', '#222', 1.5); A.ell(ctx, 420, 545, 18, 6, null, '#222', 1); A.line(ctx, 420, 537, 420, 553, '#222', 1);
       for (let x = 10; x < 960; x += 60) A.rect(ctx, x, 556, 28, 3, 'rgba(230,220,180,0.32)');
-      A.puddle(ctx, 500, 502, 150, 14, 'rgba(255,220,160,0.1)'); A.ell(ctx, 640, 452, 60, 10, 'rgba(255,225,160,0.12)');
+      A.puddle(ctx, 500, 502, 150, 14, 'rgba(255,220,160,0.1)'); A.ell(ctx, 716, 452, 60, 10, 'rgba(255,225,160,0.12)');
       ctx.save(); ctx.translate(250, 530); ctx.rotate(-0.4); A.rect(ctx, -14, -9, 28, 18, 'rgba(216,208,192,0.7)'); ctx.restore();
-      // Laterne
-      A.rect(ctx, 636, 200, 8, 250, '#2a2a30'); A.rr(ctx, 622, 180, 36, 28, 6, '#3a3a40'); A.rect(ctx, 628, 186, 24, 18, '#ffe9a0');
-      A.glow(ctx, 640, 200, 180, 'rgba(255,230,160,0.7)', 0.4);
+      // Laterne, zwischen Kasse und Würstchenwagen, mit Fuß auf dem Gehweg
+      A.ell(ctx, 716, 450, 12, 4, '#1a1a20');
+      A.rect(ctx, 712, 200, 8, 250, '#2a2a30'); A.rect(ctx, 709, 436, 14, 14, '#2a2a30'); A.rr(ctx, 698, 180, 36, 28, 6, '#3a3a40'); A.rect(ctx, 704, 186, 24, 18, '#ffe9a0');
+      A.glow(ctx, 716, 200, 180, 'rgba(255,230,160,0.7)', 0.4);
       // Sonnenschirm des Würstchenwagens
       A.rect(ctx, 848, 300, 6, 140, '#8a8a90');
       A.poly(ctx, [700, 340, 960, 340, 930, 300, 730, 300], '#b34a3a');
@@ -130,14 +131,16 @@
         take: 'Der Türsteher sieht her.' },
       { id: 'kasse', name: 'Kasse', rect: [610, 260, 90, 180], at: [655, 480, 'u'],
         look: 'Ausverkauft. Seit Tagen, dem Staub auf dem Schild nach.', use: 'Niemand da. Und keine Karten.', open: 'Die Klappe ist zu.', talk: 'Hinter der Scheibe sitzt niemand.' },
-      { id: 'laterne', name: 'Straßenlaterne', rect: [620, 178, 40, 270], at: [640, 490, 'u'], look: 'Gaslicht. Die Stadt stellt gerade auf Strom um, aber nicht in dieser Straße.', push: 'Sie steht fest.' },
+      { id: 'laterne', name: 'Straßenlaterne', rect: [696, 178, 40, 272], at: [716, 490, 'u'], look: 'Gaslicht. Die Stadt stellt gerade auf Strom um, aber nicht in dieser Straße.', push: 'Sie steht fest.' },
       { id: 'wagen', name: 'Würstchenwagen', rect: [720, 340, 130, 100], at: [700, 500, 'r'], z: 462,
         paint: (ctx) => {
           A.rect(ctx, 720, 380, 130, 60, '#d8d0c0'); A.rect(ctx, 720, 372, 130, 10, '#b34a3a');
           for (let i = 0; i < 5; i++) A.rect(ctx, 724 + i * 26, 372, 13, 10, '#f0e0d0');
           A.rect(ctx, 728, 350, 50, 22, '#8a8a90'); A.rect(ctx, 792, 356, 40, 16, '#e0b84a');
           A.text(ctx, 'HOT DOGS', 785, 415, { font: 'bold 12px Georgia', color: '#b34a3a', align: 'center' });
-          A.circle(ctx, 740, 448, 12, '#222'); A.circle(ctx, 830, 448, 12, '#222');
+          // Fahrgestell mit Achse, damit unter dem Wagen kein Fuß durchschaut
+          A.rect(ctx, 748, 440, 74, 14, '#3a3a40'); A.line(ctx, 740, 448, 830, 448, '#222', 3);
+          A.circle(ctx, 740, 448, 12, '#222'); A.circle(ctx, 830, 448, 12, '#222'); A.circle(ctx, 740, 448, 4, '#666'); A.circle(ctx, 830, 448, 4, '#666');
         },
         look: 'Ein Würstchenwagen. Der Senf ist älter als der Verkäufer.', open: 'Der Verkäufer würde das nicht mögen.', use: 'Ich kaufe lieber etwas, als selbst hineinzugreifen.',
         take: 'Ich nehme nichts ohne zu bezahlen.', giveWith: { muenzen: (g) => g.hs('wagen').buy(g) },
@@ -270,11 +273,12 @@
       A.circle(ctx, 452, 336, 6, null, chalk, 1.5); A.line(ctx, 452, 342, 452, 362, chalk, 1.5); A.line(ctx, 440, 350, 464, 350, chalk, 1.5); A.line(ctx, 452, 362, 444, 378, chalk, 1.5); A.line(ctx, 452, 362, 460, 378, chalk, 1.5);
       ctx.strokeStyle = chalk; ctx.lineWidth = 1.5; ctx.strokeRect(372, 386, 18, 14); ctx.strokeRect(390, 386, 18, 14); ctx.strokeRect(381, 372, 18, 14);
       // Feuerleiter links
+      A.rect(ctx, 150, 60, 160, 110, '#1a1a22'); // Fenster oben, mit Sprossen
+      A.rect(ctx, 156, 66, 148, 98, '#3a3a50'); A.line(ctx, 230, 66, 230, 164, '#1a1a22', 3); A.line(ctx, 156, 115, 304, 115, '#1a1a22', 3);
       A.rect(ctx, 130, 200, 200, 8, '#2a2a30');
+      A.line(ctx, 136, 208, 160, 246, '#2a2a30', 3); A.line(ctx, 324, 208, 300, 246, '#2a2a30', 3); A.line(ctx, 230, 208, 230, 246, '#2a2a30', 3); // Streben zur Wand
       for (let i = 0; i < 8; i++) A.rect(ctx, 134 + i * 26, 170, 4, 30, '#2a2a30');
       A.rect(ctx, 130, 166, 200, 4, '#2a2a30');
-      A.rect(ctx, 150, 60, 160, 110, '#1a1a22'); // Fenster oben
-      A.rect(ctx, 156, 66, 148, 98, '#3a3a50');
       if (g.flag('leiter_unten')) A.ladder(ctx, 200, 208, 232, '#3a3a40', 34);
       else { ctx.save(); ctx.translate(200, 208); ctx.rotate(Math.PI); A.ladder(ctx, -39, 0, 100, '#3a3a40', 34); ctx.restore(); }
       // Bühnentür rechts
@@ -428,17 +432,17 @@
       A.circle(ctx, 281, 290, 5, '#a3312a'); A.circle(ctx, 292, 285, 5, '#b03a34'); A.circle(ctx, 301, 294, 5, '#a3312a'); A.ell(ctx, 296, 300, 4, 2, '#3a6a3a');
       A.rect(ctx, 327, 306, 6, 34, '#5a4a3a'); A.ell(ctx, 330, 340, 9, 3, '#5a4a3a'); A.ell(ctx, 330, 294, 11, 14, '#e8d0b0'); A.ell(ctx, 330, 286, 14, 11, '#7a3a1a'); A.circle(ctx, 320, 292, 5, '#7a3a1a'); A.circle(ctx, 340, 292, 5, '#7a3a1a'); A.circle(ctx, 318, 300, 4, '#7a3a1a'); A.circle(ctx, 342, 300, 4, '#7a3a1a');
       ctx.save(); ctx.translate(420, 430); ctx.rotate(1.2); A.chair(ctx, 0, 0, 40, '#5a3a2a'); ctx.restore();
+      // Fenster rechts (offen), vor der aufgerissenen Schranktür liegend
+      A.rect(ctx, 856, 150, 90, 160, '#2a1a2a'); A.rect(ctx, 862, 156, 78, 148, '#0d1024');
+      A.stars(ctx, 78, 60, 8, 3); ctx.save(); ctx.translate(862, 156); A.stars(ctx, 78, 70, 10, 5); ctx.restore();
+      A.rect(ctx, 856, 150, 90, 8, '#e8d8b0'); A.rect(ctx, 850, 144, 110, 4, '#8a6a4a'); A.rect(ctx, 850, 308, 102, 6, '#8a6a4a');
       // Kleiderschrank, aufgerissen
       A.shadeRect(ctx, 640, 420, 240, 6, 0.3);
       A.rect(ctx, 640, 130, 170, 290, '#4a3020');
       A.rect(ctx, 648, 138, 154, 274, '#2a1a10');
       A.rect(ctx, 652, 150, 146, 6, '#6a5a4a');
       A.rr(ctx, 660, 156, 30, 120, 6, '#8a3a4a'); A.rr(ctx, 700, 156, 30, 130, 6, '#3a4a6a'); A.rr(ctx, 740, 156, 26, 110, 6, '#e8d8b0');
-      A.poly(ctx, [810, 130, 880, 150, 880, 400, 810, 420], '#5a4030'); // offene Tür
-      // Fenster rechts (offen)
-      A.rect(ctx, 856, 150, 90, 160, '#2a1a2a'); A.rect(ctx, 862, 156, 78, 148, '#0d1024');
-      A.stars(ctx, 78, 60, 8, 3); ctx.save(); ctx.translate(862, 156); A.stars(ctx, 78, 70, 10, 5); ctx.restore();
-      A.rect(ctx, 856, 150, 90, 8, '#e8d8b0'); A.rect(ctx, 850, 144, 110, 4, '#8a6a4a');
+      A.poly(ctx, [810, 130, 880, 150, 880, 400, 810, 420], '#5a4030'); A.line(ctx, 845, 160, 845, 400, 'rgba(0,0,0,0.2)', 2); A.circle(ctx, 872, 280, 3, '#c8a848'); // offene Tür
       // Stiefel vor dem Schrank
       A.rr(ctx, 890, 426, 34, 12, 4, '#4a3020'); A.rr(ctx, 914, 410, 12, 26, 4, '#4a3020'); A.rect(ctx, 916, 414, 8, 3, '#8a6a4a');
       // Koffer umgekippt mit Reiseaufklebern, Papiere
@@ -568,8 +572,8 @@
       A.rect(ctx, 160, 394, 26, 6, '#5a4a3a'); for (let i = 0; i < 3; i++) A.rect(ctx, 163 + i * 8, 400, 3, 10, '#8a7a5a');
       A.rr(ctx, 162, 406, 20, 22, 3, '#a3312a'); A.text(ctx, 'FEUER', 172, 421, { font: 'bold 5px Georgia', color: '#fff', align: 'center' }); A.path(ctx, [163, 408, 172, 400, 181, 408], '#555', 1.5);
       // Kulisse: Säule aus Pappe mit Stützstrebe, Requisitenkiste, Stuhl mit Jacke
-      A.line(ctx, 742, 288, 772, 236, '#5a4a3a', 4); A.rect(ctx, 700, 288, 60, 8, '#5a4a3a');
-      A.column(ctx, 725, 290, 190, 30, '#d8d0c0', 'doric'); A.line(ctx, 712, 120, 712, 280, 'rgba(0,0,0,0.25)', 1);
+      A.line(ctx, 776, 414, 742, 290, '#5a4a3a', 4); A.rect(ctx, 700, 414, 84, 8, '#5a4a3a');
+      A.column(ctx, 725, 418, 300, 30, '#d8d0c0', 'doric'); A.line(ctx, 712, 130, 712, 400, 'rgba(0,0,0,0.25)', 1);
       A.crate(ctx, 690, 382, 72, 48, '#5a4a3a', 'REQUISITEN'); A.ell(ctx, 712, 380, 12, 8, '#8a8a90'); A.rect(ctx, 708, 366, 8, 12, '#a3312a'); A.poly(ctx, [734, 382, 754, 382, 752, 374, 748, 378, 744, 372, 740, 378, 736, 374], '#c8a848');
       A.chair(ctx, 806, 424, 40, '#5a3a2a'); A.rr(ctx, 808, 378, 36, 30, 6, '#3a3a4a'); A.line(ctx, 826, 382, 826, 404, 'rgba(0,0,0,0.3)', 1);
       // Bühnenboden mit Klebemarkierungen, Kabel, Schleifspuren
@@ -586,11 +590,12 @@
       A.line(ctx, 310, 428, 310, 350, '#3a3a3a', 3); A.line(ctx, 310, 428, 298, 440, '#3a3a3a', 2); A.line(ctx, 310, 428, 322, 440, '#3a3a3a', 2); A.line(ctx, 310, 428, 310, 442, '#3a3a3a', 2);
       A.poly(ctx, [296, 352, 324, 352, 326, 328, 294, 328], '#2a2a2a'); A.rect(ctx, 298, 332, 24, 14, '#e8e0d0'); for (let i = 0; i < 3; i++) A.line(ctx, 301, 336 + i * 4, 319, 336 + i * 4, '#777', 1);
       // Modelltisch mit Atlantis-Modell
-      A.table(ctx, 520, 340, 260, 24, '#3a2a1a', 80);
-      A.ell(ctx, 650, 330, 120, 40, '#3a6a8a');
-      for (let i = 0; i < 4; i++) A.ell(ctx, 650, 330, 100 - i * 24, 34 - i * 8, i % 2 ? '#c8b070' : '#5a8aa8', '#2a3a4a', 1);
-      if (!g.flag('modell_offen')) { A.rect(ctx, 640, 305, 20, 22, '#e8d8b0'); A.poly(ctx, [636, 306, 664, 306, 650, 296], '#c8b070'); }
-      else { A.rect(ctx, 665, 312, 20, 10, '#e8d8b0'); A.ell(ctx, 650, 328, 8, 4, '#1a2a3a'); }
+      A.ell(ctx, 650, 447, 132, 5, 'rgba(0,0,0,0.3)');
+      A.table(ctx, 520, 336, 260, 30, '#3a2a1a', 80);
+      A.ell(ctx, 650, 328, 118, 30, '#3a6a8a');
+      for (let i = 0; i < 4; i++) A.ell(ctx, 650, 328, 98 - i * 24, 25 - i * 6, i % 2 ? '#c8b070' : '#5a8aa8', '#2a3a4a', 1);
+      if (!g.flag('modell_offen')) { A.rect(ctx, 640, 306, 20, 20, '#e8d8b0'); A.poly(ctx, [636, 307, 664, 307, 650, 297], '#c8b070'); }
+      else { A.rect(ctx, 665, 314, 20, 10, '#e8d8b0'); A.ell(ctx, 650, 326, 8, 4, '#1a2a3a'); }
       // Falltür
       A.rect(ctx, 300, 522, 90, 44, '#3a2a1a'); ctx.strokeStyle = '#2a1a0a'; ctx.lineWidth = 3; ctx.strokeRect(300, 522, 90, 44); A.rect(ctx, 340, 540, 10, 6, '#8a8a90');
       // Scheinwerfer
@@ -681,7 +686,7 @@
       { id: 'scheinwerfer', name: 'Scheinwerfer', rect: [560, 40, 200, 30], at: [650, 480, 'u'], noWalk: true, look: 'Ein Scheinwerfer, auf das Modell gerichtet. Livia versteht etwas von Wirkung.' },
       // Ausschmückung, nur anschauen
       { id: 'seilzug', name: 'Seilzüge', rect: [162, 44, 22, 280], at: [200, 480, 'l'], look: 'Seile und Sandsäcke. Damit werden Kulissen hochgezogen. Oder Redner, wenn sie zu lange sprechen.' },
-      { id: 'kulisse', name: 'Kulissensäule', rect: [696, 96, 70, 180], at: [730, 480, 'u'], look: 'Eine Säule aus Pappe. Von Weitem dorisch, von Nahem Pappe. Wie so manches hier.' },
+      { id: 'kulisse', name: 'Kulissensäule', rect: [696, 100, 70, 266], at: [730, 480, 'u'], look: 'Eine Säule aus Pappe. Von Weitem dorisch, von Nahem Pappe. Wie so manches hier.' },
       { id: 'requisiten', name: 'Requisitenkiste', rect: [688, 366, 76, 64], at: [726, 490, 'u'], look: 'Eine Requisitenkiste. Ein Helm, eine Krone aus Blech, ein Dreizack. Atlantis für zwei Dollar pro Kopf.' },
     ],
     exits: [

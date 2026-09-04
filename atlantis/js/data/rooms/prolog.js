@@ -56,24 +56,28 @@
       A.circle(ctx, 254, 310, 32, A.grad(ctx, 230, 280, 280, 340, ['#8fb8d8', '#3a6a9a']));
       A.poly(ctx, [235, 300, 262, 292, 268, 322, 245, 330], '#8a9a5a'); A.poly(ctx, [265, 330, 280, 316, 284, 335], '#8a9a5a');
       A.circle(ctx, 254, 310, 32, null, '#c8a848', 3);
-      // Garderobe
-      A.rect(ctx, 806, 200, 6, 220, '#3a2a1a'); A.rect(ctx, 790, 200, 38, 6, '#3a2a1a');
+      // Garderobe: Ständer mit Fuß, Mantel und (solange nicht genommen) aufgehängtes Seil
+      A.ell(ctx, 809, 421, 18, 4, 'rgba(0,0,0,0.3)');
+      A.rect(ctx, 806, 200, 6, 216, '#3a2a1a'); A.rect(ctx, 790, 200, 38, 6, '#3a2a1a');
+      A.line(ctx, 809, 408, 795, 420, '#3a2a1a', 4); A.line(ctx, 809, 408, 823, 420, '#3a2a1a', 4); A.ell(ctx, 809, 419, 14, 3, '#3a2a1a');
       A.rr(ctx, 792, 210, 34, 110, 8, '#4a3a3a');
+      if (!g.flag('seil_genommen')) { A.circle(ctx, 826, 206, 2.5, '#c8a848'); for (let i = 0; i < 3; i++) A.ell(ctx, 818 + i * 2, 246 + i * 3, 7, 36, null, '#b89a68', 2.5); A.line(ctx, 818, 212, 826, 206, '#b89a68', 2.5); }
       // Zettel an der Wand neben der Tür, Diplom über der Tür
       A.rect(ctx, 834, 122, 18, 24, '#efe4c8'); A.circle(ctx, 843, 124, 1.5, '#a3312a'); for (let i = 0; i < 4; i++) A.line(ctx, 837, 129 + i * 4, 849, 129 + i * 4, '#888', 1);
       A.rect(ctx, 862, 102, 66, 50, '#3a2a1a'); A.rect(ctx, 866, 106, 58, 42, '#efe4c8');
       A.text(ctx, 'HARVARD', 895, 117, { font: 'bold 7px Georgia', color: '#3a2a1a', align: 'center' });
       for (let i = 0; i < 4; i++) A.line(ctx, 872, 124 + i * 5, 918, 124 + i * 5, '#9a9080', 1);
       A.circle(ctx, 912, 140, 4, '#a3312a');
-      // Tür zum Flur
-      A.door(ctx, 860, 190, 70, 230, '#6a4a2e', { panel: true, frame: '#3a2a1a' });
+      // Tür zum Flur, endet an der Wandkante, davor eine Schwelle
+      A.door(ctx, 860, 190, 70, 210, '#6a4a2e', { panel: true, frame: '#3a2a1a' });
+      A.rect(ctx, 856, 400, 78, 5, '#4a3a2a'); A.rect(ctx, 856, 405, 78, 2, 'rgba(0,0,0,0.25)');
       // Teppich
       A.rug(ctx, 300, 470, 380, 100, '#7a2e2e', '#c9a86a');
       // Ledersessel hinter dem Schreibtisch
       A.rr(ctx, 466, 262, 52, 80, 12, '#4a3020'); A.rr(ctx, 471, 267, 42, 56, 9, '#5e3e2a'); A.line(ctx, 475, 294, 509, 294, 'rgba(0,0,0,0.25)', 2); A.circle(ctx, 481, 280, 1.5, '#c8a848'); A.circle(ctx, 503, 280, 1.5, '#c8a848');
       // Schreibtisch
+      A.ell(ctx, 455, 456, 165, 5, 'rgba(0,0,0,0.28)');
       A.table(ctx, 300, 335, 310, 40, '#5a3f28', 80);
-      A.shadeRect(ctx, 296, 420, 318, 8, 0.25);
       A.rect(ctx, 300, 375, 310, 45, '#4a3220');
       A.rect(ctx, 320, 385, 120, 30, '#3a2a1a'); A.rect(ctx, 460, 385, 130, 30, '#3a2a1a');
       A.circle(ctx, 380, 400, 3, '#c8a848'); A.circle(ctx, 525, 400, 3, '#c8a848');
@@ -94,9 +98,9 @@
     },
     paintFront(ctx) {
       // Fundkisten vorn links, Sessellehne vorn rechts
-      A.crate(ctx, -30, 540, 84, 66, '#5a4030', 'KNOSSOS'); A.crate(ctx, -22, 494, 70, 46, '#6a4e38', 'THERA');
-      A.rr(ctx, 892, 486, 110, 130, 22, '#2e4a3a'); A.rr(ctx, 904, 498, 84, 56, 14, '#3a5a48');
-      ctx.fillStyle = A.grad(ctx, 0, 480, 0, 600, ['rgba(0,0,0,0)', 'rgba(0,0,0,0.45)']); ctx.fillRect(892, 480, 68, 120); ctx.fillRect(-30, 490, 90, 110);
+      A.crate(ctx, -46, 540, 84, 66, '#5a4030', 'KNOSSOS'); A.crate(ctx, -38, 494, 70, 46, '#6a4e38', 'THERA');
+      A.rr(ctx, 912, 486, 110, 130, 22, '#2e4a3a'); A.rr(ctx, 924, 498, 84, 56, 14, '#3a5a48'); A.line(ctx, 918, 560, 960, 560, 'rgba(0,0,0,0.2)', 2);
+      ctx.fillStyle = A.grad(ctx, 0, 480, 0, 600, ['rgba(0,0,0,0)', 'rgba(0,0,0,0.45)']); ctx.fillRect(912, 480, 48, 120); ctx.fillRect(-46, 490, 84, 110);
     },
     animate(ctx, t) {
       A.dust(ctx, 660, 300, 200, 250, t, 25);
@@ -150,7 +154,7 @@
       { id: 'fundkisten', name: 'Fundkisten', rect: [612, 352, 56, 72], at: [640, 450, 'u'], look: 'Scherben von der Grabung 1936. Katalogisiert, nummeriert, und seither von niemandem angesehen.' },
     ],
     exits: [
-      { id: 'tuer', name: 'Tür zum Flur', rect: [856, 186, 78, 236], at: [893, 450, 'u'], to: 'p_hall', pos: [110, 505], dir: 'r',
+      { id: 'tuer', name: 'Tür zum Flur', rect: [856, 186, 78, 220], at: [893, 450, 'u'], to: 'p_hall', pos: [110, 505], dir: 'r',
         look: 'Die Tür zum Flur des Instituts.', open: (g) => g.travel(g.roomDef.exits[0]) },
     ],
     async enter(g) {
@@ -193,7 +197,7 @@
       A.cracks(ctx, 540, 34, 140, 40, 5, 'rgba(0,0,0,0.14)'); A.ell(ctx, 700, 60, 50, 10, 'rgba(60,40,20,0.1)');
       // Durchgang zum Hof links, dahinter Rasen und Ahorn
       A.rect(ctx, 0, 150, 60, 250, '#3a2a1a'); A.rect(ctx, 0, 160, 50, 240, '#c8dcf0');
-      A.rect(ctx, 0, 330, 50, 70, '#7fa85a'); A.rect(ctx, 0, 350, 50, 16, '#b8a888');
+      A.rect(ctx, 0, 330, 50, 70, '#7fa85a'); A.poly(ctx, [0, 346, 50, 352, 50, 366, 0, 374], '#b8a888');
       A.circle(ctx, 8, 250, 34, '#5a8a42'); A.circle(ctx, 30, 236, 24, '#6a9a4c'); A.rect(ctx, 6, 280, 8, 52, '#5a4630');
       A.rect(ctx, 0, 160, 50, 240, 'rgba(200,220,240,0.25)');
       A.lightBeam(ctx, 50, 170, 120, 280, 'rgba(255,240,210,0.2)');
@@ -370,24 +374,27 @@
       ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(0, 400, 960, 6);
       // Staubflecken auf den Dielen, ein fehlendes Brett, Wasserfleck unter dem undichten Dach
       { const r = ATL.U.rng(15); for (let i = 0; i < 14; i++) { const x = r() * 960, y = 415 + r() * 180; A.ell(ctx, x, y, 20 + r() * 40, 4 + r() * 6, 'rgba(200,190,170,0.06)'); } }
-      A.rect(ctx, 600, 551, 90, 12, '#1a120c'); A.rect(ctx, 600, 551, 90, 2, '#2a1a10');
-      A.ell(ctx, 890, 248, 40, 12, 'rgba(0,0,0,0.2)'); A.cracks(ctx, 790, 232, 70, 100, 9, 'rgba(0,0,0,0.25)');
-      // Fenster
-      A.rect(ctx, 856, 136, 68, 90, '#3a2a1a'); A.rect(ctx, 862, 142, 56, 78, '#9fb8d0');
-      A.line(ctx, 890, 142, 890, 220, '#3a2a1a', 3); A.line(ctx, 862, 181, 918, 181, '#3a2a1a', 3);
-      A.cobweb(ctx, 862, 142, 26, 'tl', 'rgba(255,255,255,0.3)');
-      A.lightBeam(ctx, 862, 220, 160, 250, 'rgba(255,240,210,0.16)');
+      A.rect(ctx, 600, 551, 90, 12, '#1a120c'); A.rect(ctx, 600, 551, 90, 2, '#2a1a10'); A.rect(ctx, 600, 561, 90, 2, '#3a2c20'); A.rect(ctx, 600, 551, 2, 12, '#2a1a10'); A.rect(ctx, 688, 551, 2, 12, '#2a1a10');
+      A.ell(ctx, 890, 288, 40, 12, 'rgba(0,0,0,0.2)'); A.cracks(ctx, 790, 232, 70, 100, 9, 'rgba(0,0,0,0.25)');
+      // Fenster, ganz in der Giebelwand unter der Dachschräge
+      A.rect(ctx, 870, 186, 54, 70, '#3a2a1a'); A.rect(ctx, 876, 192, 42, 58, '#9fb8d0');
+      A.line(ctx, 897, 192, 897, 250, '#3a2a1a', 3); A.line(ctx, 876, 221, 918, 221, '#3a2a1a', 3);
+      A.rect(ctx, 866, 256, 62, 5, '#4a3a2a');
+      A.cobweb(ctx, 876, 192, 22, 'tl', 'rgba(255,255,255,0.3)');
+      A.lightBeam(ctx, 876, 260, 120, 190, 'rgba(255,240,210,0.16)');
       // Spinnweben in den Ecken, Wimpel, Seil mit alter Laterne
       A.cobweb(ctx, 0, 200, 56, 'tl', 'rgba(255,255,255,0.22)'); A.cobweb(ctx, 960, 200, 70, 'tr', 'rgba(255,255,255,0.22)');
       A.poly(ctx, [120, 200, 192, 222, 120, 244], '#7a2e2e'); A.text(ctx, 'WHITMORE', 126, 226, { font: 'bold 8px Georgia', color: '#e8d8b0' });
       A.rope(ctx, [200, 126, 203, 180, 199, 236], '#8a7a5a', 2); A.lantern(ctx, 200, 262, 0, false);
       // Teppichrolle rechts, Flaschen und Sack am Boden
       ctx.save(); ctx.translate(915, 400); ctx.rotate(0.1); A.rr(ctx, -14, -170, 28, 170, 8, '#6a3a3a'); A.line(ctx, -8, -160, -8, -10, 'rgba(0,0,0,0.25)', 3); A.ell(ctx, 0, -170, 14, 6, '#8a4a4a'); A.circle(ctx, 0, -170, 6, '#3a2020'); ctx.restore();
-      A.bottle(ctx, 206, 428, 30, '#3a5a3a'); A.bottle(ctx, 218, 428, 24, '#5a4a2a');
-      A.sack(ctx, 538, 428, 40, 52, '#a89a78');
-      // Regalbrett oben mit Kisten
-      A.rect(ctx, 100, 175, 340, 12, '#6a5a4a');
-      A.rect(ctx, 110, 187, 8, 60, '#5a4a3a'); A.rect(ctx, 425, 187, 8, 60, '#5a4a3a');
+      A.ell(ctx, 212, 429, 16, 3, 'rgba(0,0,0,0.3)'); A.bottle(ctx, 206, 428, 30, '#3a5a3a'); A.bottle(ctx, 218, 428, 24, '#5a4a2a');
+      A.ell(ctx, 538, 429, 22, 4, 'rgba(0,0,0,0.3)'); A.sack(ctx, 538, 428, 40, 52, '#a89a78');
+      // Regalbrett oben mit Kisten, auf zwei Pfosten bis zum Boden mit Kopfbändern
+      A.rect(ctx, 110, 187, 8, 216, '#5a4a3a'); A.rect(ctx, 425, 187, 8, 216, '#5a4a3a');
+      A.line(ctx, 118, 216, 148, 186, '#5a4a3a', 4); A.line(ctx, 425, 216, 395, 186, '#5a4a3a', 4);
+      A.ell(ctx, 114, 404, 8, 2, 'rgba(0,0,0,0.3)'); A.ell(ctx, 429, 404, 8, 2, 'rgba(0,0,0,0.3)');
+      A.rect(ctx, 100, 175, 340, 12, '#6a5a4a'); A.rect(ctx, 100, 175, 340, 2, '#7a6a5a');
       A.cobweb(ctx, 118, 187, 40, 'tl', 'rgba(255,255,255,0.3)'); A.cobweb(ctx, 425, 187, 30, 'tr', 'rgba(255,255,255,0.25)');
       // Schneiderpuppe mit Tropenhelm
       A.rect(ctx, 246, 340, 8, 88, '#5a4a3a'); A.ell(ctx, 250, 428, 22, 5, '#3a2a1a');
@@ -396,7 +403,7 @@
       A.crate(ctx, 110, 120, 80, 55, '#8a6a48', 'UR 1928'); A.crate(ctx, 200, 100, 90, 75, '#7a5e40', 'GIZEH');
       if (!g.flag('kiste_gefallen')) A.crate(ctx, 300, 95, 110, 80, '#9a7a52', 'THERA 1932');
       // Zugschnur mit Glühbirne
-      A.line(ctx, 480, 60, 480, 150, '#333', 2);
+      A.line(ctx, 480, 24, 480, 150, '#333', 2);
       A.circle(ctx, 480, 160, 12, g.flag('licht') ? '#ffe9a0' : '#5a5a4a');
       A.line(ctx, 486, 165, 500, 260, '#8a8a7a', 1.5);
       A.circle(ctx, 500, 262, 4, '#8a7a5a');
@@ -406,16 +413,19 @@
       A.rect(ctx, 70, 350, 26, 14, '#c8b890'); A.rect(ctx, 160, 372, 22, 18, '#8a3a4a'); A.rect(ctx, 72, 380, 30, 8, '#d8d0c0');
       A.shadeRect(ctx, 56, 404, 148, 5, 0.3);
       A.rect(ctx, 96, 322, 70, 6, '#3a2a1a'); A.boat(ctx, 100, 312, 62, '#5a3a22', true);
-      // Kistenstapel
-      const kx = g.flag('kisten_verschoben') ? 660 : 560;
-      if (!g.flag('kisten_verschoben') || !g.flag('leiter_genommen')) {
-        if (!g.flag('leiter_genommen')) A.ladder(ctx, 700, 210, 200, '#a08050', 40);
-      }
+      // Kistenstapel; verschoben stehen die Kisten rechts der Leiter, sodass sie ganz frei steht
+      const kx = g.flag('kisten_verschoben') ? 750 : 560;
+      if (!g.flag('leiter_genommen')) { A.ell(ctx, 722, 411, 26, 4, 'rgba(0,0,0,0.3)'); A.ladder(ctx, 700, 210, 200, '#a08050', 40); }
+      A.ell(ctx, kx + 100, 412, 112, 5, 'rgba(0,0,0,0.3)');
       A.crate(ctx, kx, 330, 110, 80, '#7a5e40', 'KERAMIK');
       A.crate(ctx, kx + 115, 340, 90, 70, '#8a6a48', 'SCHERBEN');
       A.crate(ctx, kx + 30, 260, 100, 70, '#9a7a52', 'BÜCHER');
       // Leiter am Regal, wenn angestellt
-      if (g.flag('leiter_platziert')) { ctx.save(); ctx.translate(360, 420); ctx.rotate(-0.12); A.ladder(ctx, 0, -240, 240, '#a08050', 40); ctx.restore(); }
+      if (g.flag('leiter_platziert')) { A.ell(ctx, 380, 422, 26, 4, 'rgba(0,0,0,0.3)'); ctx.save(); ctx.translate(360, 420); ctx.rotate(-0.12); A.ladder(ctx, 0, -240, 240, '#a08050', 40); ctx.restore(); }
+      // Treppenöffnung nach unten, vorn rechts
+      A.poly(ctx, [858, 552, 960, 552, 960, 600, 842, 600], '#120c08');
+      for (let i = 0; i < 3; i++) { const y = 556 + i * 15, x = 862 + i * 5; A.rect(ctx, x, y, 960 - x, 11, shade('#5a4632', -0.45 - i * 0.1)); A.rect(ctx, x, y, 960 - x, 2, shade('#5a4632', -0.2 - i * 0.1)); }
+      A.rect(ctx, 852, 548, 108, 5, '#3a2c20'); A.rect(ctx, 848, 548, 6, 52, '#3a2c20');
       // Zerbrochene Kiste und Figur
       if (g.flag('kiste_gefallen')) {
         A.poly(ctx, [300, 440, 360, 420, 400, 445, 380, 470, 310, 465], '#7a5e40');
@@ -450,7 +460,7 @@
           look: (g) => g.flag('licht') ? 'Die Schnur der Glühbirne. Das Licht brennt.' : 'Eine Schnur, die von der Decke hängt. Daran hängt vermutlich das Licht.',
           pull: async (g) => { if (g.flag('licht')) { g.set('licht', false); g.dark = 0.85; g.repaint(); return 'Dunkel.'; } g.set('licht'); g.dark = 0; g.repaint(); g.fx('click'); await g.say('falk', 'Licht. Vierzig Watt und ein paar tausend Motten.'); },
           use: (g) => g.roomDef.hotspots.find((h) => h.id === 'schnur').pull(g) },
-        { id: 'fenster', name: 'Dachfenster', rect: [856, 136, 68, 90], at: [890, 440, 'u'], look: 'Ein kleines Fenster. Man sieht das Dach des Ostflügels. Es ist tatsächlich undicht.', open: 'Es ist zugenagelt.' },
+        { id: 'fenster', name: 'Dachfenster', rect: [866, 182, 62, 78], at: [890, 440, 'u'], look: 'Ein kleines Fenster. Man sieht das Dach des Ostflügels. Es ist tatsächlich undicht.', open: 'Es ist zugenagelt.' },
         { id: 'regal', name: 'Regalbrett', rect: [100, 90, 340, 100], at: [360, 460, 'u'],
           look: (g) => g.flag('kiste_gefallen') ? 'Das Brett. Die Kiste aus Thera liegt jetzt unten, in Einzelteilen.' : 'Ein Brett unter dem Dach, viel zu hoch. Darauf drei Kisten: Ur 1928, Gizeh, und Thera 1932. Die brauche ich.',
           take: (g) => g.flag('kiste_gefallen') ? 'Da oben ist nichts mehr, was ich brauche.' : 'Zu hoch. Ich komme nicht heran, nicht einmal auf Zehenspitzen.',
@@ -488,7 +498,7 @@
           look: 'Keramik, Scherben, Bücher. Hinter den Kisten lehnt etwas an der Wand.',
           push: async (g) => { g.fx('stone'); await g.say('falk', 'Mit Schwung…'); g.set('kisten_verschoben'); g.repaint(); await g.say('falk', 'Die Kisten rutschen zur Seite. Dahinter: eine Leiter.'); },
           pull: 'Ziehen bringt nichts, ich muss sie wegschieben.', take: 'Zu schwer. Und zu viele.', open: 'Scherben. Ich habe genug Scherben gesehen.' },
-        { id: 'kisten2', name: 'Kistenstapel', rect: [660, 260, 230, 150], at: [620, 470, 'r'], cond: (g) => g.flag('kisten_verschoben'),
+        { id: 'kisten2', name: 'Kistenstapel', rect: [750, 260, 210, 150], at: [620, 470, 'r'], cond: (g) => g.flag('kisten_verschoben'),
           look: 'Die Kisten stehen jetzt an der Wand. Der Staub darauf hat sich kaum bewegt.', push: 'Das reicht. Sie stehen gut.', open: 'Scherben. Ich habe genug Scherben gesehen.' },
         { id: 'leiter', name: 'Leiter', rect: [695, 205, 55, 200], at: [660, 470, 'r'], cond: (g) => g.flag('kisten_verschoben') && !g.flag('leiter_genommen'),
           look: 'Eine Holzleiter. Zwei Sprossen wackeln.',
@@ -584,7 +594,8 @@
       // Tor rechts
       A.rect(ctx, 900, 300, 12, 190, '#3a3a3a'); A.rect(ctx, 946, 300, 12, 190, '#3a3a3a');
       for (let i = 0; i < 4; i++) A.rect(ctx, 914 + i * 8, 310, 3, 170, '#3a3a3a');
-      A.rect(ctx, 900, 296, 58, 8, '#3a3a3a');
+      A.rect(ctx, 900, 296, 58, 8, '#3a3a3a'); A.rect(ctx, 900, 474, 58, 6, '#3a3a3a');
+      A.ell(ctx, 929, 491, 36, 5, 'rgba(0,0,0,0.15)');
       A.vignette(ctx, 960, 600, 0.3);
     },
     paintFront(ctx) {
