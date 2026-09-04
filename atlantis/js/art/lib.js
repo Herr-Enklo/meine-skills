@@ -725,7 +725,6 @@
     A.rect(ctx, x - 5, y - 5, w + 10, h + 10, frame || '#5a3f28');
     A.rect(ctx, x - 2, y - 2, w + 4, h + 4, shade(frame || '#5a3f28', 0.3));
     const r = ATL.U.rng(seed || 97);
-    A.sky(ctx, w, h, shade('#8fb3d8', (r() - 0.5) * 0.3), '#e8d8b0', 0);
     ctx.save(); ctx.translate(x, y); ctx.beginPath(); ctx.rect(0, 0, w, h); ctx.clip();
     A.sky(ctx, w, h, shade('#8fb3d8', (r() - 0.5) * 0.3), '#e8d8b0');
     A.mountains(ctx, w, h * 0.6, shade('#6a7a8a', (r() - 0.5) * 0.3), seed, h * 0.3, w * 0.3);

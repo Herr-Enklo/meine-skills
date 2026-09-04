@@ -23,9 +23,22 @@
     scale: { y0: 430, s0: 0.78, y1: 585, s1: 1.05 },
     paint(ctx, g) {
       cityNight(ctx);
+      // Oberleitung quer über die Straße
+      A.path(ctx, [0, 46, 480, 58, 960, 44], 'rgba(0,0,0,0.6)', 1.5);
       // Theaterfassade
       A.bricks(ctx, 120, 60, 720, 380, '#5a4a48', 36, 14, 4, '#3a2e2c');
       A.rect(ctx, 120, 60, 720, 12, '#7a6a68');
+      // Feuerleiter links mit zwei Fenstern dahinter
+      A.rect(ctx, 138, 78, 44, 60, '#1a1a28'); A.rect(ctx, 142, 82, 36, 52, '#2a2a40'); A.line(ctx, 160, 82, 160, 134, '#1a1a28', 2);
+      A.rect(ctx, 138, 158, 44, 60, '#1a1a28'); A.rect(ctx, 142, 162, 36, 52, '#6a5030'); A.line(ctx, 160, 162, 160, 214, '#1a1a28', 2); A.rect(ctx, 142, 162, 36, 22, 'rgba(255,220,150,0.25)');
+      A.railing(ctx, 124, 118, 74, 28, '#2a2a30'); A.rect(ctx, 124, 144, 74, 5, '#2a2a30');
+      A.railing(ctx, 124, 200, 74, 28, '#2a2a30'); A.rect(ctx, 124, 226, 74, 5, '#2a2a30');
+      A.line(ctx, 192, 149, 132, 226, '#2a2a30', 3); for (let i = 0; i < 6; i++) A.rect(ctx, 184 - i * 10, 156 + i * 12, 12, 3, '#3a3a40');
+      A.line(ctx, 130, 231, 130, 300, '#2a2a30', 3); A.line(ctx, 194, 231, 194, 300, '#2a2a30', 3); A.line(ctx, 194, 296, 214, 296, '#2a2a30', 3);
+      A.pot(ctx, 176, 144, 14, 12, '#9a5a44'); A.bush(ctx, 176, 132, 14, '#3a5a2e', 2); A.bottle(ctx, 140, 226, 12, '#4a6a4a');
+      // Neonschild rechts, senkrecht: das O ist kaputt
+      A.rect(ctx, 782, 66, 40, 218, '#1a1420'); A.rect(ctx, 770, 76, 12, 4, '#3a3a40'); A.rect(ctx, 770, 270, 12, 4, '#3a3a40');
+      ['B', 'I', 'J', 'O', 'U'].forEach((ch, i) => { const on = ch !== 'O'; A.text(ctx, ch, 802, 104 + i * 42, { font: 'bold 28px Georgia', color: on ? '#ff7a8a' : '#5a2a30', align: 'center' }); if (on) A.glow(ctx, 802, 94 + i * 42, 34, 'rgba(255,90,120,0.7)', 0.4); });
       // Marquee
       A.rect(ctx, 200, 110, 560, 70, '#1a1420');
       A.rect(ctx, 206, 116, 548, 58, '#f4e8c8');
@@ -44,17 +57,36 @@
       for (let i = 0; i < 3; i++) A.ell(ctx, 288, 340, 30 - i * 9, 8 - i * 2, null, '#c8b070', 2);
       A.text(ctx, 'ATLANTIS', 288, 290, { font: 'bold 13px Georgia', color: '#3a1a20', align: 'center' });
       A.text(ctx, 'Vortrag, 20 Uhr', 288, 310, { font: '10px Georgia', color: '#3a1a20', align: 'center' });
-      // Kasse
+      // zerrissener Anschlag links neben dem Plakat
+      A.rect(ctx, 202, 298, 34, 74, '#c8b890'); A.text(ctx, 'HEUTE', 219, 322, { font: 'bold 8px Georgia', color: '#5a2a30', align: 'center' }); for (let i = 0; i < 5; i++) A.line(ctx, 207, 334 + i * 6, 231, 334 + i * 6, '#8a7a68', 1);
+      A.poly(ctx, [202, 350, 224, 372, 202, 372], '#4e403e'); A.poly(ctx, [226, 298, 236, 298, 236, 316], '#4e403e');
+      // Kasse mit Markise
       A.rect(ctx, 610, 260, 90, 180, '#3a2a28'); A.rect(ctx, 618, 268, 74, 90, '#1a2030');
       A.rect(ctx, 622, 300, 66, 40, '#e8d8b0'); A.text(ctx, 'AUSVERKAUFT', 655, 325, { font: 'bold 9px Georgia', color: '#7a1a20', align: 'center' });
-      // Gasse rechts
+      A.awning(ctx, 598, 242, 112, 14, '#6a1e2a', '#3a1420', 5);
+      // Drahtpapierkorb neben dem Eingang, Zeitungsständer an der Wand
+      A.poly(ctx, [580, 406, 606, 406, 603, 444, 583, 444], '#3a3a40'); for (let i = 0; i < 4; i++) A.line(ctx, 581, 412 + i * 9, 605, 412 + i * 9, '#55555f', 1); for (let i = 1; i < 4; i++) A.line(ctx, 580 + i * 6.5, 406, 583 + i * 5, 444, '#55555f', 1);
+      A.rect(ctx, 586, 398, 14, 10, '#d8d0c0'); A.rect(ctx, 594, 400, 10, 9, '#c8c0b0');
+      A.rect(ctx, 188, 386, 46, 56, '#4a3a30'); A.rect(ctx, 192, 392, 38, 14, '#e8e0d0'); A.rect(ctx, 192, 412, 38, 14, '#d8d0c0'); A.rect(ctx, 192, 430, 38, 10, '#e0d8c8');
+      A.line(ctx, 196, 398, 226, 398, '#555', 1); A.line(ctx, 196, 418, 226, 418, '#555', 1); A.sign(ctx, 186, 372, 50, 14, 'ZEITUNGEN', '#8a2a2a', '#f0e0d0', 'bold 7px Georgia');
+      // Gasse rechts, ganz hinten zwei Passanten unter einer fernen Laterne
       A.rect(ctx, 840, 60, 120, 380, '#0a0a12');
       A.rect(ctx, 850, 200, 100, 240, '#101018');
+      A.glow(ctx, 900, 330, 44, 'rgba(255,220,160,0.5)', 0.22); A.rect(ctx, 898, 296, 4, 40, '#1a1a22');
+      A.rr(ctx, 884, 392, 12, 36, 4, '#06060c'); A.circle(ctx, 890, 386, 5, '#06060c'); A.rr(ctx, 904, 396, 10, 32, 4, '#06060c'); A.circle(ctx, 909, 391, 4, '#06060c');
       // Gehweg und Straße
       A.rect(ctx, 0, 440, 960, 30, '#6a6a72');
       A.ground(ctx, 0, 470, 960, 130, '#4a4a52', '#2a2a30');
       A.rect(ctx, 0, 466, 960, 6, '#8a8a90');
       for (let x = 0; x < 960; x += 60) A.rect(ctx, x, 466, 30, 3, '#a0a0a8');
+      // Gehwegrisse, Flecken, Gullydeckel, Fahrbahnstreifen, Pfütze im Schein der Reklame
+      A.cracks(ctx, 200, 442, 320, 24, 8, 'rgba(0,0,0,0.3)'); A.cracks(ctx, 620, 442, 260, 24, 9, 'rgba(0,0,0,0.3)');
+      { const r = ATL.U.rng(33); for (let i = 0; i < 10; i++) A.circle(ctx, r() * 960, 444 + r() * 24, 2 + r() * 2, 'rgba(0,0,0,0.25)'); }
+      A.rect(ctx, 300, 462, 26, 8, '#222'); for (let i = 0; i < 4; i++) A.rect(ctx, 303 + i * 6, 464, 3, 4, '#444');
+      A.ell(ctx, 420, 545, 26, 9, '#3a3a40', '#222', 1.5); A.ell(ctx, 420, 545, 18, 6, null, '#222', 1); A.line(ctx, 420, 537, 420, 553, '#222', 1);
+      for (let x = 10; x < 960; x += 60) A.rect(ctx, x, 556, 28, 3, 'rgba(230,220,180,0.32)');
+      A.puddle(ctx, 500, 502, 150, 14, 'rgba(255,220,160,0.1)'); A.ell(ctx, 640, 452, 60, 10, 'rgba(255,225,160,0.12)');
+      ctx.save(); ctx.translate(250, 530); ctx.rotate(-0.4); A.rect(ctx, -14, -9, 28, 18, 'rgba(216,208,192,0.7)'); ctx.restore();
       // Laterne
       A.rect(ctx, 636, 200, 8, 250, '#2a2a30'); A.rr(ctx, 622, 180, 36, 28, 6, '#3a3a40'); A.rect(ctx, 628, 186, 24, 18, '#ffe9a0');
       A.glow(ctx, 640, 200, 180, 'rgba(255,230,160,0.7)', 0.4);
@@ -63,11 +95,32 @@
       A.poly(ctx, [700, 340, 960, 340, 930, 300, 730, 300], '#b34a3a');
       for (let i = 0; i < 6; i++) A.poly(ctx, [700 + i * 44, 340, 722 + i * 44, 340, 726 + i * 44, 300, 712 + i * 44, 300], '#f0e0d0');
       // Hydrant
+      A.ell(ctx, 90, 446, 22, 4, 'rgba(0,0,0,0.35)');
       A.rr(ctx, 80, 400, 20, 44, 5, '#a3312a'); A.rect(ctx, 72, 412, 36, 8, '#a3312a'); A.circle(ctx, 90, 398, 10, '#a3312a');
       // Zeitungsstapel
+      A.ell(ctx, 155, 444, 28, 4, 'rgba(0,0,0,0.3)');
       A.rect(ctx, 130, 425, 50, 18, '#e8e0d0'); A.rect(ctx, 134, 420, 46, 6, '#d8d0c0');
       A.vignette(ctx, 960, 600, 0.5);
       A.grain(ctx, 960, 600, 7, 0.04);
+    },
+    paintFront(ctx) {
+      // Taxi vorn links, angeschnitten; Briefkasten vorn rechts
+      A.rr(ctx, -40, 548, 270, 70, 14, '#e0b030'); A.rr(ctx, 10, 528, 172, 44, 12, '#e8c040');
+      A.rect(ctx, 22, 534, 62, 32, '#222a3a'); A.rect(ctx, 92, 534, 82, 32, '#222a3a'); A.rect(ctx, 26, 538, 54, 10, 'rgba(255,255,255,0.12)'); A.rect(ctx, 96, 538, 74, 10, 'rgba(255,255,255,0.12)');
+      A.rect(ctx, 84, 534, 8, 32, '#c8a828'); A.rect(ctx, 10, 568, 172, 4, '#c8a828');
+      for (let i = 0; i < 22; i++) A.rect(ctx, -40 + i * 12, 574, 6, 6, i % 2 ? '#1a1a1a' : '#f0f0f0'), A.rect(ctx, -34 + i * 12, 580, 6, 6, i % 2 ? '#1a1a1a' : '#f0f0f0');
+      A.rr(ctx, 70, 514, 52, 16, 4, '#1a1a20'); A.text(ctx, 'TAXI', 96, 526, { font: 'bold 10px Georgia', color: '#ffe9a0', align: 'center' });
+      A.rect(ctx, 160, 588, 14, 6, '#ffe9a0');
+      ctx.fillStyle = A.grad(ctx, -40, 0, 230, 0, ['rgba(0,0,0,0.45)', 'rgba(0,0,0,0.05)']); ctx.fillRect(-40, 514, 270, 90);
+      A.rect(ctx, 906, 586, 8, 20, '#2a3a2a'); A.rect(ctx, 934, 586, 8, 20, '#2a3a2a');
+      A.rr(ctx, 896, 500, 56, 96, 14, '#3a4e3a'); A.rect(ctx, 906, 520, 36, 9, '#2a3a2a'); A.rect(ctx, 904, 516, 40, 4, '#4a5e4a');
+      A.text(ctx, 'U.S. MAIL', 924, 552, { font: 'bold 8px Georgia', color: '#c8c8b0', align: 'center' }); A.rect(ctx, 906, 560, 36, 1.5, '#c8c8b0');
+      ctx.fillStyle = A.grad(ctx, 0, 500, 0, 600, ['rgba(0,0,0,0.1)', 'rgba(0,0,0,0.5)']); ctx.fillRect(890, 500, 70, 110);
+    },
+    animate(ctx, t) {
+      // Dampf aus dem Gully, kaputtes O der Neonreklame zuckt hin und wieder auf
+      A.smoke(ctx, 420, 540, t, 'rgba(180,180,190,0.22)', 0.6);
+      if (Math.sin(t * 7) * Math.sin(t * 1.3) > 0.88) { A.text(ctx, 'O', 802, 230, { font: 'bold 28px Georgia', color: '#ff7a8a', align: 'center' }); A.glow(ctx, 802, 220, 34, 'rgba(255,90,120,0.7)', 0.4); }
     },
     hotspots: [
       { id: 'marquee', name: 'Leuchtreklame', rect: [200, 110, 560, 70], at: [480, 480, 'u'], noWalk: true,
@@ -93,6 +146,10 @@
       { id: 'zeitungen', name: 'Zeitungsstapel', rect: [130, 418, 50, 26], at: [150, 480, 'u'],
         look: async (g) => { await g.say('falk', 'Die Abendausgabe. Unten auf der ersten Seite: „Berliner Gesellschaft chartert Jacht für Mittelmeerfahrt.“'); if (!g.flag('zeitung_gelesen')) { g.set('zeitung_gelesen'); await g.say('falk', 'Die Jacht heißt „Meridian“. Vesper reist also. Die Frage ist, wohin.'); } },
         take: 'Der Junge lebt davon.' },
+      // Ausschmückung, nur anschauen
+      { id: 'feuerleiter', name: 'Feuerleiter', rect: [124, 76, 74, 226], at: [160, 480, 'u'], look: 'Eine Feuerleiter. In dieser Stadt hängen die Treppen außen, damit drinnen mehr Platz für Miete ist.' },
+      { id: 'neon', name: 'Neonschild', rect: [780, 64, 44, 222], at: [800, 480, 'u'], noWalk: true, look: '„BIJOU“, in rotem Neon. Das O ist kaputt. Da steht also „BIJU“, und keiner kümmert sich.' },
+      { id: 'muelleimer', name: 'Papierkorb', rect: [578, 396, 30, 50], at: [592, 480, 'u'], look: 'Ein Drahtkorb voller Programmhefte. Atlantis, gelesen und weggeworfen. So schnell geht das.' },
     ],
     exits: [
       { id: 'eingang', name: 'Theatereingang', rect: [370, 240, 200, 200], at: [470, 480, 'u'], to: null,
@@ -190,6 +247,28 @@
       // Wände
       A.bricks(ctx, 0, 0, 960, 440, '#4a3e3c', 36, 14, 5, '#2a2220');
       A.shadeRect(ctx, 0, 0, 960, 440, 0.35);
+      // feuchte Wandkante, Risse, Moos
+      A.rect(ctx, 0, 405, 960, 35, 'rgba(0,0,0,0.22)'); A.cracks(ctx, 470, 220, 160, 130, 6, 'rgba(0,0,0,0.3)'); A.moss(ctx, 340, 434, 220, 3, '#2e3e26'); A.moss(ctx, 690, 436, 100, 4, '#2e3e26');
+      // vernageltes Fenster und ein beleuchtetes mit Silhouette
+      A.rect(ctx, 404, 94, 102, 102, '#1a1a20'); A.rect(ctx, 410, 100, 90, 90, '#0e0e16');
+      [[-0.12, 118], [0.08, 150], [-0.05, 178]].forEach(([a, y]) => { ctx.save(); ctx.translate(455, y); ctx.rotate(a); A.rect(ctx, -52, -6, 104, 12, '#5a4a3a'); A.line(ctx, -50, -3, 50, -3, 'rgba(255,255,255,0.08)', 1); ctx.restore(); });
+      A.rect(ctx, 596, 66, 58, 58, '#1a1a20'); A.rect(ctx, 600, 70, 50, 50, '#e8c878'); A.rect(ctx, 612, 84, 14, 36, '#3a2a20'); A.circle(ctx, 619, 79, 6, '#3a2a20');
+      A.line(ctx, 625, 70, 625, 120, '#1a1a20', 3); A.line(ctx, 600, 95, 650, 95, '#1a1a20', 3); A.glow(ctx, 625, 95, 60, 'rgba(255,220,150,0.6)', 0.28);
+      // Rohrleitungen mit Ventil, Regenrinne rechts
+      A.rect(ctx, 702, 0, 10, 440, '#3a3a44'); A.rect(ctx, 724, 0, 8, 440, '#2e2e38'); A.rect(ctx, 712, 250, 72, 8, '#3a3a44');
+      for (let y = 40; y < 440; y += 95) A.rect(ctx, 698, y, 38, 6, '#4e4e58');
+      A.circle(ctx, 707, 300, 9, null, '#7a3a3a', 3); A.line(ctx, 707, 291, 707, 309, '#7a3a3a', 2); A.line(ctx, 698, 300, 716, 300, '#7a3a3a', 2);
+      A.rect(ctx, 900, 60, 50, 380, 'rgba(0,0,0,0.15)'); A.rect(ctx, 932, 0, 12, 420, '#2a2a34'); A.rr(ctx, 926, 416, 24, 12, 4, '#2a2a34'); A.rect(ctx, 928, 120, 20, 5, '#3a3a44'); A.rect(ctx, 928, 300, 20, 5, '#3a3a44');
+      // zerrissenes Plakat mit aufgeklebtem Flugblatt, Kreidezeichnungen
+      A.rect(ctx, 356, 200, 74, 86, '#b8a888'); A.text(ctx, 'ATLANTIS', 393, 226, { font: 'bold 10px Georgia', color: '#5a2a30', align: 'center' }); A.text(ctx, '20 UHR', 393, 244, { font: '8px Georgia', color: '#5a2a30', align: 'center' });
+      A.poly(ctx, [356, 262, 402, 286, 356, 286], '#3a302e'); A.poly(ctx, [412, 200, 430, 200, 430, 224], '#3a302e');
+      ctx.save(); ctx.translate(394, 258); ctx.rotate(0.1); A.rect(ctx, -22, -18, 44, 36, '#e8e0d0'); A.text(ctx, 'MERIDIAN', 0, -6, { font: 'bold 6px Georgia', color: '#222', align: 'center' }); for (let i = 0; i < 3; i++) A.line(ctx, -16, 2 + i * 5, 16, 2 + i * 5, '#777', 1); ctx.restore();
+      const chalk = 'rgba(255,255,255,0.42)';
+      ctx.strokeStyle = chalk; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(380, 330); ctx.bezierCurveTo(380, 316, 398, 316, 398, 330); ctx.bezierCurveTo(398, 316, 416, 316, 416, 330); ctx.quadraticCurveTo(416, 344, 398, 356); ctx.quadraticCurveTo(380, 344, 380, 330); ctx.stroke();
+      A.text(ctx, 'JOE + MAY', 398, 376, { font: '11px Georgia', color: chalk, align: 'center' });
+      for (let i = 0; i < 7; i++) A.line(ctx, 430 + i * 6, 300, 430 + i * 6, 316, chalk, 1.5); A.line(ctx, 428, 312, 470, 304, chalk, 1.5);
+      A.circle(ctx, 452, 336, 6, null, chalk, 1.5); A.line(ctx, 452, 342, 452, 362, chalk, 1.5); A.line(ctx, 440, 350, 464, 350, chalk, 1.5); A.line(ctx, 452, 362, 444, 378, chalk, 1.5); A.line(ctx, 452, 362, 460, 378, chalk, 1.5);
+      ctx.strokeStyle = chalk; ctx.lineWidth = 1.5; ctx.strokeRect(372, 386, 18, 14); ctx.strokeRect(390, 386, 18, 14); ctx.strokeRect(381, 372, 18, 14);
       // Feuerleiter links
       A.rect(ctx, 130, 200, 200, 8, '#2a2a30');
       for (let i = 0; i < 8; i++) A.rect(ctx, 134 + i * 26, 170, 4, 30, '#2a2a30');
@@ -208,11 +287,43 @@
       A.rect(ctx, 556, 356, 68, 8, '#6a6a70');
       // Kisten
       A.crate(ctx, 60, 380, 80, 60, '#5a4a3a', ''); A.crate(ctx, 80, 330, 60, 50, '#6a5a4a', '');
+      // Pappkartons, aufgeweicht
+      A.rect(ctx, 460, 400, 60, 42, '#8a6a48'); A.line(ctx, 490, 400, 490, 442, 'rgba(0,0,0,0.25)', 2); A.rect(ctx, 462, 404, 56, 4, 'rgba(200,190,170,0.5)');
+      A.text(ctx, 'ZERBRECHLICH', 490, 428, { font: 'bold 6px Georgia', color: '#4a3020', align: 'center' });
+      A.rect(ctx, 470, 372, 50, 30, '#9a7a58'); A.line(ctx, 470, 380, 520, 380, 'rgba(0,0,0,0.2)', 1); A.rect(ctx, 480, 372, 30, 4, 'rgba(200,190,170,0.5)');
+      A.poly(ctx, [520, 424, 548, 414, 550, 442, 520, 442], '#7a5a3a'); A.line(ctx, 522, 430, 546, 424, 'rgba(0,0,0,0.25)', 1.5);
       // Boden
       A.ground(ctx, 0, 440, 960, 160, '#3a3a42', '#1a1a20');
       for (let i = 0; i < 12; i++) A.ell(ctx, 100 + i * 80, 470 + (i % 3) * 30, 40, 6, 'rgba(120,140,170,0.15)');
+      // Pfützen, Gully, Schälchen für die Katze, Katzenspuren, Flaschen und Kies bei den Tonnen
+      A.puddle(ctx, 300, 522, 100, 18, 'rgba(120,150,190,0.22)'); A.puddle(ctx, 730, 566, 150, 22, 'rgba(120,150,190,0.2)'); A.puddle(ctx, 938, 458, 40, 10, 'rgba(120,150,190,0.28)');
+      A.ell(ctx, 835, 480, 34, 5, 'rgba(255,230,160,0.12)');
+      A.ell(ctx, 480, 500, 20, 7, '#222', '#111', 1); for (let i = -2; i <= 2; i++) A.line(ctx, 480 + i * 7, 496, 480 + i * 7, 504, '#111', 1);
+      A.ell(ctx, 240, 452, 10, 3, '#c8c0b0'); A.ell(ctx, 240, 451, 6, 1.5, '#e8e0d0');
+      for (let i = 0; i < 8; i++) { const x = 250 + i * 24, y = 466 + Math.sin(i * 1.3) * 8 + i * 5; A.ell(ctx, x, y, 3, 2.5, 'rgba(180,190,210,0.2)'); A.ell(ctx, x - 3, y - 4, 1.2, 1.2, 'rgba(180,190,210,0.2)'); A.ell(ctx, x + 3, y - 4, 1.2, 1.2, 'rgba(180,190,210,0.2)'); }
+      A.pebbles(ctx, 560, 444, 170, 18, 4, '#55555f'); A.bottle(ctx, 704, 444, 26, '#3a5a3a');
+      ctx.save(); ctx.translate(690, 452); ctx.rotate(1.3); A.bottle(ctx, 0, 0, 22, '#6a5a3a'); ctx.restore();
+      ctx.save(); ctx.translate(420, 505); ctx.rotate(0.3); A.rect(ctx, -14, -9, 28, 18, 'rgba(200,192,176,0.55)'); ctx.restore();
       A.vignette(ctx, 960, 600, 0.6);
       A.grain(ctx, 960, 600, 8, 0.05);
+    },
+    paintFront(ctx) {
+      // Müllsack vorn links, Kistenkante vorn rechts
+      A.ell(ctx, 30, 596, 60, 22, '#1e1e26'); A.ell(ctx, 10, 572, 44, 30, '#26262e'); A.ell(ctx, 52, 578, 36, 24, '#22222a'); A.ell(ctx, 4, 560, 10, 6, '#3a3a44');
+      A.line(ctx, -6, 560, 30, 566, 'rgba(255,255,255,0.06)', 6);
+      A.crate(ctx, 896, 548, 90, 70, '#3e3229', ''); ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fillRect(896, 548, 70, 60);
+    },
+    animate(ctx, t) {
+      // Wäscheleine hoch über der Gasse, Tropfen aus der Regenrinne
+      A.line(ctx, 340, 62, 700, 46, '#b8b0a0', 1.2);
+      [[400, 0, '#d8d0c0', 24, 34], [470, 1, '#5a6a8a', 20, 40], [548, 2, '#e8e0d0', 46, 38], [630, 3, '#8a6a5a', 14, 22]].forEach(([x, i, c, w, h]) => {
+        const y = 62 - ((x - 340) * 16) / 360, s = Math.sin(t * 1.1 + i) * 3;
+        A.poly(ctx, [x - w / 2, y, x + w / 2, y, x + w / 2 + s, y + h, x - w / 2 + s, y + h], c);
+        if (i === 1) A.poly(ctx, [x - 2 + s * 0.6, y + h * 0.5, x + 2 + s * 0.6, y + h * 0.5, x + 2 + s, y + h, x - 2 + s, y + h], '#2a2a36');
+        A.rect(ctx, x - w / 2 - 1, y - 3, 3, 6, '#8a6a4a'); A.rect(ctx, x + w / 2 - 2, y - 3, 3, 6, '#8a6a4a');
+      });
+      const k = (t * 1.4) % 1; A.circle(ctx, 938, 426 + k * 28, 1.5, `rgba(180,200,230,${0.9 - k * 0.5})`);
+      if (k > 0.94) A.ell(ctx, 938, 458, 10 + (k - 0.94) * 120, 3, 'rgba(180,200,230,0.25)');
     },
     hotspots: [
       { id: 'buehnentuer', name: 'Bühneneingang', rect: [796, 256, 78, 188], at: [835, 480, 'u'],
@@ -249,6 +360,10 @@
       { id: 'kisten', name: 'Kisten', rect: [60, 330, 90, 110], at: [150, 500, 'l'], look: 'Leere Kisten. „Bühnenbild, zerbrechlich.“ Sie sind nicht mehr zerbrechlich, sie sind zerbrochen.',
         take: 'Zu sperrig, und morsch.', push: 'Sie stehen, wo sie stehen. Zu weit von der Leiter.', use: 'Draufsteigen? Sie tragen keine Katze, geschweige denn mich.' },
       { id: 'fenster_oben', name: 'Fenster', rect: [150, 60, 160, 110], at: [220, 480, 'u'], noWalk: true, look: 'Ein Fenster im ersten Stock. Dahinter brennt Licht. Garderoben, würde ich sagen.' },
+      // Ausschmückung, nur anschauen
+      { id: 'waescheleine', name: 'Wäscheleine', rect: [340, 30, 360, 56], at: [520, 490, 'u'], noWalk: true, look: 'Wäsche über der Gasse. Wer sie dort aufhängt, hat mehr Vertrauen in diese Stadt als ich.' },
+      { id: 'kartons', name: 'Pappkartons', rect: [458, 370, 92, 72], at: [500, 490, 'u'], look: 'Pappkartons, aufgeweicht. „Zerbrechlich“, steht darauf. Das war einmal.' },
+      { id: 'kreide', name: 'Kreidezeichnungen', rect: [356, 294, 116, 108], at: [410, 490, 'u'], look: 'Kreide an der Wand. Ein Herz, zwei Namen, und ein Strichmännchen, das dem Türsteher ähnlich sieht.' },
     ],
     exits: [
       { id: 'strasse', name: 'Zur Straße', rect: [0, 300, 40, 290], at: [50, 520, 'l'], to: 'ny_street', pos: [880, 500], dir: 'l', look: 'Zurück zur Straße.' },
@@ -278,20 +393,43 @@
       A.rect(ctx, 0, 380, 960, 40, '#3a2a3a');
       A.planks(ctx, 0, 420, 960, 180, '#5a4a40', 12, false, 4);
       ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(0, 420, 960, 6);
-      // Tür links
+      // Rohre unter der Decke, nackte Glühbirne, Risse, abgetretener Boden
+      A.rect(ctx, 0, 32, 960, 6, '#3a3a44'); for (let x = 60; x < 960; x += 180) A.rect(ctx, x, 30, 8, 10, '#4a4a54');
+      A.line(ctx, 500, 38, 500, 68, '#222', 1.5); A.circle(ctx, 500, 76, 9, '#ffe9a0'); A.rect(ctx, 496, 64, 8, 6, '#555'); A.glow(ctx, 500, 76, 90, 'rgba(255,230,160,0.6)', 0.35);
+      A.cracks(ctx, 520, 44, 200, 70, 7, 'rgba(0,0,0,0.18)'); A.ell(ctx, 420, 470, 120, 24, 'rgba(255,240,220,0.05)');
+      // Tür links mit Uhr darüber
       A.door(ctx, 30, 190, 70, 230, '#4a3a4a', { panel: true, frame: '#2a1a2a' });
       A.text(ctx, 'BÜHNE', 65, 182, { font: 'bold 9px Georgia', color: '#e8d8b0', align: 'center' });
-      // Spiegel mit Glühbirnen
+      A.circle(ctx, 65, 134, 23, '#2a2a30'); A.circle(ctx, 65, 134, 19, '#e8dcc0'); A.line(ctx, 65, 134, 54, 131, '#222', 2); A.line(ctx, 65, 134, 65, 148, '#222', 1.5); A.circle(ctx, 65, 134, 1.5, '#222');
+      // Plakat und Kostümstange an der Wand
+      A.rect(ctx, 362, 136, 106, 158, '#2a1a2a'); A.rect(ctx, 366, 140, 98, 150, '#e8d8b0');
+      A.text(ctx, 'BIJOU', 415, 158, { font: 'bold 11px Georgia', color: '#3a1a20', align: 'center' }); A.text(ctx, 'DR. LIVIA MARSH', 415, 172, { font: '8px Georgia', color: '#3a1a20', align: 'center' });
+      A.sea(ctx, 366, 196, 98, 94, '#3a6a8a', '#1a3a5a', 3); for (let i = 0; i < 3; i++) A.ell(ctx, 415, 240, 30 - i * 9, 8 - i * 2, null, '#c8b070', 2);
+      A.text(ctx, 'ATLANTIS', 415, 188, { font: 'bold 12px Georgia', color: '#3a1a20', align: 'center' });
+      A.rect(ctx, 484, 144, 4, 274, '#5a5a60'); A.rect(ctx, 626, 144, 4, 274, '#5a5a60'); A.rect(ctx, 480, 140, 154, 5, '#7a7a80'); A.circle(ctx, 486, 418, 4, '#3a3a40'); A.circle(ctx, 628, 418, 4, '#3a3a40');
+      [[500, '#c8a040', 26, 120], [530, '#2a3a5a', 30, 140], [566, '#efe4c8', 24, 100], [596, '#3a6a4a', 28, 130]].forEach(([x, c, w, h]) => { A.path(ctx, [x, 145, x, 152, x - 8, 160, x + 8, 160], '#8a8a90', 1.5); A.rr(ctx, x - w / 2, 160, w, h, 6, c); A.line(ctx, x, 164, x, 160 + h - 6, 'rgba(0,0,0,0.15)', 1); });
+      // Hutschachteln auf dem Schrank
+      A.rr(ctx, 660, 100, 60, 30, 6, '#8a6a7a'); A.rr(ctx, 656, 96, 68, 8, 4, '#7a5a6a'); for (let i = 0; i < 4; i++) A.rect(ctx, 664 + i * 14, 106, 6, 22, 'rgba(255,255,255,0.12)');
+      A.rr(ctx, 664, 74, 52, 24, 6, '#6a4a5a'); A.rr(ctx, 660, 70, 60, 8, 4, '#5a3a4a'); A.rr(ctx, 740, 104, 50, 26, 5, '#4a6a5a'); A.rr(ctx, 736, 100, 58, 8, 4, '#3a5a4a');
+      // Spiegel mit Glühbirnen, Foto vom Fresko und Telegramm im Rahmen
       A.rect(ctx, 120, 110, 220, 230, '#2a2a30'); A.rect(ctx, 130, 120, 200, 210, '#8a90a8');
       ctx.fillStyle = 'rgba(255,255,255,0.15)'; A.poly(ctx, [132, 122, 200, 122, 132, 260], ctx.fillStyle);
+      A.rect(ctx, 134, 124, 58, 44, '#f0e8d0'); A.rect(ctx, 138, 128, 50, 36, '#4a7a9a'); for (let i = 0; i < 3; i++) { A.poly(ctx, [146 + i * 14, 152, 158 + i * 14, 152, 156 + i * 14, 156, 148 + i * 14, 156], '#3a2a1a'); A.line(ctx, 152 + i * 14, 152, 152 + i * 14, 142, '#3a2a1a', 1); } A.line(ctx, 140, 160, 186, 160, 'rgba(255,255,255,0.3)', 1);
+      ctx.save(); ctx.translate(313, 136); ctx.rotate(0.08); A.rect(ctx, -20, -13, 40, 26, '#f0e0a0'); A.rect(ctx, -18, -11, 36, 5, '#c8b060'); for (let i = 0; i < 3; i++) A.line(ctx, -16, 0 + i * 5, 16, 0 + i * 5, '#666', 1); ctx.restore();
       for (let i = 0; i < 8; i++) { A.circle(ctx, 130 + i * 28, 114, 5, '#ffe9a0'); A.circle(ctx, 130 + i * 28, 336, 5, '#ffe9a0'); }
       for (let i = 0; i < 6; i++) { A.circle(ctx, 124, 140 + i * 36, 5, '#ffe9a0'); A.circle(ctx, 336, 140 + i * 36, 5, '#ffe9a0'); }
       A.glow(ctx, 230, 225, 220, 'rgba(255,230,160,0.5)', 0.35);
-      // Schminktisch, umgeworfener Stuhl
+      // Schminktisch mit Rosen, Perücke, Puderstaub; Schuhe darunter; umgeworfener Stuhl
       A.table(ctx, 110, 340, 240, 26, '#6a4a3a', 60);
+      A.shadeRect(ctx, 110, 420, 240, 7, 0.25); A.ell(ctx, 160, 416, 12, 4, '#3a2a2a'); A.ell(ctx, 186, 416, 12, 4, '#3a2a2a'); A.rect(ctx, 150, 404, 6, 12, '#3a2a2a'); A.rect(ctx, 176, 404, 6, 12, '#3a2a2a');
       A.rect(ctx, 140, 320, 30, 20, '#e8d8b0'); A.rect(ctx, 180, 326, 40, 14, '#d8c8a0'); A.rr(ctx, 250, 316, 14, 24, 4, '#c8a848');
+      A.ell(ctx, 206, 344, 18, 4, 'rgba(240,220,220,0.45)'); A.ell(ctx, 230, 348, 8, 2, 'rgba(240,220,220,0.35)');
+      A.rr(ctx, 283, 306, 14, 34, 4, '#8fb8d8'); A.line(ctx, 288, 306, 282, 292, '#3a6a3a', 1.5); A.line(ctx, 290, 306, 292, 288, '#3a6a3a', 1.5); A.line(ctx, 292, 306, 300, 296, '#3a6a3a', 1.5);
+      A.circle(ctx, 281, 290, 5, '#a3312a'); A.circle(ctx, 292, 285, 5, '#b03a34'); A.circle(ctx, 301, 294, 5, '#a3312a'); A.ell(ctx, 296, 300, 4, 2, '#3a6a3a');
+      A.rect(ctx, 327, 306, 6, 34, '#5a4a3a'); A.ell(ctx, 330, 340, 9, 3, '#5a4a3a'); A.ell(ctx, 330, 294, 11, 14, '#e8d0b0'); A.ell(ctx, 330, 286, 14, 11, '#7a3a1a'); A.circle(ctx, 320, 292, 5, '#7a3a1a'); A.circle(ctx, 340, 292, 5, '#7a3a1a'); A.circle(ctx, 318, 300, 4, '#7a3a1a'); A.circle(ctx, 342, 300, 4, '#7a3a1a');
       ctx.save(); ctx.translate(420, 430); ctx.rotate(1.2); A.chair(ctx, 0, 0, 40, '#5a3a2a'); ctx.restore();
       // Kleiderschrank, aufgerissen
+      A.shadeRect(ctx, 640, 420, 240, 6, 0.3);
       A.rect(ctx, 640, 130, 170, 290, '#4a3020');
       A.rect(ctx, 648, 138, 154, 274, '#2a1a10');
       A.rect(ctx, 652, 150, 146, 6, '#6a5a4a');
@@ -300,13 +438,32 @@
       // Fenster rechts (offen)
       A.rect(ctx, 856, 150, 90, 160, '#2a1a2a'); A.rect(ctx, 862, 156, 78, 148, '#0d1024');
       A.stars(ctx, 78, 60, 8, 3); ctx.save(); ctx.translate(862, 156); A.stars(ctx, 78, 70, 10, 5); ctx.restore();
-      A.rect(ctx, 856, 150, 90, 8, '#e8d8b0');
-      // Koffer umgekippt, Papiere
+      A.rect(ctx, 856, 150, 90, 8, '#e8d8b0'); A.rect(ctx, 850, 144, 110, 4, '#8a6a4a');
+      // Stiefel vor dem Schrank
+      A.rr(ctx, 890, 426, 34, 12, 4, '#4a3020'); A.rr(ctx, 914, 410, 12, 26, 4, '#4a3020'); A.rect(ctx, 916, 414, 8, 3, '#8a6a4a');
+      // Koffer umgekippt mit Reiseaufklebern, Papiere
+      A.ell(ctx, 535, 424, 72, 6, 'rgba(0,0,0,0.3)');
       A.rr(ctx, 470, 360, 130, 60, 6, '#5a3a2a'); A.rect(ctx, 470, 360, 130, 8, '#8a6a4a'); A.rect(ctx, 520, 350, 30, 12, '#c8a848');
+      A.rr(ctx, 480, 378, 28, 14, 2, '#c8a848'); A.text(ctx, 'ATHEN', 494, 388, { font: 'bold 6px Georgia', color: '#3a2a1a', align: 'center' });
+      A.circle(ctx, 562, 392, 9, '#a3312a'); A.circle(ctx, 562, 392, 6, null, '#e8d8b0', 1); A.rr(ctx, 518, 396, 32, 12, 2, '#3a6a8a'); A.text(ctx, 'THERA', 534, 405, { font: 'bold 6px Georgia', color: '#e8e0d0', align: 'center' });
       A.rr(ctx, 590, 385, 50, 40, 4, '#e8d8b0');
       for (let i = 0; i < 9; i++) { ctx.save(); ctx.translate(300 + i * 60, 470 + (i % 3) * 30); ctx.rotate((i * 0.7) % 1.2 - 0.6); A.rect(ctx, -16, -10, 32, 20, '#efe4c8'); ctx.restore(); }
+      A.path(ctx, [640, 507, 660, 500, 680, 507, 640, 507], '#8a8a90', 1.5); A.path(ctx, [660, 500, 660, 495, 664, 493], '#8a8a90', 1.5); // Kleiderbügel am Boden
       A.rr(ctx, 520, 400, 60, 40, 3, '#3a2a1a'); // Notizbuch
       A.vignette(ctx, 960, 600, 0.5);
+    },
+    paintFront(ctx) {
+      // Hutschachtel auf einem Hocker vorn links, Sessellehne vorn rechts
+      A.rect(ctx, -10, 560, 80, 8, '#4a3a3a'); A.rect(ctx, 4, 568, 6, 40, '#3a2a2a'); A.rect(ctx, 54, 568, 6, 40, '#3a2a2a');
+      A.rr(ctx, -12, 510, 84, 50, 10, '#8a6a7a'); A.rr(ctx, -16, 502, 92, 14, 6, '#6a4a5a'); for (let i = 0; i < 5; i++) A.rect(ctx, -4 + i * 16, 520, 7, 36, 'rgba(255,255,255,0.1)');
+      A.rr(ctx, 892, 520, 110, 100, 20, '#5a2a3a'); A.rr(ctx, 904, 532, 84, 44, 12, '#6a3a4a');
+      ctx.fillStyle = A.grad(ctx, 0, 500, 0, 600, ['rgba(0,0,0,0.05)', 'rgba(0,0,0,0.45)']); ctx.fillRect(-16, 500, 100, 110); ctx.fillRect(892, 520, 70, 90);
+    },
+    animate(ctx, t) {
+      // eine Spiegelbirne flackert, der Vorhang am offenen Fenster bewegt sich im Zug
+      const on = Math.sin(t * 9) + Math.sin(t * 23) > 0.6;
+      A.circle(ctx, 214, 114, 5, on ? '#ffe9a0' : '#8a7a50');
+      A.curtain(ctx, 934, 148, 26, 184, '#6a2a3a', t, 2);
     },
     hotspots: [
       { id: 'spiegel', name: 'Spiegel', rect: [120, 110, 220, 230], at: [230, 480, 'u'],
@@ -329,6 +486,10 @@
       { id: 'papiere', name: 'Papiere', rect: [280, 450, 560, 100], at: [480, 520, 'd'], look: 'Vortragsnotizen, Zeichnungen, Rechnungen des Hotels. Über den ganzen Boden verstreut.', take: 'Nichts davon ist mir nützlich.' },
       { id: 'fenster', name: 'Fenster', rect: [856, 150, 90, 160], at: [880, 470, 'u'], look: 'Das Fenster zur Gasse. Durch das bin ich gekommen. Die Katze ist nicht nachgekommen.',
         use: 'Ich bleibe lieber drin.', close: 'Ich lasse es offen. Für den Fall, dass ich schnell wieder hinausmuss.' },
+      // Ausschmückung, nur anschauen
+      { id: 'kleiderstange', name: 'Kostümstange', rect: [480, 140, 154, 200], at: [557, 480, 'u'], look: 'Livias Kostüme. Eines für Atlantis, eines für die Presse, eines für Leute mit Scheckbuch.' },
+      { id: 'poster', name: 'Plakat', rect: [362, 136, 106, 158], at: [415, 480, 'u'], look: 'Ihr Plakat. Die Ringe hat der Zeichner hübscher gemacht als Platon. Platon hatte auch keinen Verleger.' },
+      { id: 'uhr', name: 'Wanduhr', rect: [42, 111, 46, 46], at: [70, 470, 'u'], look: 'Halb zehn. Die Uhr geht vor, wie alle Uhren in Theatern. Damit keiner zu spät kommt.' },
     ],
     exits: [
       { id: 'tuer', name: 'Tür zur Bühne', rect: [26, 186, 78, 238], at: [70, 470, 'u'], to: 'ny_stage', pos: [880, 500], dir: 'l',
@@ -399,11 +560,31 @@
       ctx.fillStyle = A.grad(ctx, 800, 0, 960, 0, ['#4a1418', '#8a2a30', '#5a1a20']); ctx.fillRect(800, 0, 160, 440);
       for (let i = 0; i < 6; i++) { A.line(ctx, 20 + i * 24, 0, 30 + i * 24, 440, 'rgba(0,0,0,0.25)', 6); A.line(ctx, 820 + i * 24, 0, 830 + i * 24, 440, 'rgba(0,0,0,0.25)', 6); }
       A.rect(ctx, 0, 0, 960, 44, '#1a0a0c');
-      // Bühnenboden
+      // Beleuchtungsbrücke mit Scheinwerfern
+      A.rect(ctx, 180, 46, 600, 5, '#222'); [250, 400, 650].forEach((x) => { A.rr(ctx, x - 14, 50, 28, 22, 5, '#333'); A.rect(ctx, x - 10, 68, 20, 4, '#222'); A.circle(ctx, x, 76, 7, x === 400 ? '#8a8a70' : '#ffe9a0'); });
+      // Seilzüge mit Sandsäcken links und rechts, Nagelleiste, Feuereimer
+      A.line(ctx, 168, 44, 168, 300, '#b89a68', 2); A.line(ctx, 176, 44, 176, 262, '#b89a68', 2); A.line(ctx, 788, 44, 788, 240, '#b89a68', 2);
+      A.sack(ctx, 168, 332, 18, 32, '#8a7a5a'); A.sack(ctx, 176, 292, 16, 30, '#9a8a6a'); A.sack(ctx, 788, 272, 18, 32, '#8a7a5a');
+      A.rect(ctx, 160, 394, 26, 6, '#5a4a3a'); for (let i = 0; i < 3; i++) A.rect(ctx, 163 + i * 8, 400, 3, 10, '#8a7a5a');
+      A.rr(ctx, 162, 406, 20, 22, 3, '#a3312a'); A.text(ctx, 'FEUER', 172, 421, { font: 'bold 5px Georgia', color: '#fff', align: 'center' }); A.path(ctx, [163, 408, 172, 400, 181, 408], '#555', 1.5);
+      // Kulisse: Säule aus Pappe mit Stützstrebe, Requisitenkiste, Stuhl mit Jacke
+      A.line(ctx, 742, 288, 772, 236, '#5a4a3a', 4); A.rect(ctx, 700, 288, 60, 8, '#5a4a3a');
+      A.column(ctx, 725, 290, 190, 30, '#d8d0c0', 'doric'); A.line(ctx, 712, 120, 712, 280, 'rgba(0,0,0,0.25)', 1);
+      A.crate(ctx, 690, 382, 72, 48, '#5a4a3a', 'REQUISITEN'); A.ell(ctx, 712, 380, 12, 8, '#8a8a90'); A.rect(ctx, 708, 366, 8, 12, '#a3312a'); A.poly(ctx, [734, 382, 754, 382, 752, 374, 748, 378, 744, 372, 740, 378, 736, 374], '#c8a848');
+      A.chair(ctx, 806, 424, 40, '#5a3a2a'); A.rr(ctx, 808, 378, 36, 30, 6, '#3a3a4a'); A.line(ctx, 826, 382, 826, 404, 'rgba(0,0,0,0.3)', 1);
+      // Bühnenboden mit Klebemarkierungen, Kabel, Schleifspuren
       A.planks(ctx, 0, 420, 960, 180, '#4a3a2a', 16, false, 3);
       ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(0, 420, 960, 6);
-      // Rednerpult
+      A.line(ctx, 186, 430, 700, 430, '#111', 2); A.ell(ctx, 740, 458, 30, 9, null, '#161616', 3); A.ell(ctx, 740, 458, 18, 5, null, '#161616', 3);
+      const tape = 'rgba(230,220,170,0.5)';
+      A.line(ctx, 440, 462, 460, 478, tape, 3); A.line(ctx, 460, 462, 440, 478, tape, 3); A.line(ctx, 690, 512, 730, 512, tape, 3); A.line(ctx, 710, 512, 710, 532, tape, 3);
+      A.line(ctx, 240, 556, 262, 570, tape, 3); A.line(ctx, 262, 556, 240, 570, tape, 3); for (let x = 20; x < 960; x += 40) A.rect(ctx, x, 578, 22, 3, tape);
+      A.ell(ctx, 480, 480, 170, 20, 'rgba(255,255,255,0.03)'); A.line(ctx, 560, 540, 640, 560, 'rgba(0,0,0,0.2)', 2); A.line(ctx, 380, 500, 430, 512, 'rgba(0,0,0,0.2)', 2);
+      // Rednerpult mit Wasserkaraffe, Notenständer daneben
       A.rect(ctx, 190, 300, 80, 130, '#3a2a1a'); A.rect(ctx, 180, 290, 100, 16, '#5a4a3a'); A.rect(ctx, 200, 280, 60, 12, '#e8e0d0');
+      A.rr(ctx, 184, 256, 14, 28, 3, 'rgba(200,220,240,0.7)'); A.rect(ctx, 187, 250, 8, 8, 'rgba(200,220,240,0.7)'); A.rect(ctx, 202, 268, 10, 14, 'rgba(200,220,240,0.7)');
+      A.line(ctx, 310, 428, 310, 350, '#3a3a3a', 3); A.line(ctx, 310, 428, 298, 440, '#3a3a3a', 2); A.line(ctx, 310, 428, 322, 440, '#3a3a3a', 2); A.line(ctx, 310, 428, 310, 442, '#3a3a3a', 2);
+      A.poly(ctx, [296, 352, 324, 352, 326, 328, 294, 328], '#2a2a2a'); A.rect(ctx, 298, 332, 24, 14, '#e8e0d0'); for (let i = 0; i < 3; i++) A.line(ctx, 301, 336 + i * 4, 319, 336 + i * 4, '#777', 1);
       // Modelltisch mit Atlantis-Modell
       A.table(ctx, 520, 340, 260, 24, '#3a2a1a', 80);
       A.ell(ctx, 650, 330, 120, 40, '#3a6a8a');
@@ -417,7 +598,22 @@
       A.lightBeam(ctx, 230, 44, 160, 260, 'rgba(255,240,200,0.12)');
       A.vignette(ctx, 960, 600, 0.55);
     },
-    animate(ctx, t, g) { if (g.flag('medaillon_leuchtet')) A.glow(ctx, 650, 320, 120 + Math.sin(t * 5) * 20, 'rgba(120,255,210,0.8)', 0.6); },
+    paintFront(ctx) {
+      // Rampenlicht an der Bühnenkante
+      A.rect(ctx, 0, 596, 960, 4, '#1a1a1a');
+      for (let x = 60; x < 960; x += 80) { A.rr(ctx, x - 14, 588, 28, 14, 4, '#2a2a2a'); A.rect(ctx, x - 9, 591, 18, 6, '#ffe9a0'); }
+    },
+    animate(ctx, t, g) {
+      A.dust(ctx, 580, 60, 180, 260, t, 18);
+      for (let x = 60; x < 960; x += 80) A.glow(ctx, x, 592, 46 + Math.sin(t * 7 + x) * 2, 'rgba(255,225,150,0.6)', 0.18);
+      if (g.flag('medaillon_leuchtet')) A.glow(ctx, 650, 320, 120 + Math.sin(t * 5) * 20, 'rgba(120,255,210,0.8)', 0.6);
+    },
+    animateFront(ctx, t) {
+      // Ränder des Hauptvorhangs ganz vorn, leicht in Bewegung
+      A.curtain(ctx, -14, 0, 70, 604, '#6a1a22', t, 3); A.curtain(ctx, 906, 0, 70, 604, '#6a1a22', t, 3);
+      A.rect(ctx, -14, 0, 70, 12, '#3a0a10'); A.rect(ctx, 906, 0, 70, 12, '#3a0a10');
+      ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(-14, 0, 70, 604); ctx.fillRect(906, 0, 70, 604);
+    },
     hotspots: [
       { id: 'leinwand', name: 'Leinwand', rect: [296, 86, 368, 228], at: [480, 470, 'u'],
         look: async (g) => { await g.say('falk', 'Livias letztes Bild: die Ringe der Stadt, nach Platons Beschreibung im Kritias. Drei Ringe Wasser, zwei Ringe Land, in der Mitte der Tempel.'); g.codex('ringe'); } },
@@ -483,6 +679,10 @@
         },
         use: (g) => g.hs('falltuer').open(g), pull: (g) => g.hs('falltuer').open(g), push: 'Sie öffnet sich nach unten. Ziehen, nicht drücken.' },
       { id: 'scheinwerfer', name: 'Scheinwerfer', rect: [560, 40, 200, 30], at: [650, 480, 'u'], noWalk: true, look: 'Ein Scheinwerfer, auf das Modell gerichtet. Livia versteht etwas von Wirkung.' },
+      // Ausschmückung, nur anschauen
+      { id: 'seilzug', name: 'Seilzüge', rect: [162, 44, 22, 280], at: [200, 480, 'l'], look: 'Seile und Sandsäcke. Damit werden Kulissen hochgezogen. Oder Redner, wenn sie zu lange sprechen.' },
+      { id: 'kulisse', name: 'Kulissensäule', rect: [696, 96, 70, 180], at: [730, 480, 'u'], look: 'Eine Säule aus Pappe. Von Weitem dorisch, von Nahem Pappe. Wie so manches hier.' },
+      { id: 'requisiten', name: 'Requisitenkiste', rect: [688, 366, 76, 64], at: [726, 490, 'u'], look: 'Eine Requisitenkiste. Ein Helm, eine Krone aus Blech, ein Dreizack. Atlantis für zwei Dollar pro Kopf.' },
     ],
     exits: [
       { id: 'garderobe', name: 'Tür zur Garderobe', rect: [860, 200, 80, 240], at: [880, 470, 'u'], to: 'ny_dressing', pos: [70, 480], dir: 'r', look: 'Zurück zur Garderobe.', cond: (g) => !g.flag('medaillon_genommen') },

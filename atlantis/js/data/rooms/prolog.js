@@ -2,6 +2,7 @@
 (function (ATL) {
   const A = ATL.A;
   const R = ATL.rooms.define;
+  const TAU = Math.PI * 2;
 
   // ---------------------------------------------------------------- Arbeitszimmer
   R({
@@ -17,11 +18,28 @@
       A.floorTiles(ctx, 960, 400, 600, '#8a6a48', '#5a4230', 10, 480);
       A.planks(ctx, 0, 400, 960, 200, '#7a5a3c', 14, false, 2);
       ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(0, 400, 960, 8);
+      // Abnutzung: ausgetretener Weg von der Tür zum Schreibtisch, Wandflecken und Risse oben
+      A.ell(ctx, 720, 480, 230, 34, 'rgba(255,240,210,0.06)'); A.ell(ctx, 520, 500, 160, 26, 'rgba(255,240,210,0.05)');
+      A.cracks(ctx, 470, 42, 180, 44, 3, 'rgba(0,0,0,0.16)'); A.ell(ctx, 320, 60, 46, 10, 'rgba(90,70,40,0.06)');
       // Fenster mit Blick auf den Campus
       A.window(ctx, 650, 90, 150, 200, { frame: '#e8e0d0', view: (c) => { A.sky(c, 960, 290, '#9fc8ee', '#d8ecf8', 90); A.hills(c, 960, 250, '#5f8a4a', 4, 30); A.rect(c, 650, 250, 150, 40, '#6f9a52'); A.tree(c, 700, 258, 60, '#3f6a2e', '#4a3624', 3); } });
       A.lightBeam(ctx, 700, 290, 240, 300, 'rgba(255,240,200,0.18)');
-      // Bücherregal
+      // Heizkörper unter dem Fenster
+      A.rect(ctx, 664, 340, 120, 5, '#8a8478');
+      for (let i = 0; i < 9; i++) A.rect(ctx, 670 + i * 12, 345, 9, 50, i % 2 ? '#c4bcaa' : '#a8a090');
+      A.rect(ctx, 676, 395, 6, 10, '#6a6458'); A.rect(ctx, 766, 395, 6, 10, '#6a6458');
+      A.line(ctx, 672, 372, 776, 372, 'rgba(0,0,0,0.15)', 2);
+      // Bücherregal mit Regalleiter und Fundkisten obenauf
       A.shelf(ctx, 40, 110, 200, 290, '#5a3f28', 5, 11);
+      A.shadeRect(ctx, 36, 400, 208, 6, 0.25);
+      A.crate(ctx, 48, 72, 60, 38, '#8a6a48', 'UR'); A.crate(ctx, 112, 80, 50, 30, '#7a5e40', 'SAIS');
+      A.amphora(ctx, 190, 110, 44, '#b5865a', 2); A.pot(ctx, 226, 110, 20, 24, '#9a7a52');
+      A.ladder(ctx, 12, 150, 274, '#7a5a3c', 20); A.ell(ctx, 26, 426, 18, 4, 'rgba(0,0,0,0.3)');
+      // Pendeluhr zwischen Regal und Foto
+      A.rect(ctx, 259, 168, 22, 52, '#3a2416'); A.rect(ctx, 262, 172, 16, 46, '#2a1a10');
+      A.circle(ctx, 270, 150, 22, '#3a2416'); A.circle(ctx, 270, 150, 18, '#e8dcc0');
+      for (let i = 0; i < 12; i++) { const a = (i / 12) * TAU; A.line(ctx, 270 + Math.cos(a) * 13, 150 + Math.sin(a) * 13, 270 + Math.cos(a) * 16, 150 + Math.sin(a) * 16, '#3a2a1a', i % 3 ? 1 : 2); }
+      A.line(ctx, 270, 150, 270 + Math.cos(-2.1) * 9, 150 + Math.sin(-2.1) * 9, '#222', 2); A.line(ctx, 270, 150, 270 + Math.cos(-0.5) * 13, 150 + Math.sin(-0.5) * 13, '#222', 1.5);
       // Foto an der Wand
       A.rect(ctx, 300, 120, 90, 70, '#3a2a1a'); A.rect(ctx, 305, 125, 80, 60, '#d8c8a0');
       ctx.save(); ctx.beginPath(); ctx.rect(305, 125, 80, 60); ctx.clip();
@@ -40,12 +58,21 @@
       // Garderobe
       A.rect(ctx, 806, 200, 6, 220, '#3a2a1a'); A.rect(ctx, 790, 200, 38, 6, '#3a2a1a');
       A.rr(ctx, 792, 210, 34, 110, 8, '#4a3a3a');
+      // Zettel an der Wand neben der Tür, Diplom über der Tür
+      A.rect(ctx, 834, 122, 18, 24, '#efe4c8'); A.circle(ctx, 843, 124, 1.5, '#a3312a'); for (let i = 0; i < 4; i++) A.line(ctx, 837, 129 + i * 4, 849, 129 + i * 4, '#888', 1);
+      A.rect(ctx, 862, 102, 66, 50, '#3a2a1a'); A.rect(ctx, 866, 106, 58, 42, '#efe4c8');
+      A.text(ctx, 'HARVARD', 895, 117, { font: 'bold 7px Georgia', color: '#3a2a1a', align: 'center' });
+      for (let i = 0; i < 4; i++) A.line(ctx, 872, 124 + i * 5, 918, 124 + i * 5, '#9a9080', 1);
+      A.circle(ctx, 912, 140, 4, '#a3312a');
       // Tür zum Flur
       A.door(ctx, 860, 190, 70, 230, '#6a4a2e', { panel: true, frame: '#3a2a1a' });
       // Teppich
       A.rug(ctx, 300, 470, 380, 100, '#7a2e2e', '#c9a86a');
+      // Ledersessel hinter dem Schreibtisch
+      A.rr(ctx, 466, 262, 52, 80, 12, '#4a3020'); A.rr(ctx, 471, 267, 42, 56, 9, '#5e3e2a'); A.line(ctx, 475, 294, 509, 294, 'rgba(0,0,0,0.25)', 2); A.circle(ctx, 481, 280, 1.5, '#c8a848'); A.circle(ctx, 503, 280, 1.5, '#c8a848');
       // Schreibtisch
       A.table(ctx, 300, 335, 310, 40, '#5a3f28', 80);
+      A.shadeRect(ctx, 296, 420, 318, 8, 0.25);
       A.rect(ctx, 300, 375, 310, 45, '#4a3220');
       A.rect(ctx, 320, 385, 120, 30, '#3a2a1a'); A.rect(ctx, 460, 385, 130, 30, '#3a2a1a');
       A.circle(ctx, 380, 400, 3, '#c8a848'); A.circle(ctx, 525, 400, 3, '#c8a848');
@@ -54,9 +81,33 @@
       A.rect(ctx, 330, 322, 70, 16, '#efe4c8'); A.rect(ctx, 340, 318, 70, 16, '#f4ecd8'); A.line(ctx, 348, 326, 395, 326, '#666', 1); A.line(ctx, 348, 330, 385, 330, '#666', 1);
       if (!g.flag('kaffee_genommen')) { A.rr(ctx, 440, 300, 22, 38, 4, '#5a5a5a'); A.rect(ctx, 440, 296, 22, 6, '#333'); }
       A.rect(ctx, 470, 326, 40, 12, '#8a4a3a');
+      // Aschenbecher und Pfeife am linken Tischrand
+      A.ell(ctx, 314, 335, 11, 4, '#4a4a48'); A.ell(ctx, 314, 333, 8, 2.5, '#6a6a68');
+      A.path(ctx, [300, 328, 310, 331, 320, 327], '#3a2418', 3); A.circle(ctx, 322, 326, 4, '#3a2418');
+      // Fundkisten neben dem Schreibtisch mit Scherbentablett
+      A.crate(ctx, 614, 386, 52, 38, '#7a5e40', 'K 36'); A.crate(ctx, 618, 362, 44, 24, '#8a6a48', '');
+      A.rr(ctx, 612, 354, 56, 9, 2, '#5a4a3a');
+      for (let i = 0; i < 6; i++) A.poly(ctx, [616 + i * 9, 356, 623 + i * 9, 353, 626 + i * 9, 357, 620 + i * 9, 358], i % 2 ? '#c8b890' : '#b5865a');
+      A.ell(ctx, 640, 425, 30, 4, 'rgba(0,0,0,0.3)');
       A.vignette(ctx, 960, 600, 0.45);
     },
-    animate(ctx, t) { A.dust(ctx, 660, 300, 200, 250, t, 25); },
+    paintFront(ctx) {
+      // Fundkisten vorn links, Sessellehne vorn rechts
+      A.crate(ctx, -30, 540, 84, 66, '#5a4030', 'KNOSSOS'); A.crate(ctx, -22, 494, 70, 46, '#6a4e38', 'THERA');
+      A.rr(ctx, 892, 486, 110, 130, 22, '#2e4a3a'); A.rr(ctx, 904, 498, 84, 56, 14, '#3a5a48');
+      ctx.fillStyle = A.grad(ctx, 0, 480, 0, 600, ['rgba(0,0,0,0)', 'rgba(0,0,0,0.45)']); ctx.fillRect(892, 480, 68, 120); ctx.fillRect(-30, 490, 90, 110);
+    },
+    animate(ctx, t) {
+      A.dust(ctx, 660, 300, 200, 250, t, 25);
+      // Pendel der Wanduhr
+      const a = Math.sin(t * 2.4) * 0.22;
+      A.rect(ctx, 262, 172, 16, 46, '#2a1a10');
+      A.line(ctx, 270, 172, 270 + Math.sin(a) * 36, 172 + Math.cos(a) * 36, '#c8a848', 1.5); A.circle(ctx, 270 + Math.sin(a) * 36, 172 + Math.cos(a) * 36, 4, '#d8b858');
+      // Vögel vor dem Fenster
+      ctx.save(); ctx.beginPath(); ctx.rect(650, 90, 150, 150); ctx.clip();
+      for (let i = 0; i < 3; i++) { const bx = 640 + ((t * 9 + i * 70) % 180), by = 125 + i * 14 + Math.sin(t * 1.5 + i) * 3, f = Math.sin(t * 6 + i) * 2.5; A.path(ctx, [bx - 5, by + f, bx, by, bx + 5, by + f], 'rgba(40,50,60,0.65)', 1.2); }
+      ctx.restore();
+    },
     hotspots: [
       { id: 'regal', name: 'Bücherregal', rect: [40, 110, 200, 290], at: [140, 450, 'u'],
         look: 'Platon, Herodot, Evans\' Berichte aus Knossos und dreißig Jahre Grabungsberichte. Die Hälfte davon ungelesen.',
@@ -92,6 +143,10 @@
         take: (g) => { g.set('seil_genommen'); g.take('seil'); g.repaint(); return 'Zehn Meter gutes Seil. Kann nicht schaden.'; } },
       { id: 'garderobe', name: 'Garderobe', rect: [786, 196, 44, 224], at: [808, 450, 'u'], cond: (g) => g.flag('seil_genommen'),
         look: 'Mein Mantel. Das Seil habe ich mitgenommen.' },
+      // Ausschmückung, nur anschauen (neue Einträge ans Ende, die Handler oben greifen per Index zu)
+      { id: 'diplom', name: 'Diplom', rect: [862, 102, 66, 50], at: [893, 450, 'u'], look: 'Doktor der Philosophie, Harvard, 1926. Der Rahmen war teurer als die Feier.' },
+      { id: 'heizkoerper', name: 'Heizkörper', rect: [664, 340, 120, 60], at: [725, 450, 'u'], look: 'Der Heizkörper. Im Winter klopft er, als wollte jemand herein.' },
+      { id: 'fundkisten', name: 'Fundkisten', rect: [612, 352, 56, 72], at: [640, 450, 'u'], look: 'Scherben von der Grabung 1936. Katalogisiert, nummeriert, und seither von niemandem angesehen.' },
     ],
     exits: [
       { id: 'tuer', name: 'Tür zum Flur', rect: [856, 186, 78, 236], at: [893, 450, 'u'], to: 'p_hall', pos: [110, 505], dir: 'r',
@@ -132,30 +187,81 @@
       A.rect(ctx, 0, 340, 960, 60, '#4a3a2a');
       A.floorTiles(ctx, 960, 400, 600, '#c8bca0', '#8a7e66', 14, 480);
       ctx.fillStyle = 'rgba(0,0,0,0.2)'; ctx.fillRect(0, 400, 960, 6);
-      // Durchgang zum Hof links
+      // Abnutzung, Risse, Flecken
+      A.ell(ctx, 480, 500, 440, 36, 'rgba(0,0,0,0.05)'); A.ell(ctx, 120, 470, 90, 20, 'rgba(0,0,0,0.05)');
+      A.cracks(ctx, 540, 34, 140, 40, 5, 'rgba(0,0,0,0.14)'); A.ell(ctx, 700, 60, 50, 10, 'rgba(60,40,20,0.1)');
+      // Durchgang zum Hof links, dahinter Rasen und Ahorn
       A.rect(ctx, 0, 150, 60, 250, '#3a2a1a'); A.rect(ctx, 0, 160, 50, 240, '#c8dcf0');
+      A.rect(ctx, 0, 330, 50, 70, '#7fa85a'); A.rect(ctx, 0, 350, 50, 16, '#b8a888');
+      A.circle(ctx, 8, 250, 34, '#5a8a42'); A.circle(ctx, 30, 236, 24, '#6a9a4c'); A.rect(ctx, 6, 280, 8, 52, '#5a4630');
+      A.rect(ctx, 0, 160, 50, 240, 'rgba(200,220,240,0.25)');
       A.lightBeam(ctx, 50, 170, 120, 280, 'rgba(255,240,210,0.2)');
-      // Tür zu Falks Zimmer
+      ctx.fillStyle = 'rgba(255,240,210,0.13)'; A.poly(ctx, [0, 400, 60, 400, 200, 470, 0, 530], ctx.fillStyle);
+      // Tür zu Falks Zimmer mit Fußabtreter
       A.door(ctx, 60, 190, 70, 210, '#6a4a2e', { panel: true, frame: '#3a2a1a' });
       A.text(ctx, 'DR. A. FALK', 95, 180, { font: 'bold 10px Georgia', color: '#3a2a1a', align: 'center' });
+      A.rect(ctx, 62, 406, 66, 22, '#4a3a2a'); A.rect(ctx, 66, 409, 58, 16, '#7a6a48'); for (let i = 0; i < 5; i++) A.line(ctx, 68, 411 + i * 3, 122, 411 + i * 3, 'rgba(0,0,0,0.15)', 1);
+      // Kleiderhaken mit Hut, Schirmständer
+      A.rect(ctx, 138, 236, 28, 5, '#3a2a1a'); A.circle(ctx, 144, 245, 2, '#c8a848'); A.circle(ctx, 160, 245, 2, '#c8a848');
+      A.ell(ctx, 152, 256, 12, 4, '#3a2a1a'); A.rr(ctx, 145, 244, 14, 13, 4, '#3a2a1a');
+      A.rr(ctx, 140, 350, 26, 56, 5, '#4a4a48'); A.ell(ctx, 153, 350, 13, 4, '#6a6a68');
+      A.line(ctx, 148, 352, 144, 300, '#2a2a2a', 3); A.circle(ctx, 143, 297, 3, '#c8a848'); A.line(ctx, 158, 352, 162, 306, '#5a2a2a', 3); A.line(ctx, 154, 352, 153, 296, '#8a6a4a', 2.5);
+      // Wandlampen
+      const sconce = (x) => { A.rect(ctx, x - 2, 150, 4, 22, '#8a7a4a'); A.poly(ctx, [x - 14, 152, x + 14, 152, x + 8, 132, x - 8, 132], '#efe4c8'); A.glow(ctx, x, 142, 48, 'rgba(255,225,150,0.6)', 0.32); };
+      sconce(152); sconce(432); sconce(600); sconce(765);
+      // Anschlagbrett über der ersten Vitrine
+      A.rect(ctx, 178, 82, 114, 96, '#5a3f28'); A.rect(ctx, 184, 88, 102, 84, '#b8956a');
+      [[190, 94, 30, 38, 0.05, '#f4ecd8'], [226, 92, 40, 26, -0.06, '#efe4c8'], [270, 96, 14, 44, 0.02, '#e8e0b0'], [192, 138, 44, 30, -0.04, '#f0e8d0'], [244, 126, 36, 40, 0.08, '#fff8e0']].forEach(([x, y, w, h, a, c]) => {
+        ctx.save(); ctx.translate(x + w / 2, y + h / 2); ctx.rotate(a); A.rect(ctx, -w / 2, -h / 2, w, h, c);
+        for (let i = 4; i < h - 3; i += 5) A.line(ctx, -w / 2 + 3, -h / 2 + i, w / 2 - 3, -h / 2 + i, 'rgba(0,0,0,0.25)', 1);
+        A.circle(ctx, 0, -h / 2 + 2, 1.8, '#a3312a'); ctx.restore();
+      });
+      // Gedenktafel über der mittleren Vitrine, Wegweiser über der dritten
+      A.rr(ctx, 468, 96, 94, 70, 4, '#8a6a3a', '#5a4a2a', 2); A.rr(ctx, 474, 102, 82, 58, 3, null, 'rgba(255,230,160,0.35)', 1);
+      A.text(ctx, 'IN MEMORIAM', 515, 120, { font: 'bold 9px Georgia', color: '#efe4c8', align: 'center' });
+      A.text(ctx, 'EZRA WHITMORE', 515, 136, { font: 'bold 10px Georgia', color: '#efe4c8', align: 'center' });
+      A.text(ctx, '1841 – 1911', 515, 152, { font: '8px Georgia', color: '#efe4c8', align: 'center' });
+      A.sign(ctx, 640, 100, 92, 22, 'BIBLIOTHEK →', '#3a2a1a', '#e8d8b0', 'bold 10px Georgia');
+      // Barometer zwischen den Vitrinen, Feuerlöscher an der Wand
+      A.circle(ctx, 600, 262, 17, '#5a3f28'); A.circle(ctx, 600, 262, 12, '#e8dcc0'); A.line(ctx, 600, 262, 606, 253, '#222', 1.5); A.circle(ctx, 600, 262, 1.5, '#222');
+      A.rect(ctx, 300, 296, 38, 6, '#3a2a1a'); A.rr(ctx, 308, 310, 22, 56, 6, '#a3312a'); A.rect(ctx, 314, 302, 10, 10, '#333'); A.line(ctx, 322, 306, 332, 330, '#222', 2); A.rect(ctx, 312, 328, 14, 10, '#f0e8d0');
       // Vitrinen
       const vitrine = (x, w, draw) => { A.rect(ctx, x, 200, w, 200, '#3a2a1a'); A.rect(ctx, x + 6, 206, w - 12, 150, '#1a1a22'); ctx.fillStyle = 'rgba(200,220,255,0.12)'; ctx.fillRect(x + 6, 206, w - 12, 150); draw(); A.rect(ctx, x + 6, 356, w - 12, 44, '#4a3a2a'); ctx.fillStyle = 'rgba(255,255,255,0.08)'; A.poly(ctx, [x + 8, 208, x + 40, 208, x + 8, 300], ctx.fillStyle); };
       vitrine(170, 130, () => { A.rect(ctx, 215, 300, 40, 50, '#5a4a3a'); A.ell(ctx, 235, 300, 20, 8, '#5a4a3a'); A.rr(ctx, 205, 245, 60, 60, 20, '#b5865a'); A.spirals(ctx, 210, 265, 50, 16, '#3a2a1a'); A.ell(ctx, 235, 245, 16, 6, '#8a6a4a'); });
       vitrine(450, 130, () => { A.rect(ctx, 470, 230, 90, 110, '#9a8a6a'); A.rect(ctx, 480, 250, 30, 80, '#7a6a4a'); A.circle(ctx, 495, 250, 12, '#7a6a4a'); A.poly(ctx, [495, 236, 512, 232, 500, 244], '#7a6a4a'); A.cuneiform(ctx, 518, 240, 38, 80, '#4a3a2a', 3); });
       vitrine(620, 130, () => { A.rr(ctx, 665, 250, 40, 90, 14, '#3a7a6a'); A.circle(ctx, 685, 250, 14, '#3a7a6a'); A.hieroglyphs(ctx, 668, 270, 34, 60, 'rgba(0,0,0,0.4)', 4); A.ell(ctx, 720, 300, 12, 15, '#3a7a6a'); });
-      // Greaves' Tür
+      A.shadeRect(ctx, 170, 400, 130, 5, 0.3); A.shadeRect(ctx, 450, 400, 130, 5, 0.3); A.shadeRect(ctx, 620, 400, 130, 5, 0.3);
+      // kleine Beschriftungsschilder in den Vitrinen
+      [235, 515, 685].forEach((x) => { A.rect(ctx, x - 22, 364, 44, 14, '#efe4c8'); A.line(ctx, x - 18, 369, x + 18, 369, '#666', 1); A.line(ctx, x - 14, 374, x + 14, 374, '#888', 1); });
+      // Greaves' Tür mit Fußabtreter
       A.door(ctx, 340, 190, 70, 210, '#6a4a2e', { panel: true, frame: '#3a2a1a' });
       A.text(ctx, 'PROF. GREAVES', 375, 180, { font: 'bold 10px Georgia', color: '#3a2a1a', align: 'center' });
+      A.rect(ctx, 342, 406, 66, 22, '#4a3a2a'); A.rect(ctx, 346, 409, 58, 16, '#7a6a48'); for (let i = 0; i < 5; i++) A.line(ctx, 348, 411 + i * 3, 402, 411 + i * 3, 'rgba(0,0,0,0.15)', 1);
       // Treppe nach oben rechts
       A.rect(ctx, 780, 100, 180, 300, '#8a7a68');
       A.stairs(ctx, 790, 400, 150, 9, 18, '#7a6656', 'r');
       A.rect(ctx, 775, 250, 10, 160, '#3a2a1a');
       A.door(ctx, 880, 90, 60, 150, '#5a3e28', { frame: '#3a2a1a' });
       A.text(ctx, 'DACHBODEN', 910, 82, { font: 'bold 9px Georgia', color: '#3a2a1a', align: 'center' });
-      // Eimer und Wischmopp
+      // Eimer und Wischmopp, feuchter Boden
+      A.puddle(ctx, 736, 546, 80, 12, 'rgba(170,185,200,0.22)'); A.puddle(ctx, 810, 560, 50, 8, 'rgba(170,185,200,0.18)');
       A.rr(ctx, 758, 500, 30, 34, 4, '#5a6a7a'); A.ell(ctx, 773, 500, 15, 5, '#7a8a9a');
       A.line(ctx, 795, 400, 785, 520, '#8a6a4a', 4); A.rect(ctx, 775, 515, 24, 14, '#c8c0a0');
+      // Schild „Vorsicht, nass“
+      A.poly(ctx, [700, 560, 724, 560, 712, 524], '#e8c848'); A.poly(ctx, [704, 558, 720, 558, 712, 532], '#3a2a1a'); A.line(ctx, 712, 524, 726, 560, '#b89830', 2);
       A.vignette(ctx, 960, 600, 0.45);
+    },
+    paintFront(ctx) {
+      // Topfpflanze vorn rechts
+      A.pot(ctx, 918, 604, 64, 52, '#9a5a44');
+      [[-40, -20, -0.6], [-22, -46, -0.3], [4, -58, 0], [28, -46, 0.3], [44, -22, 0.6], [-8, -34, -0.1]].forEach(([dx, dy, a]) => { ctx.save(); ctx.translate(918, 556); ctx.rotate(a); A.ell(ctx, 0, -32, 9, 34, '#2f5a26'); A.line(ctx, 0, 0, 0, -60, '#4a7a3a', 1.5); ctx.restore(); });
+      ctx.fillStyle = A.grad(ctx, 0, 470, 0, 600, ['rgba(0,0,0,0)', 'rgba(0,0,0,0.4)']); ctx.fillRect(860, 470, 100, 130);
+    },
+    animate(ctx, t) {
+      A.dust(ctx, 50, 170, 130, 230, t, 18);
+      // eine Wandlampe brummt und flackert leicht
+      const f = 0.14 + Math.sin(t * 11) * 0.03 + (Math.sin(t * 37) > 0.93 ? 0.1 : 0);
+      A.glow(ctx, 432, 142, 40, 'rgba(255,225,150,0.6)', f);
     },
     hotspots: [
       { id: 'vitrine1', name: 'Vitrine mit Vase', rect: [170, 200, 130, 200], at: [235, 450, 'u'],
@@ -174,6 +280,10 @@
         look: 'Hanks Eimer. Das Wasser ist grau.', take: 'Hank braucht ihn. Und ich will keinen Streit mit dem Hausmeister.', use: 'Ich habe nicht vor, den Boden zu wischen.' },
       { id: 'mopp', name: 'Wischmopp', rect: [775, 400, 28, 130], at: [730, 520, 'r'],
         look: 'Ein Wischmopp. Hanks Zepter.', take: 'Den lasse ich Hank.' },
+      // Ausschmückung, nur anschauen
+      { id: 'tafel', name: 'Gedenktafel', rect: [468, 96, 94, 70], at: [515, 450, 'u'], look: 'Zum Gedenken an Ezra Whitmore, der dieses Haus gestiftet hat. Das undichte Dach gleich mit.' },
+      { id: 'brett', name: 'Anschlagbrett', rect: [178, 82, 114, 96], at: [235, 450, 'u'], look: 'Sprechstunden, ein Zimmergesuch, und dreimal derselbe Zettel: „Wer hat meinen Regenschirm?“' },
+      { id: 'feuerloescher', name: 'Feuerlöscher', rect: [302, 296, 34, 74], at: [318, 450, 'u'], look: 'Ein Feuerlöscher. „Geprüft 1931“, steht auf dem Schild. Ich hoffe, wir brauchen ihn nie.' },
     ],
     exits: [
       { id: 'tuer_falk', name: 'Tür zu Falks Zimmer', rect: [56, 186, 78, 214], at: [95, 450, 'u'], to: 'p_office', pos: [880, 470], dir: 'l', look: 'Mein Arbeitszimmer.' },
@@ -237,13 +347,31 @@
       A.line(ctx, 0, 200, 480, 20, '#5a4a3a', 6); A.line(ctx, 480, 20, 960, 200, '#5a4a3a', 6);
       A.planks(ctx, 0, 400, 960, 200, '#5a4632', 12, false, 5);
       ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(0, 400, 960, 6);
+      // Staubflecken auf den Dielen, ein fehlendes Brett, Wasserfleck unter dem undichten Dach
+      { const r = ATL.U.rng(15); for (let i = 0; i < 14; i++) { const x = r() * 960, y = 415 + r() * 180; A.ell(ctx, x, y, 20 + r() * 40, 4 + r() * 6, 'rgba(200,190,170,0.06)'); } }
+      A.rect(ctx, 600, 551, 90, 12, '#1a120c'); A.rect(ctx, 600, 551, 90, 2, '#2a1a10');
+      A.ell(ctx, 890, 248, 40, 12, 'rgba(0,0,0,0.2)'); A.cracks(ctx, 790, 232, 70, 100, 9, 'rgba(0,0,0,0.25)');
       // Fenster
       A.rect(ctx, 856, 136, 68, 90, '#3a2a1a'); A.rect(ctx, 862, 142, 56, 78, '#9fb8d0');
       A.line(ctx, 890, 142, 890, 220, '#3a2a1a', 3); A.line(ctx, 862, 181, 918, 181, '#3a2a1a', 3);
+      A.cobweb(ctx, 862, 142, 26, 'tl', 'rgba(255,255,255,0.3)');
       A.lightBeam(ctx, 862, 220, 160, 250, 'rgba(255,240,210,0.16)');
+      // Spinnweben in den Ecken, Wimpel, Seil mit alter Laterne
+      A.cobweb(ctx, 0, 200, 56, 'tl', 'rgba(255,255,255,0.22)'); A.cobweb(ctx, 960, 200, 70, 'tr', 'rgba(255,255,255,0.22)');
+      A.poly(ctx, [120, 200, 192, 222, 120, 244], '#7a2e2e'); A.text(ctx, 'WHITMORE', 126, 226, { font: 'bold 8px Georgia', color: '#e8d8b0' });
+      A.rope(ctx, [200, 126, 203, 180, 199, 236], '#8a7a5a', 2); A.lantern(ctx, 200, 262, 0, false);
+      // Teppichrolle rechts, Flaschen und Sack am Boden
+      ctx.save(); ctx.translate(915, 400); ctx.rotate(0.1); A.rr(ctx, -14, -170, 28, 170, 8, '#6a3a3a'); A.line(ctx, -8, -160, -8, -10, 'rgba(0,0,0,0.25)', 3); A.ell(ctx, 0, -170, 14, 6, '#8a4a4a'); A.circle(ctx, 0, -170, 6, '#3a2020'); ctx.restore();
+      A.bottle(ctx, 206, 428, 30, '#3a5a3a'); A.bottle(ctx, 218, 428, 24, '#5a4a2a');
+      A.sack(ctx, 538, 428, 40, 52, '#a89a78');
       // Regalbrett oben mit Kisten
       A.rect(ctx, 100, 175, 340, 12, '#6a5a4a');
       A.rect(ctx, 110, 187, 8, 60, '#5a4a3a'); A.rect(ctx, 425, 187, 8, 60, '#5a4a3a');
+      A.cobweb(ctx, 118, 187, 40, 'tl', 'rgba(255,255,255,0.3)'); A.cobweb(ctx, 425, 187, 30, 'tr', 'rgba(255,255,255,0.25)');
+      // Schneiderpuppe mit Tropenhelm
+      A.rect(ctx, 246, 340, 8, 88, '#5a4a3a'); A.ell(ctx, 250, 428, 22, 5, '#3a2a1a');
+      A.poly(ctx, [232, 240, 268, 240, 274, 300, 262, 344, 238, 344, 226, 300], '#a89a80'); A.line(ctx, 250, 244, 250, 340, 'rgba(0,0,0,0.15)', 1);
+      A.rect(ctx, 247, 226, 6, 16, '#8a7a60'); A.ell(ctx, 250, 218, 20, 8, '#b8a888'); A.ell(ctx, 250, 208, 13, 12, '#b8a888'); A.line(ctx, 237, 216, 263, 216, '#8a7a60', 2);
       A.crate(ctx, 110, 120, 80, 55, '#8a6a48', 'UR 1928'); A.crate(ctx, 200, 100, 90, 75, '#7a5e40', 'GIZEH');
       if (!g.flag('kiste_gefallen')) A.crate(ctx, 300, 95, 110, 80, '#9a7a52', 'THERA 1932');
       // Zugschnur mit Glühbirne
@@ -252,8 +380,11 @@
       A.line(ctx, 486, 165, 500, 260, '#8a8a7a', 1.5);
       A.circle(ctx, 500, 262, 4, '#8a7a5a');
       if (g.flag('licht')) A.glow(ctx, 480, 160, 260, 'rgba(255,220,150,0.7)', 0.5);
-      // Truhe
+      // Truhe mit Aufklebern und Schiffsmodell obenauf
       A.rr(ctx, 60, 330, 140, 75, 6, '#4a3020'); A.rect(ctx, 60, 330, 140, 14, '#5a4030'); A.rect(ctx, 122, 355, 16, 18, '#c8a848');
+      A.rect(ctx, 70, 350, 26, 14, '#c8b890'); A.rect(ctx, 160, 372, 22, 18, '#8a3a4a'); A.rect(ctx, 72, 380, 30, 8, '#d8d0c0');
+      A.shadeRect(ctx, 56, 404, 148, 5, 0.3);
+      A.rect(ctx, 96, 322, 70, 6, '#3a2a1a'); A.boat(ctx, 100, 312, 62, '#5a3a22', true);
       // Kistenstapel
       const kx = g.flag('kisten_verschoben') ? 660 : 560;
       if (!g.flag('kisten_verschoben') || !g.flag('leiter_genommen')) {
@@ -276,7 +407,22 @@
       A.vignette(ctx, 960, 600, 0.55);
       A.grain(ctx, 960, 600, 6, 0.05);
     },
-    animate(ctx, t, g) { if (g.flag('licht')) A.dust(ctx, 300, 200, 500, 300, t, 40); },
+    paintFront(ctx) {
+      // Dachbalken ganz vorn oben, Kiste vorn links
+      A.rect(ctx, 0, 0, 960, 24, '#1a120c'); A.rect(ctx, 0, 22, 960, 4, '#2a1a10'); A.cobweb(ctx, 0, 26, 40, 'tl', 'rgba(255,255,255,0.2)');
+      A.crate(ctx, -30, 536, 90, 64, '#3e2e1e', ''); A.rect(ctx, -30, 536, 90, 4, '#4a3828');
+      ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(-30, 536, 90, 64);
+    },
+    animate(ctx, t, g) {
+      // Vogelkäfig am Sparren, leicht pendelnd
+      const sw = Math.sin(t * 0.9) * 0.03;
+      ctx.save(); ctx.translate(620, 72); ctx.rotate(sw);
+      A.line(ctx, 0, 0, 0, 10, '#8a8a7a', 1.5); A.rr(ctx, -20, 10, 40, 74, 18, null, '#8a8a7a', 1.5);
+      for (let i = -3; i <= 3; i++) A.line(ctx, i * 6, i % 3 ? 22 : 12, i * 6, 82, '#8a8a7a', 1);
+      A.ell(ctx, 0, 84, 22, 4, '#6a6a5a'); A.line(ctx, -14, 60, 14, 60, '#8a8a7a', 1.5);
+      ctx.restore();
+      if (g.flag('licht')) { A.dust(ctx, 300, 200, 500, 300, t, 40); A.insects(ctx, 440, 120, 80, 70, t, 5, 'rgba(230,220,180,0.7)'); }
+    },
     get hotspots() {
       const lit = [
         { id: 'schnur', name: 'Zugschnur', rect: [470, 140, 40, 130], at: [500, 470, 'u'],
@@ -338,6 +484,10 @@
           look: 'Eine Steinfigur, kaum zwei Handbreit hoch. Ein Mann mit einem Fischkopf als Kapuze. Ich habe sie 1932 zuletzt gesehen, in Livias Zelt.',
           take: async (g) => { g.set('figur_genommen'); g.take('figur'); g.repaint(); await g.say('falk', 'Schwerer, als sie aussieht. Und beim Aufheben klappert etwas darin.'); await g.say('falk', 'Sie ist hohl. Bevor ich sie irgendwem in die Hand drücke, will ich wissen, was da drin ist.'); g.objective('Herausfinden, was in der Figur klappert, und sie dann zu Greaves und Kessler in den Hof bringen.'); } },
         { id: 'mauseloch', name: 'Mauseloch', rect: [36, 380, 30, 22], at: [80, 470, 'l'], look: 'Ein Mauseloch. Die Bewohner sind ausgegangen.', use: 'Ich passe da nicht durch.' },
+        // Ausschmückung, nur anschauen
+        { id: 'puppe', name: 'Schneiderpuppe', rect: [224, 200, 52, 230], at: [290, 470, 'l'], look: 'Eine Schneiderpuppe mit Tropenhelm. Im Dunkeln hätte sie mich beinahe zu Tode erschreckt.' },
+        { id: 'kaefig', name: 'Vogelkäfig', rect: [598, 74, 44, 86], at: [620, 470, 'u'], look: 'Ein leerer Vogelkäfig. Der Kanarienvogel des Instituts, 1912 bis 1919. Er hat den Krieg überlebt, aber nicht Hanks Vorgänger.' },
+        { id: 'schiff', name: 'Schiffsmodell', rect: [92, 250, 78, 78], at: [130, 440, 'u'], look: 'Ein Schiffsmodell, die „Whitmore“. Ezra Whitmore hat sein Geld mit Fracht verdient. Mit dem Dachboden verdient niemand etwas.' },
       ];
       return lit;
     },
@@ -370,34 +520,72 @@
       A.sky(ctx, 960, 400, '#7fb3e6', '#cfe4f5');
       A.clouds(ctx, 960, 70, 5, 2);
       A.sun(ctx, 820, 70, 30);
+      // Kirchturm des Ortes in der Ferne, Schornstein auf dem Dach
+      A.rect(ctx, 292, 62, 16, 52, '#9aa4b4'); A.poly(ctx, [288, 64, 312, 64, 300, 22], '#8a94a4'); A.rect(ctx, 297, 70, 6, 8, '#6a7484'); A.line(ctx, 300, 22, 300, 12, '#8a94a4', 1.5);
+      A.rect(ctx, 690, 64, 24, 50, '#7a4a3a'); A.rect(ctx, 686, 60, 32, 6, '#5a3a2a'); A.rect(ctx, 694, 54, 6, 8, '#3a3a3a'); A.rect(ctx, 704, 54, 6, 8, '#3a3a3a');
       // Gebäude im Hintergrund
       A.bricks(ctx, 0, 120, 960, 300, '#9a5a44', 34, 14, 3, '#6a4034');
       A.rect(ctx, 0, 110, 960, 14, '#d8d0c0');
-      for (let i = 0; i < 6; i++) { const x = 60 + i * 160; A.window(ctx, x, 160, 60, 110, { frame: '#e8e0d0', light: '#3a4a5a' }); A.rect(ctx, x - 6, 272, 72, 8, '#d8d0c0'); }
+      for (let i = 0; i < 6; i++) { const x = 60 + i * 160; A.window(ctx, x, 160, 60, 110, { frame: '#e8e0d0', light: '#3a4a5a' }); A.rect(ctx, x - 6, 272, 72, 8, '#d8d0c0'); A.rect(ctx, x + 4, 282, 52, 26, 'rgba(0,0,0,0.06)'); }
+      // Blumenkästen unter zwei Fenstern
+      [220, 700].forEach((x) => { A.rect(ctx, x - 4, 280, 68, 12, '#5a3a2a'); const r = ATL.U.rng(x); for (let i = 0; i < 9; i++) A.circle(ctx, x + 2 + i * 7, 278 - r() * 4, 3, ['#d84a4a', '#f0e0d0', '#e8c848'][i % 3]); A.moss(ctx, x, 282, 60, x + 1, '#4a7a3a'); });
+      // Regenrohr links, Efeu an den Ecken und neben dem Durchgang
+      A.rect(ctx, 20, 124, 8, 296, '#5a3a2a'); A.rect(ctx, 16, 130, 16, 4, '#4a2a1a'); A.rect(ctx, 16, 300, 16, 4, '#4a2a1a'); A.rr(ctx, 18, 410, 20, 10, 3, '#5a3a2a');
+      A.vines(ctx, 40, 128, 290, 6); A.vines(ctx, 386, 244, 176, 4); A.vines(ctx, 574, 244, 176, 5); A.vines(ctx, 930, 128, 170, 7);
       A.rect(ctx, 400, 240, 160, 180, '#4a3a2a'); A.arch(ctx, 410, 250, 140, 170, '#d8d0c0', '#2a2018');
       A.text(ctx, 'WHITMORE COLLEGE', 480, 140, { font: 'bold 18px Georgia', color: '#e8e0d0', align: 'center' });
       A.text(ctx, 'MCMII', 480, 160, { font: '12px Georgia', color: '#e8e0d0', align: 'center' });
+      // Messingschild neben dem Durchgang
+      A.rr(ctx, 566, 300, 30, 44, 2, '#b8963a', '#8a6a2a', 1); for (let i = 0; i < 4; i++) A.line(ctx, 570, 310 + i * 8, 592, 310 + i * 8, 'rgba(60,40,10,0.5)', 1.5);
       // Rasen und Weg
       A.ground(ctx, 0, 420, 960, 180, '#6f9a52', '#4f7a3a');
+      A.moss(ctx, 0, 421, 380, 2, '#4a6a2a'); A.moss(ctx, 580, 421, 320, 3, '#4a6a2a');
       A.poly(ctx, [380, 420, 580, 420, 760, 600, 200, 600], '#b8a888');
       A.poly(ctx, [0, 480, 960, 480, 960, 520, 0, 520], 'rgba(184,168,136,0.9)');
-      // Bäume, Bank, Statue
+      A.pebbles(ctx, 390, 424, 170, 50, 4, '#a8987a'); A.pebbles(ctx, 300, 530, 360, 60, 6, '#a8987a');
+      A.grass(ctx, 330, 470, 60, 3, '#4f7a3a'); A.grass(ctx, 580, 470, 60, 4, '#4f7a3a'); A.grass(ctx, 120, 528, 90, 5, '#5f8a42'); A.grass(ctx, 780, 530, 120, 6, '#5f8a42');
+      // Schatten von Baum, Bank, Statue und Laterne (Sonne oben rechts)
+      A.ell(ctx, 90, 476, 90, 13, 'rgba(0,0,0,0.13)'); A.ell(ctx, 820, 478, 100, 14, 'rgba(0,0,0,0.13)');
+      A.ell(ctx, 250, 486, 62, 7, 'rgba(0,0,0,0.13)'); A.ell(ctx, 618, 476, 44, 8, 'rgba(0,0,0,0.13)'); A.line(ctx, 786, 440, 740, 470, 'rgba(0,0,0,0.12)', 5);
+      // Bäume, Bank mit Plakette, Statue
       A.tree(ctx, 120, 470, 200, '#3f6a2e', '#4a3624', 8);
       A.tree(ctx, 860, 470, 220, '#4a7a35', '#4a3624', 9);
       A.bush(ctx, 250, 430, 60, '#3f6a2e', 3); A.bush(ctx, 700, 430, 70, '#3f6a2e', 4);
       A.rect(ctx, 220, 445, 100, 8, '#5a3f28'); A.rect(ctx, 220, 455, 100, 6, '#5a3f28'); A.rect(ctx, 228, 461, 6, 22, '#3a2a1a'); A.rect(ctx, 306, 461, 6, 22, '#3a2a1a');
+      A.rect(ctx, 262, 447, 16, 4, '#c8a848');
       A.statue(ctx, 640, 470, 110, '#a8a8a0', 'standing');
+      // Briefkasten, Fahrrad, Steinvase, Gaslaterne
+      A.rr(ctx, 194, 396, 20, 36, 5, '#3a5a3a'); A.rect(ctx, 197, 402, 14, 3, '#2a4a2a'); A.rect(ctx, 199, 432, 10, 8, '#3a3a3a'); A.rect(ctx, 197, 410, 14, 8, 'rgba(255,255,255,0.15)');
+      A.circle(ctx, 346, 424, 15, null, '#2a2a2a', 2); A.circle(ctx, 384, 424, 15, null, '#2a2a2a', 2); A.circle(ctx, 346, 424, 2, '#2a2a2a'); A.circle(ctx, 384, 424, 2, '#2a2a2a');
+      A.path(ctx, [346, 424, 358, 400, 384, 424, 366, 424, 358, 400, 350, 400], '#8a2a2a', 2.5); A.line(ctx, 350, 400, 348, 392, '#2a2a2a', 2); A.line(ctx, 342, 391, 356, 393, '#2a2a2a', 3); A.ell(ctx, 366, 397, 6, 2.5, '#3a2a1a'); A.line(ctx, 366, 399, 366, 424, '#8a2a2a', 2);
+      A.rect(ctx, 573, 434, 24, 6, '#8a8a80'); A.pot(ctx, 585, 434, 30, 34, '#a8a8a0'); A.bush(ctx, 585, 402, 34, '#4a7a3a', 7); A.circle(ctx, 578, 396, 3, '#d84a6a'); A.circle(ctx, 592, 392, 3, '#e8c848'); A.circle(ctx, 586, 400, 3, '#f0e0d0');
+      A.lamppost(ctx, 790, 440, 120, 0, false, '#2a2a30');
       // Tor rechts
       A.rect(ctx, 900, 300, 12, 190, '#3a3a3a'); A.rect(ctx, 946, 300, 12, 190, '#3a3a3a');
       for (let i = 0; i < 4; i++) A.rect(ctx, 914 + i * 8, 310, 3, 170, '#3a3a3a');
       A.rect(ctx, 900, 296, 58, 8, '#3a3a3a');
       A.vignette(ctx, 960, 600, 0.3);
     },
+    paintFront(ctx) {
+      // Hecke vorn links, Ahornzweig oben links im Bild
+      A.bush(ctx, 30, 604, 120, '#2f5a26', 5); A.bush(ctx, -40, 606, 110, '#3a6a2e', 6);
+      A.line(ctx, -10, 10, 150, 40, '#3a2a1a', 5); A.line(ctx, 90, 28, 130, 8, '#3a2a1a', 3);
+      const r = ATL.U.rng(21);
+      for (let i = 0; i < 12; i++) { const x = r() * 190 - 10, y = r() * 60 - 10; A.circle(ctx, x, y, 14 + r() * 16, ['#2f5a26', '#3a6a2e', '#2a4e22'][i % 3]); }
+    },
+    animate(ctx, t) {
+      A.smoke(ctx, 702, 58, t, 'rgba(200,200,200,0.35)', 0.7);
+      A.birds(ctx, -100 + ((t * 6) % 700) - t * 6, 46, 5, t, 'rgba(30,40,50,0.6)', 110);
+    },
     hotspots: [
       { id: 'bank', name: 'Bank', rect: [218, 440, 104, 45], at: [270, 500, 'u'], look: 'Eine Bank. Hier habe ich 1931 Livia zum ersten Mal gesagt, dass ihre Atlantis-Theorie Unsinn ist. Sie hat gelacht. Damals.', use: 'Keine Zeit zum Sitzen.' },
       { id: 'statue', name: 'Statue', rect: [610, 360, 60, 115], at: [640, 500, 'u'], look: 'Ezra Whitmore, Gründer des Colleges. Er sieht aus, als hätte er Hank eingestellt.', use: 'Ich lasse ihn stehen.' },
       { id: 'baum', name: 'Ahorn', rect: [60, 280, 130, 200], at: [140, 500, 'u'], look: 'Ein alter Ahorn. Im Herbst rot, im Mai voller Vögel.' },
       { id: 'gebaeude', name: 'Institutsgebäude', rect: [0, 110, 960, 130], at: [480, 470, 'u'], look: 'Das Institut für Archäologie. Backstein, 1902, undichtes Dach.' },
+      // Ausschmückung, nur anschauen
+      { id: 'fahrrad', name: 'Fahrrad', rect: [330, 388, 70, 52], at: [365, 500, 'u'], look: 'Ein Fahrrad mit plattem Reifen. Es gehört einem Studenten, der es seit Ostern nicht vermisst.' },
+      { id: 'laterne', name: 'Gaslaterne', rect: [774, 294, 32, 148], at: [790, 500, 'u'], look: 'Eine Gaslaterne. Hank zündet sie abends an und flucht dabei. Jeden Abend dasselbe.' },
+      { id: 'briefkasten', name: 'Briefkasten', rect: [192, 394, 24, 48], at: [204, 500, 'u'], look: 'Der Briefkasten des Instituts. Leerung um vier. Livias Brief hat auf dem Weg hierher zwei Wochen gebraucht.' },
     ],
     exits: [
       { id: 'durchgang', name: 'Durchgang zum Institut', rect: [400, 240, 160, 180], at: [480, 460, 'u'], to: 'p_hall', pos: [80, 500], dir: 'r', look: 'Der Durchgang zurück ins Institut.' },
