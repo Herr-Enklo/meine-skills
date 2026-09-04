@@ -25,12 +25,12 @@
 
   // Reiseziele auf der Karte
   S.locations = {
-    whitmore: { name: 'Whitmore College', x: 150, y: 205, room: 'p_courtyard', pos: [480, 520], dir: 'd', cond: (g) => !g.flag('prolog_fertig') },
-    newyork: { name: 'New York', x: 175, y: 240, room: 'ny_street', pos: [200, 520], dir: 'r', cond: (g) => g.flag('kessler_geflohen') },
-    alexandria: { name: 'Alexandria', x: 655, y: 335, room: 'eg_harbor', pos: [200, 520], dir: 'r', cond: (g) => g.flag('ny_fertig') },
-    kreta: { name: 'Kreta', x: 603, y: 300, room: 'cr_village', pos: [160, 520], dir: 'r', cond: (g) => g.flag('eg_fertig') },
-    eridu: { name: 'Eridu', x: 815, y: 345, room: 'me_camp', pos: [160, 520], dir: 'r', cond: (g) => g.flag('eg_fertig') },
-    thera: { name: 'Thera', x: 618, y: 272, room: 'th_harbor', pos: [200, 520], dir: 'r', cond: (g) => g.has('sonnensiegel') && g.has('stiersiegel') && g.has('flutsiegel') },
+    whitmore: { name: 'Whitmore College', x: 53, y: 250, room: 'p_courtyard', pos: [480, 520], dir: 'd', cond: (g) => !g.flag('prolog_fertig') },
+    newyork: { name: 'New York', x: 44, y: 304, room: 'ny_street', pos: [200, 520], dir: 'r', cond: (g) => g.flag('kessler_geflohen') },
+    alexandria: { name: 'Alexandria', x: 812, y: 440, labelDy: 22, room: 'eg_harbor', pos: [200, 520], dir: 'r', cond: (g) => g.flag('ny_fertig') },
+    kreta: { name: 'Kreta', x: 775, y: 383, labelDy: 14, room: 'cr_village', pos: [160, 520], dir: 'r', cond: (g) => g.flag('eg_fertig') },
+    eridu: { name: 'Eridu', x: 930, y: 446, labelSide: 'left', labelDy: -8, room: 'me_camp', pos: [160, 520], dir: 'r', cond: (g) => g.flag('eg_fertig') },
+    thera: { name: 'Thera', x: 778, y: 366, labelDy: -6, room: 'th_harbor', pos: [200, 520], dir: 'r', cond: (g) => g.has('sonnensiegel') && g.has('stiersiegel') && g.has('flutsiegel') },
   };
 
   S.openMap = async function (g, from) {
