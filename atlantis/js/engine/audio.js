@@ -9,7 +9,7 @@
       S.ctx = new (window.AudioContext || window.webkitAudioContext)();
       S.master = S.ctx.createGain(); S.master.gain.value = S.volume; S.master.connect(S.ctx.destination);
       S.musicGain = S.ctx.createGain(); S.musicGain.gain.value = 0.85;
-      const lp = S.ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 2400; lp.Q.value = 0.5;
+      const lp = S.ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 2000; lp.Q.value = 0.4;
       const comp = S.ctx.createDynamicsCompressor(); comp.threshold.value = -24; comp.knee.value = 20; comp.ratio.value = 4; comp.attack.value = 0.02; comp.release.value = 0.3;
       S.musicGain.connect(lp); lp.connect(comp); comp.connect(S.master);
       S.atmosGain = S.ctx.createGain(); S.atmosGain.gain.value = 1; S.atmosGain.connect(S.master);
@@ -94,37 +94,58 @@
     major: [0, 2, 4, 5, 7, 9, 11], minor: [0, 2, 3, 5, 7, 8, 10], dorian: [0, 2, 3, 5, 7, 9, 10],
     phrygDom: [0, 1, 4, 5, 7, 8, 10], minPenta: [0, 3, 5, 7, 10], harmMinor: [0, 2, 3, 5, 7, 8, 11], lydian: [0, 2, 4, 6, 7, 9, 11],
   };
-  // Das Thema des Spiels: (Stufe, Schläge) in Moll
-  const THEME = [[0, 1], [0, 0.5], [2, 0.5], [4, 1], [7, 1], [6, 0.5], [4, 0.5], [5, 1], [4, 1], [2, 1], [0, 1], [1, 0.5], [2, 0.5], [0, 2]];
+  // Phrasen als (Stufe, Schläge); T ist das Thema des Spiels
+  const T = [[0, 1], [0, 0.5], [2, 0.5], [4, 1], [7, 1], [6, 0.5], [4, 0.5], [5, 1], [4, 1], [2, 1], [0, 1], [1, 0.5], [2, 0.5], [0, 2]];
   const MUSIC = {
-    title: { root: 220, scale: 'minor', bpm: 80, prog: [0, 5, 3, 4], lead: { type: 'triangle', cutoff: 1100, a: 0.05, r: 0.35, vol: 0.055, theme: true }, pad: { type: 'triangle', vol: 0.045, cutoff: 700 }, bass: { type: 'sine', vol: 0.09, pattern: [0, 8] }, density: 0.5 },
-    map: { root: 220, scale: 'minor', bpm: 100, prog: [0, 5, 3, 4], lead: { type: 'triangle', cutoff: 1200, a: 0.03, r: 0.25, vol: 0.05, theme: true }, pad: { type: 'triangle', vol: 0.04, cutoff: 700 }, bass: { type: 'triangle', vol: 0.08, pattern: [0, 6, 8, 14] }, perc: 'brush', density: 0.5 },
-    college: { root: 220, scale: 'major', bpm: 76, prog: [0, 5, 3, 4, 0, 3, 1, 4], lead: { type: 'triangle', cutoff: 1300, a: 0.03, r: 0.35, vol: 0.06 }, pad: { type: 'sine', vol: 0.045 }, bass: { type: 'sine', vol: 0.07, pattern: [0, 8, 12] }, density: 0.5 },
-    city: { root: 196, scale: 'dorian', bpm: 98, prog: [0, 3, 0, 4], lead: { type: 'triangle', cutoff: 1000, a: 0.02, r: 0.25, vol: 0.045 }, pad: { type: 'sawtooth', cutoff: 450, vol: 0.018 }, bass: { type: 'triangle', vol: 0.09, pattern: [0, 3, 6, 8, 11, 14] }, perc: 'brush', density: 0.6, swing: 0.14 },
-    egypt: { root: 233.1, scale: 'phrygDom', bpm: 86, prog: [0, 1, 0, 4], lead: { type: 'triangle', cutoff: 1400, a: 0.008, r: 0.5, vol: 0.07, pluck: true }, pad: { type: 'sine', vol: 0.04 }, bass: { type: 'sine', vol: 0.08, pattern: [0, 8] }, perc: 'frame', density: 0.55 },
-    crete: { root: 261.6, scale: 'dorian', bpm: 104, prog: [0, 6, 3, 4], lead: { type: 'sine', a: 0.05, r: 0.25, vol: 0.075, vibrato: true, oct: 1 }, pad: { type: 'triangle', vol: 0.035, cutoff: 900 }, bass: { type: 'triangle', vol: 0.07, pattern: [0, 8, 10] }, density: 0.6 },
-    mesopotamia: { root: 146.8, scale: 'minPenta', bpm: 64, prog: [0, 3, 0, 4], lead: { type: 'triangle', cutoff: 1000, a: 0.06, r: 0.6, vol: 0.065, oct: 1 }, pad: { type: 'sawtooth', cutoff: 320, vol: 0.03 }, bass: { type: 'sine', vol: 0.1, pattern: [0] }, perc: 'deep', density: 0.4 },
-    thera: { root: 174.6, scale: 'harmMinor', bpm: 72, prog: [0, 5, 3, 4], lead: { type: 'sine', a: 0.01, r: 1.0, vol: 0.065, bell: true, oct: 1 }, pad: { type: 'triangle', vol: 0.04, cutoff: 800 }, bass: { type: 'sine', vol: 0.08, pattern: [0, 8] }, density: 0.35 },
-    atlantis: { root: 130.8, scale: 'lydian', bpm: 58, prog: [0, 1, 4, 3], lead: { type: 'sine', a: 0.15, r: 1.0, vol: 0.055, oct: 1 }, pad: { type: 'sawtooth', cutoff: 300, vol: 0.035, detune: 9 }, bass: { type: 'sine', vol: 0.1, pattern: [0], sub: true }, density: 0.3 },
+    title: { root: 220, scale: 'minor', bpm: 78, prog: [0, 5, 3, 4], order: ['T', 'B', 'T', 'A'], arp: true, pad: { vol: 0.045, cutoff: 700 }, bass: { vol: 0.08, pattern: [0, 8] }, lead: { vol: 0.06, cutoff: 1100 },
+      phrases: { A: [[4, 1], [5, 1], [4, 0.5], [2, 0.5], [0, 1], [2, 1], [4, 2], [-1, 2]], B: [[7, 1.5], [6, 0.5], [5, 1], [4, 1], [2, 1], [4, 1], [0, 2]] } },
+    map: { root: 220, scale: 'minor', bpm: 92, prog: [0, 5, 3, 4], order: ['T', 'A', 'T', 'B'], arp: true, pad: { vol: 0.04, cutoff: 700 }, bass: { vol: 0.08, pattern: [0, 6, 8] }, lead: { vol: 0.055, cutoff: 1100 },
+      phrases: { A: [[4, 1], [5, 1], [4, 0.5], [2, 0.5], [0, 1], [2, 1], [4, 2], [-1, 2]], B: [[7, 1.5], [6, 0.5], [5, 1], [4, 1], [2, 1], [4, 1], [0, 2]] } },
+    college: { root: 220, scale: 'major', bpm: 74, prog: [0, 5, 3, 4, 0, 3, 1, 4], order: ['A', 'B', 'A', 'C', 'T5'], arp: true, pad: { vol: 0.04 }, bass: { vol: 0.07, pattern: [0, 8, 12] }, lead: { vol: 0.055, cutoff: 1100 },
+      phrases: { A: [[4, 1], [5, 0.5], [4, 0.5], [2, 1], [0, 1], [2, 1], [4, 1], [7, 2]], B: [[6, 1], [5, 0.5], [4, 0.5], [5, 1], [4, 1], [2, 1], [1, 1], [0, 2]], C: [[2, 1], [4, 1], [6, 1], [7, 1], [6, 1], [4, 1], [5, 2]] } },
+    city: { root: 196, scale: 'dorian', bpm: 90, prog: [0, 3, 0, 4], order: ['A', 'B', 'A', 'T5', 'C'], pad: { vol: 0.03, cutoff: 500 }, bass: { vol: 0.085, pattern: [0, 3, 8, 11] }, perc: 'brush', swing: 0.14, lead: { vol: 0.05, cutoff: 950 },
+      phrases: { A: [[0, 1.5], [2, 0.5], [3, 1], [4, 1], [7, 1], [6, 1], [4, 2]], B: [[5, 1], [4, 0.5], [3, 0.5], [2, 1], [0, 1], [-1, 1], [0, 3]], C: [[4, 0.5], [5, 0.5], [7, 2], [6, 1], [5, 1], [4, 1], [2, 2]] } },
+    egypt: { root: 233.1, scale: 'phrygDom', bpm: 80, prog: [0, 1, 0, 4], order: ['A', 'B', 'A', 'C', 'T5'], pad: { vol: 0.04 }, bass: { vol: 0.08, pattern: [0, 8] }, perc: 'frame', lead: { vol: 0.055, cutoff: 1000 },
+      phrases: { A: [[0, 1], [1, 1], [3, 1], [4, 1], [3, 0.5], [1, 0.5], [0, 2]], B: [[4, 1], [5, 0.5], [4, 0.5], [3, 1], [1, 1], [0, 1], [1, 1], [0, 2]], C: [[7, 1], [6, 1], [5, 1], [4, 1], [3, 1], [4, 1], [1, 2]] } },
+    crete: { root: 261.6, scale: 'dorian', bpm: 96, prog: [0, 6, 3, 4], order: ['A', 'A', 'B', 'C', 'T5'], arp: true, pad: { vol: 0.035, cutoff: 900 }, bass: { vol: 0.07, pattern: [0, 8, 10] }, lead: { vol: 0.06, cutoff: 1200 },
+      phrases: { A: [[0, 0.5], [2, 0.5], [4, 1], [5, 0.5], [4, 0.5], [2, 1], [0, 1], [2, 1], [4, 2]], B: [[7, 1], [6, 0.5], [5, 0.5], [4, 1], [2, 1], [3, 1], [2, 1], [0, 2]], C: [[4, 1], [6, 1], [7, 1], [6, 0.5], [4, 0.5], [2, 1], [4, 1], [2, 2]] } },
+    mesopotamia: { root: 146.8, scale: 'minPenta', bpm: 62, prog: [0, 3, 0, 4], order: ['A', 'B', 'A', 'T5'], pad: { vol: 0.035, cutoff: 320 }, bass: { vol: 0.1, pattern: [0] }, perc: 'deep', lead: { vol: 0.055, cutoff: 900, oct: 1 },
+      phrases: { A: [[0, 2], [2, 1], [3, 1], [4, 2], [3, 1], [2, 1]], B: [[5, 2], [4, 1], [3, 1], [2, 2], [0, 2]] } },
+    thera: { root: 174.6, scale: 'harmMinor', bpm: 70, prog: [0, 5, 3, 4], order: ['A', 'B', 'A', 'T5', 'C'], pad: { vol: 0.04, cutoff: 800 }, bass: { vol: 0.08, pattern: [0, 8] }, lead: { vol: 0.055, cutoff: 1000, oct: 1 },
+      phrases: { A: [[4, 1], [5, 1], [4, 1], [2, 1], [0, 1], [1, 1], [0, 2]], B: [[7, 1], [6, 1], [7, 1], [4, 1], [5, 0.5], [4, 0.5], [2, 1], [0, 2]], C: [[2, 1.5], [4, 0.5], [5, 1], [4, 1], [2, 1], [1, 1], [0, 2]] } },
+    atlantis: { root: 130.8, scale: 'lydian', bpm: 56, prog: [0, 1, 4, 3], order: ['A', 'B', 'A', 'T5'], pad: { vol: 0.035, cutoff: 320, detune: 9 }, bass: { vol: 0.1, pattern: [0], sub: true }, lead: { vol: 0.05, cutoff: 900, oct: 1, a: 0.35 },
+      phrases: { A: [[0, 2], [4, 2], [6, 1], [7, 1], [4, 2]], B: [[2, 2], [3, 1], [4, 1], [2, 2], [0, 2]] } },
     none: null,
   };
   const freqOf = (def, deg) => { const sc = SCALES[def.scale]; const n = sc.length; const oct = Math.floor(deg / n); const st = sc[((deg % n) + n) % n] + 12 * oct; return def.root * Math.pow(2, st / 12); };
 
+  // Hall aus erzeugter Impulsantwort
+  function reverb(c) {
+    const len = Math.floor(c.sampleRate * 2.4);
+    const buf = c.createBuffer(2, len, c.sampleRate);
+    for (let ch = 0; ch < 2; ch++) { const d = buf.getChannelData(ch); let last = 0; for (let i = 0; i < len; i++) { const w = Math.random() * 2 - 1; last = (last * 3 + w) / 4; d[i] = last * Math.pow(1 - i / len, 2.6); } }
+    const cv = c.createConvolver(); cv.buffer = buf;
+    return cv;
+  }
+
+  // Weiche Stimme: zwei leicht verstimmte Oszillatoren, Tiefpass, langsamer Einsatz, langes Ausklingen
   function voice(c, out, freq, t0, dur, cfg, vol) {
-    const o = c.createOscillator(); o.type = cfg.type || 'sine'; o.frequency.setValueAtTime(freq, t0);
-    if (cfg.detune) o.detune.value = (Math.random() - 0.5) * cfg.detune * 2;
-    let node = o;
-    if (cfg.cutoff) { const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = cfg.cutoff; f.Q.value = 0.7; o.connect(f); node = f; }
-    if (cfg.vibrato) { const l = c.createOscillator(); l.frequency.value = 5.5; const lg = c.createGain(); lg.gain.value = freq * 0.006; l.connect(lg); lg.connect(o.frequency); l.start(t0); l.stop(t0 + dur + 1); }
     const g = c.createGain();
-    const a = cfg.a || 0.02, r = cfg.r || 0.3;
+    const a = cfg.a || 0.14, r = cfg.r || 0.6;
     g.gain.setValueAtTime(0.0001, t0);
     g.gain.linearRampToValueAtTime(vol, t0 + a);
-    if (cfg.pluck || cfg.bell) g.gain.exponentialRampToValueAtTime(Math.max(0.0001, vol * 0.25), t0 + Math.max(a + 0.05, dur * 0.6));
-    g.gain.setTargetAtTime(0.0001, t0 + dur, r / 4);
-    node.connect(g); g.connect(out);
-    o.start(t0); o.stop(t0 + dur + r + 0.2);
-    if (cfg.bell) { const o2 = c.createOscillator(); o2.frequency.value = freq * 2.76; const g2 = c.createGain(); g2.gain.setValueAtTime(vol * 0.07, t0); g2.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.35); o2.connect(g2); g2.connect(out); o2.start(t0); o2.stop(t0 + 0.6); }
+    g.gain.setValueAtTime(vol, t0 + Math.max(a, dur));
+    g.gain.setTargetAtTime(0.0001, t0 + Math.max(a, dur), r / 3);
+    const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = Math.min(cfg.cutoff || 1000, Math.max(500, freq * 3)); f.Q.value = 0.4;
+    f.connect(g); g.connect(out);
+    const oscs = [];
+    const n = cfg.single ? 1 : 2;
+    for (let i = 0; i < n; i++) {
+      const o = c.createOscillator(); o.type = cfg.type || (i ? 'sine' : 'triangle'); o.frequency.setValueAtTime(freq, t0);
+      o.detune.value = (i ? 5 : -5) + (cfg.detune ? (Math.random() - 0.5) * cfg.detune * 2 : 0);
+      if (cfg.vibrato !== false && !cfg.single) { const l = c.createOscillator(); l.frequency.value = 4.6; const lg = c.createGain(); lg.gain.setValueAtTime(0, t0); lg.gain.linearRampToValueAtTime(freq * 0.004, t0 + 0.5); l.connect(lg); lg.connect(o.frequency); l.start(t0); l.stop(t0 + dur + r + 0.5); }
+      o.connect(f); o.start(t0); o.stop(t0 + Math.max(a, dur) + r + 0.4); oscs.push(o);
+    }
     return g;
   }
 
@@ -135,62 +156,59 @@
     S.stopMusic(false);
     if (!def) return;
     const bus = c.createGain(); bus.gain.setValueAtTime(0.0001, c.currentTime); bus.gain.linearRampToValueAtTime(1, c.currentTime + 3);
-    bus.connect(S.musicGain);
+    const dry = c.createGain(); dry.gain.value = 0.7; bus.connect(dry); dry.connect(S.musicGain);
+    const rv = reverb(c); const wet = c.createGain(); wet.gain.value = 0.45; bus.connect(rv); rv.connect(wet); wet.connect(S.musicGain);
     const stepDur = 60 / def.bpm / 4;
-    const m = { def, bus, step: 0, next: c.currentTime + 0.15, stepDur, deg: 7, hold: 0, pad: [], themeIdx: -1, themeRest: 0, timer: null, lastQuote: -100 };
+    const m = { def, bus, rv, step: 0, next: c.currentTime + 0.15, stepDur, pad: [], queue: [], orderIdx: 0, restSteps: 0, timer: null, arpIdx: 0 };
     const chordDegs = (bar) => { const d = def.prog[Math.floor(bar / 2) % def.prog.length]; return [d, d + 2, d + 4]; };
+    const leadOct = (def.lead.oct || 0) * 7;
     const schedule = () => {
-      while (m.next < c.currentTime + 0.25) {
+      while (m.next < c.currentTime + 0.3) {
         const step = m.step, bar = Math.floor(step / 16), inBar = step % 16;
         let t0 = m.next;
         if (def.swing && step % 2 === 1) t0 += stepDur * def.swing;
         const chord = chordDegs(bar);
-        // Flächen: alle zwei Takte neu
+        // Flächen: alle zwei Takte neu, langsam ein- und ausblenden
         if (inBar === 0 && bar % 2 === 0) {
-          m.pad.forEach((g) => { g.gain.cancelScheduledValues(t0); g.gain.setTargetAtTime(0.0001, t0, 0.6); });
-          m.pad = chord.map((d, i) => voice(c, bus, freqOf(def, d - (i === 0 ? 7 : 0)), t0, stepDur * 32 - 0.5, Object.assign({ a: 1.2, r: 1.5 }, def.pad), def.pad.vol));
+          m.pad.forEach((g) => { g.gain.cancelScheduledValues(t0); g.gain.setTargetAtTime(0.0001, t0, 0.8); });
+          m.pad = chord.map((d, i) => voice(c, bus, freqOf(def, d - (i === 0 ? 7 : 0)), t0, stepDur * 32 - 0.8, { type: i === 1 ? 'sine' : 'triangle', a: 1.6, r: 2.0, cutoff: def.pad.cutoff || 600, detune: def.pad.detune, vibrato: false }, def.pad.vol));
         }
         // Bass
         if (def.bass && def.bass.pattern.includes(inBar)) {
           const bd = chord[0] - 14 + (def.bass.sub ? -7 : 0) + (inBar % 8 === 6 ? 4 : 0);
-          voice(c, bus, freqOf(def, bd), t0, stepDur * (def.bass.pattern.length > 2 ? 2.5 : 6), { type: def.bass.type, a: 0.01, r: 0.15 }, def.bass.vol);
+          voice(c, bus, freqOf(def, bd), t0, stepDur * (def.bass.pattern.length > 2 ? 3 : 7), { type: 'sine', single: true, a: 0.05, r: 0.3, cutoff: 400 }, def.bass.vol);
         }
-        // Schlagwerk
-        if (def.perc === 'brush' && inBar % 4 === 2) noise(0.05, 0.02, 3200, 'bandpass', t0, 0.8);
-        if (def.perc === 'frame') { if (inBar === 0 || inBar === 8) tone(75, 0.14, 'sine', 0.13, 0.6, t0); if (inBar === 6 || inBar === 11 || inBar === 14) noise(0.05, 0.035, 1600, 'bandpass', t0, 1.5); }
-        if (def.perc === 'deep') { if (inBar === 0) { tone(52, 0.5, 'sine', 0.2, 0.7, t0); noise(0.2, 0.08, 200, 'lowpass', t0); } if (inBar === 8) tone(52, 0.3, 'sine', 0.08, 0.7, t0); }
-        // Melodie
-        if (step % 2 === 0) {
-          const oct = (def.lead.oct || 0) * 7;
-          if (def.lead.theme || (inBar === 0 && bar % 8 === 4)) {
-            if (m.themeIdx < 0 && m.themeRest <= 0 && (def.lead.theme ? inBar === 0 : true)) { m.themeIdx = 0; m.hold = 0; m.quoteLen = def.lead.theme ? THEME.length : 5; }
-          }
-          if (m.hold > 0) m.hold -= 2;
-          else if (m.themeIdx >= 0 && m.themeIdx < m.quoteLen) {
-            const [d, beats] = THEME[m.themeIdx++];
-            const len = beats * 4 * stepDur;
-            voice(c, bus, freqOf(def, d + oct), t0, len * 0.95, def.lead, def.lead.vol);
-            m.hold = beats * 4;
-            m.deg = d + oct;
-            if (m.themeIdx >= m.quoteLen) { m.themeIdx = -1; m.themeRest = def.lead.theme ? 16 : 0; }
-          } else if (m.themeRest > 0) { m.themeRest -= 2; }
-          else if (Math.random() < def.density * (inBar % 4 === 0 ? 1.2 : 0.8) && !(bar % 8 === 7 && inBar >= 8)) {
-            let target;
-            const rel = m.deg - oct;
-            if (inBar % 8 === 0) { const opts = chord.map((d) => d + (rel > 10 ? 7 : rel < 3 ? 0 : (Math.random() < 0.5 ? 7 : 0))); target = opts[Math.floor(Math.random() * opts.length)] + oct; }
-            else target = m.deg + (Math.random() < 0.5 ? -1 : 1) * (1 + Math.floor(Math.random() * 2.2));
-            const lo = oct + 2, hi = oct + 13;
-            if (target < lo) target = lo + 2; if (target > hi) target = hi - 2;
-            const holds = [2, 2, 2, 4, 4, 4, 6, 8];
-            m.hold = holds[Math.floor(Math.random() * holds.length)];
-            voice(c, bus, freqOf(def, target), t0, m.hold * stepDur * 0.9, def.lead, def.lead.vol * (0.8 + Math.random() * 0.3));
-            m.deg = target;
-          }
+        // Harfenbegleitung: Akkordtöne auf Achteln
+        if (def.arp && step % 2 === 0) {
+          const pat = [0, 1, 2, 3, 2, 1];
+          const k = pat[m.arpIdx++ % pat.length];
+          const d = k < 3 ? chord[k] : chord[0] + 7;
+          voice(c, bus, freqOf(def, d), t0, stepDur * 1.5, { type: 'sine', single: true, a: 0.015, r: 0.6, cutoff: 1400 }, 0.02);
         }
+        // Schlagwerk, sehr zurückhaltend
+        if (def.perc === 'brush' && inBar % 4 === 2) noise(0.05, 0.012, 2600, 'bandpass', t0, 0.8);
+        if (def.perc === 'frame') { if (inBar === 0 || inBar === 8) tone(70, 0.16, 'sine', 0.1, 0.6, t0); if (inBar === 6 || inBar === 11 || inBar === 14) noise(0.05, 0.02, 1200, 'bandpass', t0, 1.5); }
+        if (def.perc === 'deep') { if (inBar === 0) { tone(50, 0.5, 'sine', 0.16, 0.7, t0); } if (inBar === 8) tone(50, 0.3, 'sine', 0.07, 0.7, t0); }
+        // Melodie aus komponierten Phrasen, taktweise gestartet
+        if (m.restSteps > 0) m.restSteps--;
+        else if (!m.queue.length && inBar === 0 && bar % 2 === 0) {
+          const key = def.order[m.orderIdx++ % def.order.length];
+          const ph = key === 'T' ? T : key === 'T5' ? T.slice(0, 5).concat([[0, 3]]) : def.phrases[key];
+          m.queue = ph.map(([d, b]) => ({ deg: d + leadOct, steps: Math.round(b * 4) }));
+          m.restAfter = 16;
+        }
+        if (m.queue.length && m.waitSteps <= 0) {
+          const nnote = m.queue.shift();
+          if (nnote.deg > -20) voice(c, bus, freqOf(def, nnote.deg), t0, nnote.steps * stepDur * 1.05, Object.assign({ a: 0.14, r: 0.7 }, def.lead), def.lead.vol);
+          m.waitSteps = nnote.steps;
+          if (!m.queue.length) m.restSteps = m.restAfter;
+        }
+        m.waitSteps = (m.waitSteps || 0) - 1;
         m.step++;
         m.next += stepDur;
       }
     };
+    m.waitSteps = 0;
     m.timer = setInterval(() => { try { schedule(); } catch (e) { clearInterval(m.timer); console.error('Musik angehalten', e); } }, 60);
     S.music = m;
   };
@@ -199,7 +217,7 @@
     const m = S.music; if (!m) return;
     S.music = null;
     clearInterval(m.timer);
-    try { const c = S.ctx; m.bus.gain.cancelScheduledValues(c.currentTime); m.bus.gain.setTargetAtTime(0.0001, c.currentTime, 0.5); setTimeout(() => { try { m.bus.disconnect(); } catch (e) { /* weg */ } }, 2500); } catch (e) { /* ignorieren */ }
+    try { const c = S.ctx; m.bus.gain.cancelScheduledValues(c.currentTime); m.bus.gain.setTargetAtTime(0.0001, c.currentTime, 0.6); setTimeout(() => { try { m.bus.disconnect(); m.rv.disconnect(); } catch (e) { /* weg */ } }, 3500); } catch (e) { /* ignorieren */ }
   };
   // Kompatibel zur alten Schnittstelle: playAmbient wählt die Musik des Kapitels
   S.playAmbient = function (name) { if (name === S.musicName && S.music) return; S.playMusic(name); };
