@@ -277,9 +277,13 @@
       lime(ctx, 0, 160, 1600, 120, 122, 26);
       lime(ctx, 0, 300, 1600, 60, 123, 18);
       algae(ctx, 0, 380, 1600, 26, 132);
-      // Treppe, die in das Wasser führt
-      for (let i = 0; i < 4; i++) { A.rect(ctx, 816, 344 + i * 12, 88, 12, shade('#3a5a5e', i * 0.05)); A.rect(ctx, 816, 344 + i * 12, 88, 2, 'rgba(255,255,255,0.12)'); }
-      A.rect(ctx, 812, 340, 4, 52, '#1e3436'); A.rect(ctx, 904, 340, 4, 52, '#1e3436');
+      // Treppe, die in das Wasser führt: Wangen, Stufen mit Tritt und Setzstufe, nach unten breiter
+      A.poly(ctx, [806, 340, 816, 340, 810, 396, 798, 396], '#1e3436'); A.poly(ctx, [904, 340, 914, 340, 922, 396, 910, 396], '#1e3436');
+      for (let i = 0; i < 4; i++) {
+        const y = 344 + i * 12, w = 88 + i * 4, x = 860 - w / 2;
+        A.rect(ctx, x, y, w, 12, shade('#2c484c', -i * 0.05));
+        A.rect(ctx, x, y, w, 4, shade('#4c6e70', i * 0.04)); A.rect(ctx, x, y + 3, w, 1, 'rgba(255,255,255,0.2)');
+      }
       // Kristalle am Fuß der Mauer
       for (const [x, w, h] of [[386, 12, 26], [398, 16, 38], [416, 10, 20], [1360, 12, 24], [1374, 14, 34]]) A.crystal(ctx, x, 392, w, h, 'rgba(110,230,205,0.85)');
       A.glow(ctx, 402, 380, 40, TEAL, 0.3); A.glow(ctx, 1370, 380, 34, TEAL, 0.25);
@@ -289,7 +293,7 @@
       // Kanal hinter dem Gehweg
       canal(ctx, 0, 392, 1600, 56);
       // Stufen unter Wasser, Bootswrack im Kanal
-      A.rect(ctx, 816, 396, 88, 10, 'rgba(60,110,110,0.45)'); A.rect(ctx, 816, 406, 88, 10, 'rgba(50,95,95,0.35)');
+      A.rect(ctx, 808, 396, 104, 10, 'rgba(60,110,110,0.45)'); A.rect(ctx, 806, 406, 108, 10, 'rgba(50,95,95,0.35)');
       ctx.save(); ctx.translate(900, 428); ctx.rotate(-0.16);
       A.poly(ctx, [-52, -2, 52, -2, 42, 14, -40, 14], '#233836');
       A.rect(ctx, -48, -7, 96, 5, '#34504c');
@@ -329,16 +333,20 @@
       A.ell(ctx, 424, 492, 22, 5, 'rgba(0,0,0,0.35)');
       anchor(ctx, 420, 440, 52);
       // Umgestürzte Säule rechts der Brücke
-      A.ell(ctx, 1378, 492, 58, 7, 'rgba(0,0,0,0.35)');
-      drum(ctx, 1326, 460, 92, 30, '#587c7c'); drum(ctx, 1338, 490, 60, 22, '#4e6e6c');
-      A.ell(ctx, 1326, 475, 5, 15, '#3e5e5c');
+      A.ell(ctx, 1398, 492, 58, 7, 'rgba(0,0,0,0.35)');
+      drum(ctx, 1346, 460, 92, 30, '#587c7c'); drum(ctx, 1358, 490, 60, 22, '#4e6e6c');
+      A.ell(ctx, 1346, 475, 5, 15, '#3e5e5c');
       // Kristallgruppe neben dem Podest
       A.ell(ctx, 1062, 478, 26, 5, 'rgba(0,0,0,0.3)');
       A.crystal(ctx, 1044, 474, 14, 30, '#6fe0c8'); A.crystal(ctx, 1056, 478, 18, 42, '#8ff0dc'); A.crystal(ctx, 1072, 476, 12, 24, '#6fe0c8');
       A.glow(ctx, 1062, 460, 44, TEAL, 0.4);
-      // Geröll links: der Gang zur Hebebühne
+      // Geröll links: der Gang zur Hebebühne. Auf dem Gehweg bleibt der Haufen links von x≈100, damit Falk davor steht
       A.rect(ctx, 0, 120, 60, 480, '#101c20');
-      for (let i = 0; i < 14; i++) A.rock(ctx, -10 + (i * 37) % 90, 300 + (i * 53) % 260, 40 + (i % 3) * 18, 30 + (i % 2) * 14, '#4a5a58', i + 3);
+      for (let i = 0; i < 14; i++) {
+        const ry = 300 + (i * 53) % 260, rx = ry > 430 ? -20 + (i * 37) % 40 : -10 + (i * 37) % 90;
+        A.rock(ctx, rx, ry, 40 + (i % 3) * 18, 30 + (i % 2) * 14, '#4a5a58', i + 3);
+      }
+      A.ell(ctx, 60, 570, 60, 8, 'rgba(0,0,0,0.3)');
       // Brücke
       if (g.flag('bruecke_unten')) {
         ctx.fillStyle = A.grad(ctx, 0, 448, 0, 600, ['#587a78', '#2e4a4a']);
@@ -346,26 +354,35 @@
         for (let i = 0; i < 6; i++) A.line(ctx, 1100 + i * 40, 452, 1100 + i * 40, 600, 'rgba(0,0,0,0.3)', 2);
         A.rect(ctx, 1100, 448, 200, 6, '#7aa09c');
       } else {
-        ctx.save(); ctx.translate(1300, 452); ctx.rotate(-1.35);
+        // hochgezogene Platte: rechts des Pfostens angelenkt, mit sichtbarer Seitenkante, Scharnierblock und Kette zur Spitze
+        ctx.save(); ctx.translate(1322, 452); ctx.rotate(-1.35);
         ctx.fillStyle = A.grad(ctx, 0, 0, 200, 0, ['#587a78', '#2e4a4a']);
         ctx.fillRect(0, -12, 200, 24);
+        A.rect(ctx, 0, -18, 200, 6, '#1e3436');
         for (let i = 0; i < 6; i++) A.line(ctx, i * 40, -12, i * 40, 12, 'rgba(0,0,0,0.3)', 2);
+        A.rect(ctx, 0, 9, 200, 3, 'rgba(255,255,255,0.15)');
         ctx.restore();
-        A.chain(ctx, 1252, 260, 1290, 150, '#6a8a88');
+        A.rr(ctx, 1308, 440, 28, 14, 3, '#2a4446', '#1a2c2e', 1);
+        A.chain(ctx, 1352, 256, 1303, 148, '#6a8a88');
       }
       A.rect(ctx, 1290, 140, 22, 310, '#3e5c5e'); A.rect(ctx, 1286, 136, 30, 10, '#5a7e7e');
-      // Podest mit drei Sockeln
+      // Podest mit drei Sockeln, auf einer Fußplatte am Gehwegrand
+      A.ell(ctx, 1001, 458, 42, 7, 'rgba(0,0,0,0.3)');
       A.rect(ctx, 976, 372, 50, 78, '#3a5658'); A.rect(ctx, 970, 366, 62, 10, '#587c7c');
+      A.rect(ctx, 966, 444, 70, 12, '#4a6e6c'); A.rect(ctx, 966, 444, 70, 3, 'rgba(255,255,255,0.15)');
       for (let i = 0; i < 3; i++) { A.circle(ctx, 986 + i * 15, 384, 5, '#0a1618'); if (g.flag('bruecke_unten')) { A.circle(ctx, 986 + i * 15, 384, 4, '#5fd8b0'); A.glow(ctx, 986 + i * 15, 384, 20, TEAL, 0.5); } }
       A.rr(ctx, 978, 400, 46, 30, 3, '#2e4648'); A.spirals(ctx, 980, 404, 44, 20, 'rgba(120,255,225,0.5)');
-      // Tor zum Tempel rechts
-      A.rect(ctx, 1430, 130, 170, 320, '#1a2c30');
+      // Tor zum Tempel rechts: Torhaus aus Blöcken mit Gesims, Kantenschatten und Schwelle
+      A.stones(ctx, 1430, 130, 170, 320, '#223a40', 35, 44);
+      ctx.fillStyle = A.grad(ctx, 1430, 0, 1460, 0, ['rgba(0,0,0,0.5)', 'rgba(0,0,0,0)']); ctx.fillRect(1430, 130, 30, 320);
+      A.rect(ctx, 1424, 124, 176, 10, '#3a5e62'); A.line(ctx, 1424, 125, 1600, 125, 'rgba(255,255,255,0.2)', 1);
       A.arch(ctx, 1450, 170, 130, 280, '#5a8a84', '#03080c');
       A.glow(ctx, 1515, 330, 120, 'rgba(90,240,210,0.6)', 0.3);
       A.text(ctx, 'ΠΟΣΕΙΔΩΝ', 1515, 160, { font: 'bold 16px Georgia', color: '#8fe0d0', align: 'center' });
       A.spirals(ctx, 1436, 136, 160, 14, 'rgba(120,255,225,0.3)');
       A.cobweb(ctx, 1452, 300, 26, 'tl', 'rgba(255,255,255,0.16)');
       lime(ctx, 1436, 132, 160, 80, 124, 8);
+      A.rect(ctx, 1436, 444, 164, 10, '#5a7e7e'); A.rect(ctx, 1436, 444, 164, 3, 'rgba(255,255,255,0.18)'); A.rect(ctx, 1450, 450, 130, 3, 'rgba(0,0,0,0.35)');
       // Maschinenkrebs
       crab(ctx, 630, 440, g.flag('krebs_offen'));
       A.ell(ctx, 640, 478, 90, 8, 'rgba(0,0,0,0.3)');
@@ -386,11 +403,13 @@
       A.glow(ctx, 1572, 580, 50, TEAL, 0.35);
     },
     animate(ctx, t, g) {
-      A.waterAnim(ctx, 0, 396, 1600, 48, t, 'rgba(160,255,235,0.14)');
+      // Wasser und Fische nur dort, wo Wasser zu sehen ist: nicht über Krebs, Podest und Torhaus
+      for (const [x, w] of [[0, 540], [720, 250], [1030, 70], [1300, 130]]) A.waterAnim(ctx, x, 396, w, 48, t, 'rgba(160,255,235,0.14)');
       A.waterAnim(ctx, 1104, 396, 192, 200, t * 0.8, 'rgba(160,255,235,0.14)');
-      fishSchool(ctx, 4, 398, 1092, 46, t, 7, 'rgba(6,45,45,0.55)', 0);
-      fishSchool(ctx, 1304, 398, 292, 46, t * 0.9, 3, 'rgba(6,45,45,0.55)', 90);
-      mist(ctx, 0, 392, 1600, t, 7);
+      fishSchool(ctx, 4, 398, 536, 46, t, 4, 'rgba(6,45,45,0.55)', 0);
+      fishSchool(ctx, 720, 398, 250, 46, t * 1.1, 3, 'rgba(6,45,45,0.55)', 40);
+      fishSchool(ctx, 1304, 398, 126, 46, t * 0.9, 2, 'rgba(6,45,45,0.55)', 90);
+      mist(ctx, 0, 392, 1300, t, 7);
       const p = 0.5 + Math.sin(t * 1.5) * 0.15;
       for (let x = 150; x < 1600; x += 300) A.glow(ctx, x, 260, 70, 'rgba(90,240,210,0.5)', p * 0.4);
       for (let x = 150; x < 1600; x += 150) A.glow(ctx, x, 214, 14, 'rgba(120,255,225,0.7)', 0.25 + Math.sin(t * 1.5 + x * 0.01) * 0.15);
@@ -618,7 +637,12 @@
       A.circle(ctx, 432, 282, 6, '#1e3c40'); A.circle(ctx, 528, 282, 6, '#1e3c40');
       A.statue(ctx, 480, 226, 200, '#1a3a40', 'trident');
       A.glow(ctx, 480, 100, 60, 'rgba(90,240,210,0.6)', 0.3);
-      // Die zehn Könige
+      // Die zehn Könige auf einem durchgehenden Podium, das bis zum Boden reicht
+      for (const [x0, x1] of [[58, 350], [648, 950]]) {
+        ctx.fillStyle = A.grad(ctx, 0, 422, 0, 450, ['#3a5a5c', '#20363a']); ctx.fillRect(x0, 422, x1 - x0, 28);
+        A.rect(ctx, x0 - 4, 418, x1 - x0 + 8, 6, '#4e7472'); A.line(ctx, x0 - 4, 419, x1 + 4, 419, 'rgba(255,255,255,0.2)', 1);
+        for (let x = x0 + 30; x < x1; x += 60) A.line(ctx, x, 424, x, 450, 'rgba(0,0,0,0.25)', 1);
+      }
       const seq = g.flag('koenige_seq') || '';
       KINGS.forEach((k, i) => kingStatue(ctx, KING_X[i], 420, 96, k[2], g.flag('koenige_offen') ? (i < 2) : (seq === 'atlas' && i === 0)));
       // Altar und Säule der Gesetze
@@ -821,9 +845,9 @@
       // Rohrleitung mit Ventilen, quer über die Wand
       pipe(ctx, [0, 172, 826, 172], 8, '#3e5e5c');
       for (const x of [120, 340, 560]) pipe(ctx, [x, 172, x, 208], 5, '#3e5e5c');
-      pipe(ctx, [800, 172, 800, 372], 6, '#3e5e5c');
+      // Abzweig, der in den Sockel mit der Perle führt (das Ende verschwindet unter dessen Deckplatte)
+      pipe(ctx, [800, 172, 800, 384, 776, 384], 6, '#3e5e5c');
       for (const [vx, vy] of [[80, 172], [800, 300]]) { A.circle(ctx, vx, vy, 5, '#2a4446'); A.gear(ctx, vx, vy, 9, 8, '#7a9a96', 0.3); A.circle(ctx, vx, vy, 2.5, '#2a4446'); }
-      A.ell(ctx, 800, 372, 8, 3, 'rgba(220,235,228,0.2)');
       // Öffnung des Gangs zurück zum Tempel
       A.rect(ctx, 0, 250, 50, 200, '#03080c');
       A.poly(ctx, [0, 250, 50, 262, 50, 450, 0, 450], '#050d12');
@@ -1171,6 +1195,17 @@
       }
       veins(ctx, 0, 100, 960, 300, 19, 8);
       const live = g.flag('strom');
+      // Gehäuse der Maschine: runde Vertiefung mit Rand und Bolzen, in der die Ringe (animate) laufen
+      A.circle(ctx, 480, 200, 156, '#081418'); A.circle(ctx, 480, 200, 156, null, '#3a5a5c', 4);
+      A.circle(ctx, 480, 200, 150, null, 'rgba(120,255,225,0.15)', 1);
+      for (let i = 0; i < 12; i++) { const a = (i / 12) * TAU; A.circle(ctx, 480 + Math.cos(a) * 153, 200 + Math.sin(a) * 153, 3, '#5a7a7c', '#1e3436', 1); }
+      // Gang nach oben, rechts (Vespers Weg)
+      A.rect(ctx, 904, 200, 56, 250, '#03080c');
+      A.poly(ctx, [904, 200, 960, 186, 960, 450, 904, 450], '#050d12');
+      for (let i = 0; i < 5; i++) A.rect(ctx, 910 + i * 8, 300 + i * 30, 50 - i * 8, 4, 'rgba(60,120,120,0.25)');
+      A.glow(ctx, 940, 440, 50, 'rgba(60,200,180,0.5)', 0.15);
+      A.rect(ctx, 898, 196, 8, 254, '#2a4a4e');
+      algae(ctx, 906, 200, 54, 26, 219, 'rgba(30,80,70,0.5)');
       // Kabelstränge von der Decke und entlang des Wandfußes
       pipe(ctx, [100, 0, 100, 110], 6, '#2c4a4c');
       pipe(ctx, [860, 0, 860, 120], 6, '#2c4a4c');
@@ -1198,8 +1233,8 @@
       // Zahnräder an der Wand links: Achsen (die Räder drehen sich in animate)
       for (const [gx, gy] of [[250, 150], [292, 190], [232, 214]]) A.circle(ctx, gx, gy, 5, '#0b1e24', '#4a6a6c', 2);
       A.rect(ctx, 226, 232, 80, 6, '#2a4648');
-      // Rohr vom Kanal in die Wand, mit Ventil und Dampfschlitz
-      pipe(ctx, [256, 386, 256, 300, 300, 300], 8, '#3a5a5c');
+      // Rohr, das vom Kanalpfosten aus in die Wand führt, mit Ventil und Dampfschlitz
+      pipe(ctx, [256, 380, 256, 300, 300, 300], 8, '#3a5a5c');
       A.gear(ctx, 256, 344, 10, 8, '#7a9a96', 0.2); A.circle(ctx, 256, 344, 3, '#2a4446');
       A.rect(ctx, 262, 430, 22, 10, '#1a2c30'); for (let k = 0; k < 4; k++) A.rect(ctx, 264 + k * 5, 432, 2, 6, '#3e5e5c');
       // Adern von der Maschine zur Kammer und Konsole
@@ -1244,7 +1279,15 @@
       A.rect(ctx, 0, 448, 960, 6, '#5a8280');
       A.rubble(ctx, 786, 426, 90, 30, 217, '#3e5a58');
       A.pebbles(ctx, 770, 452, 120, 14, 218, '#3e5250');
+      // Durchgang zurück zum Tempel, mit Laibung
       A.rect(ctx, 0, 250, 40, 200, '#03080c');
+      A.poly(ctx, [0, 250, 40, 262, 40, 450, 0, 450], '#050d12');
+      A.rect(ctx, 38, 246, 8, 206, '#2a4a4e');
+      if (g.flag('kammer_zerstoert')) {
+        // Scherben auf dem Boden vor der Kammer, Reste der Scheibe am Rahmen
+        for (let i = 0; i < 14; i++) { const sx = 612 + (i * 53) % 170, sy = 454 + (i * 17) % 22; A.poly(ctx, [sx, sy, sx + 8 + (i % 3) * 3, sy - 1, sx + 5, sy + 4], 'rgba(170,255,240,0.5)'); }
+        A.glow(ctx, 700, 462, 60, 'rgba(120,255,235,0.4)', 0.2);
+      }
       A.vignette(ctx, 960, 600, 0.5);
       A.grain(ctx, 960, 600, 6, 0.05);
     },
@@ -1255,7 +1298,11 @@
       A.rect(ctx, 40, 580, 6, 12, '#4a6a6c'); A.rect(ctx, 106, 582, 6, 12, '#4a6a6c');
       A.crystal(ctx, 908, 600, 16, 36, '#5fd0b8'); A.crystal(ctx, 926, 600, 22, 52, '#7fe6cc'); A.crystal(ctx, 946, 600, 14, 30, '#5fd0b8');
       if (g.flag('kammer_zerstoert')) {
-        for (let i = 0; i < 12; i++) A.poly(ctx, [640 + (i * 41) % 110, 440 - (i * 29) % 240, 650 + (i * 41) % 110, 450 - (i * 29) % 240, 646 + (i * 41) % 110, 462 - (i * 29) % 240], 'rgba(160,255,240,0.25)');
+        // gezackte Reste der Scheibe, die noch im Rahmen hängen
+        A.poly(ctx, [650, 197, 750, 197, 750, 214, 736, 206, 722, 228, 708, 204, 692, 220, 676, 202, 664, 216, 650, 208], 'rgba(120,255,235,0.22)');
+        A.poly(ctx, [650, 197, 650, 300, 662, 280, 656, 250, 668, 232, 654, 214], 'rgba(120,255,235,0.2)');
+        A.poly(ctx, [750, 300, 750, 442, 738, 430, 746, 400, 734, 372, 746, 340, 740, 318], 'rgba(120,255,235,0.2)');
+        A.path(ctx, [650, 208, 664, 216, 676, 202, 692, 220, 708, 204, 722, 228, 736, 206, 750, 214], 'rgba(255,255,255,0.35)', 1);
         return;
       }
       ctx.fillStyle = 'rgba(120,255,235,0.14)'; ctx.fillRect(650, 196, 100, 246);
@@ -1280,14 +1327,17 @@
       const col = (a) => u > 0 ? `rgba(${Math.round(90 + 165 * u)},${Math.round(200 - 160 * u)},${Math.round(180 - 150 * u)},${a})` : `rgba(90,200,180,${a})`;
       A.glow(ctx, 480, 200, 200, col(0.6), strom ? 0.35 + Math.sin(t * 2) * 0.1 + u * 0.3 : 0.12);
       for (let i = 3; i >= 0; i--) {
-        const r = 52 + i * 28;
+        const r = 48 + i * 25;
         A.gear(ctx, 480, 200, r, 10 + i * 6, i % 2 ? '#2e5658' : '#3a6a6a', rot * (i % 2 ? -1 : 1) / (i + 1));
         A.circle(ctx, 480, 200, r - 9, '#0b1e24');
       }
       A.crystal(ctx, 464, 206, 32, 36, u > 0 ? `rgb(${Math.round(90 + 165 * u)},${Math.round(230 - 180 * u)},${Math.round(200 - 160 * u)})` : (strom ? '#8fffe0' : '#3a6a66'));
-      A.waterAnim(ctx, 34, 402, 212, 44, t * (strom ? 2 : 0.3), 'rgba(160,255,235,0.14)');
+      // Wasserrad, dessen untere Hälfte im Kanal steht: erst das Rad, dann das Wasser darüber
       A.gear(ctx, 180, 400, 34, 10, '#4a6e6c', strom ? t * 2.2 : 0.3);
       A.circle(ctx, 180, 400, 6, '#1a2c30');
+      ctx.fillStyle = A.grad(ctx, 0, 412, 0, 446, ['rgba(26,154,144,0.35)', 'rgba(12,90,88,0.85)']); ctx.fillRect(34, 412, 212, 34);
+      A.line(ctx, 34, 412, 246, 412, 'rgba(180,255,240,0.3)', 1);
+      A.waterAnim(ctx, 34, 402, 212, 44, t * (strom ? 2 : 0.3), 'rgba(160,255,235,0.14)');
       if (g.flag('vesper_in_kammer') && !g.flag('vesper_vernichtet')) A.glow(ctx, 700, 320, 120, u > 0.5 ? 'rgba(255,60,30,0.9)' : 'rgba(120,255,230,0.8)', 0.3 + u * 0.5);
       if (u > 0) { ctx.fillStyle = `rgba(255,40,20,${u * 0.35})`; ctx.fillRect(0, 0, 960, 600); A.glow(ctx, 700, 320, 300, 'rgba(255,60,30,0.9)', u * 0.6); }
       if (strom) for (let i = 0; i < 3; i++) if (g.flag('siegel_' + ['sun', 'bull', 'flood'][i])) A.glow(ctx, 355 + i * 35, 420, 24 + Math.sin(t * 4 + i) * 4, TEAL, 0.5);
@@ -1445,13 +1495,12 @@
     paint(ctx, g) {
       ctx.fillStyle = A.grad(ctx, 0, 0, 0, 600, ['#0a0608', '#1c0e0c', '#2a1410']);
       ctx.fillRect(0, 0, 960, 600);
-      // Lavaröhre: Wände, die nach rechts zulaufen
+      // Lavaröhre: nahe Seitenwand links mit großen Blöcken, dahinter die Rückwand mit kleineren;
+      // die Decke wird danach darübergelegt, damit die Wandkrone der Röhre folgt statt in Stufen zu springen
+      A.stones(ctx, 400, 120, 560, 350, '#42281f', 45, 30);
+      A.stones(ctx, 0, 120, 400, 360, '#3a2420', 44, 40);
+      ctx.fillStyle = A.grad(ctx, 380, 0, 420, 0, ['rgba(0,0,0,0)', 'rgba(0,0,0,0.45)']); ctx.fillRect(380, 120, 40, 350);
       A.poly(ctx, [0, 0, 960, 0, 960, 130, 700, 190, 400, 210, 0, 160], '#14090a');
-      A.poly(ctx, [0, 160, 400, 210, 400, 470, 0, 600], '#2a1612');
-      A.poly(ctx, [400, 210, 700, 190, 700, 470, 400, 470], '#3a1e18');
-      A.stones(ctx, 0, 160, 400, 320, '#3a2420', 44, 40);
-      A.stones(ctx, 400, 200, 300, 270, '#42281f', 45, 30);
-      A.stones(ctx, 700, 190, 260, 280, '#3a2420', 46, 40);
       veins(ctx, 0, 180, 700, 260, 23, 6);
       // Tropfsteine an der Decke, Risse mit Glut dahinter
       {
@@ -1480,7 +1529,7 @@
       for (let x = 0; x < 960; x += 70) A.line(ctx, x, 470, x - 40, 600, 'rgba(0,0,0,0.3)', 1);
       A.pebbles(ctx, 0, 470, 960, 120, 225, '#5a3a30');
       A.rubble(ctx, 30, 438, 170, 44, 226, '#4a2e26'); A.rubble(ctx, 560, 440, 150, 40, 227, '#4a2e26');
-      drum(ctx, 300, 446, 80, 26, '#4e6e6c');
+      A.ell(ctx, 344, 474, 52, 6, 'rgba(0,0,0,0.35)'); drum(ctx, 300, 446, 80, 26, '#4e6e6c');
       A.cracks(ctx, 200, 470, 300, 110, 228, 'rgba(255,120,40,0.35)'); A.glow(ctx, 350, 540, 80, 'rgba(255,120,40,0.5)', 0.15);
       A.puddle(ctx, 130, 486, 70, 12, 'rgba(60,200,190,0.25)');
       // Wasser, das aus einem Riss in der linken Wand läuft
@@ -1517,11 +1566,19 @@
       }
       // Staub
       A.dust(ctx, 0, 100, 960, 400, t, 60, 'rgba(200,160,120,0.25)');
-      // steigendes Wasser
-      const lvl = Math.min(150, rt * 28);
-      if (lvl > 0) { ctx.fillStyle = 'rgba(20,120,110,0.7)'; ctx.fillRect(0, 600 - lvl, 960, lvl); A.waterAnim(ctx, 0, 600 - lvl, 960, lvl, t * 2, 'rgba(160,255,235,0.2)'); A.glow(ctx, 480, 600, 300, 'rgba(60,220,200,0.5)', 0.3); }
       const sh = Math.sin(t * 40) * 2;
       ctx.fillStyle = `rgba(255,120,60,${0.05 + Math.abs(sh) * 0.02})`; ctx.fillRect(0, 0, 960, 600);
+    },
+    animateFront(ctx, t, g) {
+      // steigendes Wasser vor den Figuren, mit Wasserkante: sie waten, statt darauf zu stehen
+      const lvl = Math.min(150, g.roomTime * 28);
+      if (lvl <= 0) return;
+      const y = 600 - lvl;
+      ctx.fillStyle = 'rgba(20,120,110,0.6)'; ctx.fillRect(0, y, 960, lvl);
+      A.waterAnim(ctx, 0, y, 960, lvl, t * 2, 'rgba(160,255,235,0.2)');
+      A.line(ctx, 0, y, 960, y, 'rgba(190,255,240,0.45)', 2);
+      for (let i = 0; i < 8; i++) A.ell(ctx, 60 + i * 120 + Math.sin(t * 1.3 + i) * 14, y + 4, 26, 3, 'rgba(200,255,245,0.18)');
+      A.glow(ctx, 480, 600, 300, 'rgba(60,220,200,0.5)', 0.3);
     },
     hotspots: [],
     async enter(g) {

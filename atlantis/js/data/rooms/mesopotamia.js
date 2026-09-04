@@ -141,6 +141,21 @@
   }
   // Tonöllampe (Schnabelform) mit Rußfahne an der Wand darüber
   const clayLamp = (ctx, x, y, soot) => { if (soot) A.ell(ctx, x + 12, y - 28, 8, 20, 'rgba(0,0,0,0.35)'); A.ell(ctx, x, y - 3, 9, 4, '#8a6a48'); A.poly(ctx, [x + 8, y - 4, x + 15, y - 3, x + 8, y - 1], '#8a6a48'); A.ell(ctx, x - 1, y - 5, 4, 1.8, '#3a2a18'); };
+  // Treppe von der Seite gesehen, steigt nach links an: eine geschlossene Masse mit Sägezahnkante,
+  // helle Trittstufen, dunkle Setzstufenkanten. x ist die linke Kante, floorY der Boden, w die Breite
+  // der untersten Stufe, landingW die Breite des obersten Absatzes (so breit wie die Tür darüber).
+  const sideStairs = (ctx, x, floorY, w, n, riser, landingW, color) => {
+    const d = (w - landingW) / (n - 1), wi = (i) => w - i * d, top = floorY - n * riser;
+    const pts = [x, floorY];
+    for (let i = 0; i < n; i++) pts.push(x + wi(i), floorY - i * riser, x + wi(i), floorY - (i + 1) * riser);
+    pts.push(x, top);
+    A.poly(ctx, pts, A.grad(ctx, 0, top, 0, floorY, [A.shade(color, 0.06), A.shade(color, -0.28)]));
+    for (let i = 0; i < n; i++) {
+      const y = floorY - (i + 1) * riser, wn = i + 1 < n ? wi(i + 1) : 0;
+      A.rect(ctx, x + wn, y, wi(i) - wn, 4, A.shade(color, 0.3));
+      A.rect(ctx, x + wi(i) - 3, y + 4, 3, riser - 4, 'rgba(0,0,0,0.3)');
+    }
+  };
 
   R({
     id: 'me_camp', name: 'Grabungslager bei Eridu', ambient: 'mesopotamia',
@@ -157,14 +172,16 @@
       A.ziggurat(ctx, 880, 340, 220, 92, '#c8aa78', 3);
       A.rect(ctx, 0, 300, 960, 45, A.grad(ctx, 0, 300, 0, 345, ['rgba(247,234,208,0)', 'rgba(240,222,180,0.55)']));
       A.dune(ctx, 960, 352, '#d3bc8e', 5, 8);
+      // Abraumhalden als nahe Dünenkette; A.dune füllt bis unten, deshalb vor dem Boden
+      A.dune(ctx, 960, 350, '#c4a878', 19, 12);
       // Boden
       A.ground(ctx, 0, 352, 960, 250, '#dac49a', '#b6976a');
       sandDots(ctx, 0, 352, 960, 250, 21, 700);
-      // Grabungsschnitt im Hintergrund links, mit Schnüren und Abraum
+      // Abraumhaufen hinter dem Grabungsschnitt, davor der Schnitt mit Schnüren
+      A.ell(ctx, 150, 358, 70, 13, '#c8ae80'); A.ell(ctx, 235, 359, 55, 11, '#cdb387'); A.ell(ctx, 300, 357, 40, 9, '#c4a97c');
       A.rect(ctx, 30, 356, 240, 26, '#a88a5e'); A.rect(ctx, 36, 360, 228, 18, '#7a6040');
       for (let i = 0; i < 5; i++) A.line(ctx, 30 + i * 60, 354, 30 + i * 60, 384, '#f0e8d0', 1);
       A.line(ctx, 30, 354, 270, 354, '#f0e8d0', 1); A.line(ctx, 30, 384, 270, 384, '#f0e8d0', 1);
-      A.dune(ctx, 330, 356, '#c8ae80', 8, 14);
       // Reifenspuren zur Piste rechts
       for (let i = 0; i < 26; i++) { A.rect(ctx, 700 + i * 10, 556 - i * 1.6, 6, 3, 'rgba(90,70,40,0.25)'); A.rect(ctx, 700 + i * 10, 574 - i * 1.6, 6, 3, 'rgba(90,70,40,0.25)'); }
       // Wegweiser an der Piste links
@@ -181,8 +198,7 @@
       // Erdanker der Abspannseile, Isolatoren am Kabel
       A.poly(ctx, [84, 440, 96, 440, 92, 452, 88, 452], '#4a4a48'); A.poly(ctx, [184, 440, 196, 440, 192, 452, 188, 452], '#4a4a48');
       A.circle(ctx, 172, 185, 2.5, '#e8e8e0'); A.circle(ctx, 206, 244, 2.5, '#e8e8e0');
-      // Abraumhalden und ferne Zelte der Arbeiter
-      A.dune(ctx, 960, 350, '#c4a878', 19, 12);
+      // Ferne Zelte der Arbeiter auf der Abraumkette
       A.tent(ctx, 470, 352, 40, 22, '#cbbb92'); A.tent(ctx, 520, 354, 46, 26, '#c4b48a'); A.tent(ctx, 585, 350, 36, 20, '#cbbb92');
       // Am Grabungsschnitt: Maßstab, Schubkarre, Sieb, zwei Arbeiter in der Ferne
       surveyPole(ctx, 282, 344, 386);
@@ -196,11 +212,15 @@
       // Funkzelt und Vorratszelt, mit Schatten und Abspannschnüren
       A.ell(ctx, 250, 450, 150, 12, 'rgba(0,0,0,0.18)');
       A.tent(ctx, 250, 448, 240, 140, '#d2c39c');
-      A.poly(ctx, [250, 308, 370, 448, 250, 448], 'rgba(0,0,0,0.12)');
-      A.line(ctx, 130, 448, 160, 380, '#8a7a5a', 1); A.line(ctx, 370, 448, 340, 380, '#8a7a5a', 1);
-      A.rect(ctx, 300, 392, 60, 14, '#6a5238'); A.text(ctx, 'W/T', 330, 403, { font: 'bold 10px Georgia', color: '#efe4c8', align: 'center' });
+      // Die Sonne steht rechts oben: die linke Zeltseite liegt im Schatten
+      A.poly(ctx, [250, 308, 130, 448, 250, 448], 'rgba(0,0,0,0.12)');
+      // Abspannschnüre von der Zeltbahn nach außen zu Heringen im Sand
+      A.line(ctx, 203, 392, 150, 452, '#8a7a5a', 1); A.line(ctx, 297, 392, 335, 452, '#8a7a5a', 1);
+      A.poly(ctx, [146, 448, 154, 448, 152, 456, 148, 456], '#4a4a48');
+      // Schild über dem Eingang
+      A.rect(ctx, 220, 346, 60, 14, '#6a5238'); A.text(ctx, 'W/T', 250, 357, { font: 'bold 10px Georgia', color: '#efe4c8', align: 'center' });
       // Flickstellen und Nähte auf der Zeltbahn, Petroleumlampe an der Stange im Eingang
-      A.rr(ctx, 168, 396, 22, 16, 2, '#c4b48a'); A.rr(ctx, 300, 350, 14, 20, 2, '#c8b890');
+      A.rr(ctx, 200, 372, 22, 16, 2, '#c4b48a'); A.rr(ctx, 300, 350, 14, 20, 2, '#c8b890');
       A.line(ctx, 200, 448, 250, 320, 'rgba(0,0,0,0.08)', 1); A.line(ctx, 300, 448, 250, 320, 'rgba(0,0,0,0.08)', 1);
       A.line(ctx, 250, 366, 250, 380, '#3a3a3a', 1); A.lantern(ctx, 250, 402, 0, false);
       // Wäscheleine vom Mast zur Zeltstange
@@ -218,8 +238,8 @@
       A.ell(ctx, 322, 474, 32, 5, 'rgba(0,0,0,0.15)'); cot(ctx, 294, 452, 56, '#8e8c6c');
       A.ell(ctx, 750, 447, 130, 10, 'rgba(0,0,0,0.18)');
       A.tent(ctx, 750, 445, 210, 125, '#c6b088');
-      A.poly(ctx, [750, 320, 855, 445, 750, 445], 'rgba(0,0,0,0.12)');
-      A.line(ctx, 645, 445, 665, 390, '#8a7a5a', 1);
+      A.poly(ctx, [750, 320, 645, 445, 750, 445], 'rgba(0,0,0,0.12)');
+      A.line(ctx, 712, 400, 640, 452, '#8a7a5a', 1); A.poly(ctx, [636, 448, 644, 448, 642, 456, 638, 456], '#4a4a48');
       A.rr(ctx, 790, 372, 18, 24, 2, '#b8a078'); A.line(ctx, 800, 445, 750, 335, 'rgba(0,0,0,0.07)', 1);
       // Säcke, Sieb und Werkzeug am Vorratszelt
       A.ell(ctx, 716, 458, 34, 5, 'rgba(0,0,0,0.15)'); A.sack(ctx, 702, 458, 28, 32, '#cbb890'); A.sack(ctx, 728, 460, 24, 26, '#c0ac84');
@@ -235,9 +255,10 @@
       // Sonnensegel über dem Fundtisch, mit Stangen, Spannschnüren und Schatten darunter
       A.rect(ctx, 380, 456, 176, 18, 'rgba(60,40,20,0.08)');
       A.line(ctx, 374, 384, 350, 458, '#8a7a5a', 1); A.line(ctx, 558, 384, 584, 458, '#8a7a5a', 1);
+      A.ell(ctx, 374, 472, 7, 2, 'rgba(0,0,0,0.2)'); A.ell(ctx, 558, 472, 7, 2, 'rgba(0,0,0,0.2)');
       A.rect(ctx, 372, 384, 4, 88, '#6a5238'); A.rect(ctx, 556, 384, 4, 88, '#6a5238');
-      A.awning(ctx, 360, 378, 208, 12, '#dccaa2', '#c8b48a', 8);
-      A.rect(ctx, 364, 378, 204, 3, '#a8987a');
+      A.awning(ctx, 360, 368, 208, 18, '#cdb488', '#a68c62', 8);
+      A.rect(ctx, 364, 367, 204, 3, '#8a7452');
       // Fundtisch mit Scherben, Tafeln, Notizbuch
       A.rect(ctx, 380, 460, 170, 28, 'rgba(0,0,0,0.12)');
       A.table(ctx, 380, 425, 170, 12, '#8a6a48', 50);
@@ -252,7 +273,8 @@
       A.poly(ctx, [455, 412, 462, 404, 468, 411], '#a8794a'); A.poly(ctx, [466, 414, 472, 407, 476, 414], '#8a5a3a'); A.poly(ctx, [446, 416, 452, 409, 456, 416], '#b08a5a');
       A.line(ctx, 430, 430, 452, 428, '#5a4a3a', 2); A.rect(ctx, 452, 425, 8, 5, '#d8c8a0');
       A.circle(ctx, 522, 404, 5, 'rgba(200,220,230,0.5)', '#3a3a3a', 1.5); A.line(ctx, 526, 407, 534, 412, '#3a3a3a', 2);
-      // Wassertank auf Böcken
+      // Wassertank auf Böcken, mit Schatten am Boden
+      A.ell(ctx, 645, 454, 56, 5, 'rgba(0,0,0,0.15)');
       A.rect(ctx, 600, 430, 8, 22, '#4a3a2a'); A.rect(ctx, 682, 430, 8, 22, '#4a3a2a'); A.rect(ctx, 596, 428, 98, 5, '#5a4a3a');
       A.rr(ctx, 594, 348, 102, 82, 14, A.grad(ctx, 594, 0, 696, 0, ['#6a7a7a', '#a8b4b0', '#5a6a6a']));
       A.rect(ctx, 594, 372, 102, 4, '#4a5a5a'); A.rect(ctx, 594, 402, 102, 4, '#4a5a5a');
@@ -277,7 +299,7 @@
       A.ell(ctx, 162, 566, 16, 3, 'rgba(0,0,0,0.2)');
       for (let i = 0; i < 4; i++) A.rect(ctx, 150 + (i % 2) * 3, 560 - i * 4, 22, 4, i % 2 ? '#7a5a3a' : '#6a4a2e');
       // Kanister am Vorratszelt, solange Nabil ihn nicht freigibt
-      if (!g.flag('kanister_erhalten')) { A.rr(ctx, 652, 452, 24, 32, 3, '#5a6a3a'); A.rect(ctx, 658, 447, 8, 6, '#3a3a3a'); A.rect(ctx, 656, 462, 16, 10, '#3a4a2a'); }
+      if (!g.flag('kanister_erhalten')) { A.ell(ctx, 664, 485, 15, 3, 'rgba(0,0,0,0.18)'); A.rr(ctx, 652, 452, 24, 32, 3, '#5a6a3a'); A.rect(ctx, 658, 447, 8, 6, '#3a3a3a'); A.rect(ctx, 656, 462, 16, 10, '#3a4a2a'); }
       A.vignette(ctx, 960, 600, 0.3);
       A.grain(ctx, 960, 600, 4, 0.035);
     },
@@ -345,7 +367,7 @@
         take: (g) => g.flag('zylinder_gelesen') ? 'Erst sage ich Nabil, was ich gelesen habe. Dann frage ich. Er hat schon einen Vorarbeiter an Leute verloren, die einfach nehmen.' : 'Nabil steht zehn Meter weiter und sieht mich an. Ich habe keine Lust auf Streit an meinem ersten Tag.',
         use: 'Nicht meiner. Noch nicht.', open: 'Ich rieche es von hier: Benzin. Der Deckel bleibt zu.' },
       { id: 'jeep', name: 'Jeep', rect: [700, 490, 172, 62], at: [680, 552, 'r'], z: 549, cond: (g) => !g.flag('jeep_an_zikkurat'),
-        paint: (ctx) => { A.jeep(ctx, 700, 548, 170, '#6b6a3c'); A.rect(ctx, 706, 512, 30, 12, '#3a3a2a'); A.text(ctx, 'IRAQ', 812, 540, { font: 'bold 8px Georgia', color: '#e8e0c8', align: 'center' }); },
+        paint: (ctx) => { A.ell(ctx, 785, 565, 90, 6, 'rgba(0,0,0,0.22)'); A.jeep(ctx, 700, 548, 170, '#6b6a3c'); A.rect(ctx, 706, 512, 30, 12, '#3a3a2a'); A.text(ctx, 'IRAQ', 812, 540, { font: 'bold 8px Georgia', color: '#e8e0c8', align: 'center' }); },
         look: (g) => g.flag('jeep_betankt') ? 'Der Jeep der Grabung. Vorn eine Seilwinde, hinten Sand. Jetzt ist Benzin drin.' : 'Der Jeep der Grabung. Staub, Beulen, eine Winde am Kühler. Die Tankanzeige steht auf null, wenn sie überhaupt geht.',
         use: async (g) => {
           if (!g.flag('jeep_betankt')) { await g.say('falk', 'Ich drehe den Schlüssel. Der Anlasser orgelt, der Motor bleibt still. Kein Tropfen im Tank.'); if (!g.flag('kanister_erhalten')) await g.say('falk', 'Im Vorratszelt steht ein Kanister. Und davor steht Nabil.'); return; }
@@ -595,6 +617,8 @@
       // Sand: Boden und Verwehungen am Fuß der Mauer
       A.ground(ctx, 0, 440, 960, 160, '#dcc69c', '#b6976a');
       A.dune(ctx, 960, 452, '#e2cca4', 14, 16);
+      // Die Düne füllt den Boden flach; nach vorn wieder abdunkeln, damit der Boden Tiefe bekommt
+      A.rect(ctx, 0, 456, 960, 150, A.grad(ctx, 0, 456, 0, 600, ['rgba(100,75,40,0)', 'rgba(100,75,40,0.25)']));
       A.poly(ctx, [30, 440, 200, 440, 240, 452, 0, 468], '#e6d2aa'); A.poly(ctx, [700, 440, 960, 440, 960, 470, 760, 456], '#e6d2aa');
       sandDots(ctx, 0, 445, 960, 155, 33, 600);
       // heruntergefallene Ziegel im Sand, Schatten der Mauer
@@ -627,16 +651,18 @@
       ctx.save(); ctx.translate(700, 470); ctx.rotate(1.35); pickaxe(ctx, 0, 0, 0); ctx.restore();
       scorpion(ctx, 258, 468);
       // Der Ziegelblock: vor dem Eingang oder weggezogen daneben
+      // Die Sonne steht links: der Schatten fällt nach rechts, am Fuß liegt angewehter Sand
       if (!g.flag('block_weg')) {
+        A.poly(ctx, [392, 456, 484, 451, 548, 464, 450, 468], 'rgba(0,0,0,0.22)');
         ctx.save(); ctx.translate(384, 372); ctx.rotate(-0.05);
         A.bricks(ctx, 0, 0, 96, 84, '#a8845a', 24, 12, 3, '#7a5a3a'); A.rect(ctx, 0, 0, 96, 6, '#c8a878'); ctx.restore();
-        A.ell(ctx, 432, 458, 62, 8, 'rgba(0,0,0,0.25)');
-        A.poly(ctx, [372, 462, 500, 462, 490, 446, 380, 446], '#e2cca4');
+        A.ell(ctx, 402, 457, 32, 6, '#e2cca4'); A.ell(ctx, 466, 456, 34, 6, '#e6d2aa');
       } else {
-        A.ell(ctx, 566, 476, 66, 9, 'rgba(0,0,0,0.25)');
+        for (let i = 0; i < 12; i++) A.rect(ctx, 400 + i * 14, 452 + (i % 3) * 4, 40, 3, 'rgba(120,90,50,0.3)');
+        A.poly(ctx, [507, 473, 601, 490, 670, 496, 580, 480], 'rgba(0,0,0,0.22)');
         ctx.save(); ctx.translate(520, 402); ctx.rotate(0.18);
         A.bricks(ctx, 0, 0, 96, 72, '#a8845a', 24, 12, 3, '#7a5a3a'); A.rect(ctx, 0, 0, 96, 6, '#c8a878'); ctx.restore();
-        for (let i = 0; i < 12; i++) A.rect(ctx, 400 + i * 14, 452 + (i % 3) * 4, 40, 3, 'rgba(120,90,50,0.3)');
+        A.ell(ctx, 514, 474, 24, 5, '#e2cca4'); A.ell(ctx, 596, 490, 28, 6, '#e6d2aa');
       }
       A.vignette(ctx, 960, 600, 0.3);
       A.grain(ctx, 960, 600, 5, 0.035);
@@ -681,6 +707,12 @@
         take: 'Er sitzt seit viertausend Jahren in dieser Wand. Nabil würde mich mit dem Spaten erschlagen, und zu Recht.',
         useWith: { syllabar: readCylinder, schaufel: 'Ich kratze nicht an Fundstücken herum.', default: 'Damit lese ich nicht besser.' } },
       { id: 'block', name: 'Ziegelblock', rect: [376, 366, 112, 96], at: [432, 484, 'u'], cond: (g) => !g.flag('block_weg'),
+        // Das Seil, zweimal um den Block gelegt; das lose Ende hängt herab, solange es nicht am Jeep ist
+        paint: (ctx, g) => {
+          if (!g.flag('seil_am_block')) return;
+          A.rope(ctx, [389, 412, 483, 407], '#b89a68', 3); A.rope(ctx, [389, 422, 483, 417], '#b89a68', 3);
+          if (!g.flag('seil_gespannt')) A.rope(ctx, [483, 417, 492, 438, 474, 452], '#b89a68', 3);
+        },
         look: (g) => g.flag('seil_am_block') ? 'Der Block, mit meinem Seil darum. Der Knoten hält. Jetzt fehlt nur Zugkraft.' : 'Ein Block aus verbackenen Ziegeln, so groß wie ein Schrank. Er ist von der oberen Terrasse gestürzt und liegt genau im Eingang. Zwanzig Männer haben gezogen, sagt Nabil.',
         push: 'Ich stemme mich dagegen. Der Block überlegt es sich nicht einmal.',
         pull: 'Mit bloßen Händen? Nabils zwanzig Männer haben es nicht geschafft.',
@@ -704,9 +736,9 @@
         push: 'Er liegt gut. Da bleibt er.', take: 'Nein. Auch jetzt nicht.' },
       { id: 'jeep', name: 'Jeep', rect: [560, 490, 176, 64], at: [545, 556, 'r'], z: 549, cond: (g) => g.flag('jeep_an_zikkurat'),
         paint: (ctx, g) => {
+          A.ell(ctx, 645, 565, 90, 6, 'rgba(0,0,0,0.22)');
           A.jeep(ctx, 560, 548, 170, '#6b6a3c'); A.rect(ctx, 566, 512, 30, 12, '#3a3a2a');
-          if (g.flag('seil_gespannt') && !g.flag('block_weg')) A.rope(ctx, [566, 522, 520, 470, 478, 420], '#b89a68', 3);
-          else if (g.flag('seil_am_block') && !g.flag('block_weg')) A.rope(ctx, [478, 420, 490, 440, 470, 452], '#b89a68', 3);
+          if (g.flag('seil_gespannt') && !g.flag('block_weg')) A.rope(ctx, [566, 522, 520, 470, 483, 417], '#b89a68', 3);
           else if (g.flag('seil_am_jeep')) A.rope(ctx, [566, 522, 540, 540, 528, 556], '#b89a68', 3);
         },
         look: (g) => g.flag('seil_gespannt') && !g.flag('block_weg') ? 'Der Jeep, das Seil an der Winde, straff bis zum Block. Jetzt kommt es auf den Motor an.' : g.flag('seil_am_jeep') ? 'Der Jeep, ein Seilende an der Winde. Das andere Ende hängt lose herunter. Es gehört an den Block.' : 'Der Jeep der Grabung, mit der Nase zum Eingang. Vorn am Kühler die Winde, mit einem Haken, an dem man etwas festmachen kann.',
@@ -787,19 +819,26 @@
 
   // Ein Apkallu-Relief auf der Bronzetür: Mann im Fischgewand, Eimer und Zapfen in den Händen
   function apkalluRelief(ctx, x, y, h, color, lit) {
-    const w = h * 0.42;
-    ctx.fillStyle = color;
-    A.rr(ctx, x - w * 0.35, y - h * 0.62, w * 0.7, h * 0.6, 4, color);                     // Gewand
-    A.poly(ctx, [x - w * 0.5, y - h * 0.62, x + w * 0.5, y - h * 0.62, x + w * 0.42, y - h * 0.28, x - w * 0.42, y - h * 0.28], A.shade(color, -0.12)); // Fischmantel
+    const w = h * 0.42, dark = A.shade(color, -0.12), light = A.shade(color, 0.12), arm = Math.max(1.5, w * 0.08);
+    // Fischmantel hinten, die Schwanzflosse hängt am Rücken bis zum Boden
+    A.poly(ctx, [x - w * 0.5, y - h * 0.2, x - w * 0.64, y, x - w * 0.3, y - h * 0.08], dark);
+    A.poly(ctx, [x - w * 0.5, y - h * 0.64, x + w * 0.5, y - h * 0.64, x + w * 0.42, y - h * 0.26, x - w * 0.42, y - h * 0.26], dark);
     for (let i = 0; i < 4; i++) A.line(ctx, x - w * 0.42, y - h * 0.58 + i * h * 0.08, x + w * 0.42, y - h * 0.55 + i * h * 0.08, A.shade(color, 0.18), 1);
-    A.circle(ctx, x, y - h * 0.72, w * 0.22, A.shade(color, 0.12));                        // Kopf
-    A.poly(ctx, [x - w * 0.16, y - h * 0.66, x + w * 0.16, y - h * 0.66, x, y - h * 0.52], A.shade(color, -0.2)); // Bart
-    A.circle(ctx, x - w * 0.07, y - h * 0.74, w * 0.03, '#1a130c'); A.circle(ctx, x + w * 0.07, y - h * 0.74, w * 0.03, '#1a130c');
-    A.poly(ctx, [x - w * 0.34, y - h * 0.7, x, y - h * 0.98, x + w * 0.34, y - h * 0.7, x + w * 0.2, y - h * 0.6, x - w * 0.2, y - h * 0.6], A.shade(color, -0.05)); // Fischkopf als Kapuze
-    A.circle(ctx, x + w * 0.1, y - h * 0.86, w * 0.05, '#1a130c');
-    A.poly(ctx, [x - w * 0.5, y - h * 0.2, x - w * 0.62, y, x - w * 0.3, y - h * 0.08], A.shade(color, -0.05)); // Schwanzflosse
-    A.rr(ctx, x - w * 0.6, y - h * 0.34, w * 0.2, h * 0.14, 2, A.shade(color, 0.2));        // Eimer
-    A.poly(ctx, [x + w * 0.4, y - h * 0.5, x + w * 0.6, y - h * 0.5, x + w * 0.5, y - h * 0.62], A.shade(color, 0.2)); // Zapfen
+    // Falbelgewand
+    A.rr(ctx, x - w * 0.35, y - h * 0.62, w * 0.7, h * 0.62, 4, color);
+    for (let i = 1; i < 5; i++) A.line(ctx, x - w * 0.33, y - h * 0.62 + i * h * 0.12, x + w * 0.33, y - h * 0.62 + i * h * 0.12, A.shade(color, -0.15), 1);
+    // Fischkopf als Kapuze hinter dem Kopf, das Maul offen nach vorn
+    A.poly(ctx, [x - w * 0.36, y - h * 0.66, x - w * 0.1, y - h, x + w * 0.18, y - h * 0.96, x + w * 0.38, y - h * 0.7, x + w * 0.3, y - h * 0.6, x - w * 0.3, y - h * 0.6], dark);
+    A.circle(ctx, x + w * 0.02, y - h * 0.9, w * 0.05, '#1a130c');
+    // Kopf mit Bart in der Kapuzenöffnung
+    A.circle(ctx, x, y - h * 0.76, w * 0.2, light);
+    A.poly(ctx, [x - w * 0.15, y - h * 0.7, x + w * 0.15, y - h * 0.7, x, y - h * 0.54], A.shade(color, -0.25));
+    A.circle(ctx, x - w * 0.07, y - h * 0.78, w * 0.03, '#1a130c'); A.circle(ctx, x + w * 0.07, y - h * 0.78, w * 0.03, '#1a130c');
+    // Arme: links der Eimer, rechts der erhobene Zapfen
+    A.line(ctx, x - w * 0.25, y - h * 0.5, x - w * 0.5, y - h * 0.36, light, arm);
+    A.rr(ctx, x - w * 0.62, y - h * 0.34, w * 0.22, h * 0.14, 2, A.shade(color, 0.2));
+    A.line(ctx, x + w * 0.25, y - h * 0.5, x + w * 0.48, y - h * 0.58, light, arm);
+    A.poly(ctx, [x + w * 0.38, y - h * 0.56, x + w * 0.6, y - h * 0.56, x + w * 0.49, y - h * 0.7], A.shade(color, 0.2));
     if (lit) A.glow(ctx, x, y - h * 0.5, h * 0.7, 'rgba(255,220,150,0.7)', 0.35);
   }
   const RELIEF_X = (i) => 676 + i * 32;
@@ -872,10 +911,12 @@
       A.poly(ctx, [900, 440, 960, 400, 960, 474, 860, 474], 'rgba(120,95,60,0.16)');
       A.rubble(ctx, 884, 414, 76, 48, 21, '#6a5238');
       for (const [bx, by, a] of [[858, 456, 0.3], [876, 466, -0.2], [904, 470, 0.6], [930, 462, -0.5]]) { ctx.save(); ctx.translate(bx, by); ctx.rotate(a); A.rect(ctx, -9, -4, 18, 8, '#6a5238'); A.rect(ctx, -9, -4, 18, 2, 'rgba(255,240,200,0.12)'); ctx.restore(); }
-      // Treppe hinauf zum Eingang, Licht von oben
+      // Treppe hinauf zum Eingang: eine Masse mit Sägezahnkante, oben ein Absatz so breit wie die Öffnung
       A.rect(ctx, 30, 110, 140, 330, '#2a2016');
-      A.stairs(ctx, 40, 440, 130, 9, 26, '#8a7050');
-      A.rect(ctx, 40, 110, 80, 110, '#e8d8b0'); A.rect(ctx, 40, 110, 80, 110, 'rgba(255,240,200,0.5)');
+      sideStairs(ctx, 40, 440, 130, 9, 26, 40, '#8a7050');
+      A.rect(ctx, 32, 106, 56, 102, '#5a4632');
+      A.rect(ctx, 38, 112, 44, 94, '#e8d8b0'); A.rect(ctx, 38, 112, 44, 94, 'rgba(255,240,200,0.5)');
+      A.rect(ctx, 38, 204, 44, 3, '#b8956a');
       A.lightBeam(ctx, 60, 200, 220, 330, 'rgba(255,230,180,0.2)');
       // Ton-Regale mit Tafeln, links und rechts der Statue
       const shelf = (x, w, rows, seed) => {
@@ -903,8 +944,8 @@
       // Tonöllampen auf den Regalkanten, mit Rußfahnen darüber
       clayLamp(ctx, 230, 150, true); clayLamp(ctx, 336, 150, true); clayLamp(ctx, 606, 150, true);
       // Tonkörbe mit Tafeln vor den Regalen, ein Stapel und ein paar gefallene Tafeln
-      A.ell(ctx, 206, 471, 20, 4, 'rgba(0,0,0,0.3)'); A.basket(ctx, 206, 470, 36, 28, '#a08050');
-      for (let i = 0; i < 3; i++) A.rr(ctx, 195 + i * 8, 432 + (i % 2) * 2, 7, 12, 1, A.shade('#b89468', -0.1 * i));
+      A.ell(ctx, 372, 477, 20, 4, 'rgba(0,0,0,0.3)'); A.basket(ctx, 372, 476, 36, 28, '#a08050');
+      for (let i = 0; i < 3; i++) A.rr(ctx, 392 + i * 8, 462 + (i % 2) * 2, 7, 12, 1, A.shade('#b89468', -0.1 * i));
       A.ell(ctx, 584, 471, 17, 4, 'rgba(0,0,0,0.3)'); A.basket(ctx, 584, 470, 30, 24, '#a08050');
       for (let i = 0; i < 3; i++) A.rr(ctx, 575 + i * 7, 438 + (i % 2) * 2, 6, 10, 1, A.shade('#b08a5a', -0.1 * i));
       for (const [tx, ty, tw] of [[448, 452, 22], [474, 458, 18], [500, 450, 24], [530, 460, 16]]) { A.rr(ctx, tx, ty, tw, 8, 1, '#a08658'); A.cuneiform(ctx, tx + 2, ty + 1, tw - 4, 6, 'rgba(60,35,15,0.6)', tx); }
@@ -929,9 +970,12 @@
       } else {
         A.rect(ctx, 664, 148, 232, 292, '#05070a');
         A.poly(ctx, [664, 148, 700, 160, 700, 432, 664, 440], '#8a6a3a');
-        for (let i = 0; i < 6; i++) A.rect(ctx, 720, 300 + i * 22, 160, 6, A.shade('#3a4048', i * 0.04));
-        A.glow(ctx, 780, 260, 120, 'rgba(120,180,220,0.5)', 0.3);
+        // Stufen hinab, die sich in der Tiefe verkürzen; von unten das Wasserlicht
+        A.glow(ctx, 780, 400, 120, 'rgba(120,180,220,0.5)', 0.3);
+        for (let i = 0; i < 6; i++) { const k = i / 5, sw = 200 - k * 90, sy = 434 - i * (10 - i); A.rect(ctx, 780 - sw / 2, sy, sw, 3, `rgba(140,170,190,${(0.5 - k * 0.32).toFixed(2)})`); }
       }
+      // Steinschwelle unter der Tür
+      A.rect(ctx, 652, 438, 256, 8, '#4a3a28'); A.rect(ctx, 652, 438, 256, 2, 'rgba(255,240,200,0.15)');
       // Tisch mit der Fluttafel vorn links, Scherben am Boden rechts
       A.table(ctx, 240, 445, 110, 10, '#6a5238', 34);
       A.rr(ctx, 260, 420, 70, 28, 3, '#b89468'); A.cuneiform(ctx, 264, 424, 62, 20, '#4a2e18', 31);
@@ -954,7 +998,7 @@
       A.dust(ctx, 50, 150, 220, 300, t, 30);
       // Staub, der aus der eingestürzten Ecke rieselt; Wasserlicht aus der offenen Tür
       A.dust(ctx, 880, 300, 80, 150, t, 6, 'rgba(200,170,120,0.22)');
-      if (g.flag('weisen_tuer_offen')) A.glow(ctx, 780, 280, 110 + Math.sin(t * 1.3) * 10, 'rgba(120,180,220,0.6)', 0.14 + Math.sin(t * 2.1) * 0.05);
+      if (g.flag('weisen_tuer_offen')) A.glow(ctx, 780, 390, 110 + Math.sin(t * 1.3) * 10, 'rgba(120,180,220,0.6)', 0.14 + Math.sin(t * 2.1) * 0.05);
     },
     hotspots: [
       { id: 'fries', name: 'Reliefband', rect: [190, 80, 460, 54], at: [420, 485, 'u'],
@@ -1139,11 +1183,18 @@
       A.rect(ctx, 594, 372, 30, 128, '#06080c');
       if (g.flag('tor_zu')) { for (let i = 0; i < 4; i++) A.rect(ctx, 597 + i * 7, 372, 4, 128, '#7a6a3a'); A.rect(ctx, 594, 380, 30, 5, '#8a7a4a'); }
       else { for (let i = 0; i < 4; i++) A.rect(ctx, 597 + i * 7, 300, 4, 60, '#7a6a3a'); A.rect(ctx, 594, 352, 30, 5, '#8a7a4a'); }
-      A.chain(ctx, 609, 298, 700, 240, '#8a8a80'); A.chain(ctx, 700, 240, 800, 300, '#8a8a80');
-      // Sims mit dem Schilfboot, Podest rechts mit Stufen
+      // Unter dem Wasserspiegel liegt das Tor im Wasser
+      if (wy < 500) { A.rect(ctx, 594, wy, 30, 500 - wy, 'rgba(30,80,105,0.6)'); A.rect(ctx, 594, wy, 30, 2, 'rgba(200,230,255,0.35)'); }
+      // Umlenkrolle an der Decke; die Kette setzt oben am Tor an, je nach Stellung
+      A.rect(ctx, 697, 210, 6, 30, '#3a3020'); A.circle(ctx, 700, 240, 9, '#6a5a3a'); A.circle(ctx, 700, 240, 3, '#2a2420');
+      const chainTop = g.flag('tor_zu') ? 372 : 300;
+      const drawChain = () => { A.chain(ctx, 609, chainTop, 700, 231, '#8a8a80'); A.chain(ctx, 700, 231, 800, 300, '#8a8a80'); };
+      ctx.save(); ctx.beginPath(); ctx.rect(0, 0, 960, wy); ctx.clip(); drawChain(); ctx.restore();
+      if (chainTop > wy) { ctx.save(); ctx.beginPath(); ctx.rect(140, wy, 480, 500 - wy); ctx.clip(); ctx.globalAlpha = 0.4; drawChain(); ctx.restore(); }
+      // Sims mit dem Schilfboot, Podest rechts mit Stufen, die vom Boden hinaufführen
       A.rect(ctx, 618, 396, 110, 16, '#5a5e66'); A.rect(ctx, 618, 412, 110, 10, '#3a3c42');
       A.rect(ctx, 660, 432, 300, 104, '#4a4c52'); A.rect(ctx, 660, 432, 300, 6, '#6a6e76');
-      for (let i = 0; i < 3; i++) { A.rect(ctx, 636 + i * 8, 470 + i * 22, 24 - i * 8, 66 - i * 22, A.shade('#4a4c52', i * 0.06)); }
+      for (let k = 0; k < 3; k++) { const top = 534 - (k + 1) * 34; A.rect(ctx, 636 + k * 8, top, 24 - k * 8, 534 - top, A.shade('#4a4c52', k * 0.05)); A.rect(ctx, 636 + k * 8, top, 24 - k * 8, 4, '#6a6e76'); }
       A.cuneiform(ctx, 700, 450, 220, 30, 'rgba(0,0,0,0.35)', 41);
       // Schleusenrad an der rechten Wand
       A.rect(ctx, 846, 340, 10, 92, '#3a3020');
@@ -1163,9 +1214,10 @@
       A.puddle(ctx, 262, 562, 64, 10, 'rgba(110,150,180,0.22)'); A.puddle(ctx, 724, 570, 40, 7, 'rgba(110,150,180,0.2)'); A.puddle(ctx, 460, 578, 30, 6, 'rgba(110,150,180,0.18)');
       ctx.fillStyle = A.grad(ctx, 0, 534, 0, 556, ['rgba(20,40,50,0.35)', 'rgba(20,40,50,0)']); ctx.fillRect(140, 534, 480, 22);
       A.rect(ctx, 20, 240, 110, 300, '#22262c');
-      A.stairs(ctx, 24, 534, 106, 8, 24, '#4a4c52');
+      // Treppe als Masse mit Sägezahnkante; der Absatz oben ist so breit wie die Tür zum Archiv
+      sideStairs(ctx, 24, 534, 106, 8, 24, 40, '#4a4c52');
       A.moss(ctx, 30, 508, 40, 8, '#2e4a2c'); A.moss(ctx, 60, 460, 30, 9, '#2e4a2c');
-      A.rect(ctx, 30, 236, 70, 100, '#8a6a3a'); A.rect(ctx, 36, 242, 58, 94, '#1a1410'); A.glow(ctx, 65, 290, 80, 'rgba(255,220,160,0.6)', 0.3);
+      A.rect(ctx, 22, 238, 46, 104, '#8a6a3a'); A.rect(ctx, 27, 243, 36, 99, '#1a1410'); A.glow(ctx, 45, 292, 70, 'rgba(255,220,160,0.6)', 0.3);
       // Boot auf dem Sims
       if (!g.flag('boot_im_wasser')) reedBoat(ctx, 672, 394, 90);
       A.vignette(ctx, 960, 600, 0.7);
