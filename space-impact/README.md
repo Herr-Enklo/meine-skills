@@ -10,17 +10,27 @@ inklusive).
 ## Spielprinzip
 
 Das Schiff bewegt sich frei im linken Teil des Bildschirms (wie beim Original),
-schießt nach rechts und muss vier unterschiedliche Sektoren durchqueren.
+schießt nach rechts und muss zehn unterschiedliche Sektoren durchqueren.
 
-- **4 Sektoren** mit eigenem Hintergrund, eigenen Gegnertypen und einem
-  eigenen Endboss:
-  1. **Asteroidenfeld** – Drohnen und drehende Asteroiden, Boss: Gesteinsbrecher
-  2. **Alien-Schwarm** – Späher im Zickzack und Spinner mit Streufeuer,
-     Boss: Bienenkönigin (spawnt Drohnen nach)
-  3. **Trümmerfeld** – zielende Geschütztürme, Kamikaze-Flieger und
-     Minen-Bomber, Boss: Wächter (nur bei geöffnetem Schild verwundbar)
-  4. **Dunkle Zone** – Elite-Jäger mit Doppelkanonen, Boss: Overmind
-     (mehrere Phasen, wird bei sinkender Energie aggressiver)
+- **10 Sektoren** mit eigenem Hintergrund, eigenem Gegnermix und eigenem
+  Endboss:
+
+  | # | Sektor | Gegner | Boss |
+  |---|---|---|---|
+  | 1 | Asteroidenfeld | Drohnen, Asteroiden | Gesteinsbrecher (Bohrkopf, Rammangriff) |
+  | 2 | Alien-Schwarm | Späher, Spinner | Bienenkönigin (spawnt Drohnen) |
+  | 3 | Trümmerfeld | Geschütztürme, Kamikaze, Bomber | Wächter (nur bei offenem Kern verwundbar) |
+  | 4 | Eisgürtel | Eissplitter, Drohnen, Späher | Frostkoloss (Panzerplatten, Splitterwelle) |
+  | 5 | Plasmasturm | Plasmakugeln, Spinner, Jäger | Sturmauge (rotierendes Dauerfeuer) |
+  | 6 | Schrottpresse | Geschütztürme, Bomber, Kamikaze | Schrottpresse (zuschlagende Backen) |
+  | 7 | Biozone | Würmer, Plasmakugeln, Drohnen | Brutmutter (spawnt Würmer) |
+  | 8 | Kriegsflotte | Jäger, Elite, Geschütztürme | Fregatte (drei zielende Geschütze) |
+  | 9 | Singularität | Phantome, Kamikaze, Plasmakugeln | Singularität (zieht dich in sich hinein) |
+  | 10 | Dunkle Zone | Elite, Phantome, Würmer, Kamikaze | Overmind (drei Phasen) |
+
+  Eissplitter zerbrechen beim Abschuss in zwei kleinere Splitter, Phantome
+  tarnen sich im Rhythmus, Kamikaze-Flieger zielen kurz und stürzen dann.
+  Nach jedem dritten Sektor gibt es ein Schiff dazu.
 - **Waffen-Extras** fallen von besiegten Gegnern und ersetzen bzw. verbessern
   die aktuelle Waffe (bis Stufe 3): Streuschuss, Schnellfeuer, Laser
   (durchschlagend) und homing Raketen (mit Explosionsradius). Dazu Schild
@@ -47,8 +57,9 @@ Highscore wird lokal im Browser gespeichert (`localStorage`).
 
 ## Technik
 
-Ein einziges `<canvas>` (240×160 Pixel, pixelig hochskaliert) ohne externe
-Bibliotheken, Bilder oder Fonts. Alles wird zur Laufzeit erzeugt:
+Ein einziges `<canvas>` (320×200 Pixel, pixelig auf bis zu 960 Pixel Breite
+hochskaliert) ohne externe Bibliotheken, Bilder oder Fonts. Alles wird zur
+Laufzeit erzeugt:
 
 - **Eigener 5×7-Bitmap-Font** (inklusive Umlaute) für HUD, Menü und Banner
 - **Pixel-Sprites** für Schiff und Gegner, als Zeichen-Raster im Code definiert
