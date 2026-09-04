@@ -5,6 +5,25 @@
   const R = ATL.rooms.define;
   const SYM = () => ATL.puzzles.SYMBOLS;
 
+  // Helfer für die Ausschmückung: Möwen, die im Bildausschnitt bleiben, und eine Krabbe
+  const gulls = (ctx, t, x0, y0, w, n, color, ys) => {
+    ctx.strokeStyle = color || 'rgba(250,250,245,0.9)'; ctx.lineWidth = 1.5;
+    for (let i = 0; i < n; i++) {
+      const sp = 10 + (i % 3) * 4;
+      const bx = x0 + ((i * 71 + t * sp) % w), by = y0 + ((i * 23) % (ys || 36)) + Math.sin(t * 1.1 + i) * 5;
+      const f = Math.sin(t * 5 + i * 1.7) * 3;
+      ctx.beginPath(); ctx.moveTo(bx - 7, by + f); ctx.quadraticCurveTo(bx - 3, by - 2, bx, by); ctx.quadraticCurveTo(bx + 3, by - 2, bx + 7, by + f); ctx.stroke();
+    }
+  };
+  const crab = (ctx, x, y, s, c) => {
+    for (let i = -1; i <= 1; i += 2) {
+      for (let k = 0; k < 3; k++) A.line(ctx, x + i * 5 * s, y + k * s, x + i * (10 + k * 2) * s, y + (3 + k * 3) * s, c, 1.2 * s);
+      A.line(ctx, x + i * 6 * s, y - 2 * s, x + i * 11 * s, y - 6 * s, c, 2 * s); A.circle(ctx, x + i * 11 * s, y - 6 * s, 2 * s, c);
+    }
+    A.ell(ctx, x, y, 7 * s, 4.5 * s, c);
+    A.circle(ctx, x - 2 * s, y - 3 * s, 1 * s, '#111'); A.circle(ctx, x + 2 * s, y - 3 * s, 1 * s, '#111');
+  };
+
   Object.assign(ATL.codex, {
     fresken: { title: 'Die Fresken von Akrotiri', origin: 'Archäologie von Santorin', text: 'In den Häusern von Akrotiri fanden die Ausgräber ab 1967 Wandmalereien, die unter dem Bimsstein fast unversehrt geblieben waren. Im sogenannten Westhaus zeigt ein schmaler Fries eine Flotte von Schiffen, die zwischen zwei Küstenstädten fährt, dazu Fischer mit ihrem Fang. Im Haus Delta blühen auf einer felsigen Landschaft rote Lilien, über denen Schwalben fliegen; das Bild heißt heute Frühlingsfresko. Aus anderen Gebäuden stammen boxende Knaben, Antilopen, blaue Affen und Frauen beim Safranpflücken.\nDie Malereien wurden auf Kalkputz ausgeführt, in Rot, Gelb, Blau, Schwarz und Weiß, und stehen der minoischen Kunst Kretas nahe. Menschliche Überreste wurden in der Siedlung nicht gefunden; die Bewohner hatten sie vor dem Ausbruch offenbar verlassen. Die meisten Fresken sind heute im Nationalmuseum in Athen und im Museum für prähistorisches Thera in Fira zu sehen.' },
   });
@@ -29,6 +48,11 @@
       A.ship(ctx, 700, 350, 150, '#3a3a44');
       A.rect(ctx, 762, 300, 3, 30, '#222'); A.poly(ctx, [765, 300, 785, 306, 765, 312], '#8a2a2a');
       A.text(ctx, 'MERIDIAN', 775, 364, { font: 'bold 8px Georgia', color: '#c8c8d0', align: 'center' });
+      // Ferne: Dunst am Horizont, Fischerboote draußen in der Caldera, Netzbojen
+      ctx.fillStyle = A.grad(ctx, 0, 300, 0, 342, ['rgba(232,222,204,0.45)', 'rgba(232,222,204,0)']); ctx.fillRect(640, 300, 320, 42);
+      A.boat(ctx, 662, 322, 24, '#6a5a4a', true); A.boat(ctx, 896, 336, 30, '#5a4a3a', true); A.boat(ctx, 936, 316, 16, '#7a6a5a');
+      A.poly(ctx, [948, 314, 951, 300, 956, 314], '#f0ece0');
+      for (const [bx, by, r] of [[930, 466, 6], [886, 404, 5], [702, 462, 5]]) { A.ell(ctx, bx, by + r * 0.8, r * 1.4, r * 0.4, 'rgba(0,0,0,0.3)'); A.circle(ctx, bx, by, r, '#c83a2a'); A.rect(ctx, bx - r, by - r * 0.35, r * 2, r * 0.6, '#f0e8d8'); A.rect(ctx, bx - 1, by - r - 5, 2, 5, '#3a3a3a'); }
       // Steilwand der Caldera: Schichten aus Asche, Bims und Lava
       const layers = [['#4a3a34', 60], ['#7a5a48', 110], ['#c9b89a', 150], ['#8a6a58', 185], ['#3a2e2a', 230], ['#a08878', 265], ['#2a2220', 310]];
       for (let i = 0; i < layers.length; i++) { const y0 = layers[i][1], y1 = i + 1 < layers.length ? layers[i + 1][1] : 360; A.poly(ctx, [0, y0, 640 - i * 6, y0 + 4, 660 - i * 4, y1 + 6, 0, y1 + 6], layers[i][0]); }
@@ -40,10 +64,27 @@
       const hr = ATL.U.rng(8);
       for (let x = 0; x < 590; x += 34) { const h = 14 + hr() * 22; A.rect(ctx, x, 60 - h, 30, h, hr() < 0.5 ? '#f4f0e8' : '#e6e0d6'); A.rect(ctx, x + 10, 60 - h + 6, 6, 8, '#3a5a8a'); }
       for (const x of [120, 330, 470]) { A.circle(ctx, x, 34, 12, '#3a6aa8'); A.rect(ctx, x - 12, 34, 24, 26, '#f4f0e8'); A.rect(ctx, x - 2, 14, 4, 10, '#e8e0d4'); }
+      // Glockenturm der Kapelle, Wäsche zwischen den Häusern, Windmühle auf dem Felsvorsprung
+      A.rect(ctx, 236, 22, 14, 34, '#f4f0e8'); A.rect(ctx, 240, 28, 6, 9, '#3a3a3a'); A.circle(ctx, 243, 32, 2, '#c9a03a'); A.poly(ctx, [233, 22, 253, 22, 243, 13], '#e8e0d4'); A.line(ctx, 243, 13, 243, 6, '#3a3a3a', 1.5); A.line(ctx, 240, 9, 246, 9, '#3a3a3a', 1.5);
+      A.line(ctx, 58, 44, 98, 46, '#d8d0c0', 1); for (let i = 0; i < 5; i++) A.rect(ctx, 62 + i * 7, 45 + (i % 2), 4, 6, ['#e8e0d0', '#5a7aa8', '#e8e0d0', '#b34a3a', '#e8e0d0'][i]);
+      A.line(ctx, 392, 42, 428, 44, '#d8d0c0', 1); for (let i = 0; i < 4; i++) A.rect(ctx, 396 + i * 8, 43 + (i % 2), 5, 7, ['#b34a3a', '#e8e0d0', '#4a7a5a', '#e8e0d0'][i]);
+      A.poly(ctx, [596, 66, 650, 66, 642, 56, 604, 56], '#c9b89a'); A.poly(ctx, [600, 66, 650, 66, 646, 60, 604, 60], 'rgba(0,0,0,0.2)');
+      A.rect(ctx, 614, 36, 18, 22, '#f4f0e8'); A.rect(ctx, 630, 36, 2, 22, 'rgba(0,0,0,0.15)'); A.poly(ctx, [610, 36, 636, 36, 623, 24], '#8a6a48'); A.rect(ctx, 621, 46, 4, 6, '#3a3a3a');
+      for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2 + 0.4; A.line(ctx, 623, 37, 623 + Math.cos(a) * 22, 37 + Math.sin(a) * 22, '#e8e0d4', 2); A.line(ctx, 623 + Math.cos(a) * 7, 37 + Math.sin(a) * 7, 623 + Math.cos(a) * 20, 37 + Math.sin(a) * 20, 'rgba(0,0,0,0.3)', 1); }
       // Eselspfad im Zickzack
       const seg = [[430, 350], [220, 300], [400, 250], [180, 200], [360, 150], [150, 100], [300, 62]];
       for (let i = 0; i + 1 < seg.length; i++) { A.line(ctx, seg[i][0], seg[i][1], seg[i + 1][0], seg[i + 1][1], '#c8b898', 5 - i * 0.4); A.line(ctx, seg[i][0], seg[i][1] + 2, seg[i + 1][0], seg[i + 1][1] + 2, 'rgba(0,0,0,0.25)', 2); }
       for (let i = 0; i < 40; i++) { const k = i / 40; A.rect(ctx, 430 - k * 210 + Math.sin(i) * 3, 350 - k * 50, 3, 1.5, 'rgba(0,0,0,0.3)'); }
+      // Zwei Esel mit Reisenden weiter oben auf dem Pfad, je höher, desto kleiner und blasser
+      const donkey = (x, y, s, alpha) => {
+        ctx.save(); ctx.translate(x, y); ctx.scale(s, s); ctx.globalAlpha = alpha;
+        A.ell(ctx, 0, 26, 24, 4, 'rgba(0,0,0,0.3)');
+        for (const lx of [-18, -8, 10, 18]) A.rect(ctx, lx, 8, 5, 18, '#6a5a4a');
+        A.ell(ctx, 0, 0, 26, 13, '#8a7a6a'); A.rr(ctx, 16, -24, 14, 22, 5, '#8a7a6a'); A.poly(ctx, [18, -24, 14, -38, 22, -26], '#7a6a5a'); A.poly(ctx, [28, -24, 32, -38, 30, -26], '#7a6a5a');
+        A.rect(ctx, -12, -12, 24, 8, '#b34a3a'); A.rr(ctx, -8, -34, 12, 24, 4, '#e8e0d0'); A.rect(ctx, -10, -14, 16, 5, '#3a3a3a'); A.circle(ctx, -2, -38, 5, '#c8a888'); A.ell(ctx, -2, -42, 9, 2.5, '#d8c8a0');
+        ctx.restore();
+      };
+      donkey(330, 256, 0.55, 0.9); donkey(250, 170, 0.4, 0.7);
       // Kai aus dunklem Vulkangestein
       A.stones(ctx, 0, 340, 640, 60, '#4a4240', 33, 22);
       A.ground(ctx, 0, 398, 640, 202, '#5a524c', '#2e2a28');
@@ -84,11 +125,51 @@
       // Fähranleger links
       A.rect(ctx, 0, 380, 70, 220, '#3a3634'); A.rect(ctx, 0, 376, 70, 6, '#5a5654');
       A.rr(ctx, 14, 400, 30, 40, 3, '#7a6a48'); A.text(ctx, 'ΠΟΡΘΜΕΙΟ', 29, 424, { font: 'bold 6px Georgia', color: '#2a2018', align: 'center' });
+      // Ausschmückung am Kai: Schatten unter der Mauer, Abnutzung, Pfützen
+      A.poly(ctx, [40, 400, 640, 400, 640, 412, 40, 416], 'rgba(0,0,0,0.14)');
+      A.cracks(ctx, 100, 420, 420, 130, 9, 'rgba(0,0,0,0.22)'); A.pebbles(ctx, 40, 556, 320, 26, 12, '#5e5650');
+      A.puddle(ctx, 300, 522, 96, 16, 'rgba(140,160,190,0.2)'); A.puddle(ctx, 150, 476, 54, 10, 'rgba(140,160,190,0.16)');
+      // Taverne an der Kaimauer: Markise, Schild, Tisch mit zwei Stühlen, Fässer, Fischkisten, Katze
+      A.awning(ctx, 98, 344, 124, 14, '#b34a3a', '#f0e8d8', 6);
+      A.sign(ctx, 128, 364, 64, 15, 'ΤΑΒΕΡΝΑ', '#3a5a8a', '#f0e8d0', 'bold 9px Georgia');
+      A.ell(ctx, 146, 404, 44, 4, 'rgba(0,0,0,0.3)');
+      A.table(ctx, 118, 380, 56, 6, '#7a6a4a', 18); A.chair(ctx, 100, 400, 14, '#6a5a3a'); A.chair(ctx, 178, 400, 14, '#6a5a3a');
+      A.bottle(ctx, 134, 380, 12, '#3a6a3a'); A.circle(ctx, 152, 377, 4, '#d8d0c0'); A.circle(ctx, 163, 378, 4, '#d8d0c0'); A.rect(ctx, 140, 376, 12, 3, '#e8e0d0');
+      A.ell(ctx, 66, 402, 40, 4, 'rgba(0,0,0,0.3)'); A.barrel(ctx, 40, 366, 26, 34, '#6a4a2a'); A.barrel(ctx, 68, 372, 22, 28, '#7a5a3a');
+      for (let i = 0; i < 3; i++) { A.crate(ctx, 200 + (i % 2) * 4, 396 - i * 14, 36, 14, '#a89878', ''); A.rect(ctx, 202 + (i % 2) * 4, 398 - i * 14, 32, 2, 'rgba(255,255,255,0.15)'); }
+      for (let i = 0; i < 4; i++) A.ell(ctx, 208 + i * 8, 371 + (i % 2), 4, 1.5, '#8aa0a8');
+      A.ell(ctx, 222, 364, 9, 5, '#3a3430'); A.circle(ctx, 231, 360, 4.5, '#3a3430'); A.poly(ctx, [228, 357, 229, 352, 231, 356], '#3a3430'); A.poly(ctx, [233, 357, 235, 352, 235, 356], '#3a3430'); A.path(ctx, [213, 364, 206, 359, 208, 353], '#3a3430', 2); A.circle(ctx, 230, 359, 0.8, '#c8c848'); A.circle(ctx, 233, 359, 0.8, '#c8c848');
+      // Fähranleger: Ofenrohr, Rettungsring, Laterne
+      A.rect(ctx, 10, 346, 6, 32, '#2a2a2a'); A.rect(ctx, 7, 344, 12, 3, '#3a3a3a');
+      A.circle(ctx, 32, 472, 11, '#f0e8d8'); A.circle(ctx, 32, 472, 6, '#3a3634'); for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2 + 0.4; A.line(ctx, 32 + Math.cos(a) * 6, 472 + Math.sin(a) * 6, 32 + Math.cos(a) * 11, 472 + Math.sin(a) * 11, '#c83a2a', 4); }
+      A.line(ctx, 32, 461, 32, 452, '#a89060', 1.5);
+      A.lamppost(ctx, 60, 380, 56, 0, false, '#3a3a40');
+      // Kiosk: Limonadenkiste, Weinfass, Sack; Schatten unter Kiosk, Esel und Kohlenbecken
+      A.ell(ctx, 330, 461, 88, 5, 'rgba(0,0,0,0.3)'); A.ell(ctx, 480, 417, 30, 4, 'rgba(0,0,0,0.3)'); A.ell(ctx, 611, 471, 20, 4, 'rgba(0,0,0,0.3)');
+      A.crate(ctx, 254, 436, 34, 22, '#a89878', ''); for (let i = 0; i < 4; i++) A.bottle(ctx, 259 + i * 8, 437, 11, i % 2 ? '#3a8a5a' : '#c8a848');
+      A.barrel(ctx, 372, 424, 28, 36, '#6a4a2a'); A.sack(ctx, 402, 460, 14, 22, '#c8b48a');
+      // Kaikante: Tau vom Poller zum Kaïki, Fender aus alten Reifen, Möwe auf dem Stegpfahl, Schatten unter dem Steg
+      A.rope(ctx, [612, 404, 640, 410, 662, 416], '#a89060', 2);
+      for (const y of [452, 566]) { A.line(ctx, 632, y - 26, 638, y - 8, '#a89060', 1.5); A.circle(ctx, 641, y, 8, '#1a1816'); A.circle(ctx, 641, y, 4, '#2e2a28'); }
+      A.shadeRect(ctx, 660, 544, 182, 12, 0.35);
+      A.ell(ctx, 873, 482, 6, 3.5, '#f0ece4'); A.ell(ctx, 870, 481, 4, 2, '#b8b8b0'); A.circle(ctx, 878, 479, 2.6, '#f0ece4'); A.line(ctx, 880, 479, 884, 480, '#e0a030', 1.5);
       A.vignette(ctx, 960, 600, 0.4);
       A.grain(ctx, 960, 600, 4, 0.04);
     },
+    paintFront(ctx) {
+      // Ganz vorn: Poller mit Tau und eine Tauwerkrolle an der Kaikante
+      A.ell(ctx, 130, 604, 20, 5, 'rgba(0,0,0,0.4)');
+      A.rr(ctx, 118, 576, 24, 30, 6, '#2a2624'); A.ell(ctx, 130, 576, 12, 5, '#4a4440'); A.rect(ctx, 120, 588, 20, 2, 'rgba(255,255,255,0.1)');
+      A.rope(ctx, [142, 584, 190, 592, 250, 590, 300, 598], 'rgba(0,0,0,0.3)', 6); A.rope(ctx, [142, 584, 190, 592, 250, 590, 300, 598], '#a89060', 4);
+      for (let i = 0; i < 3; i++) A.ell(ctx, 470, 596 + i * 2, 34 - i * 7, 8 - i * 2, i % 2 ? '#8a7a4a' : '#a89060');
+    },
     animate(ctx, t, g) {
       A.waterAnim(ctx, 640, 300, 320, 300, t, 'rgba(200,230,255,0.12)');
+      // Möwen über der Caldera, Rauch vom Vulkan und aus dem Ofenrohr, Schaum an der Kaikante
+      gulls(ctx, t, 640, 236, 320, 4, 'rgba(250,250,245,0.85)');
+      A.smoke(ctx, 905, 286, t, 'rgba(180,170,170,0.3)', 0.5);
+      A.smoke(ctx, 13, 346, t, 'rgba(200,200,200,0.25)', 0.3);
+      for (let i = 0; i < 6; i++) { const y = 300 + ((i * 53 + t * 9) % 300); if (y < 478 || y > 548) A.ell(ctx, 647, y, 3 + Math.sin(t * 2 + i) * 1.5, 1.5, 'rgba(255,255,255,0.22)'); }
       const f = 1 + Math.sin(t * 9) * 0.15;
       A.glow(ctx, 611, 432, 40 * f, 'rgba(255,120,30,0.9)', 0.5);
       for (let i = 0; i < 5; i++) A.circle(ctx, 598 + i * 6, 430 + (i % 2) * 3, 3, i % 2 ? '#ff7a30' : '#ffb060');
@@ -182,6 +263,12 @@
         look: 'Netze zum Trocknen. Sie riechen nach dem, was sie gefangen haben.', take: 'Ich fische nicht.', use: 'Ich habe nicht vor, jemanden zu fangen. Noch nicht.' },
       { id: 'poller', name: 'Poller', rect: [600, 398, 22, 26], at: [560, 470, 'r'],
         look: 'Ein eiserner Poller. Stavros\' Tau ist daran festgemacht.', pull: 'Er sitzt fest im Kai. Seit hundert Jahren.', use: 'Das Tau ist fest. Stavros kann Knoten.' },
+      { id: 'windmuehle', name: 'Windmühle', rect: [598, 20, 54, 46], at: [520, 440, 'u'],
+        look: 'Eine Windmühle am Kraterrand. Die Flügel stehen still. Auf Thera mahlt man Gerste, wenn der Wind will, und der Wind will meistens.' },
+      { id: 'taverne', name: 'Taverne', rect: [96, 342, 130, 62], at: [160, 424, 'u'],
+        look: 'Zwei Stühle, ein Tisch, eine Flasche ohne Etikett. Die Taverne des Hafens. Der Wirt ist oben in Fira und kommt herunter, wenn die Fähre kommt.' },
+      { id: 'bojen', name: 'Bojen', rect: [872, 392, 70, 84], at: [620, 500, 'r'],
+        look: 'Bojen für die Netze. Rot und weiß, damit man sie sieht, wenn der Wind die Caldera aufwühlt. Heute liegen sie still.' },
     ],
     exits: [
       { id: 'anleger', name: 'Fähranleger', rect: [0, 376, 70, 224], at: [60, 520, 'l'],
@@ -425,11 +512,63 @@
       A.line(ctx, 580, 566, 660, 556, '#8a7a5a', 6); A.line(ctx, 600, 566, 612, 550, '#8a7a5a', 4);
       A.rock(ctx, 800, 536, 40, 22, '#3a3632', 9); A.rock(ctx, 850, 556, 26, 14, '#4a4440', 10); A.rock(ctx, 700, 500, 22, 12, '#3a3632', 11);
       for (let i = 0; i < 6; i++) A.ell(ctx, 320 + i * 40, 478 + (i % 2) * 6, 14, 3, '#3a4a2a');
+      // Ausschmückung der Bucht
+      // Ferne im Dunst: Fischerboote, ein Segel, Häuser an der fernen Küste
+      ctx.fillStyle = A.grad(ctx, 0, 296, 0, 334, ['rgba(240,225,205,0.45)', 'rgba(240,225,205,0)']); ctx.fillRect(0, 296, 360, 38);
+      for (const [hx, hy] of [[196, 296], [222, 295], [248, 297], [270, 296]]) A.rect(ctx, hx, hy, 3, 3, '#e8e0d0');
+      A.boat(ctx, 60, 318, 22, '#7a6a5a', true); A.boat(ctx, 250, 328, 28, '#6a5a4a', true); A.poly(ctx, [330, 314, 335, 300, 340, 314], '#f0ece0'); A.boat(ctx, 326, 314, 14, '#7a6a5a');
+      // Lichtkante an der Klippe (Sonne links), Kapernbüsche im Fels
+      A.path(ctx, [362, 300, 402, 180, 442, 110, 522, 60, 700, 40], 'rgba(255,230,190,0.3)', 3);
+      const caper = (x, y, s) => { A.bush(ctx, x, y, 34 * s, '#5a7a4a', 61); for (let k = 0; k < 4; k++) A.path(ctx, [x + (k - 1.5) * 8 * s, y + 4 * s, x + (k - 1.5) * 9 * s, y + 16 * s], '#4a6a3a', 1.5 * s); for (let k = 0; k < 3; k++) A.circle(ctx, x + (k - 1) * 9 * s, y - 4 * s, 2 * s, '#f0ecf0'); };
+      caper(440, 382, 1); caper(700, 306, 0.8); caper(560, 226, 0.7); caper(880, 180, 0.6);
+      // Ziegenkot auf dem Sims und dem Pfad
+      const gd = ATL.U.rng(63);
+      for (let i = 0; i < 14; i++) { const x = 500 + gd() * 186; A.ell(ctx, x, 374 - (x - 490) * 0.08 + gd() * 6, 1.6, 1, '#2a1e14'); }
+      for (let i = 0; i < 12; i++) { const k = gd(); A.ell(ctx, 740 + 130 * k + (gd() - 0.5) * 8, 470 - 54 * k, 1.6, 1, '#2a1e14'); }
+      // Gezeitenlinie, nasser Sand, Tang
+      A.path(ctx, [0, 474, 120, 462, 260, 468, 400, 454, 480, 448], 'rgba(30,50,60,0.35)', 8);
+      for (const [x, y] of [[30, 479], [82, 474], [150, 470], [212, 473], [292, 476], [352, 467], [424, 462], [472, 458]]) { A.path(ctx, [x, y, x + 10, y + 3, x + 22, y - 2, x + 32, y + 4], '#2e3e22', 2.5); A.ell(ctx, x + 14, y + 2, 5, 2, '#3a4a2a'); }
+      // Fischerhütte aus Lavabrocken mit Treibholzdach, Netz am Gestell, Ruder
+      A.ell(ctx, 322, 468, 42, 5, 'rgba(0,0,0,0.3)');
+      A.stones(ctx, 292, 430, 58, 36, '#7a6a58', 12, 10);
+      A.poly(ctx, [286, 432, 356, 432, 350, 420, 292, 420], '#8a7a5a'); for (let i = 0; i < 9; i++) A.line(ctx, 290 + i * 7, 432, 293 + i * 7, 420, 'rgba(0,0,0,0.25)', 1);
+      A.rect(ctx, 314, 442, 14, 24, '#1a1410'); A.rect(ctx, 336, 440, 8, 8, '#1a1410');
+      A.line(ctx, 352, 466, 362, 428, '#8a7a5a', 3); A.ell(ctx, 362, 426, 3, 6, '#8a7a5a');
+      A.rect(ctx, 258, 428, 3, 38, '#6a5a44'); A.rect(ctx, 286, 428, 3, 38, '#6a5a44');
+      for (let i = 0; i < 6; i++) A.line(ctx, 262 + i * 5, 432, 260 + i * 5, 464, 'rgba(60,50,30,0.7)', 1); for (let y = 436; y < 464; y += 6) A.line(ctx, 260, y, 288, y - 1, 'rgba(60,50,30,0.7)', 1);
+      // Schatten unter Stavros' Boot, Netz zum Flicken auf dem Sand, Bootsspur zum Wasser
+      A.ell(ctx, 120, 548, 96, 7, 'rgba(0,0,0,0.35)');
+      ctx.save(); ctx.beginPath(); ctx.ellipse(120, 566, 62, 14, 0, 0, Math.PI * 2); ctx.clip(); ctx.fillStyle = 'rgba(90,80,50,0.4)'; ctx.fillRect(58, 552, 124, 28);
+      for (let i = -6; i < 8; i++) { A.line(ctx, 60 + i * 12, 552, 72 + i * 12, 580, 'rgba(40,30,15,0.6)', 1); A.line(ctx, 72 + i * 12, 552, 60 + i * 12, 580, 'rgba(40,30,15,0.6)', 1); } ctx.restore();
+      for (const [cx, cy] of [[68, 560], [118, 578], [166, 562]]) A.circle(ctx, cx, cy, 3, '#c8b070');
+      A.path(ctx, [452, 452, 470, 472, 488, 500, 498, 522], 'rgba(0,0,0,0.35)', 5); A.path(ctx, [455, 452, 473, 472, 491, 500, 501, 522], 'rgba(255,255,255,0.08)', 1.5);
+      // Muscheln, Seeigel, Bimsbrocken, eine Krabbe
+      const sh = ATL.U.rng(59);
+      for (let i = 0; i < 14; i++) { const x = 40 + sh() * 880, y = 486 + sh() * 94, r = 2 + sh() * 2.5; A.ell(ctx, x, y, r, r * 0.7, sh() < 0.5 ? '#e8dcc8' : '#d8b8a8'); A.line(ctx, x - r * 0.6, y, x + r * 0.6, y, 'rgba(0,0,0,0.2)', 0.8); }
+      for (const [x, y, r, c] of [[706, 548, 4, '#e8dcc8'], [722, 556, 3, '#d8b8a8'], [740, 546, 3.5, '#e8dcc8'], [752, 558, 2.5, '#c8a898'], [728, 543, 2.5, '#e0d0c0']]) { A.ell(ctx, x, y, r, r * 0.7, c); A.line(ctx, x - r * 0.6, y, x + r * 0.6, y, 'rgba(0,0,0,0.25)', 0.8); }
+      A.circle(ctx, 716, 552, 3.5, '#3a3430'); for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4; A.line(ctx, 716, 552, 716 + Math.cos(a) * 6, 552 + Math.sin(a) * 4, '#3a3430', 1); }
+      for (let i = 0; i < 9; i++) { const x = 380 + sh() * 460, y = 456 + sh() * 40; A.rock(ctx, x, y, 8 + sh() * 12, 5 + sh() * 6, '#d8d0b8', 100 + i); }
+      A.rock(ctx, 560, 566, 18, 10, '#e0d8c0', 120); A.rock(ctx, 180, 500, 12, 7, '#d8d0b8', 121);
+      crab(ctx, 230, 494, 0.8, '#8a4a3a');
+      // Möwen auf den Felsen, Disteln am Fuß der Klippe und am Pfad
+      const gull = (x, y, d) => { A.ell(ctx, x, y, 7, 4, '#f0ece4'); A.ell(ctx, x - d * 2, y - 0.5, 5, 2.5, '#b8b8b0'); A.circle(ctx, x + d * 6, y - 4, 3, '#f0ece4'); A.line(ctx, x + d * 8, y - 4, x + d * 12, y - 3, '#e0a030', 1.5); A.line(ctx, x - 2, y + 4, x - 2, y + 7, '#e0a030', 1); A.line(ctx, x + 2, y + 4, x + 2, y + 7, '#e0a030', 1); };
+      gull(820, 532, -1); gull(863, 552, 1); gull(711, 496, -1);
+      const thistle = (x, y, s) => { A.line(ctx, x, y, x, y - 16 * s, '#6a7a4a', 1.5 * s); for (let k = 0; k < 3; k++) A.line(ctx, x, y - 6 * s - k * 3 * s, x + (k % 2 ? 6 : -6) * s, y - 10 * s - k * 3 * s, '#6a7a4a', 1.2 * s); A.circle(ctx, x, y - 17 * s, 3.5 * s, '#7a8a5a'); for (let k = 0; k < 8; k++) { const a = -Math.PI + (k / 7) * Math.PI; A.line(ctx, x + Math.cos(a) * 3 * s, y - 17 * s + Math.sin(a) * 3 * s, x + Math.cos(a) * 6 * s, y - 17 * s + Math.sin(a) * 6 * s, '#9a6ab0', 1.2 * s); } };
+      thistle(392, 446, 1); thistle(404, 450, 0.8); thistle(380, 448, 0.6); thistle(730, 458, 1); thistle(748, 452, 0.7); thistle(912, 464, 0.9);
       A.vignette(ctx, 960, 600, 0.42);
       A.grain(ctx, 960, 600, 5, 0.04);
     },
+    paintFront(ctx) {
+      // Ganz vorn: gebleichter Treibholzstamm links, Lavablock rechts
+      A.ell(ctx, 100, 594, 92, 6, 'rgba(0,0,0,0.35)');
+      A.path(ctx, [14, 592, 80, 586, 150, 590, 198, 584], '#8a7a5a', 10); A.path(ctx, [14, 591, 80, 585, 150, 589, 198, 583], '#b8a888', 5); A.line(ctx, 150, 590, 170, 578, '#9a8a6a', 5);
+      A.rock(ctx, 892, 578, 84, 34, '#3a3632', 12); A.rock(ctx, 930, 586, 40, 22, '#4a4440', 13);
+    },
     animate(ctx, t) {
       A.waterAnim(ctx, 0, 300, 560, 180, t, 'rgba(220,240,255,0.14)');
+      // Möwen über dem Meer, eine Krabbe, die seitwärts über den Sand geht
+      gulls(ctx, t, 20, 196, 330, 4, 'rgba(250,250,245,0.9)');
+      crab(ctx, 640 + Math.sin(t * 0.35) * 28, 566 + Math.cos(t * 0.7) * 1.5, 1, '#a04a30');
       const f = Math.sin(t * 1.5);
       A.path(ctx, [0, 471 + f * 2, 120, 459 + f * 2, 260, 465 + f, 400, 451 + f * 2, 480, 445], `rgba(255,255,255,${0.35 + f * 0.15})`, 4);
     },
@@ -498,6 +637,12 @@
       { id: 'boot_strand', name: 'Stavros\' Boot', rect: [20, 460, 200, 60], at: [240, 520, 'l'],
         look: 'Das Kaïki, auf den Sand gezogen. Stavros sitzt daneben und tut, als flicke er Netze.',
         use: (g) => g.travel(g.hs('boot')), take: 'Es gehört Stavros.' },
+      { id: 'huette', name: 'Fischerhütte', rect: [256, 418, 108, 48], at: [320, 486, 'u'],
+        look: 'Eine Hütte aus Lavabrocken und Treibholz, ein Netz am Gestell, ein Ruder an der Wand. Wer hier wohnt, hat wenig. Aber er hat den besten Blick auf Kreta.' },
+      { id: 'muscheln', name: 'Muscheln', rect: [698, 538, 64, 26], at: [730, 574, 'u'], z: 2,
+        look: 'Muscheln, Schnecken, ein Seeigel ohne Stacheln. Das Meer räumt auf und legt alles ordentlich an den Rand. Ich kenne Kollegen, die das nicht können.' },
+      { id: 'kapern', name: 'Kapernstrauch', rect: [420, 362, 44, 30], at: [440, 480, 'u'],
+        look: 'Ein Kapernstrauch, aus dem nackten Fels gewachsen. Die Knospen kommen hier in Salz und Essig auf den Tisch. Ich könnte welche pflücken, aber ich habe keinen Tisch.' },
     ],
     exits: [
       { id: 'boot', name: 'Zurück zum Hafen', rect: [20, 520, 200, 40], at: [240, 540, 'l'], to: 'th_harbor', pos: [580, 480], dir: 'l', z: 3,
@@ -669,10 +814,59 @@
         for (let r = 0; r < 3; r++) { const ro = 92 - r * 30; ctx.strokeStyle = '#4a4a54'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(762, 300, ro * 0.45, Math.PI * 0.5, Math.PI * 1.5); ctx.stroke(); ctx.beginPath(); ctx.arc(878, 300, ro * 0.45, -Math.PI * 0.5, Math.PI * 0.5); ctx.stroke(); }
         A.stairs(ctx, 740, 470, 160, 4, 10, '#1a1a1c', 'r');
       }
+      // Ausschmückung: Grabungsalltag 1938
+      // Boden: Bimskrümel, ausgetretener Weg vom Pfad zum Tor, Schatten unter Zelten und Pithoi
+      ctx.save(); ctx.globalAlpha = 0.4; A.pebbles(ctx, 0, 448, 960, 136, 27, '#b8ac94'); ctx.restore();
+      A.poly(ctx, [30, 500, 300, 486, 700, 480, 900, 486, 900, 512, 700, 508, 300, 520, 30, 536], 'rgba(0,0,0,0.08)');
+      A.ell(ctx, 125, 422, 66, 5, 'rgba(0,0,0,0.25)'); A.ell(ctx, 250, 426, 66, 5, 'rgba(0,0,0,0.25)'); A.ell(ctx, 500, 446, 40, 5, 'rgba(0,0,0,0.3)');
+      // Stufen aus Bims zum Pfad hinunter, Abraum mit Spaten
+      for (let i = 0; i < 7; i++) { const y = 440 - i * 20, w = 38 - i * 3; A.poly(ctx, [0, y, w, y - 4, w, y + 10, 0, y + 14], i % 2 ? '#c8bca0' : '#d8ccb0'); A.line(ctx, 0, y + 14, w, y + 10, 'rgba(0,0,0,0.3)', 1.5); A.line(ctx, 0, y, w, y - 4, 'rgba(255,255,255,0.25)', 1); }
+      A.ell(ctx, 66, 445, 24, 7, '#c8bca0'); A.rubble(ctx, 46, 430, 40, 16, 19, '#d0c4a8');
+      A.line(ctx, 74, 444, 84, 410, '#5a4a34', 3); A.poly(ctx, [68, 446, 82, 440, 78, 430, 66, 436], '#6a6a6a'); A.rect(ctx, 82, 406, 6, 4, '#5a4a34');
+      // Zeltleine mit Pflock, lose Pflöcke und Holzhammer, Fundkiste mit Nummer
+      A.line(ctx, 60, 418, 46, 436, '#d8d0b8', 1); A.rect(ctx, 44, 430, 4, 8, '#6a5a3a');
+      for (let k = 0; k < 3; k++) A.line(ctx, 138 + k * 7, 440 + (k % 2) * 3, 150 + k * 7, 444 + (k % 2) * 2, '#6a5a3a', 2.5);
+      A.rr(ctx, 160, 430, 12, 8, 2, '#5a4a34'); A.line(ctx, 166, 438, 170, 446, '#7a6a54', 2);
+      A.ell(ctx, 158, 431, 18, 3, 'rgba(0,0,0,0.3)'); A.crate(ctx, 142, 406, 32, 24, '#8a7a5a', '14');
+      A.text(ctx, '4', 252, 430, { font: 'bold 9px Georgia', color: '#3a2a1a', align: 'center' });
+      // Sieb und Eimer an den Kisten
+      ctx.save(); ctx.translate(288, 428); ctx.rotate(-0.22); A.rect(ctx, -14, -14, 28, 28, '#8a7a5a'); A.rect(ctx, -11, -11, 22, 22, '#c8bca0'); for (let k = -8; k <= 8; k += 4) { A.line(ctx, k, -11, k, 11, 'rgba(0,0,0,0.3)', 0.8); A.line(ctx, -11, k, 11, k, 'rgba(0,0,0,0.3)', 0.8); } ctx.restore();
+      A.pot(ctx, 262, 446, 16, 18, '#6a6a6a'); ctx.strokeStyle = '#4a4a4a'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(262, 430, 8, Math.PI, 0); ctx.stroke();
+      // Schubkarre mit Bims vor dem Westhaus, Maßstab am Türpfosten
+      A.ell(ctx, 404, 446, 34, 5, 'rgba(0,0,0,0.3)');
+      A.poly(ctx, [378, 418, 430, 418, 424, 438, 386, 438], '#6a5a44'); A.rect(ctx, 378, 416, 52, 3, '#7a6a54'); A.ell(ctx, 404, 418, 22, 5, '#c8bca0'); A.ell(ctx, 398, 416, 8, 3, '#d8ccb0');
+      A.circle(ctx, 384, 442, 7, '#2a2a2a'); A.circle(ctx, 384, 442, 3, '#777');
+      A.line(ctx, 430, 421, 447, 429, '#5a4a34', 3); A.line(ctx, 430, 435, 447, 441, '#5a4a34', 3); A.rect(ctx, 402, 438, 3, 8, '#5a4a34'); A.rect(ctx, 420, 438, 3, 8, '#5a4a34');
+      for (let k = 0; k < 7; k++) A.line(ctx, 370 + k * 0.5, 446 - k * 10, 370.5 + k * 0.5, 436 - k * 10, k % 2 ? '#e8e0d0' : '#c83a2a', 3);
+      // Vor dem Osthaus: Laterne, Tafel mit Freskenfragmenten, Wasserkanister
+      A.lantern(ctx, 527, 446, 0, false);
+      A.rect(ctx, 588, 404, 30, 42, '#8a7a5a'); A.rect(ctx, 590, 406, 26, 38, '#d8ccb0');
+      A.poly(ctx, [593, 410, 604, 408, 606, 418, 595, 420], '#b34a3a'); A.poly(ctx, [606, 412, 614, 414, 612, 424, 604, 422], '#2f5f8a'); A.poly(ctx, [594, 426, 604, 424, 608, 436, 596, 440], '#d8b56a'); A.poly(ctx, [607, 430, 614, 428, 613, 440, 606, 438], '#3d6e4a');
+      A.text(ctx, 'Δ 7', 603, 444, { font: 'bold 6px Georgia', color: '#3a2a1a', align: 'center' });
+      for (const cx of [632, 652]) { A.ell(ctx, cx, 446, 11, 3, 'rgba(0,0,0,0.3)'); A.rr(ctx, cx - 9, 422, 18, 24, 2, '#5a6a4a'); A.rect(ctx, cx - 9, 422, 18, 3, '#4a5a3a'); A.rr(ctx, cx - 4, 418, 8, 5, 2, '#4a5a3a'); A.rect(ctx, cx - 6, 428, 3, 12, 'rgba(255,255,255,0.15)'); }
+      // Schild an der Bimswand
+      A.sign(ctx, 196, 278, 100, 22, 'ZUTRITT VERBOTEN', '#e8e0cc', '#8a2a2a', 'bold 9px Georgia'); A.text(ctx, 'Meridian-Ges. Berlin', 246, 310, { font: '7px Georgia', color: '#5a4a3a', align: 'center' });
+      // Grabungsraster unten links: Schnüre, Pflöcke, ein ausgehobener Quadrant, Maßstab, Kelle, Zettel
+      for (let i = 0; i <= 3; i++) A.line(ctx, 70 + i * 76, 536, 60 + i * 80, 582, 'rgba(255,250,235,0.55)', 1);
+      for (let j = 0; j <= 2; j++) A.line(ctx, 70 - j * 5, 536 + j * 23, 298 + j * 2, 536 + j * 23, 'rgba(255,250,235,0.55)', 1);
+      for (let i = 0; i <= 3; i++) for (let j = 0; j <= 2; j++) A.rect(ctx, 70 + i * 76 - j * 3 - 1, 532 + j * 23, 3, 7, '#5a4a3a');
+      A.poly(ctx, [146, 537, 222, 537, 219, 558, 142, 558], 'rgba(0,0,0,0.2)'); A.poly(ctx, [146, 537, 222, 537, 219, 540, 143, 540], 'rgba(0,0,0,0.25)');
+      A.rect(ctx, 150, 545, 10, 5, '#8a7a5a'); A.rect(ctx, 200, 548, 8, 6, '#9a8a6a');
+      for (let k = 0; k < 8; k++) A.rect(ctx, 76 + k * 10, 583, 10, 3, k % 2 ? '#e8e0d0' : '#c83a2a');
+      A.line(ctx, 236, 568, 252, 562, '#5a4a34', 2); A.poly(ctx, [252, 560, 262, 558, 258, 566], '#8a8a8a');
+      A.rect(ctx, 96, 528, 14, 9, '#f0ecd8'); A.text(ctx, 'Δ3', 103, 535, { font: 'bold 6px Georgia', color: '#3a2a1a', align: 'center' });
       A.vignette(ctx, 960, 600, 0.42);
       A.grain(ctx, 960, 600, 8, 0.04);
     },
+    paintFront(ctx) {
+      // Ganz vorn: ein behauener Bimsblock rechts, Vermessungsschnur mit Pflock links
+      A.rock(ctx, 872, 578, 96, 40, '#d8ccb0', 14); A.rock(ctx, 926, 586, 44, 24, '#c8bca0', 15); A.cracks(ctx, 880, 582, 80, 16, 3, 'rgba(0,0,0,0.25)');
+      A.rope(ctx, [0, 592, 60, 587, 130, 594, 200, 590], '#c8b48a', 2.5); A.rect(ctx, 200, 584, 4, 12, '#6a5a3a');
+    },
     animate(ctx, t, g) {
+      // Schwalben über der Grabungskante, Staub in der Nachmittagsluft
+      gulls(ctx, t, 60, 6, 600, 3, 'rgba(40,50,70,0.8)', 18);
+      A.dust(ctx, 200, 440, 600, 140, t, 12, 'rgba(230,220,200,0.22)');
       if (g.flag('tor_offen')) A.glow(ctx, 820, 300, 180, 'rgba(255,120,60,0.6)', 0.28 + Math.sin(t * 2) * 0.08);
       else if ((g.flag('siegel_im_tor') || 0) === 3) A.glow(ctx, 820, 300, 120 + Math.sin(t * 3) * 10, 'rgba(120,255,220,0.5)', 0.22);
     },
@@ -763,6 +957,12 @@
           medaillon: 'Das Medaillon hat drei Ringe, das Tor hat drei Ringe. Aber hier ist kein Platz dafür. Noch nicht.',
           default: 'Das passt in keine der Vertiefungen.',
         } },
+      { id: 'raster', name: 'Grabungsquadrant', rect: [140, 534, 84, 26], at: [180, 576, 'u'], z: 2,
+        look: 'Ein Quadrant, mit Schnur abgesteckt, zwanzig Zentimeter tief. Vesper hat graben lassen, wie man gräbt, wenn man nichts sucht außer dem Tor.' },
+      { id: 'schild', name: 'Schild', rect: [196, 276, 100, 36], at: [246, 480, 'u'],
+        look: '„Zutritt verboten. Meridian-Gesellschaft, Berlin.“ Auf Deutsch, auf einer griechischen Insel. Die Ziegen können es nicht lesen, und ich will es nicht.' },
+      { id: 'schubkarre', name: 'Schubkarre', rect: [376, 412, 72, 34], at: [404, 480, 'u'],
+        look: 'Eine Schubkarre, halb voll Bims. Wer sie geschoben hat, hat mitten in der Fuhre aufgehört. Ich kenne das Gefühl.' },
     ],
     exits: [
       { id: 'pfad', name: 'Pfad zur Bucht', rect: [0, 200, 40, 360], at: [50, 520, 'l'], to: 'th_cliff', pos: [780, 490], dir: 'd',
@@ -817,11 +1017,59 @@
       for (let i = 0; i < 7; i++) { const x = 580 + i * 40; for (let r = 0; r < 3; r++) { ctx.beginPath(); ctx.arc(x, 218, 4 + r * 4, 0, Math.PI * 2); ctx.stroke(); } A.circle(ctx, x + 20, 212, 1.5, 'rgba(120,255,220,0.65)'); A.circle(ctx, x + 20, 224, 1.5, 'rgba(120,255,220,0.65)'); }
       // Schachtrand vor der Bühne
       A.rect(ctx, 556, 552, 288, 6, '#3a3a3c');
+      // Ausschmückung: Lavazapfen unter dem Bogen und an der Decke rechts
+      const drip = (x, y, len, w) => { A.poly(ctx, [x - w, y, x + w, y, x + w * 0.2, y + len, x - w * 0.2, y + len], '#2e2220'); A.line(ctx, x - w * 0.5, y + 2, x - w * 0.15, y + len * 0.8, 'rgba(130,100,90,0.45)', 1); };
+      for (let i = 4; i < 15; i++) { const k = i / 15, m = 1 - k; const bx = m * m * -40 + 2 * m * k * 260 + k * k * 640, by = m * m * 470 + 2 * m * k * -90 + k * k * 110; drip(bx, by + 7, 10 + ((i * 7) % 5) * 5, 3 + (i % 3)); }
+      for (const [x, len, w] of [[870, 26, 4], [905, 16, 3], [940, 34, 5], [820, 14, 3]]) drip(x, 0, len, w);
+      // Schwefelkrusten (gelb) am Fuß der Wände und an den Rissen
+      const sulfur = (x, y, w, seed) => { const r = ATL.U.rng(seed); for (let i = 0; i < 9; i++) A.ell(ctx, x + r() * w, y + (r() - 0.5) * 10, 3 + r() * 7, 1.5 + r() * 3, `rgba(${200 + Math.floor(r() * 40)},${170 + Math.floor(r() * 40)},${30 + Math.floor(r() * 40)},${(0.25 + r() * 0.3).toFixed(2)})`); };
+      sulfur(120, 456, 120, 91); sulfur(300, 452, 80, 92); sulfur(850, 458, 100, 93); sulfur(320, 560, 40, 95); sulfur(880, 498, 60, 96);
+      // Geröll am Fuß der Wände, feine Risse
+      A.rubble(ctx, 100, 438, 80, 24, 17, '#3a2e2a'); A.rubble(ctx, 860, 440, 90, 24, 18, '#3a2e2a');
+      A.cracks(ctx, 60, 470, 460, 110, 35, 'rgba(0,0,0,0.5)');
+      // Werkzeugspuren: Meißelschläge, wo jemand die Röhre erweitert hat
+      for (let row = 0; row < 7; row++) for (let k = 0; k < 5; k++) { const x = 856 + k * 18 + (row % 2) * 6, y = 300 + row * 20; A.line(ctx, x, y, x + 8, y + 4, 'rgba(170,140,120,0.35)', 1.5); A.line(ctx, x + 1, y + 2, x + 9, y + 6, 'rgba(0,0,0,0.4)', 1); }
+      for (let row = 0; row < 5; row++) for (let k = 0; k < 3; k++) { const x = 98 + k * 16 + (row % 2) * 5, y = 340 + row * 18; A.line(ctx, x, y, x + 7, y + 3, 'rgba(170,140,120,0.3)', 1.5); A.line(ctx, x + 1, y + 2, x + 8, y + 5, 'rgba(0,0,0,0.4)', 1); }
+      // Eisenring mit vermodertem Seil, zerbrochene Hacke
+      A.circle(ctx, 140, 384, 6, null, '#5a3a2a', 3); A.path(ctx, [140, 390, 150, 420, 146, 452], '#5a4a34', 2);
+      A.line(ctx, 250, 540, 282, 530, '#4a3a2a', 4); A.poly(ctx, [282, 522, 296, 530, 286, 538], '#5a4a44');
+      // Orichalkum-Adern im Fels
+      const vr = ATL.U.rng(77);
+      const vein = (pts) => { const j = []; for (let i = 0; i < pts.length; i += 2) { j.push(pts[i], pts[i + 1]); if (i + 2 < pts.length) j.push((pts[i] + pts[i + 2]) / 2 + (vr() - 0.5) * 16, (pts[i + 1] + pts[i + 3]) / 2 + (vr() - 0.5) * 12); } A.path(ctx, j, 'rgba(60,140,120,0.22)', 3); A.path(ctx, j, 'rgba(120,255,220,0.32)', 1); };
+      vein([180, 250, 230, 300, 260, 360, 300, 400, 320, 440]); vein([230, 300, 280, 310, 330, 350]); vein([880, 140, 900, 200, 890, 260, 920, 320]); vein([440, 200, 470, 260, 460, 320]);
+      // Verwittertes Inschriftenband auf der linken Wand
+      ctx.save(); ctx.globalAlpha = 0.45;
+      A.poly(ctx, [120, 300, 420, 262, 420, 292, 120, 334], '#1e2a28');
+      ctx.strokeStyle = 'rgba(120,255,220,0.55)'; ctx.lineWidth = 1.2;
+      for (let i = 0; i < 6; i++) { const x = 140 + i * 48, y = 317 - i * 6.1; for (let r = 0; r < 3; r++) { ctx.beginPath(); ctx.arc(x, y, 3 + r * 3.5, 0, Math.PI * 2); ctx.stroke(); } if (i % 2) { A.circle(ctx, x + 24, y - 6, 1.2, 'rgba(120,255,220,0.55)'); A.circle(ctx, x + 24, y + 3, 1.2, 'rgba(120,255,220,0.55)'); } }
+      ctx.restore();
+      A.cracks(ctx, 120, 262, 300, 70, 33, 'rgba(0,0,0,0.5)');
+      // Knochen, Pfützen mit Spiegelung
+      A.ell(ctx, 452, 560, 40, 6, 'rgba(0,0,0,0.3)'); A.bones(ctx, 430, 548, 5, '#c8bca8'); A.line(ctx, 470, 552, 496, 546, '#c8bca8', 3);
+      for (const [px, py, w] of [[170, 572, 70], [470, 486, 60], [900, 566, 60]]) { A.ell(ctx, px, py, w / 2, w / 7, 'rgba(70,110,110,0.4)'); A.ell(ctx, px, py, w / 2, w / 7, null, 'rgba(120,200,190,0.25)', 1); A.ell(ctx, px - w * 0.15, py - 2, w * 0.15, 1.5, 'rgba(160,255,230,0.3)'); }
       A.vignette(ctx, 960, 600, 0.7);
       A.grain(ctx, 960, 600, 7, 0.06);
     },
+    paintFront(ctx) {
+      // Ganz vorn: Lavablock links unten, ein Felspfeiler am rechten Rand
+      ctx.fillStyle = A.grad(ctx, 930, 0, 960, 0, ['#0a0706', '#1c1412']); A.poly(ctx, [934, 230, 960, 200, 960, 600, 944, 600, 930, 420], ctx.fillStyle);
+      for (let y = 250; y < 590; y += 26) A.line(ctx, 936 + (y % 3), y, 960, y - 6, 'rgba(130,95,85,0.25)', 2);
+      A.rock(ctx, -30, 574, 100, 44, '#1c1412', 21); A.rock(ctx, 30, 586, 60, 24, '#2a201c', 22);
+      A.line(ctx, 0, 582, 40, 590, 'rgba(255,90,30,0.25)', 2);
+    },
+    animateFront(ctx, t) {
+      // Nebelschwaden dicht über dem Boden
+      for (let i = 0; i < 7; i++) { const mx = 300 + ((i * 97 + t * 7) % 620), my = 566 + (i % 3) * 8 + Math.sin(t * 0.5 + i) * 3; A.ell(ctx, mx, my, 46 + i * 5, 7 + (i % 3) * 2, `rgba(150,200,190,${(0.045 + Math.sin(t * 0.7 + i) * 0.02).toFixed(3)})`); }
+    },
     animate(ctx, t, g) {
       const p = 0.5 + Math.sin(t * 1.6) * 0.25;
+      // Adern und Pfützen atmen mit dem Licht, ein Tropfen fällt von einem Lavazapfen
+      A.glow(ctx, 260, 340, 44, 'rgba(80,255,200,0.5)', 0.06 + Math.sin(t * 1.1) * 0.03);
+      A.ell(ctx, 470, 486, 26, 6, `rgba(80,255,200,${(0.05 + Math.sin(t * 1.6) * 0.03).toFixed(3)})`);
+      A.ell(ctx, 170, 572, 30, 8, `rgba(255,90,30,${(0.05 + p * 0.06).toFixed(3)})`);
+      const dk = (t * 0.7) % 1, dyv = 200 + dk * dk * 372;
+      A.rect(ctx, 168, dyv, 2, 6, 'rgba(180,230,230,0.7)');
+      if (dk > 0.95) A.ell(ctx, 170, 572, (dk - 0.95) * 300, (dk - 0.95) * 70, null, 'rgba(180,230,230,0.5)', 1);
       for (const [x, y, r] of [[200, 540, 80], [90, 492, 44], [450, 572, 60], [900, 522, 50], [360, 464, 40]]) A.glow(ctx, x, y, r, 'rgba(255,80,20,0.9)', p * 0.5);
       const dy = g.flag('buehne_dy') || 0;
       A.glow(ctx, 700, 520 + dy, 180, 'rgba(80,255,200,0.6)', g.flag('perle_im_sockel') ? 0.3 + Math.sin(t * 5) * 0.1 : 0.1);
@@ -910,6 +1158,12 @@
         look: 'Risse im Boden, aus denen es rot glüht. Der Berg schläft nicht, er döst. Und er ist näher, als mir lieb ist.',
         use: 'Ich stecke die Hand nicht hinein.', take: 'Glühende Lava? Ich habe keine Tasche dafür.',
         useWith: { flasche: 'Ich gieße kein Wasser auf glühenden Stein. Dampf, Splitter, keine Hand mehr.', oellampe: 'Sie brennt schon, wenn ich sie brauche. Hier brauche ich sie nicht.', bimsstein: 'Bims ins Feuer? Er ist schon einmal durchs Feuer gegangen.', default: 'Das gehört nicht in den Riss.' } },
+      { id: 'knochen', name: 'Knochen', rect: [424, 540, 80, 24], at: [464, 576, 'u'], z: 2,
+        look: 'Knochen. Eine Ziege, hoffe ich. Sie ist den Gang heruntergekommen und nicht mehr hinauf. Ich nehme es als Hinweis, nicht als Prophezeiung.' },
+      { id: 'schwefel', name: 'Schwefel', rect: [846, 440, 100, 24], at: [880, 500, 'u'],
+        look: 'Gelbe Krusten am Fuß der Wand. Schwefel. Es riecht nach faulen Eiern und nach einem Berg, der noch Pläne hat.' },
+      { id: 'adern', name: 'Adern im Fels', rect: [170, 240, 160, 210], at: [250, 500, 'u'],
+        look: 'Adern im Fels, grün wie die Säulen. Orichalkum, in seinem Bett. Vesper würde die Wand herausbrechen lassen. Ich sehe sie an und lasse sie stehen.' },
     ],
     exits: [
       { id: 'zurueck', name: 'Gang nach oben', rect: [0, 200, 90, 270], at: [80, 520, 'l'],
