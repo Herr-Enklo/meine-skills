@@ -109,7 +109,7 @@ Figuren sind in `js/data/chars.js` definiert (`ATL.chars.define(id, {name, color
 Neue Figuren kann ein Kapitel in seiner eigenen Datei ergänzen. Aussehen (`look`):
 `skin, hair, hairStyle (short|long|bald|bun|slick|grey), hat (none|fedora|pith|cap|fez|turban|beret|officer|headscarf|crown|hood),
 hatColor, top, topStyle (jacket|shirt|dress|robe|uniform|vest|coat), topInner, bottom, shoes, face (none|beard|moustache|goatee),
-glasses, build (slim|normal|heavy), height (Faktor), tie`.
+glasses, glassesColor, eyes (Irisfarbe), build (slim|normal|heavy), height (Faktor), tie, satchel (Umhängetasche), apron (Schürzenfarbe), scarf, necklace`.
 
 ## Skript-API (g = Spielobjekt)
 
