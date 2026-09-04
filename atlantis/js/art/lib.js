@@ -602,5 +602,174 @@
     }
   };
 
+  // ---------- Ausschmückung ----------
+  A.amphora = (ctx, x, baseY, h, color, seed) => {
+    const w = h * 0.42;
+    ctx.fillStyle = A.grad(ctx, x - w / 2, 0, x + w / 2, 0, [shade(color, -0.3), shade(color, 0.12), shade(color, -0.35)]);
+    ctx.beginPath(); ctx.moveTo(x - w * 0.18, baseY); ctx.bezierCurveTo(x - w * 0.7, baseY - h * 0.3, x - w * 0.55, baseY - h * 0.75, x - w * 0.22, baseY - h * 0.86);
+    ctx.lineTo(x - w * 0.22, baseY - h); ctx.lineTo(x + w * 0.22, baseY - h); ctx.lineTo(x + w * 0.22, baseY - h * 0.86);
+    ctx.bezierCurveTo(x + w * 0.55, baseY - h * 0.75, x + w * 0.7, baseY - h * 0.3, x + w * 0.18, baseY); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = shade(color, -0.4); ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(x - w * 0.22, baseY - h * 0.8); ctx.quadraticCurveTo(x - w * 0.6, baseY - h * 0.75, x - w * 0.5, baseY - h * 0.55); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x + w * 0.22, baseY - h * 0.8); ctx.quadraticCurveTo(x + w * 0.6, baseY - h * 0.75, x + w * 0.5, baseY - h * 0.55); ctx.stroke();
+    A.meander(ctx, x - w * 0.42, baseY - h * 0.55, w * 0.84, h * 0.07, 'rgba(0,0,0,0.35)');
+  };
+  A.pot = (ctx, x, baseY, w, h, color) => {
+    ctx.fillStyle = A.grad(ctx, x - w / 2, 0, x + w / 2, 0, [shade(color, -0.3), shade(color, 0.1), shade(color, -0.3)]);
+    A.poly(ctx, [x - w * 0.35, baseY, x + w * 0.35, baseY, x + w * 0.5, baseY - h, x - w * 0.5, baseY - h], ctx.fillStyle);
+    A.ell(ctx, x, baseY - h, w * 0.5, h * 0.12, shade(color, -0.45));
+  };
+  A.basket = (ctx, x, baseY, w, h, color) => {
+    color = color || '#b8955a';
+    A.poly(ctx, [x - w * 0.4, baseY, x + w * 0.4, baseY, x + w * 0.5, baseY - h, x - w * 0.5, baseY - h], color);
+    for (let yy = baseY - h + 4; yy < baseY - 2; yy += 6) A.line(ctx, x - w * 0.46, yy, x + w * 0.46, yy, shade(color, -0.3), 1.5);
+    for (let i = -2; i <= 2; i++) A.line(ctx, x + i * w * 0.18, baseY - h, x + i * w * 0.15, baseY, shade(color, -0.25), 1.5);
+    A.ell(ctx, x, baseY - h, w * 0.5, h * 0.12, shade(color, -0.4));
+  };
+  A.sack = (ctx, x, baseY, w, h, color) => {
+    A.rr(ctx, x - w / 2, baseY - h, w, h, w * 0.3, color || '#c8b48a');
+    A.rect(ctx, x - w * 0.2, baseY - h - 4, w * 0.4, 8, shade(color || '#c8b48a', -0.3));
+    A.line(ctx, x - w * 0.3, baseY - h * 0.5, x + w * 0.3, baseY - h * 0.55, shade(color || '#c8b48a', -0.2), 1.5);
+  };
+  A.bottle = (ctx, x, baseY, h, color) => {
+    A.rr(ctx, x - h * 0.16, baseY - h * 0.7, h * 0.32, h * 0.7, h * 0.08, color);
+    A.rect(ctx, x - h * 0.07, baseY - h, h * 0.14, h * 0.32, color);
+    A.rect(ctx, x - h * 0.08, baseY - h, h * 0.16, h * 0.06, shade(color, -0.4));
+    A.rect(ctx, x - h * 0.12, baseY - h * 0.5, h * 0.06, h * 0.3, 'rgba(255,255,255,0.25)');
+  };
+  A.cobweb = (ctx, x, y, r, corner, color) => {
+    // corner: 'tl' | 'tr' | 'bl' | 'br'
+    const sx = corner[1] === 'l' ? 1 : -1, sy = corner[0] === 't' ? 1 : -1;
+    ctx.strokeStyle = color || 'rgba(255,255,255,0.35)'; ctx.lineWidth = 1;
+    for (let i = 0; i <= 4; i++) { const a = (i / 4) * Math.PI / 2; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a) * r * sx, y + Math.sin(a) * r * sy); ctx.stroke(); }
+    for (let k = 1; k <= 4; k++) { const rr = (k / 4) * r; ctx.beginPath(); for (let i = 0; i <= 4; i++) { const a = (i / 4) * Math.PI / 2; const px = x + Math.cos(a) * rr * sx, py = y + Math.sin(a) * rr * sy; i ? ctx.quadraticCurveTo(x + Math.cos(a - Math.PI / 8) * rr * 0.9 * sx, y + Math.sin(a - Math.PI / 8) * rr * 0.9 * sy, px, py) : ctx.moveTo(px, py); } ctx.stroke(); }
+  };
+  A.cracks = (ctx, x, y, w, h, seed, color) => {
+    const r = ATL.U.rng(seed || 71);
+    ctx.strokeStyle = color || 'rgba(0,0,0,0.35)'; ctx.lineWidth = 1.2;
+    for (let i = 0; i < 3; i++) {
+      let px = x + r() * w, py = y + r() * h;
+      ctx.beginPath(); ctx.moveTo(px, py);
+      for (let k = 0; k < 6; k++) { px += (r() - 0.5) * w * 0.25; py += r() * h * 0.2; ctx.lineTo(px, py); }
+      ctx.stroke();
+    }
+  };
+  A.moss = (ctx, x, y, w, seed, color) => {
+    const r = ATL.U.rng(seed || 73);
+    for (let i = 0; i < 9; i++) A.ell(ctx, x + r() * w, y + (r() - 0.5) * 10, 6 + r() * 12, 3 + r() * 4, shade(color || '#5a7a3a', (r() - 0.5) * 0.3));
+  };
+  A.grass = (ctx, x, y, w, seed, color) => {
+    const r = ATL.U.rng(seed || 79);
+    ctx.strokeStyle = color || '#5a8a3a'; ctx.lineWidth = 1.5;
+    for (let i = 0; i < w / 4; i++) { const gx = x + r() * w; const gh = 6 + r() * 12; ctx.beginPath(); ctx.moveTo(gx, y); ctx.quadraticCurveTo(gx + (r() - 0.5) * 8, y - gh * 0.6, gx + (r() - 0.5) * 12, y - gh); ctx.stroke(); }
+  };
+  A.pebbles = (ctx, x, y, w, h, seed, color) => {
+    const r = ATL.U.rng(seed || 83);
+    for (let i = 0; i < (w * h) / 500; i++) A.ell(ctx, x + r() * w, y + r() * h, 2 + r() * 4, 1.5 + r() * 2, shade(color || '#8a8478', (r() - 0.5) * 0.4));
+  };
+  A.rubble = (ctx, x, y, w, h, seed, color) => {
+    const r = ATL.U.rng(seed || 89);
+    for (let i = 0; i < 10; i++) A.rock(ctx, x + r() * w * 0.8, y + r() * h * 0.6, w * (0.15 + r() * 0.25), h * (0.3 + r() * 0.4), shade(color || '#8a8478', (r() - 0.5) * 0.3), seed + i);
+  };
+  A.birds = (ctx, x, y, n, t, color, spread) => {
+    ctx.strokeStyle = color || 'rgba(20,20,30,0.7)'; ctx.lineWidth = 1.5;
+    for (let i = 0; i < n; i++) {
+      const bx = x + ((i * 37) % (spread || 120)) + Math.sin(t * 0.6 + i) * 6 + t * 6 * (i % 2 ? 1 : 0.8);
+      const by = y + ((i * 19) % 40) + Math.sin(t * 1.4 + i * 2) * 4;
+      const f = Math.sin(t * 6 + i) * 3;
+      ctx.beginPath(); ctx.moveTo(bx - 6, by + f); ctx.quadraticCurveTo(bx - 2, by - 2, bx, by); ctx.quadraticCurveTo(bx + 2, by - 2, bx + 6, by + f); ctx.stroke();
+    }
+  };
+  A.smoke = (ctx, x, y, t, color, size) => {
+    size = size || 1;
+    for (let i = 0; i < 6; i++) {
+      const k = ((t * 0.35 + i * 0.17) % 1);
+      const px = x + Math.sin(t * 0.8 + i * 1.3) * 10 * size + k * 14 * size, py = y - k * 90 * size;
+      ctx.fillStyle = (color || 'rgba(200,200,200,0.35)').replace(/[\d.]+\)$/, ((1 - k) * 0.3).toFixed(2) + ')');
+      A.ell(ctx, px, py, (6 + k * 18) * size, (5 + k * 12) * size, ctx.fillStyle);
+    }
+  };
+  A.flag = (ctx, x, y, w, h, t, color) => {
+    ctx.fillStyle = color || '#a3312a';
+    ctx.beginPath(); ctx.moveTo(x, y);
+    for (let i = 0; i <= 8; i++) { const k = i / 8; ctx.lineTo(x + k * w, y + Math.sin(t * 4 + k * 5) * h * 0.12 * k); }
+    for (let i = 8; i >= 0; i--) { const k = i / 8; ctx.lineTo(x + k * w, y + h + Math.sin(t * 4 + k * 5) * h * 0.12 * k); }
+    ctx.closePath(); ctx.fill();
+  };
+  A.curtain = (ctx, x, y, w, h, color, t, folds) => {
+    folds = folds || 5;
+    for (let i = 0; i < folds; i++) {
+      const fx = x + (i * w) / folds, fw = w / folds;
+      ctx.fillStyle = A.grad(ctx, fx, 0, fx + fw, 0, [shade(color, -0.35), shade(color, 0.1), shade(color, -0.3)]);
+      const sway = t !== undefined ? Math.sin(t * 1.2 + i) * 3 : 0;
+      A.poly(ctx, [fx, y, fx + fw, y, fx + fw + sway, y + h, fx + sway, y + h], ctx.fillStyle);
+    }
+  };
+  A.sign = (ctx, x, y, w, h, text, color, textColor, font) => {
+    A.rr(ctx, x, y, w, h, 3, color || '#5a3f28', shade(color || '#5a3f28', -0.4), 2);
+    A.text(ctx, text, x + w / 2, y + h * 0.68, { font: font || `bold ${Math.floor(h * 0.5)}px Georgia`, color: textColor || '#e8d8b0', align: 'center' });
+  };
+  A.lamppost = (ctx, x, baseY, h, t, lit, color) => {
+    A.rect(ctx, x - 3, baseY - h, 6, h, color || '#2a2a30');
+    A.ell(ctx, x, baseY, 12, 4, color || '#2a2a30');
+    A.rr(ctx, x - 12, baseY - h - 22, 24, 24, 4, shade(color || '#2a2a30', 0.15));
+    A.rect(ctx, x - 8, baseY - h - 18, 16, 16, lit ? '#ffe9a0' : '#3a3a40');
+    if (lit) A.glow(ctx, x, baseY - h - 10, 120 + (t ? Math.sin(t * 9) * 3 : 0), 'rgba(255,225,150,0.7)', 0.35);
+  };
+  A.papyrus = (ctx, x, y, w, color) => {
+    A.rect(ctx, x, y, w, 12, color || '#e0cf9e');
+    A.circle(ctx, x, y + 6, 6, shade(color || '#e0cf9e', -0.2)); A.circle(ctx, x + w, y + 6, 6, shade(color || '#e0cf9e', -0.2));
+    for (let i = 0; i < 3; i++) A.line(ctx, x + 8, y + 4 + i * 3, x + w - 8, y + 4 + i * 3, 'rgba(0,0,0,0.25)', 1);
+  };
+  A.painting = (ctx, x, y, w, h, seed, frame) => {
+    A.rect(ctx, x - 5, y - 5, w + 10, h + 10, frame || '#5a3f28');
+    A.rect(ctx, x - 2, y - 2, w + 4, h + 4, shade(frame || '#5a3f28', 0.3));
+    const r = ATL.U.rng(seed || 97);
+    A.sky(ctx, w, h, shade('#8fb3d8', (r() - 0.5) * 0.3), '#e8d8b0', 0);
+    ctx.save(); ctx.translate(x, y); ctx.beginPath(); ctx.rect(0, 0, w, h); ctx.clip();
+    A.sky(ctx, w, h, shade('#8fb3d8', (r() - 0.5) * 0.3), '#e8d8b0');
+    A.mountains(ctx, w, h * 0.6, shade('#6a7a8a', (r() - 0.5) * 0.3), seed, h * 0.3, w * 0.3);
+    A.hills(ctx, w, h * 0.75, shade('#5f8a4a', (r() - 0.5) * 0.3), seed + 1, h * 0.15);
+    if (r() < 0.6) A.tree(ctx, w * (0.2 + r() * 0.6), h * 0.9, h * 0.5, '#3f6a2e', '#4a3624', seed + 2);
+    ctx.restore();
+  };
+  A.vines = (ctx, x, y, h, seed, color) => {
+    const r = ATL.U.rng(seed || 101);
+    ctx.strokeStyle = shade(color || '#3f6a2e', -0.2); ctx.lineWidth = 2;
+    for (let v = 0; v < 3; v++) {
+      let px = x + (r() - 0.5) * 20; ctx.beginPath(); ctx.moveTo(px, y);
+      for (let yy = y; yy < y + h; yy += 12) { px += (r() - 0.5) * 8; ctx.lineTo(px, yy); if (r() < 0.7) A.ell(ctx, px + (r() - 0.5) * 10, yy, 5, 3, shade(color || '#3f6a2e', (r() - 0.5) * 0.3)); }
+      ctx.stroke();
+    }
+  };
+  A.puddle = (ctx, x, y, w, h, color) => {
+    A.ell(ctx, x, y, w / 2, h / 2, color || 'rgba(120,150,190,0.35)');
+    A.ell(ctx, x - w * 0.15, y - h * 0.15, w * 0.18, h * 0.12, 'rgba(255,255,255,0.18)');
+  };
+  A.railing = (ctx, x, y, w, h, color) => {
+    A.rect(ctx, x, y, w, 4, color || '#3a3a3a');
+    for (let px = x; px <= x + w; px += 14) A.rect(ctx, px, y, 2.5, h, color || '#3a3a3a');
+    A.rect(ctx, x, y + h - 3, w, 3, color || '#3a3a3a');
+  };
+  A.awning = (ctx, x, y, w, h, c1, c2, stripes) => {
+    stripes = stripes || 6;
+    for (let i = 0; i < stripes; i++) A.poly(ctx, [x + (i * w) / stripes, y, x + ((i + 1) * w) / stripes, y, x + ((i + 1) * w) / stripes + 6, y + h, x + (i * w) / stripes + 6, y + h], i % 2 ? c1 : c2);
+    for (let i = 0; i <= stripes; i++) A.ell(ctx, x + (i * w) / stripes + 6, y + h, w / stripes / 2, 6, i % 2 ? c2 : c1);
+  };
+  A.insects = (ctx, x, y, w, h, t, n, color) => {
+    for (let i = 0; i < (n || 6); i++) {
+      const px = x + ((i * 61) % w) + Math.sin(t * 3 + i * 2) * 12 + Math.sin(t * 0.5 + i) * 20;
+      const py = y + ((i * 43) % h) + Math.cos(t * 2.3 + i) * 8;
+      ctx.fillStyle = color || 'rgba(40,30,20,0.6)';
+      ctx.fillRect(px, py, 2, 2);
+    }
+  };
+  A.bones = (ctx, x, y, seed, color) => {
+    const r = ATL.U.rng(seed || 103);
+    color = color || '#e8e0c8';
+    for (let i = 0; i < 4; i++) { const bx = x + r() * 40, by = y + r() * 14; const a = r() * Math.PI; ctx.save(); ctx.translate(bx, by); ctx.rotate(a); A.rr(ctx, -10, -2, 20, 4, 2, color); A.circle(ctx, -10, 0, 3, color); A.circle(ctx, 10, 0, 3, color); ctx.restore(); }
+    A.circle(ctx, x + 20, y + 4, 7, color); A.circle(ctx, x + 17, y + 3, 2, '#3a2a1a'); A.circle(ctx, x + 23, y + 3, 2, '#3a2a1a');
+  };
+
   ATL.A = A;
 })(window.ATL);

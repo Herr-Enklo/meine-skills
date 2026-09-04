@@ -205,6 +205,7 @@ Natur: `palm, tree, cypress, bush, rock`.
 Licht: `glow, torch(t), candle(t), lantern(t, lit), lightBeam, dust(t), shadeRect, vignette, grain`.
 Ornament: `hieroglyphs, cuneiform, meander, spirals, fresco, statue(style standing|seated|ibis|crown|trident)`.
 Fahrzeuge: `boat, ship, jeep, tent`.
+Ausschmückung: `amphora(x, baseY, h, color), pot, basket, sack, bottle, cobweb(x, y, r, 'tl'|'tr'|'bl'|'br'), cracks, moss, grass, pebbles, rubble, birds(x, y, n, t), smoke(x, y, t), flag(x, y, w, h, t), curtain(x, y, w, h, color, t), sign(x, y, w, h, text), lamppost(x, baseY, h, t, lit), papyrus, painting(x, y, w, h, seed), vines(x, y, h, seed), puddle, railing, awning(x, y, w, h, c1, c2), insects(x, y, w, h, t, n), bones`.
 `ATL.A.shade('#rrggbb', -0.3)` dunkelt eine Farbe ab, positive Werte hellen auf.
 `ATL.U.rng(seed)` liefert einen deterministischen Zufallsgenerator für Texturen.
 
