@@ -25,6 +25,10 @@ schießt nach rechts und muss vier unterschiedliche Sektoren durchqueren.
   die aktuelle Waffe (bis Stufe 3): Streuschuss, Schnellfeuer, Laser
   (durchschlagend) und homing Raketen (mit Explosionsradius). Dazu Schild
   (kurzzeitig unverwundbar), Reparatur und Extraleben.
+- **Gegnerische Schüsse lassen sich abschießen.** Jeder Treffer neutralisiert
+  ein Projektil und bringt Punkte. Schwere Geschosse (Minen, Boss-Brocken,
+  gepanzerte Kugeln mit Ring) halten mehrere Treffer aus, der Laser räumt mit
+  seiner Durchschlagskraft ganze Reihen ab.
 - Bei einem Treffer bis auf 0 Energie geht ein Leben verloren und die Waffe
   wird auf die Standardwaffe zurückgesetzt – Risiko und Belohnung wie im
   Original.
@@ -44,6 +48,17 @@ Highscore wird lokal im Browser gespeichert (`localStorage`).
 ## Technik
 
 Ein einziges `<canvas>` (240×160 Pixel, pixelig hochskaliert) ohne externe
-Bibliotheken, Bilder oder Fonts – Gegner, Bosse, Schiff und Effekte werden
-per 2D-Canvas-Zeichenbefehlen direkt gezeichnet. Sound sind kurze
-WebAudio-Bleeps, passend zum monophonen Nokia-Gefühl.
+Bibliotheken, Bilder oder Fonts. Alles wird zur Laufzeit erzeugt:
+
+- **Eigener 5×7-Bitmap-Font** (inklusive Umlaute) für HUD, Menü und Banner
+- **Pixel-Sprites** für Schiff und Gegner, als Zeichen-Raster im Code definiert
+  und einmalig in Offscreen-Canvas gerendert, dazu eine weiße Variante für den
+  Trefferblitz
+- **Prozedurale Bosse** mit rotierenden Teilen, öffnendem Kern, schlagenden
+  Flügeln und einem Auge, das den Spieler verfolgt
+- **Geschichtete Hintergründe** je Sektor: Farbverlauf, Nebelschwaden,
+  Himmelskörper, treibende Trümmer und drei Sternenebenen
+- Explosionen aus Ring, Blitz, Funken, Rauch und Trümmern, dazu Bildschirm-
+  Wackeln und Trefferblitze
+
+Sound sind kurze WebAudio-Bleeps, passend zum monophonen Nokia-Gefühl.
