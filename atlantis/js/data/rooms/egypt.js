@@ -24,6 +24,31 @@
   const DOOR_START = [4, 5, 3, 0];
   const INSCHRIFT = 'Wer eintreten will, ordne die Zeichen, wie die Welt geordnet ist. Zuerst Re, die Sonne. Dann Nun, das Wasser. Dann Apis, der Stier. Zuletzt Thot, der Ibis.';
 
+  // ---------------------------------------------------------------- Gemeinsame Zeichenhilfen
+  // Palme wie A.palm, aber bei Nacht als dunkle Silhouette (A.palm kennt nur Tagesfarben).
+  function palmAt(ctx, x, baseY, h, seed, night) {
+    A.ell(ctx, x, baseY + 2, h * 0.11, 4, night ? 'rgba(0,0,0,0.35)' : 'rgba(0,0,0,0.22)');
+    if (!night) return A.palm(ctx, x, baseY, h, seed);
+    const r = ATL.U.rng(seed || 31);
+    const lean = (r() - 0.5) * 0.5;
+    ctx.strokeStyle = '#241c14'; ctx.lineWidth = h * 0.07; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(x, baseY); ctx.quadraticCurveTo(x + lean * h * 0.5, baseY - h * 0.6, x + lean * h, baseY - h); ctx.stroke();
+    const tx = x + lean * h, ty = baseY - h;
+    for (let i = 0; i < 7; i++) {
+      const a = (i / 7) * TAU + r() * 0.5, len = h * (0.35 + r() * 0.2);
+      ctx.strokeStyle = i % 2 ? '#1c3420' : '#142616'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(tx, ty);
+      ctx.quadraticCurveTo(tx + Math.cos(a) * len * 0.6, ty + Math.sin(a) * len * 0.6 - len * 0.3, tx + Math.cos(a) * len, ty + Math.sin(a) * len * 0.5 + len * 0.3);
+      ctx.stroke();
+    }
+    A.circle(ctx, tx, ty + 3, h * 0.05, '#2a1e12');
+  }
+  // Wasserlinie und Spiegelung unter einem Bootsrumpf (A.boat/A.ship zeichnen keine).
+  function waterline(ctx, x, y, w, night) {
+    A.ell(ctx, x + w / 2, y + 2, w * 0.55, 3.5, night ? 'rgba(0,0,0,0.35)' : 'rgba(0,30,50,0.22)');
+    A.line(ctx, x - 4, y, x + w + 4, y, night ? 'rgba(200,220,255,0.18)' : 'rgba(255,255,255,0.35)', 1.5);
+  }
+
   // ---------------------------------------------------------------- Gemeinsame Abläufe
   async function sailToSais(g) {
     await g.scene(async () => {
@@ -112,14 +137,22 @@
       A.sea(ctx, 0, 270, W, 166, night ? '#0e1a34' : '#4f93bc', night ? '#060a18' : '#22607f', 4);
       // Dampfer weit draußen am Horizont, blass, und ein ferner Segler
       const farShip = night ? '#0f1226' : '#8fa0b2';
-      A.poly(ctx, [640, 274, 724, 274, 718, 281, 646, 281], farShip); A.rect(ctx, 664, 266, 34, 8, farShip); A.rect(ctx, 676, 258, 6, 9, A.shade(farShip, -0.15));
+      A.poly(ctx, [820, 274, 904, 274, 898, 281, 826, 281], farShip); A.rect(ctx, 844, 266, 34, 8, farShip); A.rect(ctx, 856, 258, 6, 9, A.shade(farShip, -0.15));
       A.poly(ctx, [948, 279, 966, 279, 964, 283, 950, 283], farShip); A.poly(ctx, [956, 279, 956, 262, 965, 279], night ? '#1a1c30' : '#e8e4da');
-      A.ship(ctx, 190, 306, 170, night ? '#1a1a26' : '#3a3a44');
-      A.boat(ctx, 520, 322, 70, '#8a6a4a', true); A.boat(ctx, 760, 352, 110, '#6a4a2e', true);
+      // Unser Dampfer liegt im Becken zwischen den Palmen (links wäre er hinter Hafenamt und Lagerhaus verdeckt)
+      A.ship(ctx, 600, 300, 150, night ? '#1a1a26' : '#3a3a44'); waterline(ctx, 600, 327, 150, night);
+      A.boat(ctx, 520, 322, 70, '#8a6a4a', true); waterline(ctx, 520, 337, 70, night);
+      A.boat(ctx, 760, 352, 110, '#6a4a2e', true); waterline(ctx, 760, 376, 110, night);
       // Fischerboote mit ausgelegten Netzen, Bojen, Spiegelungen
       A.boat(ctx, 1230, 400, 60, '#5a4030', false); A.line(ctx, 1236, 398, 1222, 386, '#4a3a2a', 2); A.line(ctx, 1284, 398, 1300, 388, '#4a3a2a', 2);
-      A.rope(ctx, [1292, 396, 1298, 412], '#9a8258', 2);
-      A.boat(ctx, 432, 392, 56, '#7a5a3a', false); A.ell(ctx, 460, 394, 24, 3, 'rgba(0,0,0,0.25)');
+      A.rope(ctx, [1292, 396, 1298, 412], '#9a8258', 2); waterline(ctx, 1230, 413, 60, night);
+      A.boat(ctx, 432, 392, 56, '#7a5a3a', false); waterline(ctx, 432, 404, 56, night);
+      // Hassans Boot liegt längsseits am Kai: der untere Rumpf verschwindet hinter der Kaikante (wird danach gemalt)
+      A.boat(ctx, 1012, 406, 190, '#6a4a2e', true); waterline(ctx, 1012, 425, 190, night);
+      A.rect(ctx, 1030, 392, 150, 10, '#4a3620');
+      A.rr(ctx, 1150, 370, 40, 26, 4, '#8a7a5a');
+      if (!g.flag('lampe_genommen')) { A.ell(ctx, 1052, 400, 12, 6, '#b08a40'); A.poly(ctx, [1062, 398, 1072, 396, 1064, 402], '#b08a40'); A.circle(ctx, 1050, 397, 2.5, '#7a5a20'); }
+      if (!g.flag('schaufel_genommen')) { A.line(ctx, 1110, 382, 1150, 396, '#8a6a4a', 4); A.poly(ctx, [1148, 392, 1170, 388, 1176, 400, 1156, 404], '#9a9a9a'); }
       const buoy = (x, y) => { A.ell(ctx, x, y + 6, 8, 3, 'rgba(0,0,0,0.25)'); A.circle(ctx, x, y, 6, '#c8402a'); A.rect(ctx, x - 6, y - 2, 12, 3, '#f0e6d0'); A.line(ctx, x, y - 6, x, y - 12, '#3a3a3a', 1.5); A.line(ctx, x, y + 8, x, y + 18, 'rgba(200,60,40,0.25)', 3); };
       buoy(650, 384); buoy(905, 404); buoy(1250, 300);
       if (!night) for (let i = 0; i < 4; i++) A.line(ctx, 180 + i * 40, 348 + i * 6, 220 + i * 40, 348 + i * 6, 'rgba(255,255,255,0.12)', 2);
@@ -134,7 +167,8 @@
       const wallC = night ? '#3a3040' : '#e4d2a8';
       A.wall(ctx, 0, 110, 232, 330, wallC, 3); A.rect(ctx, 0, 104, 232, 10, A.shade(wallC, -0.3));
       for (let i = 0; i < 5; i++) A.rect(ctx, 10 + i * 46, 116, 30, 8, A.shade(wallC, -0.2));
-      A.door(ctx, 40, 250, 74, 178, night ? '#2a2018' : '#5a3e28', { frame: '#3a2a1a', arch: true, panel: true });
+      A.door(ctx, 40, 250, 74, 190, night ? '#2a2018' : '#5a3e28', { frame: '#3a2a1a', arch: true, panel: true });
+      A.rect(ctx, 28, 436, 98, 6, A.shade(wallC, -0.45)); A.rect(ctx, 28, 436, 98, 2, A.shade(wallC, -0.2));
       A.window(ctx, 150, 128, 52, 66, { frame: '#5a4a3a', light: night ? '#ffd890' : '#3a4a5a' });
       A.window(ctx, 40, 128, 52, 66, { frame: '#5a4a3a', light: night ? '#3a3a4a' : '#3a4a5a' });
       A.rect(ctx, 140, 198, 72, 6, '#5a4a3a'); A.rect(ctx, 30, 198, 72, 6, '#5a4a3a');
@@ -146,10 +180,11 @@
       A.rect(ctx, 236, 200, 64, 16, '#3a2a1a'); A.text(ctx, 'RUE DU MUSÉE', 268, 212, { font: 'bold 8px Georgia', color: '#e8d8a0', align: 'center' });
       // Lagerhaus
       A.wall(ctx, 304, 150, 112, 290, A.shade(wallC, -0.12), 5); A.rect(ctx, 304, 144, 112, 10, A.shade(wallC, -0.35));
-      A.door(ctx, 330, 300, 60, 130, '#4a3a2a', { frame: '#3a2a1a', planks: true }); A.rect(ctx, 316, 170, 88, 40, '#2a2a3a');
+      A.door(ctx, 330, 300, 60, 140, '#4a3a2a', { frame: '#3a2a1a', planks: true }); A.rect(ctx, 316, 170, 88, 40, '#2a2a3a');
+      A.rect(ctx, 320, 436, 80, 6, A.shade(wallC, -0.5)); A.rect(ctx, 320, 436, 80, 2, A.shade(wallC, -0.25));
       A.text(ctx, 'DÉPÔT', 360, 196, { font: 'bold 13px Georgia', color: '#c8b890', align: 'center' });
       // Palmen an der Mole
-      A.palm(ctx, 470, 442, 178, 3); A.palm(ctx, 900, 442, 150, 8);
+      palmAt(ctx, 470, 442, 178, 3, night); palmAt(ctx, 900, 442, 150, 8, night);
       // Kisten, Fässer, Netze
       A.crate(ctx, 560, 452, 82, 60, '#9a7a52', 'MANCHESTER'); A.crate(ctx, 648, 466, 60, 46, '#8a6a48', 'TRIEST');
       A.barrel(ctx, 716, 458, 36, 54, '#6a4a30');
@@ -181,7 +216,7 @@
       A.rect(ctx, 172, 320, 8, 14, '#5a4a3a');
       A.ell(ctx, 172, 434, 24, 7, '#8a7a6a'); A.rect(ctx, 170, 436, 4, 26, '#4a4a48'); A.ell(ctx, 172, 462, 12, 4, '#4a4a48');
       A.rr(ctx, 158, 424, 10, 6, 2, '#f0f0e8'); A.rr(ctx, 178, 425, 9, 5, 2, '#f0f0e8'); A.rect(ctx, 166, 418, 4, 8, '#3a3a3a');
-      const chair = (x) => { A.rect(ctx, x, 428, 22, 4, '#8a6a48'); A.rect(ctx, x + 2, 432, 3, 30, '#4a4a48'); A.rect(ctx, x + 17, 432, 3, 30, '#4a4a48'); A.rect(ctx, x + 2, 410, 3, 18, '#4a4a48'); A.rect(ctx, x + 17, 410, 3, 18, '#4a4a48'); A.rect(ctx, x + 2, 410, 18, 3, '#8a6a48'); };
+      const chair = (x) => { A.ell(ctx, x + 11, 463, 14, 3, 'rgba(0,0,0,0.2)'); A.rect(ctx, x + 2, 432, 3, 30, '#4a4a48'); A.rect(ctx, x + 17, 432, 3, 30, '#4a4a48'); A.rect(ctx, x + 2, 404, 3, 24, '#4a4a48'); A.rect(ctx, x + 17, 404, 3, 24, '#4a4a48'); A.rect(ctx, x + 2, 404, 18, 3, '#8a6a48'); A.rect(ctx, x + 2, 414, 18, 3, '#8a6a48'); A.rr(ctx, x, 426, 22, 7, 2, '#8a6a48'); A.rect(ctx, x, 431, 22, 2, '#5a4030'); };
       chair(122); chair(200);
       A.sign(ctx, 130, 238, 86, 16, 'ΚΑΦΕΝΕΙΟΝ', '#2a3a5a', '#e8d8a0', 'bold 9px Georgia');
       A.sign(ctx, 150, 258, 66, 12, 'TABAC · JOURNAUX', '#7a2e2e', '#f0e0b0', 'bold 7px Georgia');
@@ -190,14 +225,9 @@
       A.ell(ctx, 896, 476, 16, 7, '#4a3a2e'); A.circle(ctx, 910, 468, 6, '#4a3a2e'); A.poly(ctx, [906, 464, 908, 457, 911, 464], '#4a3a2e'); A.poly(ctx, [912, 464, 915, 457, 916, 464], '#4a3a2e'); A.line(ctx, 880, 476, 872, 468, '#4a3a2e', 3);
       A.cracks(ctx, 20, 300, 80, 120, 41, 'rgba(0,0,0,0.2)');
       ctx.fillStyle = 'rgba(80,60,40,0.16)'; ctx.fillRect(0, 400, 232, 40); ctx.fillRect(304, 400, 112, 40);
-      // Poller und Hassans Boot
+      // Poller mit Festmacher zu Hassans Boot
       A.rr(ctx, 990, 442, 22, 32, 7, '#3a3a3a'); A.ell(ctx, 1001, 442, 11, 5, '#5a5a5a');
       A.rope(ctx, [1004, 452, 1020, 430, 1040, 412], '#b89a68', 3);
-      A.boat(ctx, 1012, 406, 190, '#6a4a2e', true);
-      A.rect(ctx, 1030, 392, 150, 10, '#4a3620');
-      A.rr(ctx, 1150, 370, 40, 26, 4, '#8a7a5a');
-      if (!g.flag('lampe_genommen')) { A.ell(ctx, 1052, 400, 12, 6, '#b08a40'); A.poly(ctx, [1062, 398, 1072, 396, 1064, 402], '#b08a40'); A.circle(ctx, 1050, 397, 2.5, '#7a5a20'); }
-      if (!g.flag('schaufel_genommen')) { A.line(ctx, 1110, 382, 1150, 396, '#8a6a4a', 4); A.poly(ctx, [1148, 392, 1170, 388, 1176, 400, 1156, 404], '#9a9a9a'); }
       // Tor zum Basar rechts
       A.wall(ctx, 1300, 120, 100, 320, wallC, 7); A.rect(ctx, 1300, 114, 100, 10, A.shade(wallC, -0.3));
       A.arch(ctx, 1320, 240, 68, 200, '#8a7a5a', night ? '#1a1410' : '#7a5a40');
@@ -205,7 +235,12 @@
       A.rect(ctx, 1310, 196, 80, 30, '#7a2e2e'); A.text(ctx, 'SUQ', 1350, 218, { font: 'bold 16px Georgia', color: '#f0e0b0', align: 'center' });
       for (let i = 0; i < 4; i++) A.poly(ctx, [1300 + i * 25, 226, 1325 + i * 25, 226, 1318 + i * 25, 244, 1307 + i * 25, 244], i % 2 ? '#e8e0d0' : '#b34a3a');
       A.cracks(ctx, 1304, 130, 90, 100, 43, 'rgba(0,0,0,0.2)'); A.vines(ctx, 1396, 124, 90, 45, '#4a6a3a');
-      if (night) { A.lantern(ctx, 130, 250, 0, true); A.lantern(ctx, 1300, 236, 0, true); A.glow(ctx, 1354, 300, 80, 'rgba(255,190,100,0.6)', 0.35); }
+      if (night) {
+        // Nachttönung über allem unterhalb des Himmels, damit Kisten, Bojen und Segel keine Tagesfarben behalten; Lichter danach
+        ctx.fillStyle = 'rgba(8,12,40,0.3)'; ctx.fillRect(0, 108, W, 492);
+        A.glow(ctx, 428, 326, 120, 'rgba(255,225,150,0.7)', 0.3); A.glow(ctx, 1282, 336, 120, 'rgba(255,225,150,0.7)', 0.3);
+        A.lantern(ctx, 222, 300, 0, true); A.lantern(ctx, 1300, 236, 0, true); A.glow(ctx, 1354, 300, 80, 'rgba(255,190,100,0.6)', 0.35);
+      }
       A.vignette(ctx, W, 600, 0.35); A.grain(ctx, W, 600, 9, 0.035);
     },
     paintFront(ctx, g) {
@@ -219,8 +254,8 @@
       const night = g.flag('eg_nacht');
       A.waterAnim(ctx, 0, 270, 1400, 166, t, night ? 'rgba(200,220,255,0.08)' : 'rgba(255,255,255,0.13)');
       // Rauchfahnen der Dampfer, Möwen, Fahne auf Qait-Bey
-      A.smoke(ctx, 262, 256, t, night ? 'rgba(60,60,80,0.3)' : 'rgba(90,90,100,0.35)', 0.9);
-      A.smoke(ctx, 679, 258, t + 3, night ? 'rgba(60,60,80,0.2)' : 'rgba(140,145,155,0.3)', 0.35);
+      A.smoke(ctx, 664, 256, t, night ? 'rgba(60,60,80,0.3)' : 'rgba(90,90,100,0.35)', 0.9);
+      A.smoke(ctx, 859, 258, t + 3, night ? 'rgba(60,60,80,0.2)' : 'rgba(140,145,155,0.3)', 0.35);
       if (!night) { A.birds(ctx, 470 - ((t * 6) % 260), 150, 5, t, 'rgba(60,60,70,0.55)', 160); A.birds(ctx, 1000 - ((t * 6) % 200), 210, 3, t + 7, 'rgba(90,90,100,0.4)', 100); }
       A.line(ctx, 1180, 180, 1180, 150, night ? '#2a2a3a' : '#5a5a5a', 2); A.flag(ctx, 1181, 150, 22, 12, t, night ? '#1a2a24' : '#2e7a4a');
     },
@@ -232,7 +267,7 @@
         look: async (g) => { await g.say('falk', 'Qait-Bey. Eine Festung aus dem 15. Jahrhundert, gebaut aus den Steinen des Leuchtturms, der hier stand. Eines der sieben Weltwunder, als Steinbruch.'); g.codex('pharos'); } },
       { id: 'stadt', name: 'Nordufer', rect: [380, 170, 640, 100], at: [700, 470, 'u'], look: 'Alexandria. Minarette, Kuppeln und die Fassaden der Baumwollhändler. Alexander hat sie gegründet und nie gesehen.' },
       { id: 'meer', name: 'Hafenbecken', rect: [420, 270, 980, 150], noWalk: true, look: 'Der Osthafen. Das Wasser ist grün und riecht nach Fisch und Teer.', use: 'Ich habe nicht vor zu schwimmen.', useWith: { flasche: 'Salzwasser. Nein.', default: 'Das werfe ich nicht ins Hafenbecken.' }, take: 'Wasser nehme ich nicht mit. Nicht dieses.' },
-      { id: 'dampfer', name: 'Dampfer', rect: [180, 250, 200, 60], noWalk: true, look: 'Unser Dampfer aus Neapel. Er läuft morgen weiter nach Beirut, mit oder ohne uns.' },
+      { id: 'dampfer', name: 'Dampfer', rect: [596, 250, 160, 80], noWalk: true, look: 'Unser Dampfer aus Neapel. Er läuft morgen weiter nach Beirut, mit oder ohne uns.' },
       { id: 'hafenamt_schild', name: 'Hafenamt', rect: [0, 104, 232, 100], at: [78, 470, 'u'], look: 'Das Hafenamt. Hier haben wir heute Morgen Pässe gezeigt und Fragen beantwortet, die niemanden interessierten.' },
       { id: 'lagerhaus', name: 'Lagerhaus', rect: [304, 144, 112, 150], at: [360, 470, 'u'], look: 'Ein Lagerhaus. Baumwolle rein, Baumwolle raus.', open: 'Abgeschlossen. Und ich brauche keine Baumwolle.' },
       { id: 'palme', name: 'Dattelpalmen', rect: [420, 260, 120, 180], at: [470, 470, 'u'], look: 'Dattelpalmen entlang der Mole. Der Wind vom Meer geht hindurch, und sonst nichts.', take: 'Die Datteln sind noch grün.' },
@@ -393,7 +428,7 @@
       // Katze auf dem Teppich
       A.ell(ctx, 890, 428, 18, 8, '#3a3028'); A.circle(ctx, 906, 422, 6, '#3a3028'); A.poly(ctx, [902, 418, 904, 411, 907, 418], '#3a3028'); A.poly(ctx, [908, 418, 911, 411, 912, 418], '#3a3028'); A.line(ctx, 872, 428, 862, 420, '#3a3028', 3);
       // Gewürzsäcke
-      const sack = (x, y, c) => { A.rr(ctx, x, y, 44, 40, 8, '#b8a078'); A.ell(ctx, x + 22, y + 4, 18, 6, c); };
+      const sack = (x, y, c) => { A.ell(ctx, x + 22, y + 40, 25, 4, 'rgba(0,0,0,0.2)'); A.rr(ctx, x, y, 44, 40, 8, '#b8a078'); A.ell(ctx, x + 22, y + 4, 18, 6, c); };
       sack(400, 404, '#c8402a'); sack(430, 414, '#e0a020'); sack(396, 430, '#6a4a20');
       // Krüge
       A.ell(ctx, 634, 440, 40, 5, 'rgba(0,0,0,0.2)');
@@ -428,6 +463,7 @@
       { id: 'tauben', name: 'Tauben', rect: [656, 236, 134, 22], at: [720, 470, 'u'], z: 2, look: 'Vier Tauben auf dem Balkonbrett. Sie beobachten den Basar wie Beamte: ohne Eile und ohne Absicht.' },
       { id: 'stand', name: 'Farids Stand', rect: [100, 290, 300, 130], at: [250, 490, 'u'], z: 436,
         paint: (ctx, g) => {
+          A.ell(ctx, 250, 447, 152, 5, 'rgba(0,0,0,0.22)');
           A.table(ctx, 100, 372, 300, 18, '#8a6a48', 56); A.rect(ctx, 100, 390, 300, 50, '#7a5a3a'); A.rug(ctx, 110, 398, 280, 34, '#7a2e2e', '#e0b84a');
           A.rect(ctx, 106, 366, 288, 8, '#c8b48a');
           // Federn im Krug
@@ -438,7 +474,8 @@
           if (!g.flag('katalogkarte_erhalten')) A.ell(ctx, 262, 358, 12, 8, '#3a7a6a');
           A.rect(ctx, 290, 350, 40, 22, '#efe4c8'); A.rect(ctx, 296, 346, 40, 22, '#e6dcc0'); A.line(ctx, 302, 354, 326, 354, '#7a7a8a', 1);
           A.ell(ctx, 360, 362, 14, 7, '#b08a40'); A.poly(ctx, [372, 360, 384, 358, 374, 364], '#b08a40');
-          A.rect(ctx, 96, 240, 8, 100, '#5a4a3a'); A.rect(ctx, 396, 240, 8, 100, '#5a4a3a');
+          // Stützen des Baldachins reichen bis auf die Tischplatte (vorher endeten sie in der Luft)
+          A.rect(ctx, 96, 240, 8, 134, '#5a4a3a'); A.rect(ctx, 396, 240, 8, 134, '#5a4a3a');
           A.rect(ctx, 96, 234, 308, 14, '#e0b84a'); for (let i = 0; i < 12; i++) A.poly(ctx, [100 + i * 25, 248, 120 + i * 25, 248, 110 + i * 25, 262], '#e0b84a');
           A.text(ctx, 'FARID · ANTIQUITÉS', 250, 245, { font: 'bold 10px Georgia', color: '#5a3a1a', align: 'center' });
         },
@@ -633,10 +670,10 @@
       A.rect(ctx, 0, 0, 960, 26, '#8a7a5a'); A.rect(ctx, 0, 26, 960, 6, '#b8a888');
       A.cracks(ctx, 60, 34, 200, 60, 61, 'rgba(0,0,0,0.12)'); A.cracks(ctx, 880, 60, 80, 120, 63, 'rgba(0,0,0,0.12)');
       ctx.fillStyle = 'rgba(120,90,50,0.1)'; ctx.fillRect(0, 380, 960, 30);
-      A.rect(ctx, 0, 410, 960, 30, '#6a5238');
-      A.planks(ctx, 0, 440, 960, 160, '#8a6a48', 14, false, 3);
-      ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(0, 440, 960, 8);
-      ctx.fillStyle = A.grad(ctx, 0, 440, 0, 600, ['rgba(0,0,0,0)', 'rgba(0,0,0,0.25)']); ctx.fillRect(0, 440, 960, 160);
+      // Dielenboden beginnt an der Wand (y 408): Regale, Tür und Zettelkasten stehen darauf statt auf einer Leiste
+      A.planks(ctx, 0, 408, 960, 192, '#8a6a48', 16, false, 3);
+      ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(0, 408, 960, 8);
+      ctx.fillStyle = A.grad(ctx, 0, 408, 0, 600, ['rgba(0,0,0,0.14)', 'rgba(0,0,0,0)', 'rgba(0,0,0,0.25)']); ctx.fillRect(0, 408, 960, 192);
       A.cracks(ctx, 80, 450, 300, 100, 65, 'rgba(0,0,0,0.1)'); A.cracks(ctx, 640, 460, 280, 100, 67, 'rgba(0,0,0,0.1)');
       ctx.fillStyle = 'rgba(255,240,210,0.06)'; A.poly(ctx, [40, 448, 120, 448, 640, 600, 380, 600], ctx.fillStyle);
       // Gerahmte Deltakarte und ein Grabungsfoto über der Tür
@@ -653,6 +690,7 @@
       A.text(ctx, '1911', 58, 154, { font: '7px Georgia', color: 'rgba(40,30,20,0.7)', align: 'center' });
       // Tür zur Straße
       A.door(ctx, 24, 220, 66, 200, '#5a3e28', { panel: true, frame: '#3a2a1a' });
+      A.rect(ctx, 16, 418, 82, 5, '#3a2a1a'); A.rect(ctx, 16, 418, 82, 2, '#6a5a48');
       A.rect(ctx, 20, 196, 74, 18, '#3a2a1a'); A.text(ctx, 'AUSGANG', 57, 209, { font: 'bold 9px Georgia', color: '#e8d8a0', align: 'center' });
       // Kartenrollen im Ständer neben der Tür
       A.rect(ctx, 98, 398, 18, 42, '#4a3220'); A.rect(ctx, 98, 398, 18, 4, '#6a4f38');
@@ -672,7 +710,7 @@
       A.shelf(ctx, 300, 40, 220, 372, '#5a3f28', 7, 21);
       A.shelf(ctx, 690, 40, 200, 372, '#5a3f28', 7, 23);
       A.rr(ctx, 380, 44, 60, 18, 3, '#e8dcc0'); A.text(ctx, 'II · III', 410, 57, { font: 'bold 11px Georgia', color: '#3a2a1a', align: 'center' });
-      A.rr(ctx, 760, 44, 60, 18, 3, '#e8dcc0'); A.text(ctx, 'IV', 790, 57, { font: 'bold 11px Georgia', color: '#3a2a1a', align: 'center' });
+      A.rr(ctx, 818, 44, 60, 18, 3, '#e8dcc0'); A.text(ctx, 'IV', 848, 57, { font: 'bold 11px Georgia', color: '#3a2a1a', align: 'center' });
       for (let i = 0; i < 7; i++) A.text(ctx, String(7 - i), 884, 74 + i * 53, { font: '9px Georgia', color: '#c8b890', align: 'right' });
       if (g.flag('bericht_genommen')) A.rect(ctx, 830, 48, 30, 40, A.shade('#5a3f28', -0.55));
       // Leiter auf Schiene
@@ -700,9 +738,9 @@
       A.rect(ctx, 574, 330, 14, 10, '#3a2a1a'); A.circle(ctx, 581, 328, 4, '#8a8a8a');
       A.shadeRect(ctx, 520, 410, 160, 8, 0.3);
       // Vitrine über dem Schreibtisch: Scherbe, Skarabäus, Amulett, Münze
-      A.rect(ctx, 538, 300, 96, 36, '#3a2a1a'); A.rect(ctx, 542, 304, 88, 28, '#c8c0a8'); A.rect(ctx, 542, 304, 88, 28, 'rgba(200,220,240,0.25)');
-      A.poly(ctx, [548, 326, 560, 314, 566, 328], '#9a6a48'); A.ell(ctx, 578, 322, 6, 4, '#3a7a6a'); A.ell(ctx, 598, 320, 5, 7, '#2a5a8a'); A.circle(ctx, 618, 322, 5, '#c8a848');
-      A.line(ctx, 542, 306, 630, 306, 'rgba(255,255,255,0.35)', 1);
+      A.rect(ctx, 538, 304, 96, 36, '#3a2a1a'); A.rect(ctx, 542, 308, 88, 28, '#c8c0a8'); A.rect(ctx, 542, 308, 88, 28, 'rgba(200,220,240,0.25)');
+      A.poly(ctx, [548, 330, 560, 318, 566, 332], '#9a6a48'); A.ell(ctx, 578, 326, 6, 4, '#3a7a6a'); A.ell(ctx, 598, 324, 5, 7, '#2a5a8a'); A.circle(ctx, 618, 326, 5, '#c8a848');
+      A.line(ctx, 542, 310, 630, 310, 'rgba(255,255,255,0.35)', 1);
       // Aktenstapel neben dem Schreibtisch
       A.rect(ctx, 478, 428, 34, 12, '#7a2e2e'); A.rect(ctx, 480, 418, 32, 10, '#2e4a7a'); A.rect(ctx, 476, 408, 36, 10, '#4a6a2e');
       A.rect(ctx, 482, 386, 30, 22, '#e8dcc0'); A.line(ctx, 482, 397, 512, 397, '#8a7a5a', 1); A.line(ctx, 497, 386, 497, 408, '#8a7a5a', 1);
@@ -715,6 +753,7 @@
       A.papyrus(ctx, 328, 362, 24, '#e0cf9e'); A.rect(ctx, 340, 350, 12, 14, '#2a2a3a'); A.line(ctx, 352, 344, 362, 356, '#c8a848', 2);
       // Hoftür, Wanduhr
       A.door(ctx, 908, 240, 46, 176, '#4a3a2a', { frame: '#3a2a1a', planks: true });
+      A.rect(ctx, 900, 414, 60, 5, '#3a2a1a'); A.rect(ctx, 900, 414, 60, 2, '#6a5a48');
       A.text(ctx, 'HOF', 931, 232, { font: 'bold 9px Georgia', color: '#3a2a1a', align: 'center' });
       A.circle(ctx, 931, 150, 20, '#3a2a1a'); A.circle(ctx, 931, 150, 16, '#efe4c8');
       for (let i = 0; i < 12; i++) { const a = (i / 12) * TAU; A.circle(ctx, 931 + Math.cos(a) * 13, 150 + Math.sin(a) * 13, 1, '#3a2a1a'); }
@@ -897,7 +936,7 @@
       A.circle(ctx, 44, 352, 3, cam); A.rect(ctx, 41, 354, 6, 6, cam);
       A.line(ctx, 14, 380, 78, 380, night ? 'rgba(0,0,0,0.3)' : 'rgba(120,90,40,0.25)', 2);
       // Palme und ferne Mauerreste
-      A.palm(ctx, 860, 350, 100, 5);
+      palmAt(ctx, 860, 350, 100, 5, night);
       const brick = night ? '#3a3230' : '#a88a5a';
       A.poly(ctx, [400, 330, 420, 262, 470, 250, 520, 270, 560, 252, 600, 280, 660, 262, 700, 290, 740, 275, 790, 300, 820, 288, 860, 330], brick);
       ctx.save(); ctx.beginPath(); ctx.moveTo(400, 330); ctx.lineTo(420, 262); ctx.lineTo(470, 250); ctx.lineTo(520, 270); ctx.lineTo(560, 252); ctx.lineTo(600, 280); ctx.lineTo(660, 262); ctx.lineTo(700, 290); ctx.lineTo(740, 275); ctx.lineTo(790, 300); ctx.lineTo(820, 288); ctx.lineTo(860, 330); ctx.closePath(); ctx.clip();
@@ -939,6 +978,7 @@
       A.poly(ctx, [0, 462, 210, 474, 232, 512, 226, 520, 200, 486, 0, 476], night ? '#2a2830' : '#8a7a58');
       for (let i = 0; i < 12; i++) A.line(ctx, 40 + i * 15, 500 + i * 7, 60 + i * 15, 500 + i * 7, night ? 'rgba(200,220,255,0.15)' : 'rgba(255,255,255,0.18)', 1);
       A.boat(ctx, 40, 500, 150, '#6a4a2e', true);
+      if (night) A.poly(ctx, [118, 372.5, 118, 477.5, 175, 477.5], 'rgba(10,12,30,0.5)');
       A.rope(ctx, [186, 500, 206, 486, 222, 482], '#b89a68', 2); A.rect(ctx, 220, 470, 4, 14, '#5a4630');
       if (night) { A.lantern(ctx, 100, 500, 0, true); A.glow(ctx, 100, 488, 90, 'rgba(255,190,100,0.6)', 0.35); }
       // Schilf am Ufer
@@ -966,9 +1006,18 @@
         A.ell(ctx, 640, 478, 90, 30, night ? 'rgba(0,0,0,0.3)' : 'rgba(90,60,20,0.25)');
         A.ell(ctx, 640, 474, 70, 20, night ? 'rgba(0,0,0,0.2)' : 'rgba(90,60,20,0.18)');
       } else {
-        A.poly(ctx, [560, 460, 720, 460, 740, 500, 540, 500], night ? '#2a2430' : '#b89460');
+        // Ausgehobene Grube: Aushub links und rechts, Grubenboden als Rampe bis an die Schwelle, dunkle Wangen
+        const pit = night ? '#2a2430' : '#b89460', heap = night ? '#3a3040' : '#caa468';
+        A.ell(ctx, 526, 494, 36, 9, heap); A.ell(ctx, 756, 496, 38, 9, heap);
+        A.ell(ctx, 520, 490, 22, 5, A.shade(heap, 0.1)); A.ell(ctx, 762, 492, 24, 5, A.shade(heap, 0.1));
+        ctx.fillStyle = A.grad(ctx, 0, 452, 0, 500, [A.shade(pit, -0.35), pit]); A.poly(ctx, [560, 452, 720, 452, 740, 500, 540, 500], ctx.fillStyle);
+        A.poly(ctx, [560, 452, 570, 452, 552, 500, 540, 500], A.shade(pit, -0.4)); A.poly(ctx, [710, 452, 720, 452, 740, 500, 728, 500], A.shade(pit, -0.2));
+        for (let i = 1; i < 4; i++) A.line(ctx, 562 - i * 5, 452 + i * 12, 718 + i * 5, 452 + i * 12, 'rgba(0,0,0,0.12)', 1);
+        // Steinblock mit Sturz, Laibungen und Schwelle (schräg in den Hang gesetzt)
         A.rect(ctx, 586, 322, 116, 130, night ? '#3a3230' : '#8a7a5a');
-        A.rect(ctx, 578, 314, 132, 12, night ? '#4a4240' : '#9a8a6a');
+        ctx.fillStyle = A.grad(ctx, 586, 0, 702, 0, ['rgba(0,0,0,0.28)', 'rgba(0,0,0,0)', 'rgba(255,255,255,0.08)']); ctx.fillRect(586, 322, 116, 130);
+        A.rect(ctx, 578, 314, 132, 12, night ? '#4a4240' : '#9a8a6a'); A.rect(ctx, 578, 324, 132, 3, 'rgba(0,0,0,0.25)');
+        A.rect(ctx, 582, 448, 124, 6, night ? '#2a2420' : '#6a5a40'); A.rect(ctx, 582, 448, 124, 2, night ? '#4a4240' : '#9a8a6a');
         if (g.flag('tuer_offen') && !g.flag('sand_faelle')) {
           A.rect(ctx, 594, 330, 100, 122, '#0a0806');
           for (let i = 0; i < 5; i++) A.rect(ctx, 598, 372 + i * 16, 92, 6, `rgba(120,100,70,${0.5 - i * 0.09})`);
@@ -999,6 +1048,11 @@
       ctx.strokeStyle = fr; ctx.lineWidth = 5; ctx.lineCap = 'round';
       const frond = (x1, y1, cx, cy, n) => { ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(990, -20); ctx.quadraticCurveTo(cx, cy, x1, y1); ctx.stroke(); ctx.lineWidth = 2; for (let i = 1; i < n; i++) { const k = i / n; const px = (1 - k) * (1 - k) * 990 + 2 * (1 - k) * k * cx + k * k * x1, py = (1 - k) * (1 - k) * -20 + 2 * (1 - k) * k * cy + k * k * y1; const dx = (x1 - cx) * k + (cx - 990) * (1 - k), dy = (y1 - cy) * k + (cy + 20) * (1 - k); const L = Math.hypot(dx, dy) || 1; const nx = -dy / L, ny = dx / L; const len = 14 + 10 * Math.sin(k * Math.PI); ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px + nx * len + dx / L * 6, py + ny * len + dy / L * 6); ctx.moveTo(px, py); ctx.lineTo(px - nx * len + dx / L * 6, py - ny * len + dy / L * 6); ctx.stroke(); } };
       frond(770, 60, 900, 10, 14); frond(830, 130, 930, 40, 14); frond(930, 170, 970, 80, 10);
+      // Vordere Bordwand von Hassans Boot: verdeckt die Beine des Bootsführers, der darin sitzt
+      ctx.save(); ctx.beginPath(); ctx.rect(0, 506, 240, 40); ctx.clip();
+      A.boat(ctx, 40, 500, 150, '#6a4a2e', false);
+      if (night) A.rect(ctx, 40, 506, 150, 30, 'rgba(10,12,30,0.4)');
+      ctx.restore();
       const reed = night ? '#142018' : '#2e5e3a';
       for (let i = 0; i < 10; i++) { const rx = 198 + i * 4 + (i % 3) * 2, ry = 600; A.line(ctx, rx, ry, rx - 4 + (i % 2) * 8, ry - 44 - (i % 4) * 10, reed, 2.5); A.ell(ctx, rx - 4 + (i % 2) * 8, ry - 46 - (i % 4) * 10, 3, 7, A.shade(reed, 0.15)); }
     },
@@ -1191,8 +1245,15 @@
       ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(0, 440, 960, 8);
       // Treppe nach oben links
       A.rect(ctx, 0, 150, 116, 290, '#1a1410');
-      A.stairs(ctx, 0, 440, 116, 8, 18, '#5a4a38', 'l');
+      // Treppe frontal: Setzstufe dunkel, Trittfläche hell, nach hinten schmaler (steigt nach links oben aus dem Bild); Wange und Sturz
+      for (let i = 0; i < 10; i++) {
+        const y = 440 - i * 17, w = 116 - i * 5;
+        A.rect(ctx, 0, y - 17, w, 17, A.shade('#5a4a38', -0.3 + i * 0.03));
+        A.rect(ctx, 0, y - 17, w, 5, A.shade('#5a4a38', 0.12 + i * 0.03));
+        A.rect(ctx, w - 3, y - 17, 3, 17, 'rgba(0,0,0,0.35)');
+      }
       ctx.fillStyle = A.grad(ctx, 0, 150, 0, 300, ['rgba(255,220,170,0.28)', 'rgba(255,220,170,0)']); ctx.fillRect(4, 150, 108, 150);
+      A.rect(ctx, 112, 150, 8, 290, '#4a3a28'); A.rect(ctx, 0, 144, 120, 8, '#4a3a28'); A.rect(ctx, 0, 150, 120, 2, 'rgba(0,0,0,0.4)');
       // Wandinschrift
       A.rect(ctx, 392, 140, 176, 200, '#3a2c1e'); A.rect(ctx, 400, 148, 160, 184, '#8a7a5c');
       ctx.fillStyle = '#c9a86a';
@@ -1207,6 +1268,12 @@
       const open = g.flag('tuer2_offen');
       A.rect(ctx, 690, 186, 150, 254, '#2a2018');
       A.door(ctx, 704, 232, 122, 208, '#5a4a3a', { frame: '#7a6a58', planks: false, open, inside: '#06040a', knob: '#5a4a3a' });
+      if (!open) {
+        // Steinplatte: seitliche Schattierung und eine Fuge, damit sie nicht wie eine Fläche ohne Tiefe wirkt
+        ctx.fillStyle = A.grad(ctx, 704, 0, 826, 0, ['rgba(0,0,0,0.28)', 'rgba(0,0,0,0)', 'rgba(255,255,255,0.06)']); ctx.fillRect(704, 232, 122, 208);
+        A.rect(ctx, 704, 232, 122, 6, 'rgba(0,0,0,0.25)'); A.line(ctx, 706, 336, 824, 336, 'rgba(0,0,0,0.3)', 2);
+      }
+      A.rect(ctx, 698, 436, 134, 6, '#4a3a28'); A.rect(ctx, 698, 436, 134, 2, '#7a6a58');
       A.hieroglyphs(ctx, 700, 190, 130, 22, 'rgba(200,170,110,0.4)', 71);
       const cur = open ? SOLUTION : DOOR_START;
       for (let i = 0; i < 4; i++) { const bx = 706 + i * 30; A.rr(ctx, bx, 200, 26, 26, 3, '#3a2c1c', open ? '#e0b84a' : '#8a7350', 1.5); ctx.fillStyle = open ? '#ffe28a' : '#c9a86a'; SYMS[cur[i]].draw(ctx, bx + 13, 213, 8); }
@@ -1337,7 +1404,7 @@
         for (let k = 0; k < 3; k++) A.ell(ctx, x + 10 + k * 13, y + 40, 6, 6, k % 2 ? '#c8b080' : '#b8a070');
         for (let k = 0; k < 2; k++) A.ell(ctx, x + 16 + k * 13, y + 29, 6, 6, '#a89060');
       }
-      A.rect(ctx, 120, 420, 220, 8, '#5a4a38');
+      A.rect(ctx, 120, 420, 220, 20, '#5a4a38'); A.rect(ctx, 120, 420, 220, 3, '#7a6a58'); A.shadeRect(ctx, 118, 440, 224, 5, 0.35);
       A.cobweb(ctx, 122, 122, 30, 'tl', 'rgba(255,255,255,0.28)'); A.cobweb(ctx, 338, 122, 24, 'tr', 'rgba(255,255,255,0.25)');
       // Sandhaufen in den Ecken, Geröll am Eingang
       A.poly(ctx, [96, 446, 170, 446, 150, 436, 118, 430, 100, 434], '#b8a070'); A.poly(ctx, [96, 446, 140, 446, 124, 440, 104, 440], '#c8b080');
@@ -1390,7 +1457,13 @@
       jar(826, 'human'); jar(856, 'baboon'); jar(888, 'jackal'); jar(920, 'falcon');
       A.shadeRect(ctx, 806, 440, 136, 5, 0.35);
       // Sand nach dem Fall
-      if (shut) { A.dune(ctx, 300, 500, '#c8a868', 9, 30); A.poly(ctx, [700, 470, 960, 470, 960, 600, 660, 600], '#c8a868'); A.dune(ctx, 960, 560, 'rgba(200,168,104,0.6)', 12, 20); }
+      if (shut) {
+        // Sand liegt als weiche Wehe über dem ganzen Boden, mit Kuppen statt harter Kanten
+        A.dune(ctx, 960, 508, '#c8a868', 9, 34);
+        A.ell(ctx, 200, 548, 150, 24, '#d4b474'); A.ell(ctx, 760, 556, 170, 26, '#d4b474'); A.ell(ctx, 480, 592, 200, 22, '#d4b474');
+        A.dune(ctx, 960, 570, 'rgba(150,110,50,0.3)', 12, 18);
+        A.poly(ctx, [96, 446, 300, 446, 262, 470, 130, 478, 60, 466], '#c8a868');
+      }
       A.vignette(ctx, 960, 600, 0.6); A.grain(ctx, 960, 600, 17, 0.05);
     },
     paintFront(ctx) {
