@@ -55,6 +55,93 @@
   // ---------------------------------------------------------------- Grabungslager
   const sandDots = (ctx, x, y, w, h, seed, n) => { const r = ATL.U.rng(seed); for (let i = 0; i < n; i++) { ctx.fillStyle = `rgba(0,0,0,${0.03 + r() * 0.06})`; ctx.fillRect(x + r() * w, y + r() * h, 2 + r() * 4, 1 + r() * 2); } };
 
+  // ---- Ausschmückungshelfer für das Kapitel (Grabung 1938, Wüste, Zisterne)
+  // Vermessungsstange, rot-weiß, Spitze unten
+  const surveyPole = (ctx, x, y0, y1) => { const n = 8, seg = (y1 - y0) / n; for (let i = 0; i < n; i++) A.rect(ctx, x - 3, y0 + i * seg, 6, seg, i % 2 ? '#ece4d4' : '#b8382e'); A.poly(ctx, [x - 3, y1, x + 3, y1, x, y1 + 6], '#555'); A.rect(ctx, x - 4, y0 - 4, 8, 4, '#333'); };
+  // Spitzhacke und Schaufel: Ursprung ist der Fußpunkt, a neigt das Werkzeug (Bogenmaß)
+  const pickaxe = (ctx, x, y, a) => { ctx.save(); ctx.translate(x, y); ctx.rotate(a || 0); A.rect(ctx, -2, -52, 4, 52, '#8a6a48'); ctx.strokeStyle = '#4a4a48'; ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(-17, -46); ctx.quadraticCurveTo(0, -58, 17, -46); ctx.stroke(); ctx.restore(); };
+  const shovel = (ctx, x, y, a) => { ctx.save(); ctx.translate(x, y); ctx.rotate(a || 0); A.rect(ctx, -2, -56, 4, 44, '#8a6a48'); A.rect(ctx, -6, -60, 12, 5, '#6a5238'); A.poly(ctx, [-7, -14, 7, -14, 6, 0, 0, 4, -6, 0], '#6e6e6a'); A.line(ctx, -3, -12, -3, 0, 'rgba(255,255,255,0.25)', 1); ctx.restore(); };
+  // Siebrahmen aus Holz mit Drahtgeflecht
+  const sieve = (ctx, x, y, s) => { A.rr(ctx, x, y, s, s, 2, '#a07a4a', '#6a5238', 2); ctx.strokeStyle = 'rgba(40,30,20,0.45)'; ctx.lineWidth = 1; ctx.beginPath(); for (let i = 5; i < s; i += 5) { ctx.moveTo(x + i, y + 2); ctx.lineTo(x + i, y + s - 2); ctx.moveTo(x + 2, y + i); ctx.lineTo(x + s - 2, y + i); } ctx.stroke(); };
+  // Geier, der langsam auf einer Ellipse kreist
+  const vulture = (ctx, t, cx, cy, rx, ry, speed, size, phase) => {
+    const a = t * speed + (phase || 0); const x = cx + Math.cos(a) * rx, y = cy + Math.sin(a) * ry;
+    const s = size * (0.8 + Math.sin(a) * 0.2), f = Math.sin(t * 1.1 + a) * 2;
+    ctx.strokeStyle = 'rgba(40,35,30,0.75)'; ctx.lineWidth = 1.6; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(x - 10 * s, y + f); ctx.quadraticCurveTo(x - 4 * s, y - 3 * s, x, y); ctx.quadraticCurveTo(x + 4 * s, y - 3 * s, x + 10 * s, y + f); ctx.stroke();
+    A.ell(ctx, x, y + 1, 2.6 * s, 1.4 * s, 'rgba(40,35,30,0.75)');
+  };
+  // Sandschleier, die der Wind über den Boden treibt
+  const windSand = (ctx, t, y0, h, n) => {
+    ctx.lineWidth = 1.2; ctx.lineCap = 'round';
+    for (let i = 0; i < n; i++) {
+      const x = ((i * 173 + t * (50 + (i % 3) * 20)) % 1100) - 70, y = y0 + ((i * 47) % h), l = 24 + (i % 4) * 12;
+      ctx.strokeStyle = `rgba(240,225,190,${0.16 + (i % 2) * 0.1})`;
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo(x + l / 2, y - 2, x + l, y); ctx.stroke();
+    }
+  };
+  // Fußspuren entlang einer Linienkette
+  const footprints = (ctx, pts, color) => {
+    for (let i = 0; i + 3 < pts.length; i += 2) {
+      const x0 = pts[i], y0 = pts[i + 1], x1 = pts[i + 2], y1 = pts[i + 3]; const n = Math.max(1, Math.floor(Math.hypot(x1 - x0, y1 - y0) / 14));
+      for (let k = 0; k < n; k++) { const f = k / n; A.ell(ctx, x0 + (x1 - x0) * f + (k % 2 ? 4 : -4), y0 + (y1 - y0) * f, 3, 1.6, color || 'rgba(90,70,40,0.14)'); }
+    }
+  };
+  const scorpion = (ctx, x, y, c) => {
+    c = c || '#3a2a18'; A.ell(ctx, x, y, 7, 3, c); A.ell(ctx, x - 8, y, 3, 2, c);
+    for (let i = 0; i < 3; i++) { A.line(ctx, x - 3 + i * 3, y, x - 5 + i * 3, y + 5, c, 1); A.line(ctx, x - 3 + i * 3, y, x - 1 + i * 3, y - 5, c, 1); }
+    A.line(ctx, x - 11, y, x - 15, y - 3, c, 1.2); A.line(ctx, x - 11, y, x - 15, y + 3, c, 1.2);
+    ctx.strokeStyle = c; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x + 6, y); ctx.quadraticCurveTo(x + 14, y - 1, x + 13, y - 9); ctx.stroke(); A.circle(ctx, x + 13, y - 9, 1.5, c);
+  };
+  const lizard = (ctx, x, y, c) => {
+    c = c || '#7a6a48'; A.ell(ctx, x, y, 8, 3, c); A.circle(ctx, x + 9, y - 0.5, 2.5, c);
+    ctx.strokeStyle = c; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x - 8, y); ctx.quadraticCurveTo(x - 16, y + 2, x - 22, y - 4); ctx.stroke();
+    for (const s of [-1, 1]) { A.line(ctx, x + 4, y, x + 8, y + 5 * s, c, 1); A.line(ctx, x - 4, y, x - 8, y + 5 * s, c, 1); }
+  };
+  // Feldbett: x, y ist die linke obere Ecke der Liegefläche
+  const cot = (ctx, x, y, w, color) => {
+    A.line(ctx, x + 6, y + 2, x + 16, y + 22, '#5a4a3a', 2); A.line(ctx, x + 16, y + 2, x + 6, y + 22, '#5a4a3a', 2);
+    A.line(ctx, x + w - 16, y + 2, x + w - 6, y + 22, '#5a4a3a', 2); A.line(ctx, x + w - 6, y + 2, x + w - 16, y + 22, '#5a4a3a', 2);
+    ctx.fillStyle = color || '#8a8a6a'; ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo(x + w / 2, y + 8, x + w, y); ctx.lineTo(x + w, y + 5); ctx.quadraticCurveTo(x + w / 2, y + 13, x, y + 5); ctx.closePath(); ctx.fill();
+    A.rect(ctx, x - 2, y - 1, w + 4, 3, '#6a5238');
+    A.rr(ctx, x + 4, y - 9, 18, 10, 4, '#a8a088');
+  };
+  // Fahrradgenerator für den Funk: x, y ist der Boden unter dem Rad
+  const pedalGenerator = (ctx, x, y) => {
+    A.ell(ctx, x + 14, y + 1, 36, 4, 'rgba(0,0,0,0.15)');
+    A.rect(ctx, x - 20, y - 3, 62, 3, '#4a4a48');
+    A.circle(ctx, x, y - 18, 15, null, '#3a3a3a', 3);
+    for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI; A.line(ctx, x - Math.cos(a) * 13, y - 18 - Math.sin(a) * 13, x + Math.cos(a) * 13, y - 18 + Math.sin(a) * 13, '#777', 1); }
+    A.line(ctx, x, y - 18, x + 22, y - 40, '#3a3a3a', 3); A.line(ctx, x + 22, y - 40, x + 34, y - 20, '#3a3a3a', 3); A.line(ctx, x + 34, y - 20, x, y - 18, '#3a3a3a', 3);
+    A.rr(ctx, x + 13, y - 46, 18, 6, 3, '#4a3a2a');
+    A.circle(ctx, x + 34, y - 20, 4, '#3a3a3a'); A.line(ctx, x + 34, y - 20, x + 40, y - 12, '#777', 2);
+    A.rr(ctx, x + 40, y - 15, 20, 12, 2, '#5a5a58'); A.rect(ctx, x + 42, y - 10, 16, 3, '#8a7a3a');
+    A.line(ctx, x + 14, y - 22, x + 50, y - 9, 'rgba(0,0,0,0.5)', 1.5);
+  };
+  const stalactite = (ctx, x, y, w, h, color) => { A.poly(ctx, [x - w / 2, y, x + w / 2, y, x + w * 0.08, y + h * 0.85, x, y + h], color); A.poly(ctx, [x - w / 2, y, x - w * 0.15, y, x - w * 0.05, y + h * 0.7], A.shade(color, 0.12)); };
+  // Fisch als Ritzzeichnung: dir 1 schaut nach rechts
+  const fishGlyph = (ctx, x, y, w, color, dir) => {
+    const d = dir || 1; ctx.strokeStyle = color; ctx.lineWidth = 1.4; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(x - w * 0.5 * d, y); ctx.quadraticCurveTo(x - w * 0.1 * d, y - w * 0.28, x + w * 0.3 * d, y); ctx.quadraticCurveTo(x - w * 0.1 * d, y + w * 0.28, x - w * 0.5 * d, y); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x - w * 0.5 * d, y); ctx.lineTo(x - w * 0.68 * d, y - w * 0.2); ctx.lineTo(x - w * 0.68 * d, y + w * 0.2); ctx.closePath(); ctx.stroke();
+    A.circle(ctx, x + w * 0.16 * d, y - w * 0.05, 1.2, color);
+  };
+  // Enki im Relief: Hörnerkrone, Falbelgewand; die Wasserströme malt der Raum selbst
+  function enkiRelief(ctx, x, baseY, h, color) {
+    const w = h * 0.36;
+    const draw = (dx, dy, c) => {
+      A.rr(ctx, x - w * 0.4 + dx, baseY - h * 0.62 + dy, w * 0.8, h * 0.62, 4, c);
+      for (let i = 0; i < 5; i++) A.line(ctx, x - w * 0.38 + dx, baseY - h * 0.55 + i * h * 0.1 + dy, x + w * 0.38 + dx, baseY - h * 0.55 + i * h * 0.1 + dy, A.shade(c, -0.12), 1);
+      A.circle(ctx, x + dx, baseY - h * 0.72 + dy, w * 0.2, c);
+      A.poly(ctx, [x - w * 0.14 + dx, baseY - h * 0.66 + dy, x + w * 0.14 + dx, baseY - h * 0.66 + dy, x + dx, baseY - h * 0.52 + dy], A.shade(c, -0.1));
+      A.poly(ctx, [x - w * 0.26 + dx, baseY - h * 0.8 + dy, x + w * 0.26 + dx, baseY - h * 0.8 + dy, x + w * 0.2 + dx, baseY - h * 0.98 + dy, x - w * 0.2 + dx, baseY - h * 0.98 + dy], c);
+      A.line(ctx, x - w * 0.26 + dx, baseY - h * 0.82 + dy, x - w * 0.36 + dx, baseY - h * 0.94 + dy, c, 2); A.line(ctx, x + w * 0.26 + dx, baseY - h * 0.82 + dy, x + w * 0.36 + dx, baseY - h * 0.94 + dy, c, 2);
+    };
+    draw(2, 2, A.shade(color, -0.45)); draw(0, 0, color);
+  }
+  // Tonöllampe (Schnabelform) mit Rußfahne an der Wand darüber
+  const clayLamp = (ctx, x, y, soot) => { if (soot) A.ell(ctx, x + 12, y - 28, 8, 20, 'rgba(0,0,0,0.35)'); A.ell(ctx, x, y - 3, 9, 4, '#8a6a48'); A.poly(ctx, [x + 8, y - 4, x + 15, y - 3, x + 8, y - 1], '#8a6a48'); A.ell(ctx, x - 1, y - 5, 4, 1.8, '#3a2a18'); };
+
   R({
     id: 'me_camp', name: 'Grabungslager bei Eridu', ambient: 'mesopotamia',
     start: [160, 520, 'r'],
@@ -89,29 +176,82 @@
       for (let i = 0; i < 5; i++) A.line(ctx, 128, 130 + i * 60, 152, 130 + i * 60, '#3a3a3a', 2);
       A.line(ctx, 140, 100, 90, 445, 'rgba(60,60,60,0.7)', 1); A.line(ctx, 140, 100, 190, 445, 'rgba(60,60,60,0.7)', 1);
       A.line(ctx, 140, 100, 120, 92, '#3a3a3a', 3); A.line(ctx, 140, 100, 160, 92, '#3a3a3a', 3);
-      A.poly(ctx, [140, 108, 170, 114, 140, 122], '#b8473a');
+      // (der Wimpel am Mast flattert in animate)
       A.line(ctx, 140, 130, 250, 320, 'rgba(60,60,60,0.5)', 1);
+      // Erdanker der Abspannseile, Isolatoren am Kabel
+      A.poly(ctx, [84, 440, 96, 440, 92, 452, 88, 452], '#4a4a48'); A.poly(ctx, [184, 440, 196, 440, 192, 452, 188, 452], '#4a4a48');
+      A.circle(ctx, 172, 185, 2.5, '#e8e8e0'); A.circle(ctx, 206, 244, 2.5, '#e8e8e0');
       // Abraumhalden und ferne Zelte der Arbeiter
       A.dune(ctx, 960, 350, '#c4a878', 19, 12);
       A.tent(ctx, 470, 352, 40, 22, '#cbbb92'); A.tent(ctx, 520, 354, 46, 26, '#c4b48a'); A.tent(ctx, 585, 350, 36, 20, '#cbbb92');
+      // Am Grabungsschnitt: Maßstab, Schubkarre, Sieb, zwei Arbeiter in der Ferne
+      surveyPole(ctx, 282, 344, 386);
+      A.poly(ctx, [296, 372, 330, 372, 326, 386, 300, 386], '#6a6a66'); A.circle(ctx, 300, 388, 5, '#3a3a3a'); A.line(ctx, 330, 372, 344, 378, '#5a4a3a', 2);
+      sieve(ctx, 316, 356, 26);
+      for (const [wx, wy] of [[120, 372], [205, 368]]) { A.rect(ctx, wx - 3, wy - 10, 6, 10, '#7a6650'); A.circle(ctx, wx, wy - 13, 3, '#c8a888'); A.ell(ctx, wx, wy - 15, 4, 1.5, '#e8e0d0'); }
+      A.basket(ctx, 60, 384, 18, 12, '#b8955a'); A.basket(ctx, 250, 386, 16, 11, '#a8854a');
+      // Lange Zeltschatten nach links unten (Sonne steht rechts oben)
+      A.poly(ctx, [130, 448, 250, 448, 232, 462, 40, 474], 'rgba(60,40,20,0.1)');
+      A.poly(ctx, [645, 445, 750, 445, 704, 460, 556, 458], 'rgba(60,40,20,0.1)');
       // Funkzelt und Vorratszelt, mit Schatten und Abspannschnüren
       A.ell(ctx, 250, 450, 150, 12, 'rgba(0,0,0,0.18)');
       A.tent(ctx, 250, 448, 240, 140, '#d2c39c');
       A.poly(ctx, [250, 308, 370, 448, 250, 448], 'rgba(0,0,0,0.12)');
       A.line(ctx, 130, 448, 160, 380, '#8a7a5a', 1); A.line(ctx, 370, 448, 340, 380, '#8a7a5a', 1);
       A.rect(ctx, 300, 392, 60, 14, '#6a5238'); A.text(ctx, 'W/T', 330, 403, { font: 'bold 10px Georgia', color: '#efe4c8', align: 'center' });
+      // Flickstellen und Nähte auf der Zeltbahn, Petroleumlampe an der Stange im Eingang
+      A.rr(ctx, 168, 396, 22, 16, 2, '#c4b48a'); A.rr(ctx, 300, 350, 14, 20, 2, '#c8b890');
+      A.line(ctx, 200, 448, 250, 320, 'rgba(0,0,0,0.08)', 1); A.line(ctx, 300, 448, 250, 320, 'rgba(0,0,0,0.08)', 1);
+      A.line(ctx, 250, 366, 250, 380, '#3a3a3a', 1); A.lantern(ctx, 250, 402, 0, false);
+      // Wäscheleine vom Mast zur Zeltstange
+      ctx.strokeStyle = '#8a7a5a'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(140, 316); ctx.quadraticCurveTo(195, 334, 250, 302); ctx.stroke();
+      const lineY = (x) => { const k = (x - 140) / 110, a = 1 - k; return a * a * 316 + 2 * a * k * 334 + k * k * 302; };
+      [[156, 20, 24, '#efe8d8', true], [186, 14, 20, '#7a8aa0', false], [212, 18, 22, '#c8b48a', true]].forEach(([lx, lw, lh, c, shirt]) => {
+        const ly = lineY(lx + lw / 2);
+        A.rect(ctx, lx, ly, lw, lh, c); if (shirt) { A.rect(ctx, lx - 5, ly + 2, 5, 8, c); A.rect(ctx, lx + lw, ly + 2, 5, 8, c); }
+        A.rect(ctx, lx, ly, lw, 2, A.shade(c, -0.2)); A.rect(ctx, lx + 2, ly - 3, 2, 5, '#5a4a3a'); A.rect(ctx, lx + lw - 4, ly - 3, 2, 5, '#5a4a3a');
+      });
+      // Fahrradgenerator neben dem Funkzelt, Kabel ins Zelt
+      pedalGenerator(ctx, 196, 456);
+      A.line(ctx, 250, 446, 236, 452, 'rgba(30,30,30,0.6)', 1);
+      // Feldbett vor dem Funkzelt, Klappstuhl daneben
+      A.ell(ctx, 322, 474, 32, 5, 'rgba(0,0,0,0.15)'); cot(ctx, 294, 452, 56, '#8e8c6c');
       A.ell(ctx, 750, 447, 130, 10, 'rgba(0,0,0,0.18)');
       A.tent(ctx, 750, 445, 210, 125, '#c6b088');
       A.poly(ctx, [750, 320, 855, 445, 750, 445], 'rgba(0,0,0,0.12)');
       A.line(ctx, 645, 445, 665, 390, '#8a7a5a', 1);
+      A.rr(ctx, 790, 372, 18, 24, 2, '#b8a078'); A.line(ctx, 800, 445, 750, 335, 'rgba(0,0,0,0.07)', 1);
+      // Säcke, Sieb und Werkzeug am Vorratszelt
+      A.ell(ctx, 716, 458, 34, 5, 'rgba(0,0,0,0.15)'); A.sack(ctx, 702, 458, 28, 32, '#cbb890'); A.sack(ctx, 728, 460, 24, 26, '#c0ac84');
+      sieve(ctx, 762, 424, 28);
+      shovel(ctx, 804, 452, 0.14); shovel(ctx, 814, 454, 0.2); pickaxe(ctx, 830, 454, 0.26);
       A.chair(ctx, 352, 470, 22, '#8a6a48');
       A.crate(ctx, 812, 400, 70, 45, '#8a6a48', 'ERIDU 38'); A.crate(ctx, 886, 408, 56, 37, '#9a7a52', 'IX');
+      A.crate(ctx, 892, 376, 44, 32, '#9a7a52', 'XII'); A.rect(ctx, 812, 398, 70, 2, 'rgba(255,240,200,0.3)');
+      A.lantern(ctx, 838, 400, 0, false);
+      for (let i = 0; i < 3; i++) A.ell(ctx, 866, 404 - i * 2, 9 - i, 3, i % 2 ? '#a89060' : '#8a7448');
+      // Fußspuren im Sand, die zwischen Zelten, Tisch und Tank hin und her laufen
+      footprints(ctx, [270, 478, 380, 496, 470, 500, 600, 474]); footprints(ctx, [160, 470, 250, 462]);
+      // Sonnensegel über dem Fundtisch, mit Stangen, Spannschnüren und Schatten darunter
+      A.rect(ctx, 380, 456, 176, 18, 'rgba(60,40,20,0.08)');
+      A.line(ctx, 374, 384, 350, 458, '#8a7a5a', 1); A.line(ctx, 558, 384, 584, 458, '#8a7a5a', 1);
+      A.rect(ctx, 372, 384, 4, 88, '#6a5238'); A.rect(ctx, 556, 384, 4, 88, '#6a5238');
+      A.awning(ctx, 360, 378, 208, 12, '#dccaa2', '#c8b48a', 8);
+      A.rect(ctx, 364, 378, 204, 3, '#a8987a');
       // Fundtisch mit Scherben, Tafeln, Notizbuch
+      A.rect(ctx, 380, 460, 170, 28, 'rgba(0,0,0,0.12)');
       A.table(ctx, 380, 425, 170, 12, '#8a6a48', 50);
+      A.crate(ctx, 398, 456, 40, 30, '#8a6a48', '7'); A.basket(ctx, 520, 486, 34, 24, '#b8955a');
+      A.poly(ctx, [510, 466, 520, 460, 528, 466], '#a8794a'); A.poly(ctx, [526, 466, 536, 461, 540, 467], '#8a5a3a');
       A.rr(ctx, 392, 405, 30, 22, 4, '#b89468'); A.cuneiform(ctx, 395, 408, 24, 16, '#5a3a20', 4);
       A.rr(ctx, 428, 409, 26, 18, 3, '#b08a5a'); A.cuneiform(ctx, 431, 412, 20, 12, '#5a3a20', 9);
       A.ell(ctx, 480, 418, 16, 8, '#8a5a3a'); A.ell(ctx, 480, 411, 10, 4, '#5a3a20');
       A.rect(ctx, 505, 412, 36, 14, '#efe4c8'); A.line(ctx, 510, 417, 536, 417, '#666', 1); A.line(ctx, 510, 421, 530, 421, '#666', 1);
+      // Fundzettel mit roter Linie, Scherbenhäufchen, Pinsel, Lupe
+      for (const [tx, ty] of [[458, 421], [500, 405], [544, 416]]) { A.rect(ctx, tx, ty, 12, 7, '#f4ecd8'); A.rect(ctx, tx + 2, ty + 3, 8, 1, '#b8382e'); }
+      A.poly(ctx, [455, 412, 462, 404, 468, 411], '#a8794a'); A.poly(ctx, [466, 414, 472, 407, 476, 414], '#8a5a3a'); A.poly(ctx, [446, 416, 452, 409, 456, 416], '#b08a5a');
+      A.line(ctx, 430, 430, 452, 428, '#5a4a3a', 2); A.rect(ctx, 452, 425, 8, 5, '#d8c8a0');
+      A.circle(ctx, 522, 404, 5, 'rgba(200,220,230,0.5)', '#3a3a3a', 1.5); A.line(ctx, 526, 407, 534, 412, '#3a3a3a', 2);
       // Wassertank auf Böcken
       A.rect(ctx, 600, 430, 8, 22, '#4a3a2a'); A.rect(ctx, 682, 430, 8, 22, '#4a3a2a'); A.rect(ctx, 596, 428, 98, 5, '#5a4a3a');
       A.rr(ctx, 594, 348, 102, 82, 14, A.grad(ctx, 594, 0, 696, 0, ['#6a7a7a', '#a8b4b0', '#5a6a6a']));
@@ -120,21 +260,59 @@
       A.rect(ctx, 690, 412, 14, 5, '#8a7a3a'); A.rect(ctx, 702, 412, 4, 12, '#8a7a3a');
       A.rr(ctx, 694, 432, 22, 20, 3, '#7a8a8a'); A.ell(ctx, 705, 432, 11, 4, '#9aa8a8');
       A.text(ctx, 'WATER', 645, 393, { font: 'bold 12px Georgia', color: '#e8e8e0', align: 'center' });
+      // Rost und Tropfspur am Tank, Wasserkrüge aus Ton daneben
+      A.rect(ctx, 600, 376, 6, 22, 'rgba(120,70,30,0.35)'); A.ell(ctx, 654, 455, 18, 3, 'rgba(60,80,90,0.25)');
+      A.ell(ctx, 566, 464, 16, 4, 'rgba(0,0,0,0.18)'); A.ell(ctx, 586, 466, 14, 3, 'rgba(0,0,0,0.18)');
+      A.pot(ctx, 566, 463, 24, 32, '#a8794a'); A.pot(ctx, 586, 465, 20, 24, '#b08050');
+      A.rect(ctx, 556, 452, 6, 3, '#8a7a5a');
+      // Ölfleck an der Stelle, wo der Jeep steht
+      A.ell(ctx, 792, 553, 26, 6, 'rgba(40,30,20,0.25)');
       // Feuerstelle links vorn
       A.ell(ctx, 110, 546, 34, 12, '#8a7a60');
       for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2; A.ell(ctx, 110 + Math.cos(a) * 32, 546 + Math.sin(a) * 11, 7, 4, '#7a6a5a'); }
       A.ell(ctx, 110, 545, 16, 6, '#3a3230'); A.rr(ctx, 100, 522, 20, 18, 4, '#3a3a3a'); A.rect(ctx, 96, 520, 28, 3, '#2a2a2a');
+      // Teegläser, Teekanne und ein Holzstapel neben der Feuerstelle
+      A.rr(ctx, 62, 552, 6, 9, 1, 'rgba(220,200,150,0.8)'); A.rr(ctx, 72, 554, 6, 9, 1, 'rgba(220,200,150,0.8)');
+      A.rr(ctx, 82, 556, 12, 10, 3, '#8a8a86'); A.line(ctx, 94, 558, 100, 556, '#8a8a86', 2); A.rect(ctx, 86, 553, 4, 3, '#8a8a86');
+      A.ell(ctx, 162, 566, 16, 3, 'rgba(0,0,0,0.2)');
+      for (let i = 0; i < 4; i++) A.rect(ctx, 150 + (i % 2) * 3, 560 - i * 4, 22, 4, i % 2 ? '#7a5a3a' : '#6a4a2e');
       // Kanister am Vorratszelt, solange Nabil ihn nicht freigibt
       if (!g.flag('kanister_erhalten')) { A.rr(ctx, 652, 452, 24, 32, 3, '#5a6a3a'); A.rect(ctx, 658, 447, 8, 6, '#3a3a3a'); A.rect(ctx, 656, 462, 16, 10, '#3a4a2a'); }
       A.vignette(ctx, 960, 600, 0.3);
       A.grain(ctx, 960, 600, 4, 0.035);
     },
+    paintFront(ctx) {
+      // Zeltplane, die oben links ins Bild hängt
+      ctx.fillStyle = A.grad(ctx, 0, 0, 120, 100, ['#cdbd93', '#a8987a']);
+      A.poly(ctx, [0, 0, 176, 0, 0, 128], ctx.fillStyle);
+      A.line(ctx, 176, 0, 0, 128, '#7a6a4a', 3); A.line(ctx, 150, 8, 12, 108, 'rgba(0,0,0,0.12)', 6);
+      A.circle(ctx, 30, 96, 4, '#5a4a3a'); A.circle(ctx, 30, 96, 2, '#2a2a2a'); A.line(ctx, 30, 96, 0, 140, '#8a7a5a', 2);
+      // Wasserkrug rechts vorn
+      A.ell(ctx, 936, 604, 40, 7, 'rgba(0,0,0,0.25)');
+      A.pot(ctx, 938, 606, 64, 58, '#a8794a'); A.line(ctx, 916, 560, 912, 598, 'rgba(255,240,200,0.25)', 2);
+      // Blecheimer und Schaufel links vorn
+      A.ell(ctx, 18, 604, 26, 5, 'rgba(0,0,0,0.25)');
+      A.pot(ctx, 16, 606, 38, 36, '#7c7c78'); A.ell(ctx, 16, 570, 19, 4, '#5a5a58');
+      ctx.strokeStyle = '#5a5a58'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(16, 570, 17, Math.PI, 0); ctx.stroke();
+      shovel(ctx, 44, 596, 1.3);
+    },
     animate(ctx, t) {
       // Hitzeflimmern über dem Horizont: helle Streifen, die langsam wandern
       for (let i = 0; i < 6; i++) { const y = 300 + i * 9 + Math.sin(t * 1.7 + i) * 2; A.rect(ctx, 0, y, 960, 1, `rgba(255,255,240,${0.05 + (i % 2) * 0.04})`); }
       A.dust(ctx, 0, 380, 960, 200, t, 14, 'rgba(120,100,60,0.25)');
+      // Zwei Geier über der Ebene, der Wimpel am Mast, Rauch vom Kochfeuer der Arbeiter, Sand im Wind
+      vulture(ctx, t, 600, 150, 120, 26, 0.35, 1.1, 0); vulture(ctx, t, 400, 110, 70, 14, 0.28, 0.7, 2);
+      A.flag(ctx, 141, 107, 28, 12, t, '#b8473a');
+      A.smoke(ctx, 548, 350, t, 'rgba(210,200,180,0.3)', 0.45);
+      windSand(ctx, t, 470, 110, 7);
     },
     hotspots: [
+      { id: 'sonnensegel', name: 'Sonnensegel', rect: [372, 372, 190, 22], at: [465, 480, 'u'],
+        look: 'Ein Sonnensegel über dem Fundtisch. Der einzige Schatten im Lager, der nicht zu einem Zelt gehört. Nabil hat ihn für die Scherben aufgespannt, nicht für uns.' },
+      { id: 'generator', name: 'Fahrradgenerator', rect: [174, 408, 60, 48], at: [206, 480, 'u'], z: 2,
+        look: 'Ein Fahrrad ohne Räder, das einen Generator treibt. Wer mit Tom funken will, tritt vorher zwanzig Minuten in die Pedale. Die Nachrichten werden dadurch kürzer.' },
+      { id: 'kruege', name: 'Wasserkrüge', rect: [552, 436, 38, 30], at: [578, 480, 'u'],
+        look: 'Tonkrüge, wie sie hier seit fünftausend Jahren gebrannt werden. Das Wasser bleibt darin kühl. Der Tank aus Stahl schafft das nicht.' },
       { id: 'zikkurat_fern', name: 'Zikkurat in der Ferne', rect: [770, 245, 190, 95], at: [880, 470, 'u'],
         look: async (g) => { await g.say('falk', 'Die Zikkurat von Eridu. Ein Hügel aus Lehmziegeln, drei Stufen, viertausend Jahre. Von hier sieht sie aus wie ein Sandhaufen mit Ambitionen.'); g.codex('zikkurat'); },
         use: 'Zu Fuß sind es zwanzig Minuten. Der Weg geht rechts aus dem Lager.', take: 'Nein.' },
@@ -387,6 +565,23 @@
       tier(30, 222, 900, 222, 9);
       // Erosionsrinnen an der Front
       for (let i = 0; i < 9; i++) { const x = 60 + i * 100 + (i % 3) * 17; A.line(ctx, x, 240, x + 6, 440, 'rgba(60,40,20,0.22)', 3); }
+      // Bitumenlagen zwischen den Ziegelschichten, mit Tropfnasen; Salzausblühungen am Fuß
+      const rbit = ATL.U.rng(91);
+      for (const [bx, by, bw] of [[30, 262, 900], [30, 334, 900], [30, 400, 900], [170, 152, 620]]) {
+        A.rect(ctx, bx, by, bw, 3, 'rgba(25,15,10,0.42)');
+        for (let x = bx + 10; x < bx + bw; x += 26 + rbit() * 30) A.rect(ctx, x, by + 3, 2 + rbit() * 2, 3 + rbit() * 12, 'rgba(25,15,10,0.35)');
+      }
+      for (let i = 0; i < 7; i++) A.ell(ctx, 80 + i * 130 + rbit() * 40, 428 + rbit() * 8, 24 + rbit() * 20, 5, 'rgba(255,250,235,0.16)');
+      // Reliefspuren: ein verwittertes Rosettenband unter der Terrassenkante, ein Inschriftfeld mit Prozession
+      for (let x = 60; x < 920; x += 36) { if (x > 536 && x < 668) continue; A.circle(ctx, x, 243, 5.5, null, 'rgba(60,40,20,0.22)', 1.5); A.circle(ctx, x, 243, 1.5, 'rgba(60,40,20,0.3)'); }
+      A.rect(ctx, 200, 296, 90, 46, 'rgba(0,0,0,0.12)'); ctx.strokeStyle = 'rgba(60,40,20,0.3)'; ctx.lineWidth = 1.5; ctx.strokeRect(200, 296, 90, 46);
+      for (let i = 0; i < 4; i++) { const fx = 214 + i * 20; A.rect(ctx, fx - 3, 312, 6, 16, 'rgba(60,40,20,0.22)'); A.circle(ctx, fx, 308, 3, 'rgba(60,40,20,0.22)'); A.line(ctx, fx + 3, 316, fx + 8, 322, 'rgba(60,40,20,0.22)', 1.5); }
+      A.cuneiform(ctx, 206, 330, 80, 10, 'rgba(60,40,20,0.28)', 27);
+      // Eidechse auf den warmen Ziegeln
+      lizard(ctx, 704, 384, '#8a7a52');
+      // Schatten der Treppenwange nach rechts, Schatten im Bogen über dem Eingang
+      A.rect(ctx, 654, 222, 22, 218, 'rgba(0,0,0,0.12)');
+      A.rect(ctx, 470, 330, 16, 110, 'rgba(0,0,0,0.1)');
       // Große Treppe rechts der Mitte, hinauf zur ersten Terrasse
       for (let i = 0; i < 14; i++) { A.rect(ctx, 560, 440 - i * 15, 84, 15, A.shade('#b8946a', i * 0.01)); A.rect(ctx, 560, 440 - i * 15, 84, 4, '#e2caa0'); A.rect(ctx, 560, 451 - i * 15, 84, 4, 'rgba(0,0,0,0.3)'); }
       A.rect(ctx, 550, 222, 10, 218, '#8a6a48'); A.rect(ctx, 644, 222, 10, 218, '#8a6a48');
@@ -406,6 +601,31 @@
       const rb = ATL.U.rng(77);
       for (let i = 0; i < 14; i++) { const bx = 40 + rb() * 880, by = 452 + rb() * 60; ctx.save(); ctx.translate(bx, by); ctx.rotate((rb() - 0.5) * 0.8); A.rect(ctx, -9, -4, 18, 8, rb() < 0.5 ? '#a8845a' : '#8a6a48'); ctx.restore(); }
       A.rect(ctx, 30, 440, 900, 14, A.grad(ctx, 0, 440, 0, 454, ['rgba(0,0,0,0.3)', 'rgba(0,0,0,0)']));
+      // Windrippel im Sand, weiter vorn deutlicher
+      for (let j = 0; j < 9; j++) {
+        const y = 468 + j * 13 + j * j * 0.6; ctx.strokeStyle = `rgba(120,90,50,${0.05 + j * 0.008})`; ctx.lineWidth = 1; ctx.beginPath();
+        for (let x = 0; x <= 960; x += 16) { const yy = y + Math.sin(x * 0.04 + j * 1.3) * (2 + j * 0.3); x ? ctx.lineTo(x, yy) : ctx.moveTo(x, yy); }
+        ctx.stroke();
+      }
+      // Geröll am Mauerfuß, Ziegelbrocken mit Schatten, ein toter Tamariskenbusch an jeder Seite
+      A.rubble(ctx, 60, 438, 110, 26, 12, '#a8845a'); A.rubble(ctx, 690, 440, 70, 22, 15, '#9a7a52');
+      const rb2 = ATL.U.rng(78);
+      for (let i = 0; i < 9; i++) { const bx = 60 + rb2() * 840, by = 470 + rb2() * 90; A.ell(ctx, bx + 3, by + 5, 11, 3, 'rgba(0,0,0,0.16)'); ctx.save(); ctx.translate(bx, by); ctx.rotate((rb2() - 0.5) * 1.2); A.rect(ctx, -9, -4, 18, 8, rb2() < 0.5 ? '#a8845a' : '#8a6a48'); A.rect(ctx, -9, -4, 18, 2, 'rgba(255,240,200,0.25)'); ctx.restore(); }
+      A.bush(ctx, 16, 462, 30, '#8a7a50', 3); A.bush(ctx, 944, 466, 28, '#7a6a44', 5);
+      // Grabungsschnitt rechts am Mauerfuß: Schnüre, Pflöcke, Maßstab, Eimer
+      A.rect(ctx, 838, 452, 92, 24, '#a08658'); A.rect(ctx, 842, 456, 84, 17, '#6e5438'); A.rect(ctx, 842, 456, 84, 4, '#5a4430');
+      A.line(ctx, 836, 450, 932, 450, '#f0e8d0', 1); A.line(ctx, 836, 478, 932, 478, '#f0e8d0', 1); A.line(ctx, 884, 450, 884, 478, '#f0e8d0', 1);
+      for (const px of [836, 884, 932]) { A.rect(ctx, px - 2, 444, 4, 8, '#6a5238'); A.rect(ctx, px - 2, 472, 4, 8, '#6a5238'); }
+      for (let i = 0; i < 6; i++) A.rect(ctx, 846 + i * 10, 481, 10, 4, i % 2 ? '#ece4d4' : '#b8382e');
+      A.ell(ctx, 926, 490, 12, 3, 'rgba(0,0,0,0.2)'); A.pot(ctx, 926, 489, 20, 18, '#7c7c78');
+      A.line(ctx, 846, 478, 862, 460, '#4a4a48', 1.5); // Kelle
+      A.rect(ctx, 858, 456, 8, 6, '#6a6a66');
+      // Vermessungsstange vor der Mauer, mit Schatten nach rechts
+      A.line(ctx, 302, 466, 340, 470, 'rgba(0,0,0,0.18)', 3); surveyPole(ctx, 300, 380, 460);
+      // Korb und Spitzhacke am Fuß der Treppe, Skorpion im Sand
+      A.ell(ctx, 680, 467, 18, 4, 'rgba(0,0,0,0.18)'); A.basket(ctx, 680, 466, 30, 22, '#b8955a');
+      ctx.save(); ctx.translate(700, 470); ctx.rotate(1.35); pickaxe(ctx, 0, 0, 0); ctx.restore();
+      scorpion(ctx, 258, 468);
       // Der Ziegelblock: vor dem Eingang oder weggezogen daneben
       if (!g.flag('block_weg')) {
         ctx.save(); ctx.translate(384, 372); ctx.rotate(-0.05);
@@ -421,11 +641,34 @@
       A.vignette(ctx, 960, 600, 0.3);
       A.grain(ctx, 960, 600, 5, 0.035);
     },
+    paintFront(ctx) {
+      // Abgestürzter Ziegelbrocken links vorn
+      A.ell(ctx, 26, 600, 66, 10, 'rgba(0,0,0,0.3)');
+      ctx.save(); ctx.translate(24, 596); ctx.rotate(-0.22);
+      A.bricks(ctx, -56, -30, 100, 56, '#a8845a', 22, 11, 8, '#7a5a3a'); A.rect(ctx, -56, -30, 100, 5, '#c8a878'); A.rect(ctx, 44, -30, 6, 56, 'rgba(0,0,0,0.25)');
+      ctx.restore();
+      // Theodolit auf dem Dreibein rechts vorn
+      A.line(ctx, 934, 484, 900, 604, '#4a4038', 4); A.line(ctx, 934, 484, 960, 604, '#4a4038', 4); A.line(ctx, 934, 484, 942, 604, '#3a3028', 3);
+      A.rect(ctx, 930, 478, 8, 12, '#3a3a3a');
+      A.rr(ctx, 918, 462, 32, 18, 3, '#5a5a58'); A.rect(ctx, 910, 466, 48, 5, '#7a7a76'); A.circle(ctx, 934, 470, 6, '#3a3a3a'); A.circle(ctx, 934, 470, 2.5, '#9ab0c0');
+    },
     animate(ctx, t) {
       A.dust(ctx, 0, 300, 960, 280, t, 18, 'rgba(120,100,60,0.22)');
       for (let i = 0; i < 4; i++) { const y = 226 + i * 6 + Math.sin(t * 1.9 + i) * 2; A.rect(ctx, 30, y, 900, 1, 'rgba(255,255,240,0.06)'); }
+      // Ein Geier über der Zikkurat, Sand, der von der Terrassenkante und über den Boden weht
+      vulture(ctx, t, 770, 120, 130, 24, 0.3, 1.1, 1);
+      for (let i = 0; i < 6; i++) { const x = 60 + ((i * 151 + t * 60) % 880), y = 218 + Math.sin(t * 3 + i) * 3; A.rect(ctx, x, y, 3, 1, 'rgba(240,225,190,0.5)'); }
+      windSand(ctx, t, 452, 120, 8);
     },
     hotspots: [
+      { id: 'inschrift', name: 'Verwitterte Inschrift', rect: [198, 294, 94, 50], at: [245, 480, 'u'],
+        look: 'Ein Feld im Mauerwerk mit einer Prozession: vier Männer, die etwas tragen. Darunter drei Zeilen, die der Wind in dreitausend Jahren fast weggeschliffen hat. Der Wind liest auch nicht.' },
+      { id: 'eidechse', name: 'Eidechse', rect: [680, 372, 40, 20], at: [700, 480, 'u'],
+        look: 'Eine Eidechse auf den heißen Ziegeln. Sie hält still, solange ich still halte. Sie hat mehr Geduld als ich.',
+        take: 'Sie ist schneller. Deutlich.' },
+      { id: 'skorpion', name: 'Skorpion', rect: [240, 456, 36, 20], at: [220, 490, 'r'],
+        look: 'Ein Skorpion, gelb wie der Sand. Er hat den Schwanz gehoben, weil ich näher gekommen bin. Verstanden. Ich bleibe, wo ich bin.',
+        take: 'Nein. Ich habe ihn gesehen, das reicht uns beiden.' },
       { id: 'stufen', name: 'Terrassen', rect: [30, 30, 900, 200], at: [480, 480, 'u'],
         look: async (g) => { await g.say('falk', 'Drei Terrassen aus Lehmziegeln, der Mantel aus gebrannten Ziegeln ist längst weggeholt, für Häuser in Basra. Oben stand einmal ein Tempel. Jetzt steht dort Wind.'); g.codex('zikkurat'); },
         use: 'Ich könnte hinaufsteigen. Aber das Siegel liegt unten, nicht oben.', take: 'Ziegel für Ziegel? Basra war schneller.' },
@@ -608,9 +851,27 @@
       // Gewölbe aus Ziegeln oben
       ctx.fillStyle = A.grad(ctx, 0, 0, 0, 120, ['#1a120a', 'rgba(26,18,10,0)']); ctx.fillRect(0, 0, 960, 120);
       for (let i = 0; i < 6; i++) A.line(ctx, 0, 62 + i * 3, 960, 62 + i * 3, 'rgba(0,0,0,0.25)', 1);
+      // Reliefband über den Regalen: sieben Apkallu im Wechsel mit Palmetten, die Farbe längst verblasst
+      A.rect(ctx, 0, 82, 960, 52, 'rgba(0,0,0,0.2)'); A.rect(ctx, 0, 82, 960, 2, 'rgba(200,170,120,0.22)'); A.rect(ctx, 0, 132, 960, 2, 'rgba(200,170,120,0.22)');
+      for (let x = 40; x < 960; x += 68) {
+        apkalluRelief(ctx, x, 130, 44, '#7a6248', false);
+        A.line(ctx, x + 34, 128, x + 34, 100, '#6e5840', 2); for (let k = -1; k <= 1; k++) A.line(ctx, x + 34, 104, x + 34 + k * 8, 92, '#6e5840', 1.5);
+      }
+      A.rect(ctx, 0, 82, 960, 52, 'rgba(20,14,8,0.25)');
+      // Risse im Mauerwerk und die eingestürzte Ecke hinten rechts
+      A.cracks(ctx, 300, 140, 120, 90, 3, 'rgba(0,0,0,0.45)'); A.cracks(ctx, 904, 110, 56, 190, 12, 'rgba(0,0,0,0.5)');
+      A.poly(ctx, [908, 320, 930, 296, 960, 286, 960, 440, 900, 440, 890, 392, 902, 352], '#0b0704');
+      const rbr = ATL.U.rng(66);
+      for (let i = 0; i < 14; i++) { const k = i / 14; const ex = 908 + (960 - 908) * Math.max(0, k - 0.3) * 1.4 - 12 + rbr() * 10, ey = 320 - k * 34 + (i % 3) * 30; A.rect(ctx, ex, ey + rbr() * 40, 16 + rbr() * 12, 7, rbr() < 0.5 ? '#5a4632' : '#7a5a3a'); }
+      for (let i = 0; i < 6; i++) A.rect(ctx, 892 + rbr() * 10, 350 + i * 15, 12 + rbr() * 10, 6, '#4a3a28');
       // Boden: gestampfter Lehm
       A.floorTiles(ctx, 960, 440, 600, '#5a4632', '#2a2016', 8, 480);
       A.rect(ctx, 0, 440, 960, 6, 'rgba(0,0,0,0.35)');
+      // Staub, der sich an den Wänden sammelt; Geröll und Ziegel aus der eingestürzten Ecke
+      A.rect(ctx, 0, 446, 960, 26, 'rgba(200,170,120,0.05)');
+      A.poly(ctx, [900, 440, 960, 400, 960, 474, 860, 474], 'rgba(120,95,60,0.16)');
+      A.rubble(ctx, 884, 414, 76, 48, 21, '#6a5238');
+      for (const [bx, by, a] of [[858, 456, 0.3], [876, 466, -0.2], [904, 470, 0.6], [930, 462, -0.5]]) { ctx.save(); ctx.translate(bx, by); ctx.rotate(a); A.rect(ctx, -9, -4, 18, 8, '#6a5238'); A.rect(ctx, -9, -4, 18, 2, 'rgba(255,240,200,0.12)'); ctx.restore(); }
       // Treppe hinauf zum Eingang, Licht von oben
       A.rect(ctx, 30, 110, 140, 330, '#2a2016');
       A.stairs(ctx, 40, 440, 130, 9, 26, '#8a7050');
@@ -629,6 +890,30 @@
         }
       };
       shelf(190, 180, 5, 11); shelf(560, 90, 5, 13);
+      // Staub auf den Regalkanten, Spinnweben in den Ecken
+      A.rect(ctx, 190, 150, 180, 1, 'rgba(255,240,200,0.18)'); A.rect(ctx, 560, 150, 90, 1, 'rgba(255,240,200,0.18)');
+      A.cobweb(ctx, 190, 150, 20, 'tl', 'rgba(255,255,255,0.16)'); A.cobweb(ctx, 370, 150, 26, 'tr', 'rgba(255,255,255,0.18)');
+      A.cobweb(ctx, 656, 140, 26, 'tl', 'rgba(255,255,255,0.16)'); A.cobweb(ctx, 904, 140, 30, 'tr', 'rgba(255,255,255,0.18)');
+      // Durchgang zwischen Regal und Statue: dahinter weitere Regalreihen, klein und blass, ins Dunkel
+      A.arch(ctx, 380, 214, 36, 226, '#4a3a28', '#0a0704');
+      for (let i = 0; i < 4; i++) { const y = 300 + i * 32; A.rect(ctx, 386, y, 24, 3, 'rgba(140,110,70,0.28)'); for (let k = 0; k < 4; k++) A.rect(ctx, 387 + k * 6, y - 6, 4, 5, 'rgba(184,148,104,0.22)'); }
+      ctx.fillStyle = A.grad(ctx, 0, 240, 0, 440, ['rgba(10,7,4,0.9)', 'rgba(10,7,4,0)']); ctx.fillRect(384, 240, 28, 200);
+      // Leiter aus Palmholz, an das schmale Regal gelehnt
+      ctx.save(); ctx.translate(556, 470); ctx.rotate(0.07); A.ladder(ctx, -28, -300, 300, '#7a5a3a', 22); ctx.restore();
+      // Tonöllampen auf den Regalkanten, mit Rußfahnen darüber
+      clayLamp(ctx, 230, 150, true); clayLamp(ctx, 336, 150, true); clayLamp(ctx, 606, 150, true);
+      // Tonkörbe mit Tafeln vor den Regalen, ein Stapel und ein paar gefallene Tafeln
+      A.ell(ctx, 206, 471, 20, 4, 'rgba(0,0,0,0.3)'); A.basket(ctx, 206, 470, 36, 28, '#a08050');
+      for (let i = 0; i < 3; i++) A.rr(ctx, 195 + i * 8, 432 + (i % 2) * 2, 7, 12, 1, A.shade('#b89468', -0.1 * i));
+      A.ell(ctx, 584, 471, 17, 4, 'rgba(0,0,0,0.3)'); A.basket(ctx, 584, 470, 30, 24, '#a08050');
+      for (let i = 0; i < 3; i++) A.rr(ctx, 575 + i * 7, 438 + (i % 2) * 2, 6, 10, 1, A.shade('#b08a5a', -0.1 * i));
+      for (const [tx, ty, tw] of [[448, 452, 22], [474, 458, 18], [500, 450, 24], [530, 460, 16]]) { A.rr(ctx, tx, ty, tw, 8, 1, '#a08658'); A.cuneiform(ctx, tx + 2, ty + 1, tw - 4, 6, 'rgba(60,35,15,0.6)', tx); }
+      A.poly(ctx, [520, 462, 528, 456, 532, 464], '#8a7050');
+      // Schreibermatte aus Schilf mit Rollsiegeln, Griffeln und einem Tonumschlag
+      A.rect(ctx, 172, 458, 64, 26, '#7a6a48'); for (let i = 0; i < 6; i++) A.line(ctx, 172, 462 + i * 4, 236, 462 + i * 4, 'rgba(0,0,0,0.2)', 1);
+      A.rr(ctx, 178, 466, 12, 5, 2, '#3a4a5a'); A.rr(ctx, 178, 474, 12, 5, 2, '#5a3a2a');
+      for (let i = 0; i < 3; i++) A.line(ctx, 196 + i * 4, 462, 212 + i * 4, 480, '#c8b070', 1.5);
+      A.rr(ctx, 214, 466, 18, 13, 3, '#a88a60'); for (let i = 0; i < 6; i++) A.circle(ctx, 217 + (i % 3) * 5, 470 + Math.floor(i / 3) * 5, 1, 'rgba(60,35,15,0.6)');
       // Apkallu-Statue im Fischgewand auf einem Sockel
       A.rect(ctx, 425, 400, 90, 40, '#5a5248'); A.rect(ctx, 420, 396, 100, 8, '#6a6258');
       A.cuneiform(ctx, 432, 408, 76, 26, 'rgba(0,0,0,0.5)', 17);
@@ -655,8 +940,30 @@
       A.vignette(ctx, 960, 600, 0.6);
       A.grain(ctx, 960, 600, 6, 0.05);
     },
-    animate(ctx, t) { A.dust(ctx, 50, 150, 220, 300, t, 30); },
+    paintFront(ctx) {
+      // Gewölbekante ganz vorn
+      A.bricks(ctx, 0, 0, 960, 36, '#3a2a1a', 46, 18, 15, '#160e06');
+      ctx.fillStyle = A.grad(ctx, 0, 36, 0, 62, ['rgba(0,0,0,0.55)', 'rgba(0,0,0,0)']); ctx.fillRect(0, 36, 960, 26);
+      // Vorratskrug links vorn, Tafelscherben rechts vorn
+      A.ell(ctx, 10, 606, 44, 8, 'rgba(0,0,0,0.5)'); A.pot(ctx, 8, 608, 66, 74, '#6a5238');
+      A.line(ctx, 22, 546, 18, 596, 'rgba(255,230,180,0.12)', 3);
+      const r = ATL.U.rng(44);
+      for (let i = 0; i < 6; i++) A.rr(ctx, 898 + r() * 50, 566 + r() * 28, 14 + r() * 16, 8 + r() * 6, 2, A.shade('#7a6248', (r() - 0.5) * 0.3));
+    },
+    animate(ctx, t, g) {
+      A.dust(ctx, 50, 150, 220, 300, t, 30);
+      // Staub, der aus der eingestürzten Ecke rieselt; Wasserlicht aus der offenen Tür
+      A.dust(ctx, 880, 300, 80, 150, t, 6, 'rgba(200,170,120,0.22)');
+      if (g.flag('weisen_tuer_offen')) A.glow(ctx, 780, 280, 110 + Math.sin(t * 1.3) * 10, 'rgba(120,180,220,0.6)', 0.14 + Math.sin(t * 2.1) * 0.05);
+    },
     hotspots: [
+      { id: 'fries', name: 'Reliefband', rect: [190, 80, 460, 54], at: [420, 485, 'u'],
+        look: 'Ein Fries über den Regalen: Männer im Fischgewand, dazwischen Palmen, immer im Wechsel, bis in die Ecke. Die Farbe ist weg, die Form ist geblieben. Das ist bei den meisten Dingen umgekehrt.' },
+      { id: 'einsturz', name: 'Eingestürzte Ecke', rect: [904, 290, 56, 180], at: [880, 500, 'r'],
+        look: 'Die Ecke ist eingestürzt, irgendwann in den letzten dreitausend Jahren. Ziegel, Lehm, Staub. Was dahinter liegt, bleibt dahinter. Ich grabe nicht mit den Händen in einer Decke, die es sich schon einmal anders überlegt hat.' },
+      { id: 'matte', name: 'Schreibermatte', rect: [172, 454, 66, 32], at: [204, 500, 'u'],
+        look: 'Eine Schilfmatte, darauf zwei Rollsiegel, drei Griffel aus Rohr und ein Tonumschlag mit Siegelabdrücken. Jemand hat hier gearbeitet und ist aufgestanden, um kurz etwas zu holen.',
+        take: 'Bagdad bekommt es. Ich habe es Nabil versprochen, und ich habe schon eine Figur an die falschen Leute verloren.' },
       { id: 'regal_l', name: 'Tafelregal', rect: [190, 150, 180, 290], at: [280, 485, 'u'],
         look: 'Regale aus Lehm, Fach über Fach, und darin Tontafeln, hochkant wie Bücher. Hunderte. Lieferlisten, Verträge, Hymnen. Das Archiv eines Tempels.',
         take: 'Ich ziehe eine heraus. Sie bricht in drei Teile, bevor ich sie richtig halte. Ich lege sie zurück und fasse nichts mehr an.',
@@ -783,8 +1090,24 @@
       A.stones(ctx, 0, 0, 960, 310, '#3a4048', 3, 36);
       A.stones(ctx, 640, 300, 320, 140, '#3a4048', 4, 30);
       ctx.fillStyle = A.grad(ctx, 0, 0, 0, 120, ['#05070a', 'rgba(5,7,10,0)']); ctx.fillRect(0, 0, 960, 120);
+      // Tropfsteine an der Decke, Risse im Gewölbe
+      for (const [sx, sw, sh] of [[130, 18, 46], [176, 26, 66], [222, 14, 34], [268, 22, 58], [318, 16, 40], [398, 12, 30], [470, 14, 64], [610, 12, 28], [660, 20, 52], [712, 14, 36], [760, 24, 62], [822, 16, 40], [930, 20, 48]]) stalactite(ctx, sx, 0, sw, sh, sx % 3 ? '#4a4e56' : '#42464e');
+      A.cracks(ctx, 40, 120, 90, 120, 4, 'rgba(0,0,0,0.5)'); A.cracks(ctx, 700, 310, 120, 100, 9, 'rgba(0,0,0,0.5)');
       // Lichtschacht in der Decke
       A.lightBeam(ctx, 440, 0, 140, 330, 'rgba(170,200,230,0.14)');
+      // Enki im Relief links der Nische; aus seinen Schultern fließen zwei Ströme mit Fischen zur Rinne und zum Becken
+      enkiRelief(ctx, 262, 280, 116, '#5a6068');
+      for (const [sx, ex, ey, d] of [[246, 200, 286, -1], [278, 300, 300, 1]]) {
+        for (const [c, off] of [['rgba(20,24,30,0.7)', 2], ['#6a7078', 0]]) {
+          ctx.strokeStyle = c; ctx.lineWidth = 2.2; ctx.lineCap = 'round'; ctx.beginPath();
+          for (let k = 0; k <= 10; k++) { const f = k / 10; const px = sx + (ex - sx) * f + Math.sin(f * 9) * 5 * d + off, py = 204 + (ey - 204) * f + off; k ? ctx.lineTo(px, py) : ctx.moveTo(px, py); }
+          ctx.stroke();
+        }
+        fishGlyph(ctx, sx + (ex - sx) * 0.5 + 9 * d, 204 + (ey - 204) * 0.5 - 2, 12, 'rgba(160,170,180,0.6)', d);
+      }
+      // Ein kleinerer Apkallu rechts der Nische, im Licht des Schachts
+      apkalluRelief(ctx, 486, 280, 92, '#5c626a', false);
+      A.rect(ctx, 446, 282, 80, 6, 'rgba(0,0,0,0.3)'); A.rect(ctx, 220, 282, 84, 6, 'rgba(0,0,0,0.3)');
       // Nische hoch in der Rückwand, mit dem Siegel
       A.rect(ctx, 346, 186, 68, 80, '#1a1c22'); A.rect(ctx, 352, 192, 56, 68, '#05060a');
       A.rect(ctx, 340, 180, 80, 8, '#5a5e66'); A.rect(ctx, 340, 266, 80, 6, '#5a5e66');
@@ -797,10 +1120,20 @@
       A.rect(ctx, 140, 308, 480, wy - 308, '#151a20');
       for (let i = 0; i < 6; i++) A.line(ctx, 140, 320 + i * 22, 620, 320 + i * 22, 'rgba(255,255,255,0.03)', 1);
       A.rect(ctx, 140, 308, 480, 6, 'rgba(0,0,0,0.5)');
+      // Kalkfahnen unter der Rinne, alte Wasserlinien an der Beckenwand
+      const rk = ATL.U.rng(58);
+      for (let i = 0; i < 6; i++) { const kx = 146 + i * 12 + rk() * 6, kh = 16 + rk() * 70; ctx.fillStyle = A.grad(ctx, 0, 308, 0, 308 + kh, ['rgba(225,230,235,0.2)', 'rgba(225,230,235,0)']); A.poly(ctx, [kx - 1 - rk() * 3, 308, kx + 2 + rk() * 3, 308, kx + 1, 308 + kh, kx, 308 + kh], ctx.fillStyle); }
+      A.rect(ctx, 140, 308, 90, 8, 'rgba(225,230,235,0.12)');
+      for (let i = 0; i < 4; i++) { const kx = 300 + rk() * 300, kh = 8 + rk() * 30; ctx.fillStyle = A.grad(ctx, 0, 308, 0, 308 + kh, ['rgba(225,230,235,0.12)', 'rgba(225,230,235,0)']); A.poly(ctx, [kx - 2, 308, kx + 2, 308, kx + 0.5, 308 + kh, kx, 308 + kh], ctx.fillStyle); }
+      for (const ly of [344, 374, 404]) { A.line(ctx, 142, ly, 618, ly + 2, 'rgba(210,220,230,0.13)', 2.5); A.line(ctx, 142, ly + 3, 618, ly + 5, 'rgba(0,0,0,0.2)', 1); }
       A.sea(ctx, 140, wy, 480, 500 - wy, '#2f6a86', '#0f2a3a', 8);
       A.rect(ctx, 140, wy, 480, 2, 'rgba(200,230,255,0.35)');
       A.glow(ctx, 380, wy + 30, 160, 'rgba(80,160,220,0.5)', 0.25);
       A.stones(ctx, 140, 500, 480, 34, '#4a4c52', 6, 20); A.rect(ctx, 136, 498, 488, 6, '#6a6e76');
+      // Kalkkruste und Moos auf der Beckenmauer, Fische in den Stein geritzt
+      A.rect(ctx, 136, 504, 488, 2, 'rgba(230,235,240,0.18)');
+      A.moss(ctx, 150, 508, 120, 5, '#3a5a34'); A.moss(ctx, 420, 510, 160, 6, '#34523a'); A.moss(ctx, 136, 302, 80, 7, '#3a5a34');
+      for (let x = 176; x < 590; x += 46) { fishGlyph(ctx, x + 1, 520, 22, 'rgba(0,0,0,0.35)', 1); fishGlyph(ctx, x, 519, 22, 'rgba(180,190,200,0.4)', 1); }
       A.rect(ctx, 130, 300, 10, 234, '#4a4c52'); A.rect(ctx, 620, 300, 10, 234, '#4a4c52');
       // Abflusstor in der rechten Beckenwand
       A.rect(ctx, 594, 372, 30, 128, '#06080c');
@@ -818,15 +1151,34 @@
       for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2 + (g.flag('wasser_hoch') ? 0.3 : 0); A.line(ctx, 850, 330, 850 + Math.cos(a) * 40, 330 + Math.sin(a) * 40, '#8a7a4a', 4); }
       A.circle(ctx, 850, 330, 9, '#3a3020');
       A.rect(ctx, 856, 300, 90, 8, '#5a5e66'); A.rect(ctx, 940, 300, 8, 60, '#22262c');
+      // Grünspan unter der Rolle, Schilfbündel an der rechten Wand, Krüge und ein Seilring auf dem Podest
+      A.ell(ctx, 700, 262, 10, 22, 'rgba(40,80,60,0.3)');
+      for (const [rx, lean] of [[906, -0.06], [918, -0.02], [930, 0.03]]) { ctx.save(); ctx.translate(rx, 446); ctx.rotate(lean); A.rr(ctx, -6, -92, 12, 92, 5, '#a08c50'); A.rect(ctx, -6, -70, 12, 3, '#6a5a34'); A.rect(ctx, -6, -30, 12, 3, '#6a5a34'); for (let k = 0; k < 4; k++) A.line(ctx, -4 + k * 3, -92, -6 + k * 4, -104, '#b8a060', 1.5); ctx.restore(); }
+      A.ell(ctx, 918, 448, 26, 4, 'rgba(0,0,0,0.35)');
+      A.ell(ctx, 690, 446, 16, 3, 'rgba(0,0,0,0.35)'); A.pot(ctx, 690, 445, 24, 34, '#7a6248'); A.amphora(ctx, 712, 446, 40, '#6e5a44');
+      A.ell(ctx, 750, 443, 14, 5, null, '#8a7a50', 3); A.ell(ctx, 750, 443, 8, 3, null, '#8a7a50', 2);
       // Boden vorn, Treppe hinauf links
       A.stones(ctx, 0, 534, 960, 70, '#3a3c42', 4, 26);
+      // Pfützen auf dem Boden, Feuchtigkeit an der Beckenmauer
+      A.puddle(ctx, 262, 562, 64, 10, 'rgba(110,150,180,0.22)'); A.puddle(ctx, 724, 570, 40, 7, 'rgba(110,150,180,0.2)'); A.puddle(ctx, 460, 578, 30, 6, 'rgba(110,150,180,0.18)');
+      ctx.fillStyle = A.grad(ctx, 0, 534, 0, 556, ['rgba(20,40,50,0.35)', 'rgba(20,40,50,0)']); ctx.fillRect(140, 534, 480, 22);
       A.rect(ctx, 20, 240, 110, 300, '#22262c');
       A.stairs(ctx, 24, 534, 106, 8, 24, '#4a4c52');
+      A.moss(ctx, 30, 508, 40, 8, '#2e4a2c'); A.moss(ctx, 60, 460, 30, 9, '#2e4a2c');
       A.rect(ctx, 30, 236, 70, 100, '#8a6a3a'); A.rect(ctx, 36, 242, 58, 94, '#1a1410'); A.glow(ctx, 65, 290, 80, 'rgba(255,220,160,0.6)', 0.3);
       // Boot auf dem Sims
       if (!g.flag('boot_im_wasser')) reedBoat(ctx, 672, 394, 90);
       A.vignette(ctx, 960, 600, 0.7);
       A.grain(ctx, 960, 600, 7, 0.05);
+    },
+    paintFront(ctx) {
+      // Große Tropfsteine ganz vorn an der Decke, links und rechts vom Schacht
+      stalactite(ctx, 32, 0, 30, 60, '#22262c'); stalactite(ctx, 72, 0, 46, 98, '#262a30'); stalactite(ctx, 108, 0, 26, 58, '#2a2e34');
+      stalactite(ctx, 812, 0, 22, 44, '#22262c'); stalactite(ctx, 852, 0, 42, 86, '#262a30'); stalactite(ctx, 892, 0, 24, 50, '#2a2e34');
+      // Tonkrug mit Moos links vorn, Scherben rechts vorn
+      A.ell(ctx, 12, 606, 40, 8, 'rgba(0,0,0,0.5)'); A.pot(ctx, 10, 608, 56, 66, '#5a4a3a'); A.moss(ctx, -8, 604, 36, 5, '#2e4a2c');
+      const r = ATL.U.rng(48);
+      for (let i = 0; i < 5; i++) A.poly(ctx, [900 + r() * 50, 574 + r() * 22, 914 + r() * 40, 568 + r() * 22, 918 + r() * 40, 582 + r() * 18], A.shade('#6a5a48', (r() - 0.5) * 0.3));
     },
     animate(ctx, t, g) {
       const wy = WATER_Y(g);
@@ -834,8 +1186,31 @@
       if (!g.flag('flutsiegel_genommen')) A.glow(ctx, 380, 230, 60 + Math.sin(t * 2.2) * 12, 'rgba(120,200,255,0.8)', 0.3 + Math.sin(t * 1.4) * 0.1);
       if (!g.flag('flutsiegel_genommen')) A.glow(ctx, 380, wy + 20, 90, 'rgba(120,200,255,0.5)', 0.12 + Math.sin(t * 1.4) * 0.05);
       if (g.flag('wasser_hoch')) A.dust(ctx, 140, 292, 60, 20, t, 6, 'rgba(200,230,255,0.5)');
+      // Lichtreflexe des Wassers, die über Decke und Rückwand wandern; bei vollem Becken näher und heller
+      const hi = g.flag('wasser_hoch');
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+      for (let k = 0; k < 7; k++) {
+        const yb = (hi ? 66 : 88) + k * 14; ctx.strokeStyle = `rgba(110,170,220,${hi ? 0.09 : 0.06})`; ctx.beginPath();
+        for (let x = 150; x <= 610; x += 12) { const y = yb + Math.sin(x * 0.035 + t * 1.6 + k * 1.7) * 5 + Math.sin(x * 0.011 - t * 0.9 + k) * 3; x === 150 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); }
+        ctx.stroke();
+      }
+      ctx.restore();
+      // Tropfen von der Rinne und vom Tropfstein im Lichtschacht, mit Ring auf dem Wasser
+      const drip = (x, y0, off, speed) => {
+        const p = (t * speed + off) % 1, y = y0 + p * p * (wy - y0);
+        if (p < 0.97) A.ell(ctx, x, y, 1.6, 3.5, 'rgba(200,230,255,0.8)');
+        const rp = (t * speed + off + 0.06) % 1;
+        if (rp < 0.2) A.ell(ctx, x, wy, 3 + rp * 50, 1 + rp * 12, null, `rgba(200,230,255,${(0.4 * (1 - rp / 0.2)).toFixed(3)})`, 1);
+      };
+      drip(178, 304, 0.2, 0.55); drip(470, 64, 0.6, 0.45);
     },
     hotspots: [
+      { id: 'enki', name: 'Relief des Enki', rect: [216, 150, 94, 130], at: [262, 550, 'u'],
+        look: 'Ein Mann mit Hörnerkrone, aus dessen Schultern zwei Ströme fließen, mit Fischen darin. Enki, der Herr des süßen Wassers. Die Ströme führen zur Rinne und zum Becken. Wer das gemeißelt hat, wusste, wie die Anlage funktioniert. Ich noch nicht ganz.' },
+      { id: 'fische', name: 'Fischritzungen', rect: [160, 506, 424, 26], at: [380, 550, 'u'],
+        look: 'Fische, in die Beckenmauer geritzt, einer neben dem anderen, alle in dieselbe Richtung. Ein Fries oder eine Zählung. Bei den Sumerern war das oft dasselbe.' },
+      { id: 'tropfsteine', name: 'Tropfsteine', rect: [100, 0, 300, 70], at: [250, 550, 'u'],
+        look: 'Tropfsteine an der Decke, fingerlang bis armlang. Sie brauchen hundert Jahre für einen Zentimeter. Diese hier hatten Zeit.', use: 'Zu hoch. Und sie tropfen mir ohnehin schon auf den Hut.' },
       { id: 'nische', name: 'Nische', rect: [338, 178, 84, 96], at: [380, 550, 'u'],
         look: (g) => g.flag('flutsiegel_genommen') ? 'Die Nische, hoch in der Wand. Leer. Sie hat lange gewartet, jetzt wartet sie auf nichts mehr.' : 'Eine Nische hoch in der Rückwand, drei Meter über dem Wasser. Darin schimmert etwas Blaues. Es gibt keine Leiter, keine Stufen, keinen Vorsprung. Nur Wasser darunter.',
         take: (g) => g.flag('boot_im_wasser') && g.flag('wasser_hoch') ? getSeal(g) : g.flag('flutsiegel_genommen') ? 'Sie ist leer.' : 'Drei Meter über dem Wasser. Ohne Leiter und ohne Flügel komme ich nicht hin. Aber wer die Nische gebaut hat, kam hin. Irgendwie.',
