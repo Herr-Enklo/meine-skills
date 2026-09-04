@@ -1,6 +1,7 @@
 /* Prolog: Whitmore College, Vermont, Mai 1938. Vier Räume. */
 (function (ATL) {
   const A = ATL.A;
+  const shade = ATL.shade;
   const R = ATL.rooms.define;
   const TAU = Math.PI * 2;
 
@@ -238,10 +239,30 @@
       A.text(ctx, 'PROF. GREAVES', 375, 180, { font: 'bold 10px Georgia', color: '#3a2a1a', align: 'center' });
       A.rect(ctx, 342, 406, 66, 22, '#4a3a2a'); A.rect(ctx, 346, 409, 58, 16, '#7a6a48'); for (let i = 0; i < 5; i++) A.line(ctx, 348, 411 + i * 3, 402, 411 + i * 3, 'rgba(0,0,0,0.15)', 1);
       // Treppe nach oben rechts
-      A.rect(ctx, 780, 100, 180, 300, '#8a7a68');
-      A.stairs(ctx, 790, 400, 150, 9, 18, '#7a6656', 'r');
-      A.rect(ctx, 775, 250, 10, 160, '#3a2a1a');
-      A.door(ctx, 880, 90, 60, 150, '#5a3e28', { frame: '#3a2a1a' });
+      // Treppenhausnische
+      A.rect(ctx, 780, 60, 180, 340, '#a09076');
+      ctx.fillStyle = 'rgba(0,0,0,0.18)'; ctx.fillRect(780, 60, 12, 340);
+      A.rect(ctx, 778, 60, 6, 340, '#3a2a1a');
+      const sx0 = 792, sy0 = 400, nSt = 8, stW = 11, stH = 20, wood = '#7a6656';
+      // Podest vor der Tür
+      A.rect(ctx, sx0 + nSt * stW - 4, sy0 - nSt * stH - 8, 960 - (sx0 + nSt * stW - 4), 10, shade(wood, 0.12));
+      A.rect(ctx, sx0 + nSt * stW - 4, sy0 - nSt * stH + 2, 960 - (sx0 + nSt * stW - 4), 4, shade(wood, -0.3));
+      // Stufen mit Setzstufe und Trittfläche, von oben nach unten
+      for (let i = nSt - 1; i >= 0; i--) {
+        const x = sx0 + i * stW, yTop = sy0 - (i + 1) * stH;
+        A.rect(ctx, x, yTop, 960 - x, stH, shade(wood, -0.22 - i * 0.012));
+        A.poly(ctx, [x, yTop, 960, yTop, 960, yTop - 4, x + 7, yTop - 4], shade(wood, 0.16));
+        A.rect(ctx, x, yTop + stH - 3, 960 - x, 3, 'rgba(0,0,0,0.22)');
+        A.line(ctx, x + 2, yTop + 4, x + 2, yTop + stH - 3, 'rgba(0,0,0,0.15)', 1);
+      }
+      // Wange links
+      A.poly(ctx, [sx0 - 6, sy0, sx0 + nSt * stW - 4, sy0 - nSt * stH - 8, sx0 + nSt * stW - 4, sy0 - nSt * stH + 6, sx0 + 4, sy0], shade(wood, -0.38));
+      // Handlauf mit Geländerstäben
+      for (let i = 0; i <= nSt; i += 2) { const x = sx0 + i * stW + 2, yTop = sy0 - i * stH; A.line(ctx, x, yTop - 2, x, yTop - 62, '#3a2a1a', 2.5); }
+      A.line(ctx, sx0 - 2, sy0 - 62, sx0 + nSt * stW + 4, sy0 - nSt * stH - 66, '#3a2a1a', 5);
+      A.line(ctx, sx0 - 2, sy0 - 63, sx0 + nSt * stW + 4, sy0 - nSt * stH - 67, shade('#3a2a1a', 0.35), 1.5);
+      A.circle(ctx, sx0 - 2, sy0 - 64, 4, '#4a3a2a');
+      A.door(ctx, 880, 92, 60, 148, '#5a3e28', { frame: '#3a2a1a', panel: true });
       A.text(ctx, 'DACHBODEN', 910, 82, { font: 'bold 9px Georgia', color: '#3a2a1a', align: 'center' });
       // Eimer und Wischmopp, feuchter Boden
       A.puddle(ctx, 736, 546, 80, 12, 'rgba(170,185,200,0.22)'); A.puddle(ctx, 810, 560, 50, 8, 'rgba(170,185,200,0.18)');
