@@ -120,7 +120,7 @@
     box-shadow:0 4px 0 #0a0c0f, inset 0 1px 0 rgba(255,255,255,.14);
   }
   .small-row{ display:flex; gap:8px; }
-  .small{ width:58px; height:26px; font-size:9px; letter-spacing:1.5px; color:#9fb0c2; }
+  .small{ width:54px; height:26px; font-size:9px; letter-spacing:1px; color:#9fb0c2; }
 
   .legend{
     display:flex; flex-wrap:wrap; justify-content:center; gap:5px 12px;
@@ -181,6 +181,7 @@
       <div class="small-row">
         <button class="btn small" data-action="pause">PAUSE</button>
         <button class="btn small" data-action="mute">TON</button>
+        <button class="btn small" data-action="scores">LISTE</button>
       </div>
     </div>
   </div>
@@ -196,7 +197,7 @@
   </div>
 
   <div class="keys">
-    <b>Pfeiltasten / WASD</b> bewegen · <b>Leertaste / Z</b> schießen · <b>P / Esc</b> Pause · <b>M</b> Ton<br>
+    <b>Pfeiltasten / WASD</b> bewegen · <b>Leertaste / Z</b> schießen · <b>P / Esc</b> Pause · <b>M</b> Ton · <b>H</b> Bestenliste<br>
     <b>Enter</b> oder Tippen aufs Display startet. Gegnerische Schüsse lassen sich abschießen.
   </div>
 
@@ -263,6 +264,7 @@ const FONT = {
   '!':'00100'+'00100'+'00100'+'00100'+'00100'+'00000'+'00100',
   '?':'01110'+'10001'+'00001'+'00010'+'00100'+'00000'+'00100',
   '-':'00000'+'00000'+'00000'+'11111'+'00000'+'00000'+'00000',
+  '=':'00000'+'00000'+'11111'+'00000'+'11111'+'00000'+'00000',
   '+':'00000'+'00100'+'00100'+'11111'+'00100'+'00100'+'00000',
   '/':'00001'+'00010'+'00010'+'00100'+'01000'+'01000'+'10000',
   'X_':'00000'+'00000'+'10001'+'01010'+'00100'+'01010'+'10001',
@@ -526,11 +528,24 @@ const KEYMAP = {
   ArrowUp:'up', KeyW:'up', ArrowDown:'down', KeyS:'down',
   ArrowLeft:'left', KeyA:'left', ArrowRight:'right', KeyD:'right',
   Space:'fire', KeyZ:'fire', KeyJ:'fire',
-  KeyP:'pause', Escape:'pause', KeyM:'mute', Enter:'confirm',
+  KeyP:'pause', Escape:'pause', KeyM:'mute', Enter:'confirm', KeyH:'scores',
 };
 const PREVENT = new Set(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space','Enter']);
 
 window.addEventListener('keydown', e => {
+  if(game.state === 'enterName'){
+    if(e.code === 'Backspace'){
+      e.preventDefault();
+      game.entry.slot = Math.max(0, game.entry.slot - 1);
+      return;
+    }
+    const ch = (e.key || '').toUpperCase();
+    if(ch.length === 1 && CHARSET.indexOf(ch) >= 0 && e.code !== 'Space'){
+      e.preventDefault();
+      entryType(ch);
+      return;
+    }
+  }
   const action = KEYMAP[e.code];
   if(!action) return;
   if(PREVENT.has(e.code)) e.preventDefault();
@@ -555,6 +570,24 @@ canvas.addEventListener('pointerdown', () => {
 });
 function pressAction(action){
   if(action === 'mute') return toggleMute();
+  if(game.state === 'enterName'){
+    if(action === 'fire' || action === 'confirm') return entryConfirm();
+    return entryStep(action);
+  }
+  if(game.state === 'scores'){
+    if(action === 'confirm' || action === 'fire' || action === 'pause' || action === 'scores'){
+      game.state = game.returnState || 'menu';
+      game.newEntryIndex = -1;
+    }
+    return;
+  }
+  if(action === 'scores'){
+    if(game.state === 'menu' || game.state === 'gameover' || game.state === 'win'){
+      game.returnState = game.state;
+      game.state = 'scores';
+    }
+    return;
+  }
   if(action === 'pause') return togglePause();
   if(action === 'confirm' && (game.state === 'menu' || game.state === 'gameover' || game.state === 'win')) startGame();
 }
@@ -2140,13 +2173,57 @@ function drawParticles(){
 const PLAYER_SPEED = 140;
 let player = null;
 let world = null;
+const SCORE_KEY = 'sr_scores_v1';
+const NAME_KEY = 'sr_lastname';
+const MAX_SCORES = 10;
+const NAME_LEN = 3;
+const CHARSET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 -.!';
+const DEFAULT_SCORES = [
+  { name:'ACE', score:5000, sector:5 },
+  { name:'ORB', score:4200, sector:4 },
+  { name:'ZAP', score:3400, sector:4 },
+  { name:'JET', score:2600, sector:3 },
+  { name:'FOX', score:1800, sector:2 },
+  { name:'TNT', score:1000, sector:1 },
+];
+
+function loadScores(){
+  let list = null;
+  try{ list = JSON.parse(localStorage.getItem(SCORE_KEY)); } catch(e){ list = null; }
+  if(!Array.isArray(list)){
+    list = DEFAULT_SCORES.map(e => Object.assign({}, e));
+    const legacy = Number(localStorage.getItem('sr_highscore') || 0);
+    if(legacy > 0) list.push({ name:'YOU', score:legacy, sector:1 });
+  }
+  return list
+    .filter(e => e && typeof e.score === 'number' && isFinite(e.score))
+    .map(e => ({ name:String(e.name || '???').slice(0, NAME_LEN), score:Math.floor(e.score), sector:Number(e.sector) || 1 }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, MAX_SCORES);
+}
+function saveScores(list){
+  try{ localStorage.setItem(SCORE_KEY, JSON.stringify(list)); } catch(e){ /* storage unavailable */ }
+}
+function scoreRank(score){
+  const list = game.scores;
+  if(score <= 0) return -1;
+  for(let i=0;i<list.length;i++) if(score > list[i].score) return i;
+  return list.length < MAX_SCORES ? list.length : -1;
+}
+
 let game = {
   state:'menu',
-  highScore:Number(localStorage.getItem('sr_highscore') || 0),
+  scores:[],
+  highScore:0,
   newHighScore:false,
   introTimer:0,
   bestSector:1,
+  entry:null,
+  newEntryIndex:-1,
+  returnState:'menu',
 };
+game.scores = loadScores();
+game.highScore = game.scores.length ? game.scores[0].score : 0;
 const fx = { shake:0, shakeMag:0, flash:0, flashColor:'#ffffff', banner:'', bannerTimer:0, bannerColor:'#ff6060' };
 
 function shakeScreen(dur, mag){ fx.shake = Math.max(fx.shake, dur); fx.shakeMag = mag; }
@@ -2180,26 +2257,96 @@ function togglePause(){
   if(game.state === 'playing') game.state = 'paused';
   else if(game.state === 'paused') game.state = 'playing';
 }
-function saveScore(){
+function finishRun(endState){
   game.newHighScore = world.score > game.highScore;
-  if(game.newHighScore){
-    game.highScore = world.score;
-    localStorage.setItem('sr_highscore', String(game.highScore));
+  game.endState = endState;
+  const rank = scoreRank(world.score);
+  if(rank >= 0){
+    const last = (localStorage.getItem(NAME_KEY) || 'AAA').toUpperCase();
+    const chars = [];
+    for(let i=0;i<NAME_LEN;i++){
+      const ch = last[i] || 'A';
+      chars.push(CHARSET.indexOf(ch) >= 0 ? ch : 'A');
+    }
+    game.entry = { chars, slot:0, rank, hold:0, repeat:0, holdAction:null };
+    game.state = 'enterName';
+  } else {
+    game.state = endState;
   }
 }
+function commitName(){
+  const entry = game.entry;
+  const name = entry.chars.join('').trim() || 'AAA';
+  localStorage.setItem(NAME_KEY, name);
+  const record = { name, score:world.score, sector:game.bestSector };
+  game.scores.splice(entry.rank, 0, record);
+  game.scores = game.scores.slice(0, MAX_SCORES);
+  saveScores(game.scores);
+  game.highScore = game.scores[0].score;
+  game.newEntryIndex = game.scores.indexOf(record);
+  game.entry = null;
+  game.returnState = game.endState;
+  game.state = 'scores';
+  sfx.fanfare();
+}
 function gameOver(){
-  game.state = 'gameover';
   game.bestSector = world.levelIdx + 1;
-  saveScore();
   flashScreen(0.5, '#ff3040');
   shakeScreen(0.6, 5);
   sfx.gameOver();
+  finishRun('gameover');
 }
 function winGame(){
-  game.state = 'win';
   game.bestSector = LEVELS.length;
-  saveScore();
   sfx.fanfare();
+  finishRun('win');
+}
+
+function entryStep(action){
+  const entry = game.entry;
+  if(!entry) return;
+  if(action === 'up' || action === 'down'){
+    const idx = CHARSET.indexOf(entry.chars[entry.slot]);
+    const next = (idx + (action === 'up' ? -1 : 1) + CHARSET.length) % CHARSET.length;
+    entry.chars[entry.slot] = CHARSET[next];
+    beep(action === 'up' ? 620 : 540, 0.03, 'square', 0.03);
+  } else if(action === 'left'){
+    entry.slot = (entry.slot + NAME_LEN - 1) % NAME_LEN;
+    beep(480, 0.03, 'square', 0.03);
+  } else if(action === 'right'){
+    entry.slot = (entry.slot + 1) % NAME_LEN;
+    beep(480, 0.03, 'square', 0.03);
+  }
+}
+function entryConfirm(){
+  const entry = game.entry;
+  if(!entry) return;
+  if(entry.slot < NAME_LEN - 1){
+    entry.slot++;
+    beep(700, 0.04, 'square', 0.04);
+  } else {
+    commitName();
+  }
+}
+function entryType(ch){
+  const entry = game.entry;
+  if(!entry) return;
+  entry.chars[entry.slot] = ch;
+  if(entry.slot < NAME_LEN - 1) entry.slot++;
+  beep(700, 0.03, 'square', 0.035);
+}
+function updateNameEntry(dt){
+  const entry = game.entry;
+  if(!entry) return;
+  const held = ['up','down','left','right'].find(a => keys.has(a));
+  if(!held){ entry.holdAction = null; entry.hold = 0; return; }
+  if(entry.holdAction !== held){ entry.holdAction = held; entry.hold = 0; entry.repeat = 0.42; return; }
+  entry.hold += dt;
+  if(entry.hold >= entry.repeat){
+    entry.hold = 0;
+    entry.repeat = 0.11;
+    entryStep(held);
+  }
 }
 
 function applyPowerup(kind){
@@ -2517,6 +2664,8 @@ function update(dt){
     updateParticles(dt);
     handleCollisions();
     updateSpawning(dt);
+  } else if(game.state === 'enterName'){
+    updateNameEntry(dt);
   } else if(game.state === 'levelIntro'){
     game.introTimer -= dt;
     updateParticles(dt);
@@ -2685,7 +2834,7 @@ function drawMenu(){
   const t = performance.now()/1000;
   menuShip.t = t;
   menuShip.x = ((t*38) % (W+60)) - 30;
-  menuShip.y = 132 + Math.sin(t*1.4)*8;
+  menuShip.y = 8 + Math.sin(t*1.4)*4;
   blit(SPR.player, menuShip.x, menuShip.y);
   blit(SPR.drone, menuShip.x - 44, menuShip.y + Math.sin(t*2)*6 - 2);
   blit(SPR.scout, menuShip.x - 74, menuShip.y + Math.cos(t*1.7)*7);
@@ -2695,12 +2844,23 @@ function drawMenu(){
   ctx.fillRect(W/2 - 96, 58, 192, 1);
   drawText('RETRO WELTRAUM-SHOOTER', W/2, 66, { align:'center', color:'#71a58c' });
 
-  drawText('HIGHSCORE ' + String(game.highScore).padStart(6,'0'), W/2, 88, { align:'center', scale:1, color:'#d9fff0' });
-  drawText('10 SEKTOREN . 13 GEGNER . 10 BOSSE', W/2, 102, { align:'center', color:'#5d7f70' });
+  drawText('10 SEKTOREN . 13 GEGNER . 10 BOSSE', W/2, 82, { align:'center', color:'#5d7f70' });
+
+  drawPanel(88, 96, W-176, 50);
+  drawText('BESTENLISTE', W/2, 100, { align:'center', color:'#8fb0a2' });
+  for(let i=0;i<3;i++){
+    const row = game.scores[i];
+    const y = 112 + i*11;
+    const color = i === 0 ? '#ffe066' : '#9fd8c4';
+    drawText((i+1) + '.', 96, y, { color });
+    drawText(row ? row.name : '---', 112, y, { color });
+    drawText(row ? String(row.score).padStart(6,'0') : '------', W-96, y, { align:'right', color });
+  }
 
   if(Math.floor(t*2)%2 === 0){
-    drawText('ENTER ODER TIPPEN', W/2, 172, { align:'center', color:'#ffe066', shadow:'#2a1c00' });
+    drawText('ENTER ODER TIPPEN', W/2, 160, { align:'center', color:'#ffe066', shadow:'#2a1c00' });
   }
+  drawText('H = GANZE BESTENLISTE', W/2, 176, { align:'center', color:'#5d7f70' });
 }
 
 function drawLevelIntro(){
@@ -2752,6 +2912,69 @@ function drawPauseScreen(){
   drawText('P / ESC WEITER', W/2, 112, { align:'center', color:'#a9c9b8' });
 }
 
+function drawNameEntry(){
+  const entry = game.entry;
+  const t = performance.now();
+  ctx.fillStyle = 'rgba(0,0,0,.66)';
+  ctx.fillRect(0, 0, W, H);
+  drawPanel(50, 34, W-100, 132);
+  drawText(entry.rank === 0 ? 'NEUER REKORD!' : 'PLATZ ' + (entry.rank+1) + ' GESCHAFFT', W/2, 46,
+    { align:'center', color:'#ffe066', shadow:'#2a1c00' });
+  drawText(String(world.score).padStart(6, '0'), W/2, 60, { align:'center', scale:2, color:'#9dffc4', shadow:'#06301c' });
+  drawText('NAME EINGEBEN', W/2, 86, { align:'center', color:'#8fb0a2' });
+
+  const slotW = 26, totalW = slotW*NAME_LEN;
+  const startX = W/2 - totalW/2;
+  for(let i=0;i<NAME_LEN;i++){
+    const x = startX + i*slotW;
+    const active = i === entry.slot;
+    if(active && Math.floor(t/300)%2 === 0){
+      ctx.fillStyle = 'rgba(157,255,196,.18)';
+      ctx.fillRect(x, 98, slotW-4, 28);
+    }
+    drawText(entry.chars[i], x + (slotW-4)/2, 100, { align:'center', scale:3, color:active ? '#ffe066' : '#e8fff5' });
+    ctx.fillStyle = active ? '#ffe066' : 'rgba(200,230,215,.3)';
+    ctx.fillRect(x + 2, 128, slotW - 8, 2);
+  }
+  drawText('HOCH/RUNTER = BUCHSTABE', W/2, 140, { align:'center', color:'#6f9686' });
+  drawText('FEUER ODER ENTER = OK', W/2, 152, { align:'center', color:'#6f9686' });
+}
+
+function drawScores(){
+  const t = performance.now();
+  ctx.fillStyle = 'rgba(0,0,0,.66)';
+  ctx.fillRect(0, 0, W, H);
+  drawText('BESTENLISTE', W/2, 12, { align:'center', scale:2, color:'#9dffc4', shadow:'#06301c' });
+  ctx.fillStyle = 'rgba(157,255,196,.3)';
+  ctx.fillRect(28, 32, W-56, 1);
+  drawText('RANG', 30, 38, { color:'#5d7f70' });
+  drawText('NAME', 62, 38, { color:'#5d7f70' });
+  drawText('PUNKTE', 116, 38, { color:'#5d7f70' });
+  drawText('SEKTOR', 196, 38, { color:'#5d7f70' });
+
+  for(let i=0;i<MAX_SCORES;i++){
+    const row = game.scores[i];
+    const y = 50 + i*13;
+    const isNew = i === game.newEntryIndex;
+    if(isNew && Math.floor(t/280)%2 === 0){
+      ctx.fillStyle = 'rgba(255,224,102,.14)';
+      ctx.fillRect(26, y-2, W-52, 11);
+    }
+    const color = isNew ? '#ffe066' : i === 0 ? '#e8fff5' : '#9fd8c4';
+    drawText(String(i+1).padStart(2, ' ') + '.', 30, y, { color:i < 3 ? color : '#6f9686' });
+    if(row){
+      drawText(row.name, 62, y, { color });
+      drawText(String(row.score).padStart(6, '0'), 116, y, { color });
+      drawText('S' + row.sector, 196, y, { color:isNew ? '#ffe066' : '#6f9686' });
+    } else {
+      drawText('---   ------  --', 62, y, { color:'#40584c' });
+    }
+  }
+  if(Math.floor(t/500)%2 === 0){
+    drawText('ENTER = ZURÜCK', W/2, 186, { align:'center', color:'#ffe066' });
+  }
+}
+
 function drawGameOver(){
   ctx.fillStyle = 'rgba(0,0,0,.55)';
   ctx.fillRect(0, 0, W, H);
@@ -2762,8 +2985,9 @@ function drawGameOver(){
   drawText(game.newHighScore ? 'NEUER HIGHSCORE!' : 'BESTE ' + String(game.highScore).padStart(6,'0'),
     W/2, 126, { align:'center', color:game.newHighScore ? '#ffe066' : '#6f9686' });
   if(Math.floor(performance.now()/500)%2 === 0){
-    drawText('ENTER = NEUSTART', W/2, 166, { align:'center', color:'#ffe066' });
+    drawText('ENTER = NEUSTART', W/2, 162, { align:'center', color:'#ffe066' });
   }
+  drawText('H = BESTENLISTE', W/2, 178, { align:'center', color:'#5d7f70' });
 }
 
 function drawWinScreen(){
@@ -2778,8 +3002,9 @@ function drawWinScreen(){
   drawText('ALLE ' + LEVELS.length + ' SEKTOREN BEFREIT', W/2, 128, { align:'center', color:game.newHighScore ? '#ffe066' : '#6f9686' });
   blit(SPR.player, W/2 - 8 + Math.sin(t*2)*14, 158);
   if(Math.floor(t*2)%2 === 0){
-    drawText('ENTER = NOCHMAL', W/2, 180, { align:'center', color:'#ffe066' });
+    drawText('ENTER = NOCHMAL', W/2, 176, { align:'center', color:'#ffe066' });
   }
+  drawText('H = BESTENLISTE', W/2, 190, { align:'center', color:'#5d7f70' });
 }
 
 function draw(){
@@ -2792,6 +3017,8 @@ function draw(){
   if(game.state === 'playing' || game.state === 'paused' || game.state === 'levelIntro'){
     drawWorld();
     drawHUD();
+  } else if(world && (game.state === 'enterName' || game.state === 'gameover' || game.state === 'win')){
+    drawParticles();
   }
   ctx.restore();
 
@@ -2800,6 +3027,8 @@ function draw(){
   else if(game.state === 'paused') drawPauseScreen();
   else if(game.state === 'gameover') drawGameOver();
   else if(game.state === 'win') drawWinScreen();
+  else if(game.state === 'enterName') drawNameEntry();
+  else if(game.state === 'scores') drawScores();
 
   if(fx.flash > 0){
     ctx.globalAlpha = clamp(fx.flash / (fx.flashMax || 0.2), 0, 1) * 0.5;

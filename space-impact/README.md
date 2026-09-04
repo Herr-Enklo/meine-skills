@@ -52,8 +52,21 @@ schießt nach rechts und muss zehn unterschiedliche Sektoren durchqueren.
 | Pause | P / Esc | PAUSE-Knopf |
 | Ton an/aus | M | TON-Knopf |
 | Start / Neustart | Enter | Aufs Display tippen |
+| Bestenliste | H | LISTE-Knopf |
 
-Highscore wird lokal im Browser gespeichert (`localStorage`).
+## Bestenliste
+
+Die besten zehn Läufe werden mit Name, Punkten und erreichtem Sektor lokal im
+Browser gespeichert (`localStorage`, Schlüssel `sr_scores_v1`). Reicht ein Lauf
+für die Liste, kommt nach dem Spielende die Namenseingabe im Arcade-Stil: drei
+Zeichen, ausgewählt mit Hoch/Runter, gewechselt mit Links/Rechts, bestätigt mit
+Feuer oder Enter. Am Rechner kann man den Namen auch direkt tippen, Rücktaste
+geht ein Feld zurück. Der zuletzt benutzte Name ist beim nächsten Mal
+vorausgefüllt.
+
+Das Menü zeigt die besten drei, die vollständige Liste öffnet **H** (oder der
+LISTE-Knopf). Neue Einträge blinken in der Liste. Ohne gespeicherte Daten
+startet die Liste mit sechs Vorgabe-Einträgen als Messlatte.
 
 ## Technik
 
