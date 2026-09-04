@@ -24,8 +24,10 @@
       A.shelf(ctx, 40, 110, 200, 290, '#5a3f28', 5, 11);
       // Foto an der Wand
       A.rect(ctx, 300, 120, 90, 70, '#3a2a1a'); A.rect(ctx, 305, 125, 80, 60, '#d8c8a0');
-      A.dune(ctx, 385, 165, '#b8a070', 3, 8); A.rect(ctx, 305, 125, 80, 25, '#a8c8e0');
+      ctx.save(); ctx.beginPath(); ctx.rect(305, 125, 80, 60); ctx.clip();
+      A.rect(ctx, 305, 125, 80, 30, '#a8c8e0'); A.dune(ctx, 400, 160, '#b8a070', 3, 8);
       A.rect(ctx, 330, 150, 8, 30, '#6b4a2b'); A.rect(ctx, 350, 152, 8, 28, '#8a3a4a');
+      ctx.restore();
       // Landkarte an der Wand
       A.rect(ctx, 430, 100, 190, 130, '#d9c9a0'); ctx.strokeStyle = '#8a7a58'; ctx.lineWidth = 2; ctx.strokeRect(430, 100, 190, 130);
       A.poly(ctx, [440, 110, 520, 115, 500, 160, 470, 200, 445, 180], '#c8b890'); A.poly(ctx, [540, 130, 610, 120, 605, 200, 560, 210], '#c8b890');

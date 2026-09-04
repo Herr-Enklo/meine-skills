@@ -180,6 +180,9 @@
       add('Speichern', () => this.renderMenu('save'), !inGame || g.cutscene || g.inDialog);
       add('Laden', () => this.renderMenu('load'), !this.listSaves().some(Boolean));
       add(ATL.audio.muted ? 'Ton einschalten' : 'Ton ausschalten', () => { ATL.audio.unlock(); ATL.audio.toggleMute(); this.renderMenu(); });
+      const levels = [[0.25, 'leise'], [0.5, 'mittel'], [0.8, 'laut']];
+      const cur = levels.reduce((b, l) => (Math.abs(l[0] - ATL.audio.volume) < Math.abs(b[0] - ATL.audio.volume) ? l : b), levels[1]);
+      add('Lautstärke: ' + cur[1], () => { ATL.audio.unlock(); const i = (levels.indexOf(cur) + 1) % levels.length; ATL.audio.setVolume(levels[i][0]); ATL.audio.fx('pickup'); this.renderMenu(); }, ATL.audio.muted);
       add('Über das Spiel', () => this.about());
     }
     about() {
