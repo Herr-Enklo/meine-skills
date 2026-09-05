@@ -1,0 +1,55 @@
+/* Komplettlösung Atlantis. setup stellt den Zustand nach Thera her: Siegel, Werkzeug, keine Perle,
+   kein Medaillon; Ankunft auf dem äußeren Ring wie von th_descent aus. */
+export const setup = [
+  ['eval', "['taschenmesser','muenzen','flasche','seil','visitenkarte','oellampe','schaufel','solontext','sonnensiegel','stiersiegel','flutsiegel','brecheisen','bimsstein'].forEach((i) => g.take(i, { silent: true })); ['ny_fertig','eg_fertig','th_fertig','livia_gefangen','perle_im_sockel','kessler_geflohen'].forEach((f) => g.set(f)); g.set('ort', 'thera');"],
+  ['goto', 'at_outer', 200, 520, 'r'],
+];
+export const steps = [
+  // Äußerer Ring
+  ['room', 'at_outer'], ['flag', 'at_angekommen'],
+  ['act', 'look', 'geroell'], ['act', 'look', 'kanal'], ['codex', 'ringe'], ['act', 'look', 'mauer'],
+  ['act', 'look', 'krebs'], ['act', 'open', 'krebs'],
+  ['act', 'take', 'schriftrolle'], ['has', 'schriftrolle'],
+  ['act', 'use', 'podest', 'flasche'], ['noflag', 'bruecke_unten'],
+  ['act', 'use', 'krebs', 'brecheisen'], ['has', 'perlen'], ['flag', 'krebs_offen'], ['eval', "return g.flag('perlen') === 3"],
+  ['act', 'walk', 'tor'], ['room', 'at_outer'],
+  ['act', 'look', 'bruecke'],
+  ['act', 'use', 'podest', 'perlen'], ['flag', 'bruecke_unten'], ['hasnot', 'perlen'],
+  ['act', 'walk', 'tor'], ['room', 'at_middle'], ['flag', 'tempel_besucht'],
+  // Tempel
+  ['act', 'look', 'poseidon'], ['codex', 'poseidon'],
+  ['act', 'look', 'koenig_atlas'], ['codex', 'zehnkoenige'],
+  ['act', 'look', 'altar'], ['codex', 'stier'],
+  ['act', 'walk', 'tuer_innen'], ['room', 'at_middle'],
+  ['act', 'push', 'koenig_mestor'], ['noflag', 'koenige_offen'],
+  ['act', 'push', 'koenig_atlas'], ['eval', "return g.flag('koenige_seq') === 'atlas'"],
+  ['act', 'push', 'koenig_ampheres'], ['eval', "return g.flag('koenige_seq') === ''"], ['noflag', 'koenige_offen'],
+  ['act', 'push', 'koenig_gadeiros'], ['noflag', 'koenige_offen'],
+  ['act', 'push', 'koenig_atlas'], ['act', 'push', 'koenig_gadeiros'], ['flag', 'koenige_offen'],
+  ['act', 'walk', 'tuer_innen'], ['room', 'at_middle'],
+  // Zellen
+  ['act', 'walk', 'seitentuer'], ['room', 'at_prison'], ['flag', 'zellen_besucht'],
+  ['queue', 'frei', 'Wo ist Vesper', 'Figur', 'sprechen uns'], ['act', 'talk', 'kessler'],
+  ['queue', 'in Ordnung', 'Gitter', 'Was will Vesper', 'raus'], ['act', 'talk', 'livia'],
+  ['act', 'look', 'gitter'], ['act', 'use', 'gitter', 'brecheisen'],
+  ['act', 'take', 'figur'], ['hasnot', 'figur'],
+  ['act', 'take', 'sockel'], ['noflag', 'livia_frei'],
+  ['act', 'use', 'gang', 'bimsstein'], ['flag', 'kessler_abgelenkt'], ['hasnot', 'bimsstein'], ['flag', 'figur_weg'],
+  ['act', 'take', 'sockel'], ['flag', 'livia_frei'],
+  ['act', 'give', 'livia', 'schriftrolle'], ['flag', 'rolle_gelesen'], ['hasnot', 'schriftrolle'],
+  ['act', 'walk', 'ausgang'], ['room', 'at_middle'],
+  ['queue', 'Was jetzt', 'Könige', 'Gehen wir'], ['act', 'talk', 'livia'], ['codex', 'kritias'],
+  // Das Herz
+  ['act', 'walk', 'tuer_innen'], ['room', 'at_inner'], ['flag', 'vesper_begruesst'],
+  ['queue', 'Vollendung', 'Medaillon', 'genug'], ['act', 'talk', 'vesper'],
+  ['act', 'use', 'konsole', 'sonnensiegel'], ['has', 'sonnensiegel'], ['noflag', 'siegel_gesetzt'],
+  ['act', 'use', 'rad'], ['noflag', 'strom'],
+  ['act', 'look', 'gitter'],
+  ['act', 'use', 'gitter', 'brecheisen'], ['flag', 'strom'],
+  ['act', 'use', 'konsole', 'sonnensiegel'], ['hasnot', 'sonnensiegel'], ['eval', "return g.flag('siegel_gesetzt') === 1"],
+  ['act', 'use', 'konsole', 'stiersiegel'], ['hasnot', 'stiersiegel'], ['eval', "return g.flag('siegel_gesetzt') === 2"],
+  ['queue', 'ziehe'],
+  ['act', 'use', 'konsole', 'flutsiegel'], ['hasnot', 'flutsiegel'], ['flag', 'vesper_vernichtet'], ['flag', 'at_fertig'],
+  // Flucht, Epilog, Abspann
+  ['room', 'title'],
+];

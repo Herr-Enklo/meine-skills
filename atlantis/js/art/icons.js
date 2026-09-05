@@ -1,0 +1,54 @@
+/* Inventar-Symbole, 48x48, alle aus Formen gezeichnet. */
+(function (ATL) {
+  const A = ATL.A;
+  const I = {};
+  const seal = (kind) => (c) => A.seal(c, 24, 24, 20, kind, kind === 'sun' ? '#e0b84a' : kind === 'bull' ? '#b8956a' : '#6fa8c8');
+
+  I.default = (c, it) => { A.rr(c, 8, 8, 32, 32, 5, '#8a7350'); A.text(c, (it && it.name ? it.name[0] : '?'), 24, 32, { font: 'bold 22px Georgia', color: '#1a130c', align: 'center' }); };
+  I.taschenmesser = (c) => { A.rr(c, 6, 26, 26, 10, 3, '#7a2e2e'); A.poly(c, [30, 27, 44, 18, 44, 23, 30, 31], '#d8d8d8'); A.circle(c, 12, 31, 2, '#e0c060'); };
+  I.notiz = (c) => { A.rect(c, 10, 6, 28, 36, '#efe4c8'); for (let i = 0; i < 6; i++) A.line(c, 14, 13 + i * 5, 34, 13 + i * 5, '#6a5a4a', 1); };
+  I.visitenkarte = (c) => { A.rect(c, 4, 15, 40, 20, '#f4efe0'); A.line(c, 8, 21, 30, 21, '#333', 1.5); A.line(c, 8, 26, 24, 26, '#666', 1); A.circle(c, 38, 24, 3, null, '#7a2e2e', 1.5); };
+  I.schluessel = (c) => { A.circle(c, 14, 20, 8, null, '#c8a848', 4); A.line(c, 20, 24, 40, 40, '#c8a848', 4); A.line(c, 34, 34, 38, 30, '#c8a848', 3); A.line(c, 38, 38, 42, 34, '#c8a848', 3); };
+  I.leiter = (c) => { A.ladder(c, 12, 4, 40, '#a08050', 20); };
+  I.figur = (c) => { A.rr(c, 17, 12, 14, 30, 4, '#6a7a6a'); A.circle(c, 24, 10, 7, '#7a8a7a'); A.poly(c, [24, 8, 32, 6, 30, 12], '#6a7a6a'); A.line(c, 20, 14, 28, 14, '#4a5a4a', 1); };
+  I.perle = (c) => { A.glow(c, 24, 24, 22, 'rgba(120,255,200,0.8)', 0.6); A.circle(c, 24, 24, 9, '#5fd8b0'); A.circle(c, 21, 21, 3, '#d8fff0'); };
+  I.perlen = (c) => { A.glow(c, 24, 24, 24, 'rgba(120,255,200,0.8)', 0.6); A.circle(c, 16, 26, 7, '#5fd8b0'); A.circle(c, 30, 28, 7, '#5fd8b0'); A.circle(c, 24, 16, 7, '#5fd8b0'); A.circle(c, 22, 14, 2, '#d8fff0'); };
+  I.muenzen = (c) => { A.circle(c, 18, 26, 10, '#c9a848'); A.circle(c, 30, 22, 10, '#d8b858'); A.circle(c, 30, 22, 6, null, '#8a7028', 1.5); };
+  I.hotdog = (c) => { A.rr(c, 6, 18, 36, 14, 7, '#d9a86a'); A.rr(c, 8, 20, 32, 8, 4, '#b8462e'); A.path(c, [10, 24, 16, 22, 22, 26, 28, 22, 34, 26, 38, 23], '#e8d040', 2); };
+  I.medaillon = (c) => { A.circle(c, 24, 28, 15, '#4a7a78'); A.circle(c, 24, 28, 11, null, '#8fe0d0', 2); A.line(c, 24, 6, 24, 13, '#8a8a8a', 2); for (let i = 0; i < 3; i++) A.circle(c, 24, 28, 3 + i * 3.5, null, '#8fe0d0', 1); };
+  I.seil = (c) => { c.strokeStyle = '#b89a68'; c.lineWidth = 5; c.beginPath(); c.ellipse(24, 24, 14, 10, 0, 0, Math.PI * 2); c.stroke(); c.beginPath(); c.ellipse(24, 26, 12, 8, 0.3, 0, Math.PI * 2); c.stroke(); };
+  I.uhr = (c) => { A.circle(c, 24, 26, 15, '#d8b858'); A.circle(c, 24, 26, 12, '#f4efe0'); A.line(c, 24, 26, 24, 17, '#222', 2); A.line(c, 24, 26, 30, 28, '#222', 2); A.rect(c, 22, 6, 4, 6, '#d8b858'); };
+  I.katalogkarte = (c) => { A.rect(c, 6, 12, 36, 26, '#f0e8d0'); A.line(c, 10, 18, 30, 18, '#7a2e2e', 1.5); for (let i = 0; i < 3; i++) A.line(c, 10, 24 + i * 4, 38, 24 + i * 4, '#7a7a8a', 1); };
+  I.feder = (c) => { c.save(); c.translate(24, 24); c.rotate(-0.6); A.ell(c, 0, 0, 7, 20, '#f0f0f0'); A.line(c, 0, -20, 0, 22, '#aaa', 1.5); c.restore(); };
+  I.skarabaeus = (c) => { A.ell(c, 24, 26, 11, 13, '#3a7a6a'); A.ell(c, 24, 16, 7, 5, '#2a5a4a'); A.line(c, 24, 20, 24, 38, '#1a3a2a', 1.5); for (let i = -1; i <= 1; i += 2) { A.line(c, 24 + i * 9, 20, 24 + i * 16, 14, '#2a5a4a', 2); A.line(c, 24 + i * 11, 30, 24 + i * 17, 34, '#2a5a4a', 2); } };
+  I.oellampe = (c) => { A.ell(c, 22, 30, 15, 8, '#b08a40'); A.poly(c, [34, 28, 44, 26, 36, 32], '#b08a40'); A.circle(c, 22, 26, 3, '#7a5a20'); A.ell(c, 42, 22, 2.5, 5, '#ffb040'); };
+  I.schaufel = (c) => { A.line(c, 14, 6, 30, 26, '#8a6a4a', 4); A.poly(c, [28, 22, 40, 30, 32, 42, 22, 32], '#9a9a9a'); A.line(c, 12, 4, 18, 8, '#8a6a4a', 3); };
+  I.papier = (c) => { A.rect(c, 10, 6, 28, 36, '#f4efe0'); A.poly(c, [32, 6, 38, 12, 32, 12], '#d8d0b8'); };
+  I.kohle = (c) => { A.line(c, 10, 38, 36, 12, '#222', 5); A.line(c, 34, 14, 40, 8, '#555', 3); };
+  I.abrieb = (c) => { A.rect(c, 8, 6, 32, 36, '#e8e0c8'); A.hieroglyphs(c, 11, 10, 26, 28, '#333', 5); };
+  I.uebersetzung = (c) => { A.rect(c, 8, 6, 32, 36, '#f4efe0'); for (let i = 0; i < 7; i++) A.line(c, 12, 12 + i * 4.5, 12 + 10 + (i * 7) % 14, 12 + i * 4.5, '#2a3a7a', 1.2); };
+  I.bericht = (c) => { A.rect(c, 8, 6, 32, 36, '#6a3a2a'); A.rect(c, 12, 6, 24, 36, '#8a4a3a'); A.text(c, 'SAIS', 24, 28, { font: 'bold 10px Georgia', color: '#e8d090', align: 'center' }); };
+  I.flasche = (c) => { A.rr(c, 12, 14, 24, 28, 6, '#5a6a5a'); A.rect(c, 20, 6, 8, 9, '#3a3a3a'); A.rect(c, 16, 22, 16, 3, '#8a9a8a'); };
+  I.sonnensiegel = seal('sun'); I.stiersiegel = seal('bull'); I.flutsiegel = seal('flood');
+  I.oliven = (c) => { A.ell(c, 24, 30, 14, 9, '#8a7350'); for (let i = 0; i < 5; i++) A.ell(c, 16 + i * 4, 24 - (i % 2) * 4, 4, 5, i % 2 ? '#3a4a2a' : '#5a6a3a'); };
+  I.hut = (c) => { A.ell(c, 24, 30, 20, 6, '#6b4a2b'); A.rr(c, 12, 14, 24, 17, 5, '#6b4a2b'); A.rect(c, 12, 26, 24, 3, '#3a2a1a'); };
+  I.plan = (c) => { A.rect(c, 6, 8, 36, 32, '#e8dcb8'); c.strokeStyle = '#6a4a2a'; c.lineWidth = 1.2; c.strokeRect(10, 12, 12, 10); c.strokeRect(24, 12, 14, 8); c.strokeRect(10, 24, 10, 12); c.strokeRect(22, 22, 16, 14); A.circle(c, 30, 29, 2, '#b34a3a'); };
+  I.wolle = (c) => { A.circle(c, 24, 26, 15, '#d8c8a8'); c.strokeStyle = '#b0a080'; c.lineWidth = 1.5; for (let i = 0; i < 6; i++) { c.beginPath(); c.ellipse(24, 26, 15, 6 + i * 1.5, i * 0.5, 0, Math.PI * 2); c.stroke(); } A.line(c, 36, 34, 44, 42, '#d8c8a8', 2); };
+  I.raki = (c) => { A.rr(c, 16, 16, 16, 26, 4, '#dfe8e0'); A.rect(c, 20, 6, 8, 11, '#c8d0c8'); A.rect(c, 20, 4, 8, 3, '#7a3a2a'); A.rect(c, 18, 26, 12, 8, '#f4efe0'); };
+  I.doppelaxt = (c) => { A.line(c, 24, 6, 24, 44, '#6a4a2a', 4); A.poly(c, [22, 12, 8, 8, 6, 22, 8, 36, 22, 32], '#b08a40'); A.poly(c, [26, 12, 40, 8, 42, 22, 40, 36, 26, 32], '#b08a40'); };
+  I.syllabar = (c) => { A.rr(c, 6, 8, 36, 32, 4, '#b89060'); ATL.puzzles.wedgeGlyph(c, 16, 18, 12, 0); ATL.puzzles.wedgeGlyph(c, 32, 18, 12, 2); ATL.puzzles.wedgeGlyph(c, 16, 32, 12, 4); ATL.puzzles.wedgeGlyph(c, 32, 32, 12, 6); };
+  I.kanister = (c) => { A.rr(c, 10, 12, 28, 30, 3, '#5a6a3a'); A.rect(c, 18, 6, 8, 7, '#3a3a3a'); A.rect(c, 14, 20, 20, 12, '#3a4a2a'); A.line(c, 24, 8, 34, 8, '#3a3a3a', 3); };
+  I.tafeltext = (c) => { A.rect(c, 8, 6, 32, 36, '#f4efe0'); A.cuneiform(c, 11, 10, 26, 14, '#333', 7); for (let i = 0; i < 4; i++) A.line(c, 12, 28 + i * 3.5, 30, 28 + i * 3.5, '#2a3a7a', 1); };
+  I.feuerwerk = (c) => { A.rect(c, 18, 10, 12, 30, '#b34a3a'); A.poly(c, [18, 10, 30, 10, 24, 2], '#e0b84a'); A.line(c, 24, 40, 30, 46, '#888', 1.5); A.rect(c, 18, 22, 12, 4, '#e0b84a'); };
+  I.zuendkerze = (c) => { A.rect(c, 20, 6, 8, 12, '#e8e8e8'); A.rect(c, 16, 18, 16, 8, '#888'); A.rect(c, 20, 26, 8, 12, '#aaa'); A.line(c, 24, 38, 24, 44, '#555', 2); };
+  I.stein = (c) => { A.rock(c, 10, 14, 28, 22, '#8a8a80', 3); };
+  I.bimsstein = (c) => { A.rock(c, 10, 14, 28, 22, '#c8c0b0', 9); for (let i = 0; i < 12; i++) A.circle(c, 14 + (i * 7) % 22, 18 + (i * 5) % 14, 1.2, '#8a8478'); };
+  I.schriftrolle = (c) => { A.rr(c, 8, 10, 32, 28, 3, '#5fbfa8'); for (let i = 0; i < 4; i++) A.line(c, 12, 16 + i * 6, 36, 16 + i * 6, '#1a4a40', 1.5); };
+  I.brecheisen = (c) => { A.line(c, 10, 40, 38, 12, '#555', 5); A.line(c, 38, 12, 44, 18, '#555', 5); };
+  I.kaffee = (c) => { A.rr(c, 14, 14, 20, 26, 4, '#5a5a5a'); A.rect(c, 14, 10, 20, 5, '#333'); A.circle(c, 36, 26, 6, null, '#5a5a5a', 3); };
+  I.zigaretten = (c) => { A.rect(c, 12, 10, 24, 30, '#f4efe0'); A.rect(c, 12, 10, 24, 10, '#b34a3a'); for (let i = 0; i < 3; i++) A.rect(c, 15 + i * 7, 4, 5, 8, '#fff'); };
+  I.stoffbeutel = (c) => { A.poly(c, [14, 14, 34, 14, 40, 42, 8, 42], '#8a7350'); A.rect(c, 18, 8, 12, 6, '#6a5a3a'); };
+  I.schilf = (c) => { for (let i = 0; i < 5; i++) A.line(c, 12 + i * 6, 44, 10 + i * 7, 6, '#7a8a3a', 2.5); };
+
+  ATL.icons = I;
+})(window.ATL);

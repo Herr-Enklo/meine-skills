@@ -1,0 +1,82 @@
+/* Komplettlösung Ägypten. Schrittarten siehe test/steps_prolog.mjs.
+   setup: alles, was Falk aus Prolog und New York mitbringt, dann Ankunft im Hafen. */
+export const setup = [
+  ['eval', "['taschenmesser','uhr','muenzen','flasche','seil','perle','visitenkarte','medaillon'].forEach((i) => g.take(i, { silent: true })); g.set('kessler_geflohen'); g.set('ny_fertig'); g.set('ort', 'alexandria');"],
+  ['goto', 'eg_harbor', 200, 520, 'r'],
+];
+export const steps = [
+  // Hafen: Ankunft, Hassan anheuern, Werkzeug aus dem Boot
+  ['room', 'eg_harbor'], ['flag', 'eg_intro'],
+  ['act', 'look', 'festung'], ['codex', 'pharos'],
+  ['act', 'take', 'boot'], ['noflag', 'hassan_angeheuert'],
+  ['act', 'walk', 'hafenamt'], ['room', 'eg_harbor'],
+  ['queue', 'Boot nach Sais', 'Bis später'], ['act', 'talk', 'hassan'], ['flag', 'hassan_angeheuert'],
+  ['act', 'take', 'lampe'], ['has', 'oellampe'],
+  ['act', 'take', 'spaten'], ['has', 'schaufel'],
+  // Bibliothek: Zettelkasten, Amina, Livia
+  ['act', 'walk', 'gasse'], ['room', 'eg_library'],
+  ['act', 'look', 'buch'], ['codex', 'hieroglyphen'],
+  ['act', 'look', 'papyrus'], ['codex', 'maat'],
+  ['act', 'use', 'leiter'], ['hasnot', 'bericht'],
+  ['act', 'use', 'zettelkasten'], ['flag', 'karte_fehlt'],
+  ['queue', 'fehlt die Karte', 'Danke'], ['act', 'talk', 'amina'], ['flag', 'amina_farid_hinweis'],
+  ['queue', 'Was machen wir', 'Erzähl mir von Sais', 'Warum eigentlich Alexandria', 'Bis später'], ['act', 'talk', 'livia'], ['codex', 'solon'], ['codex', 'neith'],
+  // Basar: Feder kaufen, Uhr gegen Karte und Skarabäus
+  ['act', 'walk', 'hoftuer'], ['room', 'eg_bazaar'],
+  ['queue', 'Straußenfeder', 'Nur geschaut'], ['act', 'talk', 'farid'], ['has', 'feder'],
+  ['act', 'give', 'farid', 'muenzen'], ['has', 'muenzen'],
+  ['act', 'give', 'farid', 'uhr'], ['has', 'katalogkarte', 'skarabaeus'], ['hasnot', 'uhr'],
+  ['queue', 'Sie lesen Hieroglyphen', 'Ich muss weiter'], ['act', 'talk', 'yusuf'],
+  // Bibliothek: Bericht holen, Papier und Kohle
+  ['act', 'walk', 'institut'], ['room', 'eg_library'],
+  ['act', 'use', 'regal4', 'katalogkarte'], ['has', 'bericht'], ['flag', 'bericht_genommen'],
+  ['item', 'use', 'bericht'],
+  ['queue', 'Papier und Kohle', 'Danke'], ['act', 'talk', 'amina'], ['has', 'papier', 'kohle'],
+  ['act', 'give', 'livia', 'bericht'],
+  // Nach Sais
+  ['act', 'walk', 'tuer'], ['room', 'eg_harbor'],
+  ['act', 'walk', 'fahrt'], ['room', 'eg_sais'], ['flag', 'livia_in_sais'],
+  ['act', 'look', 'statue'], ['flag', 'statue_gesehen'],
+  ['act', 'use', 'senke'], ['noflag', 'freigelegt'],
+  ['act', 'use', 'senke', 'schaufel'], ['flag', 'freigelegt'],
+  ['act', 'use', 'schale_l', 'skarabaeus'], ['has', 'skarabaeus'],
+  ['act', 'use', 'schale_l', 'feder'], ['flag', 'schalen_sauber'], ['has', 'feder'],
+  ['act', 'use', 'schale_l', 'feder'], ['has', 'feder'],
+  ['act', 'use', 'schale_r', 'skarabaeus'], ['has', 'skarabaeus'],
+  ['act', 'use', 'schale_r', 'perle'], ['has', 'perle'],
+  ['act', 'use', 'schale_r', 'feder'], ['flag', 'feder_rechts'], ['hasnot', 'feder'],
+  ['act', 'use', 'schale_l', 'skarabaeus'], ['flag', 'tuer_offen'], ['hasnot', 'skarabaeus'], ['codex', 'maat'],
+  ['queue', 'Was jetzt', 'Erklär mir die Waage', 'Und Thot', 'Bis gleich'], ['act', 'talk', 'livia'], ['codex', 'thoth'],
+  // Tempel: Lampe, Thot, Inschrift abreiben
+  ['act', 'walk', 'tempel'], ['room', 'eg_temple'],
+  ['act', 'look', 'dunkel'],
+  ['item', 'use', 'oellampe'], ['flag', 'lampe_brennt'],
+  ['act', 'look', 'thot'], ['codex', 'thoth'],
+  ['act', 'look', 'inschrift'],
+  ['act', 'use', 'inschrift', 'papier'], ['has', 'abrieb'], ['hasnot', 'papier'], ['has', 'kohle'], ['flag', 'abrieb_gemacht'],
+  ['act', 'look', 'tuer'],
+  // Zurück nach Alexandria zu Yusuf
+  ['act', 'walk', 'treppe'], ['room', 'eg_sais'],
+  ['act', 'walk', 'boot'], ['room', 'eg_harbor'],
+  ['queue', 'schwarzem Mantel', 'Bis später'], ['act', 'talk', 'hassan'], ['flag', 'kessler_gefragt'],
+  ['act', 'walk', 'suq'], ['room', 'eg_bazaar'],
+  ['queue', 'Aus Sais'], ['act', 'give', 'yusuf', 'abrieb'], ['has', 'uebersetzung'], ['hasnot', 'abrieb'], ['flag', 'inschrift_text'], ['codex', 'apis'], ['codex', 'nun'],
+  ['item', 'use', 'uebersetzung'],
+  ['act', 'walk', 'hafen'], ['room', 'eg_harbor'],
+  ['queue', 'Fahren wir'], ['act', 'talk', 'hassan'], ['room', 'eg_sais'],
+  // Tempeltür und Kammer
+  ['act', 'walk', 'tempel'], ['room', 'eg_temple'],
+  ['act', 'use', 'tuer'], ['flag', 'tuer2_offen'],
+  ['act', 'walk', 'kammer'], ['room', 'eg_crypt'],
+  ['act', 'look', 'regale'],
+  ['act', 'use', 'lichtschacht', 'seil'], ['room', 'eg_crypt'], ['noflag', 'aus_schacht'],
+  ['act', 'use', 'stele'], ['has', 'solontext'], ['codex', 'platon'], ['codex', 'solon'],
+  ['item', 'use', 'solontext'],
+  ['act', 'take', 'siegel'], ['has', 'sonnensiegel'], ['flag', 'sand_faelle'],
+  ['act', 'open', 'tuer_zu'],
+  ['act', 'use', 'lichtschacht', 'seil'], ['room', 'eg_sais'], ['flag', 'eg_nacht'], ['flag', 'eg_fertig'], ['has', 'seil'], ['has', 'oellampe', 'schaufel'],
+  ['queue', 'Was jetzt', 'Bis gleich'], ['act', 'talk', 'livia'],
+  // Zurück zur Karte
+  ['act', 'walk', 'boot'], ['room', 'eg_harbor'],
+  ['act', 'walk', 'hafenamt'], ['room', 'map'],
+];
