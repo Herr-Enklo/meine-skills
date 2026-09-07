@@ -1,13 +1,4 @@
 {
-  "extraKnownMarketplaces": {
-    "meine-skills": {
-      "source": {
-        "source": "github",
-        "repo": "Herr-Enklo/meine-skills"
-      },
-      "autoUpdate": false
-    }
-  },
   "enabledPlugins": {
     "paketierung@meine-skills": false,
     "agency-dev@meine-skills": false,
@@ -17,6 +8,22 @@
     "agency-ki@meine-skills": false,
     "agency-produkt@meine-skills": false,
     "agency-ux@meine-skills": false,
-    "agency-iot@meine-skills": false
+    "agency-iot@meine-skills": false,
+    "codex@openai-codex": true
+  },
+  "extraKnownMarketplaces": {
+    "meine-skills": {
+      "source": {
+        "source": "github",
+        "repo": "Herr-Enklo/meine-skills"
+      },
+      "autoUpdate": false
+    },
+    "openai-codex": {
+      "source": {
+        "source": "github",
+        "repo": "openai/codex-plugin-cc"
+      }
+    }
   }
 }
