@@ -18,7 +18,7 @@ import zipfile
 from dataclasses import dataclass, field
 from datetime import date
 
-from .inf import InfFile, load_inf, parse_inf, decode_bytes
+from .inf import InfFile, Line, load_inf, parse_inf, decode_bytes
 
 TEMPLATE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "templates")
 
@@ -363,3 +363,130 @@ def _hex_to_text(hexdata: str) -> str:
         return raw.decode("utf-16-le").rstrip("\x00")
     except UnicodeDecodeError:
         return raw.hex()
+
+
+# -- Update eines vorhandenen Pakets ---------------------------------------------
+
+_HISTORY_RE = re.compile(r"^(\d+)\.(\d+)\t")
+
+
+def next_build(build: str) -> str:
+    """1.06 -> 1.07, 1.9 -> 1.10, leer -> 1.01."""
+    m = re.match(r"^\s*(\d+)\.(\d+)\s*$", build or "")
+    if not m:
+        return "1.01"
+    major, minor = m.group(1), m.group(2)
+    width = len(minor)
+    return f"{major}.{str(int(minor) + 1).zfill(width)}"
+
+
+def update_package(old_inf_path: str, new_version: str, store: str | None = None,
+                   author: str = "", installer: str = "", files_dir: str | None = None,
+                   note: str = "", tested_on: str = "Test ausstehend") -> str:
+    """Neue Paketversion aus der Setup.inf der Vorversion ableiten.
+
+    * [Application] Version = neue Version
+    * jede Zeile ``Set V_OldVersion=...`` bekommt die Vorversion angehaengt
+    * Installernamen, die die Vorversion enthalten, werden umbenannt (oder auf
+      ``installer`` gesetzt, wenn genau eine FileName-Zeile existiert)
+    * [SetupInfo]: Build hochgezaehlt, Last Change = heute, Tested on =
+      ``tested_on``, Historienzeile angehaengt, Version in Description ersetzt
+    * Rest der Datei, Kodierung und CRLF bleiben unveraendert
+
+    Ziel ist ``<store>\\<Hersteller>\\<Produkt>\\<neue Version>\\Install\\Setup.inf``;
+    ohne ``store`` der Package Store, in dem die alte Version liegt. Liefert den
+    Pfad der neuen Setup.inf."""
+    inf = load_inf(old_inf_path)
+    app = inf.find("Application")
+    if app is None:
+        raise ValueError("Setup.inf ohne [Application]-Sektion")
+    old_version = (app.get("Version") or "").strip()
+    new_version = new_version.strip()
+    if not old_version:
+        raise ValueError("[Application] Version der Vorversion ist leer")
+    if new_version == old_version:
+        raise ValueError(f"Neue Version ist gleich der alten ({old_version})")
+    developer = (app.get("DeveloperName") or "").strip()
+    product = (app.get("ProductName") or "").strip()
+    app.set("Version", new_version)
+    installer_name = os.path.basename(installer) if installer else ""
+    today = date.today().strftime("%d.%m.%Y")
+
+    filename_lines = []
+    for sec in inf.sections:
+        for ln in sec.lines:
+            if not ln.is_content:
+                continue
+            kv = ln.key_value()
+            if not kv:
+                continue
+            key, value = kv
+            klow = key.strip().lower()
+            if klow == "set v_oldversion":
+                versions = [v.strip() for v in value.split(",") if v.strip()]
+                if old_version not in versions:
+                    versions.append(old_version)
+                ln.raw = f"{key.strip()}={','.join(versions)}"
+            elif (sec.is_script or sec.key == "environment") and (
+                    "filename" in klow or re.search(r"\.(exe|msi|msp|zip|cab)\s*$", value, re.IGNORECASE)):
+                filename_lines.append(ln)
+    for ln in filename_lines:
+        key, value = ln.key_value()
+        if installer_name and len(filename_lines) == 1:
+            ln.raw = f"{key.strip()}={installer_name}"
+        elif old_version in value:
+            ln.raw = f"{key.strip()}={value.replace(old_version, new_version)}"
+
+    info = inf.find("SetupInfo")
+    if info is not None:
+        build = next_build(info.get("Build") or "")
+        _set_padded(info, "Build", build)
+        _set_padded(info, "Last Change", today)
+        if tested_on:
+            _set_padded(info, "Tested on", tested_on)
+        desc = info.get("Description") or ""
+        if old_version in desc:
+            _set_padded(info, "Description", desc.replace(old_version, new_version))
+        text = note or f"Update auf {new_version}"
+        history = [i for i, ln in enumerate(info.lines) if _HISTORY_RE.match(ln.raw)]
+        line = Line(0, f"{build}\t\t{today}\t{author}\t\t{text}")
+        if history:
+            info.lines.insert(history[-1] + 1, line)
+        else:
+            idx = len(info.lines)
+            while idx > 0 and info.lines[idx - 1].is_blank:
+                idx -= 1
+            info.lines[idx:idx] = [Line(0, ""), Line(0, "Buildnr.\tDatum\t\tName\t\t\tBeschreibung"), line]
+
+    old_install_dir = os.path.dirname(os.path.abspath(old_inf_path))
+    if store is None:
+        store = os.path.dirname(os.path.dirname(os.path.dirname(old_install_dir)))
+    setup_inf_dir = (app.get("SetupInfDir") or "Install").strip().strip("\\")
+    root = os.path.join(store, _safe(developer), _safe(product), _safe(new_version))
+    install_dir = os.path.join(root, setup_inf_dir)
+    target = os.path.join(install_dir, "Setup.inf")
+    if os.path.exists(target):
+        raise FileExistsError(f"Es gibt schon eine Setup.inf fuer {new_version}: {target}")
+    os.makedirs(install_dir, exist_ok=True)
+    os.makedirs(os.path.join(root, "Files"), exist_ok=True)
+    inf.renumber()
+    inf.save(target)
+    # Begleitdateien der Vorversion (Setup.ico, Logo.bmp) und Installer
+    for name in os.listdir(old_install_dir):
+        if name.lower().endswith((".ico", ".bmp")):
+            dst = os.path.join(install_dir, name)
+            if not os.path.exists(dst):
+                shutil.copy2(os.path.join(old_install_dir, name), dst)
+    if files_dir and os.path.isdir(files_dir):
+        for dirpath, _, filenames in os.walk(files_dir):
+            rel = os.path.relpath(dirpath, files_dir)
+            for fname in filenames:
+                dst = os.path.join(root, "Files", rel, fname) if rel != "." else os.path.join(root, "Files", fname)
+                if not os.path.exists(dst):
+                    os.makedirs(os.path.dirname(dst), exist_ok=True)
+                    shutil.copy2(os.path.join(dirpath, fname), dst)
+    if installer and os.path.isfile(installer):
+        dst = os.path.join(root, "Files", installer_name)
+        if not os.path.exists(dst):
+            shutil.copy2(installer, dst)
+    return target

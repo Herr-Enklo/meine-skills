@@ -23,7 +23,8 @@ from empirum.inf import decode_bytes, split_top_level  # noqa: E402
 from empirum.variables import Variables, Expander  # noqa: E402
 from empirum.script import parse_statement, parse_section  # noqa: E402
 from empirum.runner import compare  # noqa: E402
-from empirum.package import PackageSpec, create_package, export_zip, find_packages, import_reg_file  # noqa: E402
+from empirum.package import PackageSpec, create_package, export_zip, find_packages, import_reg_file, update_package, next_build  # noqa: E402
+from empirum.pipeline import build_package, run_roundtrip  # noqa: E402
 
 TEMPLATE_DIR = os.path.join(_ROOT, "empirum", "templates")
 
@@ -627,6 +628,142 @@ class PackageTests(unittest.TestCase):
             self.assertIn('-HKLM,"SOFTWARE\\Acme\\Demo","Weg"', lines)
             self.assertIn('HKLM,"SOFTWARE\\Acme\\Demo","",0x00000000,"Standard"', lines)
             self.assertIn('-HKCU,"Software\\Old"', lines)
+
+
+class UpdateTests(unittest.TestCase):
+    def _old_text(self):
+        head = ("[SetupInfo]\nAuthor                  = Codex\nDescription             = Demo 1.2.3 f\u00fcr alle\n"
+                "Tested on               = Win11\nCommand line options    = /S0\nLast Change             = 01.01.2026\n"
+                "Build                   = 1.06\n\nBuildnr.\tDatum\t\tName\t\t\tBeschreibung\n"
+                "1.00\t\t01.01.2021\tMatrix42\t\tInitialpaket\n1.06\t\t01.01.2026\t\t\t\tUpdate auf 1.2.3\n\n")
+        body = "[Setup]" + MINI.split("[Setup]", 1)[1]
+        body = body.replace("Set V_Installer=setup64.exe", "Set V_Installer=setup-1.2.3-x64.exe\nSet V_OldVersion=1.0.0,1.1.0")
+        body = body.replace("Set V_Installer=setup32.exe", "Set V_Installer=setup-1.2.3-x86.exe\nSet V_OldVersion=1.0.0,1.1.0")
+        return head + body
+
+    def test_next_build(self):
+        self.assertEqual(next_build("1.06"), "1.07")
+        self.assertEqual(next_build("1.09"), "1.10")
+        self.assertEqual(next_build("2.9"), "2.10")
+        self.assertEqual(next_build(""), "1.01")
+
+    def test_update_package(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            old = _write_package(tmp, self._old_text())
+            with open(os.path.join(os.path.dirname(old), "Setup.ico"), "wb") as fh:
+                fh.write(b"ICO")
+            files = os.path.join(tmp, "neu")
+            os.makedirs(files)
+            with open(os.path.join(files, "setup-1.3.0-x64.exe"), "wb") as fh:
+                fh.write(b"MZ")
+            new = update_package(old, "1.3.0", author="Tester", files_dir=files)
+            self.assertTrue(new.endswith(os.path.join("Acme", "Demo", "1.3.0", "Install", "Setup.inf")))
+            self.assertTrue(os.path.isfile(os.path.join(os.path.dirname(new), "Setup.ico")))
+            self.assertTrue(os.path.isfile(os.path.join(os.path.dirname(os.path.dirname(new)), "Files", "setup-1.3.0-x64.exe")))
+            inf = load_inf(new)
+            self.assertEqual(inf.encoding, "cp1252")
+            self.assertEqual(inf.newline, "\r\n")
+            self.assertEqual(inf.value("Application", "Version"), "1.3.0")
+            self.assertEqual(inf.find("Set:Win64").get("Set V_OldVersion"), "1.0.0,1.1.0,1.2.3")
+            self.assertEqual(inf.find("Set:Win32").get("Set V_OldVersion"), "1.0.0,1.1.0,1.2.3")
+            self.assertEqual(inf.find("Set:Win64").get("Set V_Installer"), "setup-1.3.0-x64.exe")
+            self.assertEqual(inf.find("Set:Win32").get("Set V_Installer"), "setup-1.3.0-x86.exe")
+            info = inf.find("SetupInfo")
+            self.assertEqual(info.get("Build"), "1.07")
+            self.assertEqual(info.get("Description"), "Demo 1.3.0 f\u00fcr alle")
+            self.assertEqual(info.get("Tested on"), "Test ausstehend")
+            self.assertNotEqual(info.get("Last Change"), "01.01.2026")
+            history = [ln.raw for ln in info.lines if ln.raw.startswith("1.07")]
+            self.assertEqual(len(history), 1)
+            self.assertIn("Tester", history[0])
+            self.assertIn("Update auf 1.3.0", history[0])
+            # Historie steht direkt hinter der letzten Zeile 1.06
+            raws = [ln.raw for ln in info.lines]
+            self.assertEqual(raws.index(history[0]), raws.index([r for r in raws if r.startswith("1.06")][0]) + 1)
+            # Rest unveraendert: Skript laeuft weiter durch
+            res = Runner(inf, SimulationBackend(read_real_registry=False), RunOptions()).run()
+            self.assertEqual(res.status, Status.SUCCESS, res.summary())
+            with self.assertRaises(FileExistsError):
+                update_package(old, "1.3.0")
+            with self.assertRaises(ValueError):
+                update_package(old, "1.2.3")
+            # alte Datei unveraendert
+            self.assertEqual(load_inf(old).value("Application", "Version"), "1.2.3")
+
+
+class PipelineTests(unittest.TestCase):
+    def test_build_and_roundtrip(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            # Quelle wie im Paketierungs-Repo: setup.inf in einem Versionsordner ohne Install\
+            src_dir = os.path.join(tmp, "repo", "demo", "releases", "1.2.3")
+            os.makedirs(src_dir)
+            src = os.path.join(src_dir, "setup.inf")
+            with open(src, "wb") as fh:
+                fh.write(MINI.replace("\n", "\r\n").encode("cp1252"))
+            with open(os.path.join(src_dir, "Setup.ico"), "wb") as fh:
+                fh.write(b"ICO")
+            files = os.path.join(tmp, "installer")
+            os.makedirs(os.path.join(files, "sub"))
+            with open(os.path.join(files, "setup64.exe"), "wb") as fh:
+                fh.write(b"MZ")
+            with open(os.path.join(files, "sub", "extra.dat"), "wb") as fh:
+                fh.write(b"x")
+            store = os.path.join(tmp, "store")
+            res = build_package(src, store, files_dir=files)
+            self.assertTrue(res.setup_inf.endswith(os.path.join("Acme", "Demo", "1.2.3", "Install", "Setup.inf")))
+            self.assertTrue(os.path.isfile(os.path.join(res.package_root, "Files", "setup64.exe")))
+            self.assertTrue(os.path.isfile(os.path.join(res.package_root, "Files", "sub", "extra.dat")))
+            self.assertTrue(os.path.isfile(os.path.join(res.package_root, "Install", "Setup.ico")))
+            with open(src, "rb") as a, open(res.setup_inf, "rb") as b:
+                self.assertEqual(a.read(), b.read())      # byteerhaltend
+            # zweiter Aufruf mit identischer Quelle ist erlaubt, geaenderte Quelle nicht
+            build_package(src, store, files_dir=files)
+            with open(src, "ab") as fh:
+                fh.write(b"; geaendert\r\n")
+            with self.assertRaises(FileExistsError):
+                build_package(src, store)
+            build_package(src, store, overwrite=True)
+
+            phases_seen = []
+            rt = run_roundtrip(res.setup_inf, simulate=True, reinstall=True,
+                               backend_factory=lambda mode, prev: _sim(prev),
+                               on_phase=lambda label, mode: phases_seen.append(mode))
+            self.assertEqual(phases_seen, ["install", "reinstall", "uninstall"])
+            self.assertTrue(rt.ok, rt.summary())
+            self.assertEqual([p.result.status for p in rt.phases], [Status.SUCCESS] * 3)
+            for p in rt.phases:
+                self.assertTrue(all(ok for _, ok, _ in p.checks), p.checks)
+            logs = {p.result.log_path for p in rt.phases}
+            self.assertEqual(len(logs), 3)          # jede Phase ein eigenes Protokoll
+            self.assertTrue(os.path.isfile(rt.report_path))
+            with open(rt.report_path, encoding="utf-8") as fh:
+                report = fh.read()
+            self.assertIn("**bestanden**", report)
+            self.assertIn("Deinstallation", report)
+            self.assertIn("[x] Uninstall-Schluessel", report)
+
+    def test_roundtrip_failure_is_reported(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = _write_package(tmp)
+
+            def factory(mode, prev):
+                be = _sim(prev)
+                be.exit_code_rules = [("*setup64.exe*", 1603)]
+                return be
+
+            rt = run_roundtrip(path, simulate=True, backend_factory=factory)
+            self.assertFalse(rt.ok)
+            self.assertEqual(rt.phases[0].result.status, Status.FAILURE)
+            self.assertIn("Abbruch in Zeile", rt.phases[0].result.trigger)
+            with open(rt.report_path, encoding="utf-8") as fh:
+                self.assertIn("nicht bestanden", fh.read())
+
+
+def _sim(prev):
+    be = SimulationBackend(read_real_registry=False)
+    if prev is not None:
+        be.inherit(prev)
+    return be
 
 
 if __name__ == "__main__":

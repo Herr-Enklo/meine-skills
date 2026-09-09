@@ -122,6 +122,16 @@ Editor. Die Vorlagen liegen unter `empirum/templates/` (`EXE.inf`, `MSI.inf`,
 Windows-1252 mit CRLF, wie im Paketierungs-Repo). Eigene Vorlagen kann man
 dort ablegen oder im Wizard auswählen.
 
+Für eine neue Version eines vorhandenen Pakets wählt man im Wizard „Update“
+und die Setup.inf der Vorversion. Sie ist dann die Basis: Die neue Version
+kommt in `[Application]`, die Vorversion wird an jede `Set V_OldVersion=`-Zeile
+angehängt, Installernamen mit der alten Version werden umbenannt, in
+`[SetupInfo]` werden Build hochgezählt, „Last Change“ gesetzt, „Tested on“ auf
+„Test ausstehend“ gestellt und eine Historienzeile angehängt. Alles andere,
+auch Kodierung und CRLF, bleibt unverändert; die alte Datei wird nicht
+angefasst. Dasselbe geht in der Automatik („Update: Setup.inf ist die
+Vorversion“) und auf der Kommandozeile mit `update` oder `auto --update-auf`.
+
 Der Package Editor hat links den Baum „Alle Abschnitte“ und rechts die
 Setup.inf in zwei Ansichten, umschaltbar mit Strg+W: die Normalansicht mit
 Schlüssel-Wert-Tabelle beziehungsweise Anweisungsliste je Sektion, die
@@ -153,6 +163,42 @@ mit einer installierten Vorversion, um Reparatur und Update zu prüfen.
 
 „Registrierung importieren“ wandelt eine `.reg`-Datei in Registryzeilen für
 eine `[Reg:...]`-Sektion um.
+
+## Automatik: bauen und hin und zurück testen
+
+Die Kachel „Automatik: bauen + testen“ im Startfenster nimmt eine Setup.inf
+(zum Beispiel aus dem Paketierungs-Repo, wo sie ohne `Install\`-Ordner liegt),
+einen Ordner mit den Installerdateien und den Package Store. Sie legt daraus
+`<Hersteller>\<Produkt>\<Version>\Install\Setup.inf` samt `Files\` an, kopiert
+Setup.ico und Logo.bmp neben der Quelle mit, öffnet die Datei im Package
+Editor und startet dort den automatischen Testlauf: Installation, wahlweise
+erneute Installation über den Reparaturpfad, Deinstallation. Nach jeder Phase
+prüft sie den Registry-Zustand: Uninstall-Schlüssel der Software (über den
+DisplayName aus `V_MSIDisplayName` bzw. `V_UnattendDisplayName`),
+Empirum-Registrierung (`UninstallKeyName`) und `MachineKeyName`, jeweils
+vorhanden nach der Installation und entfernt nach der Deinstallation.
+
+Der Testbericht landet als Markdown im Versionsordner des Pakets
+(`Testbericht_<Datum>.md`) mit einer Tabelle je Phase, den Prüfungen, den
+Warnungen und Fehlern aus den Protokollen und dem Ergebnis der Paketprüfung.
+Er passt zur `paket.md` im Paketierungs-Repo.
+
+Im Editor gibt es denselben Lauf über „Hin und zurück“ (F6) für die gerade
+geöffnete Setup.inf. In der Simulation bleibt die Registry zwischen den Phasen
+erhalten; im echten Testlauf bleibt nach der Deinstallation ein sauberer
+Rechner. Ein Klick auf Stopp bricht die laufende Phase ab, die folgenden
+laufen nicht mehr.
+
+Ohne Fenster:
+
+```
+python main.py build  Repo\software\firefox\releases\155.0.1\setup.inf --store D:\Pakete --files D:\Installer\Firefox
+python main.py roundtrip "D:\Pakete\Mozilla\Firefox (64Bit) DE\155.0.1\Install\Setup.inf" --echt --reinstall
+python main.py auto   Repo\software\firefox\releases\155.0.1\setup.inf --store D:\Pakete --files D:\Installer\Firefox --echt
+```
+
+`auto` macht beides hintereinander; Rückgabewert 0 heißt, alle Phasen und
+Prüfungen sind bestanden.
 
 ## Kommandozeile
 

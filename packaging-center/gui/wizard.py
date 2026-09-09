@@ -11,7 +11,8 @@ import os
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 
-from empirum.package import PackageSpec, create_package, list_templates, TEMPLATE_DIR
+from empirum.package import PackageSpec, create_package, list_templates, TEMPLATE_DIR, update_package
+from empirum import load_inf
 from gui.dialogs import load_settings, save_settings
 
 
@@ -52,6 +53,8 @@ class PackageWizard(tk.Toplevel):
         self.copy_installer = tk.BooleanVar(value=True)
         self.store = tk.StringVar(value=s.get("package_store", ""))
         self.open_editor = tk.BooleanVar(value=True)
+        self.old_inf = tk.StringVar()
+        self.old_version = ""
 
     def _build(self):
         self.header = ttk.Label(self, text="", font=("Segoe UI", 12, "bold"), padding=(12, 10))
@@ -79,6 +82,14 @@ class PackageWizard(tk.Toplevel):
                                   ("MSI: Windows-Installer-Paket", "MSI", "MSI.inf")):
             ttk.Radiobutton(f, text=label, variable=self.method, value=value,
                             command=lambda t=tpl: self._pick_template(t)).pack(anchor="w", pady=4)
+        ttk.Radiobutton(f, text="Update: vorhandenes Paket auf eine neue Version heben (alte Setup.inf als Basis, "
+                                "Vorversion kommt in V_OldVersion, Build und Historie werden fortgeschrieben)",
+                        variable=self.method, value="UPDATE", command=self._update_mode).pack(anchor="w", pady=4)
+        urow = ttk.Frame(f)
+        urow.pack(fill="x", pady=(2, 4))
+        ttk.Label(urow, text="Setup.inf der Vorversion:").pack(side="left")
+        ttk.Entry(urow, textvariable=self.old_inf, width=48).pack(side="left", padx=6, fill="x", expand=True)
+        ttk.Button(urow, text="...", width=3, command=self._pick_old_inf).pack(side="left")
         row = ttk.Frame(f)
         row.pack(fill="x", pady=(16, 4))
         ttk.Label(row, text="Vorlage:").pack(side="left")
@@ -88,6 +99,40 @@ class PackageWizard(tk.Toplevel):
         ttk.Label(f, text=f"Vorlagen liegen unter {TEMPLATE_DIR}. Eigene Vorlagen dort ablegen oder hier auswaehlen.",
                   wraplength=700, foreground="#555").pack(anchor="w", pady=8)
         return f
+
+    def _update_mode(self):
+        if self.old_inf.get() and os.path.isfile(self.old_inf.get()):
+            self._load_old()
+
+    def _pick_old_inf(self):
+        path = filedialog.askopenfilename(parent=self, title="Setup.inf der Vorversion",
+                                          filetypes=[("Setup.inf", "*.inf")])
+        if path:
+            self.old_inf.set(path)
+            self.method.set("UPDATE")
+            self._load_old()
+
+    def _load_old(self):
+        try:
+            inf = load_inf(self.old_inf.get())
+        except OSError as exc:
+            messagebox.showerror("Vorversion", str(exc), parent=self)
+            return
+        app = inf.find("Application")
+        if app is None:
+            return
+        self.developer.set(app.get("DeveloperName") or "")
+        self.product.set(app.get("ProductName") or "")
+        self.old_version = app.get("Version") or ""
+        self.version.set("")
+        self.revision.set(app.get("Revision") or "0")
+        info = inf.find("SetupInfo")
+        if info:
+            self.description.set(info.get("Description") or "")
+            self.cmd_options.set(info.get("Command line options") or "/S0")
+        root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(self.old_inf.get()))))
+        if not self.store.get():
+            self.store.set(root)
 
     def _pick_template(self, name: str):
         if name in list_templates():
@@ -260,8 +305,17 @@ class PackageWizard(tk.Toplevel):
             self._show_page(self.page + 1)
 
     def _validate_page(self) -> bool:
-        if self.page == 0 and not self.template.get():
+        if self.page == 0 and self.method.get() == "UPDATE":
+            if not os.path.isfile(self.old_inf.get()):
+                messagebox.showerror("Update", "Bitte die Setup.inf der Vorversion waehlen.", parent=self)
+                return False
+            if not self.old_version:
+                self._load_old()
+        elif self.page == 0 and not self.template.get():
             messagebox.showerror("Vorlage", "Bitte eine Vorlage waehlen.", parent=self)
+            return False
+        if self.page == 1 and self.method.get() == "UPDATE" and self.version.get().strip() == self.old_version:
+            messagebox.showerror("Update", f"Die neue Version ist gleich der alten ({self.old_version}).", parent=self)
             return False
         if self.page == 1:
             for label, var in (("Hersteller", self.developer), ("Produkt", self.product), ("Version", self.version)):
@@ -296,7 +350,7 @@ class PackageWizard(tk.Toplevel):
         s = self._spec()
         target = os.path.join(self.store.get(), s.developer, s.product, s.version)
         lines = [
-            f"Vorlage:            {s.template}",
+            f"Vorlage:            {s.template}" if self.method.get() != "UPDATE" else f"Basis:              {self.old_inf.get()} (Version {self.old_version})",
             f"Methode:            {self.method.get()}",
             f"Hersteller:         {s.developer}",
             f"Produkt:            {s.product}",
@@ -322,8 +376,13 @@ class PackageWizard(tk.Toplevel):
     def finish(self):
         spec = self._spec()
         try:
-            path = create_package(spec, self.store.get().strip())
-        except FileExistsError as exc:
+            if self.method.get() == "UPDATE":
+                path = update_package(self.old_inf.get(), spec.version, store=self.store.get().strip(),
+                                      author=spec.author, installer=spec.installer if spec.copy_installer else "",
+                                      note=spec.description if spec.description and spec.description != (load_inf(self.old_inf.get()).value("SetupInfo", "Description") or "") else "")
+            else:
+                path = create_package(spec, self.store.get().strip())
+        except (FileExistsError, ValueError) as exc:
             messagebox.showerror("Paket anlegen", str(exc), parent=self)
             return
         except OSError as exc:

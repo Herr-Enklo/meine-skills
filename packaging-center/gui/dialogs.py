@@ -6,7 +6,7 @@ import json
 import os
 import platform
 import tkinter as tk
-from tkinter import ttk, messagebox, simpledialog, scrolledtext
+from tkinter import ttk, messagebox, simpledialog, scrolledtext, filedialog
 
 from empirum.commands import COMMANDS, FUNCTIONS
 from empirum.runner import RunOptions
@@ -429,3 +429,139 @@ class FindDialog(simpledialog.Dialog):
         self.replace = self.repl_var.get()
         self.replace_all = self.all_var.get()
         self.destroy()
+
+
+class AutoRunDialog(simpledialog.Dialog):
+    """Einstellungen fuer den automatischen Testlauf hin und zurueck."""
+
+    def __init__(self, parent, settings: dict):
+        self.settings = settings
+        self.confirmed = False
+        self.simulate = True
+        self.reinstall = False
+        super().__init__(parent, "Automatischer Testlauf: hin und zurueck")
+
+    def body(self, master):
+        pad = {"padx": 8, "pady": 4}
+        ttk.Label(master, text="Phasen: Installation, wahlweise erneute Installation (Reparaturpfad), "
+                               "Deinstallation. Nach jeder Phase wird der Registry-Zustand geprueft; "
+                               "der Testbericht landet als Markdown im Versionsordner des Pakets.",
+                  wraplength=560, justify="left").pack(anchor="w", **pad)
+        is_windows = platform.system() == "Windows"
+        self.mode_var = tk.StringVar(value=self.settings.get("run_mode", "real" if is_windows else "sim"))
+        real = ttk.Radiobutton(master, text="Echter Testlauf (Windows, als Administrator)", variable=self.mode_var, value="real")
+        real.pack(anchor="w", **pad)
+        ttk.Radiobutton(master, text="Simulation (Registry bleibt zwischen den Phasen erhalten; Einstellungen "
+                                     "aus dem Debug-Dialog gelten)", variable=self.mode_var, value="sim").pack(anchor="w", **pad)
+        if not is_windows:
+            real.state(["disabled"])
+            self.mode_var.set("sim")
+        self.reinstall_var = tk.BooleanVar(value=self.settings.get("auto_reinstall", True))
+        ttk.Checkbutton(master, text="Erneute Installation zwischen Installation und Deinstallation",
+                        variable=self.reinstall_var).pack(anchor="w", **pad)
+        return None
+
+    def apply(self):
+        self.confirmed = True
+        self.simulate = self.mode_var.get() == "sim"
+        self.reinstall = self.reinstall_var.get()
+        self.settings["run_mode"] = self.mode_var.get()
+        self.settings["auto_reinstall"] = self.reinstall
+
+
+class AutomationDialog(simpledialog.Dialog):
+    """Packaging Center: Paket aus Setup.inf und Installerordner bauen, dann testen."""
+
+    def __init__(self, parent, settings: dict):
+        self.settings = settings
+        self.confirmed = False
+        super().__init__(parent, "Automatik: Paket bauen und testen")
+
+    def body(self, master):
+        pad = {"padx": 6, "pady": 3}
+        rows = [
+            ("Quell-Setup.inf (z. B. aus dem Paketierungs-Repo):", "auto_source_inf", self._pick_inf),
+            ("Installerordner (Inhalt kommt nach Files\\):", "auto_files_dir", self._pick_dir("auto_files_dir")),
+            ("Package Store (Zielordner):", "package_store", self._pick_dir("package_store")),
+        ]
+        self.vars: dict[str, tk.StringVar] = {}
+        for i, (label, key, picker) in enumerate(rows):
+            ttk.Label(master, text=label).grid(row=i * 2, column=0, columnspan=2, sticky="w", **pad)
+            var = tk.StringVar(value=self.settings.get(key, ""))
+            self.vars[key] = var
+            ttk.Entry(master, textvariable=var, width=80).grid(row=i * 2 + 1, column=0, sticky="ew", **pad)
+            ttk.Button(master, text="...", width=3, command=picker).grid(row=i * 2 + 1, column=1, **pad)
+        master.columnconfigure(0, weight=1)
+        self.overwrite_var = tk.BooleanVar(value=False)
+        ttk.Checkbutton(master, text="Vorhandene Setup.inf im Package Store ersetzen",
+                        variable=self.overwrite_var).grid(row=6, column=0, sticky="w", **pad)
+        u = ttk.LabelFrame(master, text="Quelle")
+        u.grid(row=8, column=0, columnspan=2, sticky="ew", **pad)
+        self.source_mode = tk.StringVar(value="build")
+        ttk.Radiobutton(u, text="Setup.inf so uebernehmen (neues Paket, z. B. aus dem Repo)",
+                        variable=self.source_mode, value="build").pack(anchor="w", padx=6, pady=2)
+        row = ttk.Frame(u)
+        row.pack(anchor="w", padx=6, pady=2)
+        ttk.Radiobutton(row, text="Update: Setup.inf ist die Vorversion, neue Version:",
+                        variable=self.source_mode, value="update").pack(side="left")
+        self.new_version_var = tk.StringVar()
+        ttk.Entry(row, textvariable=self.new_version_var, width=18).pack(side="left", padx=6)
+        ttk.Label(u, text="Beim Update kommt die Vorversion in V_OldVersion, Build und Historie werden "
+                          "fortgeschrieben, Installernamen mit der alten Version werden umbenannt.",
+                  wraplength=600, foreground="#555").pack(anchor="w", padx=6, pady=2)
+        is_windows = platform.system() == "Windows"
+        self.mode_var = tk.StringVar(value=self.settings.get("run_mode", "real" if is_windows else "sim"))
+        f = ttk.LabelFrame(master, text="Danach im Package Editor testen")
+        f.grid(row=7, column=0, columnspan=2, sticky="ew", **pad)
+        real = ttk.Radiobutton(f, text="Echter Testlauf: Installation, erneute Installation, Deinstallation (Windows, Administrator)",
+                               variable=self.mode_var, value="real")
+        real.pack(anchor="w", padx=6, pady=2)
+        ttk.Radiobutton(f, text="Simulation", variable=self.mode_var, value="sim").pack(anchor="w", padx=6, pady=2)
+        ttk.Radiobutton(f, text="Nur bauen und im Editor oeffnen", variable=self.mode_var, value="none").pack(anchor="w", padx=6, pady=2)
+        if not is_windows:
+            real.state(["disabled"])
+            if self.mode_var.get() == "real":
+                self.mode_var.set("sim")
+        self.reinstall_var = tk.BooleanVar(value=self.settings.get("auto_reinstall", True))
+        ttk.Checkbutton(f, text="Erneute Installation zwischen Installation und Deinstallation",
+                        variable=self.reinstall_var).pack(anchor="w", padx=6, pady=2)
+        return None
+
+    def _pick_inf(self):
+        path = filedialog.askopenfilename(parent=self, title="Setup.inf waehlen", filetypes=[("Setup.inf", "*.inf")])
+        if path:
+            self.vars["auto_source_inf"].set(path)
+
+    def _pick_dir(self, key):
+        def pick():
+            path = filedialog.askdirectory(parent=self, title="Ordner waehlen")
+            if path:
+                self.vars[key].set(path)
+        return pick
+
+    def validate(self):
+        if not os.path.isfile(self.vars["auto_source_inf"].get()):
+            messagebox.showerror("Automatik", "Die Quell-Setup.inf wurde nicht gefunden.", parent=self)
+            return False
+        if not self.vars["package_store"].get().strip():
+            messagebox.showerror("Automatik", "Bitte einen Package Store angeben.", parent=self)
+            return False
+        if self.source_mode.get() == "update" and not self.new_version_var.get().strip():
+            messagebox.showerror("Automatik", "Bitte die neue Version angeben.", parent=self)
+            return False
+        return True
+
+    def apply(self):
+        self.confirmed = True
+        for key, var in self.vars.items():
+            self.settings[key] = var.get().strip()
+        if self.mode_var.get() != "none":
+            self.settings["run_mode"] = self.mode_var.get()
+        self.settings["auto_reinstall"] = self.reinstall_var.get()
+        self.source_inf = self.vars["auto_source_inf"].get().strip()
+        self.files_dir = self.vars["auto_files_dir"].get().strip()
+        self.store = self.vars["package_store"].get().strip()
+        self.overwrite = self.overwrite_var.get()
+        self.test_mode = self.mode_var.get()
+        self.reinstall = self.reinstall_var.get()
+        self.update_to = self.new_version_var.get().strip() if self.source_mode.get() == "update" else ""
