@@ -447,6 +447,37 @@ class RunnerTests(unittest.TestCase):
             res, runner, be = self._run(path, backend=be)
             self.assertEqual(res.status, Status.SUCCESS)
 
+    def test_emulated_installer_round_trip(self):
+        # Simulation bildet den Installer nach: Uninstall-Schluessel entsteht, Deinstallation entfernt ihn
+        with tempfile.TemporaryDirectory() as tmp:
+            path = _write_package(tmp)
+            be = SimulationBackend(read_real_registry=False)
+            res, runner, be = self._run(path, backend=be)
+            self.assertEqual(res.status, Status.SUCCESS)
+            key = be.find_uninstall_key("Demo", "x64")
+            self.assertTrue(key.startswith("{"), key)
+            self.assertTrue(be.file_exists(be.reg_read("HKLM", "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\" + key, "UninstallString").strip('"')))
+            be2 = SimulationBackend(read_real_registry=False)
+            self.assertGreater(be2.inherit(be), 0)
+            res2, runner2, be2 = self._run(path, mode="uninstall", backend=be2)
+            self.assertEqual(res2.status, Status.SUCCESS, res2.summary())
+            self.assertEqual(be2.find_uninstall_key("Demo", "x64"), "")
+            # ohne Nachbildung entsteht kein Schluessel
+            be3 = SimulationBackend(read_real_registry=False)
+            res3, runner3, be3 = self._run(path, backend=be3, emulate_installers=False)
+            self.assertEqual(be3.find_uninstall_key("Demo", "x64"), "")
+
+    def test_abort_trigger_message(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = _write_package(tmp)
+            be = SimulationBackend(read_real_registry=False)
+            be.exit_code_rules = [("*setup64.exe*", 1603)]
+            res, runner, be = self._run(path, backend=be)
+            self.assertEqual(res.status, Status.FAILURE)
+            self.assertIn("Abbruch in Zeile", res.trigger)
+            self.assertIn("[Set:Install]", res.trigger)
+            self.assertIn('"Set:Fail"', res.trigger)
+
     def test_command_line_switches(self):
         opts = RunOptions.from_command_line('Setup.exe "C:\\p\\Setup.inf" /S2 /U /AW')
         self.assertEqual((opts.mode, opts.user_part, opts.display_level), ("uninstall", True, 2))

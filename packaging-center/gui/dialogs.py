@@ -98,6 +98,10 @@ class DebugStartDialog(simpledialog.Dialog):
         ttk.Checkbutton(opt, text="Mischmodus: Programmaufrufe wirklich starten (Call, CallHidden, MsiExec), "
                              "Registry-, Datei- und Verknuepfungszeilen des Skripts bleiben simuliert",
                         variable=self.exec_var).pack(anchor="w", padx=6, pady=2)
+        self.emulate_var = tk.BooleanVar(value=self.settings.get("emulate_installers", True))
+        ttk.Checkbutton(opt, text="Wirkung simulierter Installer nachbilden (Uninstall-Schluessel anlegen bzw. entfernen) "
+                             "und simulierte Registry zwischen den Laeufen behalten",
+                        variable=self.emulate_var).pack(anchor="w", padx=6, pady=2)
         self.real_reg_var = tk.BooleanVar(value=self.settings.get("read_real_registry", True))
         ttk.Checkbutton(opt, text="Registry und Dateien des Testrechners lesen (sonst nur die Annahmen aus der Testumgebung)",
                         variable=self.real_reg_var).pack(anchor="w", padx=6, pady=2)
@@ -155,7 +159,8 @@ class DebugStartDialog(simpledialog.Dialog):
         opts = RunOptions.from_command_line(cmd, bits=int(self.bits_var.get()),
                                             version_compare=self.cmp_var.get(),
                                             once_rule=self.once_var.get(),
-                                            apply_registration=self.reg_var.get())
+                                            apply_registration=self.reg_var.get(),
+                                            emulate_installers=self.emulate_var.get())
         opts.command_line = cmd
         self.result_options = opts
         self.simulate = self.mode_var.get() == "sim"
@@ -169,6 +174,7 @@ class DebugStartDialog(simpledialog.Dialog):
             "bits": int(self.bits_var.get()), "version_compare": self.cmp_var.get(),
             "once_rule": self.once_var.get(), "apply_registration": self.reg_var.get(),
             "read_real_registry": self.read_real_registry, "execute_programs": self.execute_programs,
+            "emulate_installers": self.emulate_var.get(),
         })
 
 

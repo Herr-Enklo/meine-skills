@@ -77,6 +77,7 @@ class EditorWindow(tk.Toplevel):
         self.step_mode = "run"          # run | step
         self.current_line = 0
         self.answer_box: queue.Queue = queue.Queue()
+        self.sim_state: SimulationBackend | None = None    # simulierte Registry des letzten Laufs
         self.title("Empirum Package Editor")
         self.geometry("1280x820")
         self.minsize(900, 600)
@@ -144,6 +145,7 @@ class EditorWindow(tk.Toplevel):
         m.add_command(label="Paketpruefung", command=self.check, accelerator="F7")
         m.add_command(label="Testumgebung (Variablen)...", command=self.edit_environment)
         m.add_command(label="Registry-Annahmen fuer die Simulation...", command=self.edit_registry_assumptions)
+        m.add_command(label="Simulierte Registry zuruecksetzen", command=self.reset_simulation)
         m.add_separator()
         m.add_command(label="Paketordner oeffnen", command=self.open_folder)
         m.add_command(label="Protokolldatei oeffnen", command=self.open_log)
@@ -942,6 +944,10 @@ class EditorWindow(tk.Toplevel):
         RegistryAssumptionsDialog(self, self.settings)
         save_settings(self.settings)
 
+    def reset_simulation(self):
+        self.sim_state = None
+        self._set_status("Simulierte Registry und Dateien zurueckgesetzt; der naechste Lauf beginnt leer")
+
     def open_folder(self):
         if not self.path:
             return
@@ -1011,6 +1017,9 @@ class EditorWindow(tk.Toplevel):
                     "Call, CallHidden und MsiExec werden in diesem Lauf wirklich gestartet. Installer "
                     "veraendern den Rechner. Fortfahren?", parent=self, icon="warning"):
                 return
+            if opts.emulate_installers and self.sim_state is not None:
+                n = backend.inherit(self.sim_state)
+                self._set_status(f"Simulierte Registry aus dem vorigen Lauf uebernommen ({n} Schluessel)")
             self._apply_registry_assumptions(backend)
         else:
             if not _is_admin():
@@ -1195,6 +1204,8 @@ class EditorWindow(tk.Toplevel):
 
     def _finish_run(self, result):
         self._set_debug_state(False)
+        if self.runner is not None and isinstance(self.runner.backend, SimulationBackend):
+            self.sim_state = self.runner.backend
         self.text.tag_remove("current", "1.0", "end")
         for line in result.executed_lines:
             self.text.tag_add("executed", f"{line}.0", f"{line}.end")
@@ -1216,7 +1227,10 @@ class EditorWindow(tk.Toplevel):
         self.log.see("end")
         self.log.configure(state="disabled")
         title = "Testlauf abgeschlossen" if ok else "Testlauf mit Fehler beendet"
-        body = f"{result.status.value}\n{result.message}\n\nErrorLevel {result.error_level}"
+        body = f"{result.status.value}\n{result.message}"
+        if result.trigger:
+            body += f"\n\n{result.trigger}"
+        body += f"\n\nErrorLevel {result.error_level}"
         if result.reboot:
             body += f"\nNeustart angefordert: {result.reboot}"
         body += f"\n{result.warnings} Warnungen, {result.errors} Fehler, {len(result.actions)} Aktionen"

@@ -33,7 +33,8 @@ from datetime import datetime
 from enum import Enum
 from typing import Callable
 
-from .backend import Backend, SimulationBackend, parse_reg_flags, normalize_root, UNINSTALL_KEY
+from .backend import (Backend, SimulationBackend, parse_reg_flags, normalize_root, UNINSTALL_KEY,
+                      UNINSTALL_KEY_WOW)
 from .inf import InfFile, Section, split_top_level, unquote
 from .script import Statement, Condition, parse_section, is_known_command, looks_like_program
 from .variables import Variables, Expander, default_environment
@@ -71,6 +72,7 @@ class RunOptions:
     abort_on_unknown_command: bool = False
     call_timeout: int | None = None    # Sekunden; None = CallTimeOut aus [Application]
     apply_registration: bool = True
+    emulate_installers: bool = True    # Simulation: Wirkung von Installern nachbilden
     env_overrides: dict[str, str] = field(default_factory=dict)
     log_path: str | None = None
     command_line: str = ""
@@ -134,11 +136,14 @@ class RunResult:
     errors: int = 0
     duration: float = 0.0
     log_path: str = ""
+    trigger: str = ""       # was den Abbruch ausgeloest hat (Zeile, Bedingung)
 
     def summary(self) -> str:
         parts = [f"Ergebnis: {self.status.value}"]
         if self.message:
             parts.append(self.message)
+        if self.trigger:
+            parts.append(self.trigger)
         parts.append(f"ErrorLevel {self.error_level}")
         if self.reboot:
             parts.append(f"Neustart: {self.reboot}")
@@ -178,6 +183,8 @@ class Runner:
         self.executed: set[str] = set()
         self.stack: list[Frame] = []
         self.current_line = 0
+        self.last_branch = ""        # zuletzt genommene If-Verzweigung (fuer die Abbruchmeldung)
+        self.exit_line = 0
         self.stop_flag = threading.Event()
         self.reboot_requested = ""
         self._unknown_reported: set[str] = set()
@@ -305,6 +312,9 @@ class Runner:
         except ScriptExit as exc:
             self.result.status = exc.status
             self.result.message = exc.message
+            if exc.status not in (Status.SUCCESS,):
+                where = f"Abbruch in Zeile {self.exit_line}" if self.exit_line else "Abbruch"
+                self.result.trigger = where + (f", ausgeloest durch {self.last_branch}" if self.last_branch else "")
             if exc.status == Status.SUCCESS and opts.apply_registration:
                 try:
                     self._registration()
@@ -500,6 +510,8 @@ class Runner:
         self.log("CMD", f"If {' ; '.join(details)}  =>  {'Then' if result else 'Else'}", st.number)
         target = st.then_target if result else st.else_target
         if target:
+            self.last_branch = (f"If in [{st.section.name}] Zeile {st.number}: "
+                                f"{' ; '.join(details)} -> \"{target}\"")
             self._call_target(target, st, f"If in [{st.section.name}] Zeile {st.number}")
 
     def _exec_for(self, st: Statement) -> None:
@@ -651,13 +663,85 @@ class Runner:
         exe = cmd.split('"')[1] if cmd.startswith('"') else cmd.split()[0] if cmd else ""
         if exe and ("\\" in exe or exe.lower().endswith((".exe", ".msi", ".cmd", ".bat"))) and not self.backend.file_exists(exe):
             self.log("WARN", f"Programmdatei nicht gefunden: {exe}", st.number)
+        before = len(self.backend.actions)
         code = self.backend.run(cmd, hidden=hidden, timeout=timeout, wait=wait)
+        really = any(a.executed for a in self.backend.actions[before:])
+        if not really and not self.backend.executes and self.options.emulate_installers:
+            self._emulate_installer(cmd, code, st)
         if code == -1:
             self.log("ERROR", f"Zeitueberschreitung nach {timeout} s: {cmd}", st.number)
             if (self.inf.value("Application", "AbortAfterCallTimeOut") or "0") == "1":
                 raise ScriptExit(Status.FAILURE, "CallTimeOut ueberschritten")
         self.vars.set("ErrorLevel", str(code))
         self.log("INFO", f"ErrorLevel = {code}", st.number)
+
+    # Simulation: Wirkung eines Installers nachbilden, damit die Pruefungen der
+    # Vorlagen (GetUninstallKeyName nach der Installation, Uninstall-Schluessel
+    # nach der Deinstallation) so ausfallen wie am echten Rechner.
+    _UNINSTALL_HINTS = ("uninst", "/x ", "/x{", "remove", "helper.exe")
+
+    def _emulate_installer(self, cmd: str, code: int, st: Statement) -> None:
+        if code not in (0, 3010, 1641):
+            return
+        low = cmd.lower()
+        is_msi = "msiexec" in low
+        display = ""
+        for name in ("V_MSIDisplayName", "V_UnattendDisplayName", "V_DisplayName", "ProductName"):
+            display = (self.vars.get(name) or "").strip()
+            if display:
+                break
+        arch = (self.vars.get("V_Arch") or "").strip().lower()
+        base = UNINSTALL_KEY_WOW if arch in ("x86", "32") or "\\wow6432node\\" in low else UNINSTALL_KEY
+        uninstall = is_msi and (" /x" in low or "/uninstall" in low) or \
+            (not is_msi and any(h in low for h in self._UNINSTALL_HINTS))
+        if uninstall:
+            removed = []
+            for keybase in (UNINSTALL_KEY, UNINSTALL_KEY_WOW):
+                for sub in self.backend.reg_subkeys("HKLM", keybase):
+                    full = keybase + "\\" + sub
+                    if self.backend.reg_read("HKLM", full, "SimulatedBy") != "PackagingCenter":
+                        continue
+                    name = self.backend.reg_read("HKLM", full, "DisplayName")
+                    ustr = self.backend.reg_read("HKLM", full, "UninstallString").lower().strip('"')
+                    loc = self.backend.reg_read("HKLM", full, "InstallLocation")
+                    if (display and name.lower() == display.lower()) or sub.lower() in low or \
+                            (ustr and ustr.split(" /x")[0] in low) or (loc and loc.lower() in low):
+                        self.backend.reg_delete_key("HKLM", full)
+                        if loc:
+                            self.backend.delete_tree(loc)
+                        removed.append(sub)
+            if removed:
+                self.log("INFO", f"Simulation: Deinstallation nachgebildet, Uninstall-Schluessel entfernt: {', '.join(removed)}", st.number)
+            return
+        if not (is_msi and " /i" in low or not is_msi and (".exe" in low or ".msi" in low)):
+            return
+        if not display:
+            return
+        if self.backend.find_uninstall_key(display, arch):
+            return
+        import hashlib
+        digest = hashlib.md5(display.lower().encode("utf-8")).hexdigest().upper()
+        keyname = f"{{{digest[:8]}-5349-4D55-4C41-{digest[8:20]}}}"
+        key = base + "\\" + keyname
+        version = self.vars.get("Version") or ""
+        # Angenommener Installationsordner samt ueblicher Deinstallationsprogramme, damit
+        # DoesFileExist(%UninstallString%) und aehnliche Pruefungen der Vorlagen aufgehen.
+        pf = self.vars.get("ProgramFilesDirx86" if arch in ("x86", "32") else "ProgramFilesDir") or "C:\\Program Files"
+        location = pf + "\\" + re.sub(r'[<>:"/\\|?*]', "", self.vars.get("ProductName") or display).strip()
+        uninstall_string = f"MsiExec.exe /X{keyname}" if is_msi else f'"{location}\\uninstall.exe"'
+        for name, data in (("DisplayName", display), ("DisplayVersion", version),
+                           ("Publisher", self.vars.get("DeveloperName") or ""),
+                           ("UninstallString", uninstall_string), ("InstallLocation", location),
+                           ("SimulatedBy", "PackagingCenter")):
+            if data:
+                self.backend.reg_write("HKLM", key, name, 0, data)
+        sim_files = getattr(self.backend, "files_created", None)
+        if sim_files is not None:
+            for rel in ("uninstall.exe", "unins000.exe", "uninstall\\helper.exe"):
+                sim_files[os.path.normpath(location + "\\" + rel).lower()] = "(simulierter Installer)"
+            getattr(self.backend, "dirs_created", set()).add(os.path.normpath(location).lower())
+        self.log("INFO", f"Simulation: Installation nachgebildet, Uninstall-Schluessel angelegt: {keyname} "
+                         f"(DisplayName \"{display}\", DisplayVersion \"{version}\", InstallLocation {location})", st.number)
 
     def cmd_call(self, st, args):
         self._run_program(st, args, hidden=False)
@@ -694,21 +778,25 @@ class Runner:
 
     def cmd_exit(self, st, args):
         msg = self.expand(args)
+        self.exit_line = st.number
         self.log("INFO", "Exit " + msg, st.number)
         raise ScriptExit(Status.SUCCESS, msg)
 
     def cmd_abort(self, st, args):
         msg = self.expand(args)
+        self.exit_line = st.number
         self.log("ERROR", "Abort " + msg, st.number)
         raise ScriptExit(Status.FAILURE, msg)
 
     def cmd_abortsilent(self, st, args):
         msg = self.expand(args)
+        self.exit_line = st.number
         self.log("ERROR", "AbortSilent " + msg, st.number)
         raise ScriptExit(Status.SILENT_FAILURE, msg)
 
     def cmd_abortreboot(self, st, args):
         msg = self.expand(args)
+        self.exit_line = st.number
         self.log("ERROR", "AbortReboot " + msg, st.number)
         self.reboot_requested = self.reboot_requested or "AbortReboot"
         raise ScriptExit(Status.REBOOT_PENDING, msg)

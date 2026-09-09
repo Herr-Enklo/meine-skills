@@ -258,6 +258,20 @@ class SimulationBackend(Backend):
         # Vorgaben fuer Exit-Codes: Muster (fnmatch auf Kommandozeile) -> Code
         self.exit_code_rules: list[tuple[str, int]] = []
 
+    def inherit(self, other: "SimulationBackend") -> int:
+        """Simulierte Registry, Dateien und Verknuepfungen eines frueheren Laufs
+        uebernehmen, damit Installation und Deinstallation hintereinander gehen.
+        Liefert die Zahl der uebernommenen Registryschluessel."""
+        self.reg = {k: dict(v) for k, v in other.reg.items()}
+        self.reg_key_names = dict(other.reg_key_names)
+        self.reg_deleted_keys = set(other.reg_deleted_keys)
+        self.reg_deleted_values = set(other.reg_deleted_values)
+        self.files_created = dict(other.files_created)
+        self.files_deleted = set(other.files_deleted)
+        self.dirs_created = set(other.dirs_created)
+        self.shortcuts = dict(other.shortcuts)
+        return len(self.reg)
+
     # -- Programme ---------------------------------------------------------
     EXECUTE = "execute"   # Antwort des call_hook: diesen Aufruf wirklich starten
 

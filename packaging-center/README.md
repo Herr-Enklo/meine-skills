@@ -75,9 +75,24 @@ Die Simulation ist der Trockenlauf. Sie startet keine Programme, schreibt keine
 Registry und keine Dateien. Lesende Zugriffe gehen ans echte System, damit
 Bedingungen wie `DoesRegKeyExist` realistisch ausfallen; unter Windows auch die
 Registry. Was das Skript schreibt, landet in einer Überlagerung, die spätere
-Lesezugriffe desselben Laufs sehen. Für jeden Programmaufruf fragt der Editor
-nach dem Rückgabewert (0, 3010, 1603 ...), damit sich auch die Fehlerpfade
-prüfen lassen; das lässt sich abschalten.
+Lesezugriffe sehen. Für jeden Programmaufruf fragt der Editor nach dem
+Rückgabewert (0, 3010, 1603 ...), damit sich auch die Fehlerpfade prüfen
+lassen; das lässt sich abschalten.
+
+Weil der Installer in der Simulation nicht läuft, bildet sie seine Wirkung
+nach: Nach einem Aufruf mit Rückgabewert 0, 3010 oder 1641 legt sie einen
+Uninstall-Schlüssel mit DisplayName (aus `V_MSIDisplayName` oder
+`V_UnattendDisplayName`), DisplayVersion, InstallLocation und UninstallString
+an, dazu die üblichen Deinstallationsprogramme im simulierten Dateisystem.
+Ein Deinstallationsaufruf entfernt beides wieder. Die simulierte Registry
+bleibt zwischen den Läufen einer Editorsitzung erhalten, so gehen Installation,
+Reparatur und Deinstallation hintereinander; „Simulierte Registry
+zurücksetzen“ im Menü Extras leert sie. Ohne diese Nachbildung würden die
+Prüfungen der Vorlagen nach dem Installeraufruf (`If "%V_MSIGUID%" == ""`)
+immer in den Fehlerzweig laufen.
+
+Bricht ein Lauf ab, nennt das Ergebnis die Zeile des Abort und die If-Zeile,
+die dorthin verzweigt hat, mit den ausgewerteten Bedingungen.
 
 Der Mischmodus liegt dazwischen: Programmaufrufe (Call, CallHidden, MsiExec)
 laufen echt, die Registry-, Datei- und Verknüpfungszeilen des Skripts bleiben
