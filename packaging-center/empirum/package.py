@@ -427,7 +427,8 @@ def update_package(old_inf_path: str, new_version: str, store: str | None = None
                 if old_version not in versions:
                     versions.append(old_version)
                 ln.raw = f"{key.strip()}={','.join(versions)}"
-            elif "filename" in klow and (sec.is_script or sec.key == "environment"):
+            elif (sec.is_script or sec.key == "environment") and (
+                    "filename" in klow or re.search(r"\.(exe|msi|msp|zip|cab)\s*$", value, re.IGNORECASE)):
                 filename_lines.append(ln)
     for ln in filename_lines:
         key, value = ln.key_value()
