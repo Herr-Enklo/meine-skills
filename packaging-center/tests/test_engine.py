@@ -23,7 +23,7 @@ from empirum.inf import decode_bytes, split_top_level  # noqa: E402
 from empirum.variables import Variables, Expander  # noqa: E402
 from empirum.script import parse_statement, parse_section  # noqa: E402
 from empirum.runner import compare  # noqa: E402
-from empirum.package import PackageSpec, create_package, export_zip, find_packages, import_reg_file  # noqa: E402
+from empirum.package import PackageSpec, create_package, export_zip, find_packages, import_reg_file, update_package, next_build  # noqa: E402
 from empirum.pipeline import build_package, run_roundtrip  # noqa: E402
 
 TEMPLATE_DIR = os.path.join(_ROOT, "empirum", "templates")
@@ -628,6 +628,67 @@ class PackageTests(unittest.TestCase):
             self.assertIn('-HKLM,"SOFTWARE\\Acme\\Demo","Weg"', lines)
             self.assertIn('HKLM,"SOFTWARE\\Acme\\Demo","",0x00000000,"Standard"', lines)
             self.assertIn('-HKCU,"Software\\Old"', lines)
+
+
+class UpdateTests(unittest.TestCase):
+    def _old_text(self):
+        head = ("[SetupInfo]\nAuthor                  = Codex\nDescription             = Demo 1.2.3 f\u00fcr alle\n"
+                "Tested on               = Win11\nCommand line options    = /S0\nLast Change             = 01.01.2026\n"
+                "Build                   = 1.06\n\nBuildnr.\tDatum\t\tName\t\t\tBeschreibung\n"
+                "1.00\t\t01.01.2021\tMatrix42\t\tInitialpaket\n1.06\t\t01.01.2026\t\t\t\tUpdate auf 1.2.3\n\n")
+        body = "[Setup]" + MINI.split("[Setup]", 1)[1]
+        body = body.replace("Set V_Installer=setup64.exe", "Set V_Installer=setup-1.2.3-x64.exe\nSet V_OldVersion=1.0.0,1.1.0")
+        body = body.replace("Set V_Installer=setup32.exe", "Set V_Installer=setup-1.2.3-x86.exe\nSet V_OldVersion=1.0.0,1.1.0")
+        return head + body
+
+    def test_next_build(self):
+        self.assertEqual(next_build("1.06"), "1.07")
+        self.assertEqual(next_build("1.09"), "1.10")
+        self.assertEqual(next_build("2.9"), "2.10")
+        self.assertEqual(next_build(""), "1.01")
+
+    def test_update_package(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            old = _write_package(tmp, self._old_text())
+            with open(os.path.join(os.path.dirname(old), "Setup.ico"), "wb") as fh:
+                fh.write(b"ICO")
+            files = os.path.join(tmp, "neu")
+            os.makedirs(files)
+            with open(os.path.join(files, "setup-1.3.0-x64.exe"), "wb") as fh:
+                fh.write(b"MZ")
+            new = update_package(old, "1.3.0", author="Tester", files_dir=files)
+            self.assertTrue(new.endswith(os.path.join("Acme", "Demo", "1.3.0", "Install", "Setup.inf")))
+            self.assertTrue(os.path.isfile(os.path.join(os.path.dirname(new), "Setup.ico")))
+            self.assertTrue(os.path.isfile(os.path.join(os.path.dirname(os.path.dirname(new)), "Files", "setup-1.3.0-x64.exe")))
+            inf = load_inf(new)
+            self.assertEqual(inf.encoding, "cp1252")
+            self.assertEqual(inf.newline, "\r\n")
+            self.assertEqual(inf.value("Application", "Version"), "1.3.0")
+            self.assertEqual(inf.find("Set:Win64").get("Set V_OldVersion"), "1.0.0,1.1.0,1.2.3")
+            self.assertEqual(inf.find("Set:Win32").get("Set V_OldVersion"), "1.0.0,1.1.0,1.2.3")
+            self.assertEqual(inf.find("Set:Win64").get("Set V_Installer"), "setup-1.3.0-x64.exe")
+            self.assertEqual(inf.find("Set:Win32").get("Set V_Installer"), "setup-1.3.0-x86.exe")
+            info = inf.find("SetupInfo")
+            self.assertEqual(info.get("Build"), "1.07")
+            self.assertEqual(info.get("Description"), "Demo 1.3.0 f\u00fcr alle")
+            self.assertEqual(info.get("Tested on"), "Test ausstehend")
+            self.assertNotEqual(info.get("Last Change"), "01.01.2026")
+            history = [ln.raw for ln in info.lines if ln.raw.startswith("1.07")]
+            self.assertEqual(len(history), 1)
+            self.assertIn("Tester", history[0])
+            self.assertIn("Update auf 1.3.0", history[0])
+            # Historie steht direkt hinter der letzten Zeile 1.06
+            raws = [ln.raw for ln in info.lines]
+            self.assertEqual(raws.index(history[0]), raws.index([r for r in raws if r.startswith("1.06")][0]) + 1)
+            # Rest unveraendert: Skript laeuft weiter durch
+            res = Runner(inf, SimulationBackend(read_real_registry=False), RunOptions()).run()
+            self.assertEqual(res.status, Status.SUCCESS, res.summary())
+            with self.assertRaises(FileExistsError):
+                update_package(old, "1.3.0")
+            with self.assertRaises(ValueError):
+                update_package(old, "1.2.3")
+            # alte Datei unveraendert
+            self.assertEqual(load_inf(old).value("Application", "Version"), "1.2.3")
 
 
 class PipelineTests(unittest.TestCase):

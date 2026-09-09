@@ -122,6 +122,16 @@ Editor. Die Vorlagen liegen unter `empirum/templates/` (`EXE.inf`, `MSI.inf`,
 Windows-1252 mit CRLF, wie im Paketierungs-Repo). Eigene Vorlagen kann man
 dort ablegen oder im Wizard auswählen.
 
+Für eine neue Version eines vorhandenen Pakets wählt man im Wizard „Update“
+und die Setup.inf der Vorversion. Sie ist dann die Basis: Die neue Version
+kommt in `[Application]`, die Vorversion wird an jede `Set V_OldVersion=`-Zeile
+angehängt, Installernamen mit der alten Version werden umbenannt, in
+`[SetupInfo]` werden Build hochgezählt, „Last Change“ gesetzt, „Tested on“ auf
+„Test ausstehend“ gestellt und eine Historienzeile angehängt. Alles andere,
+auch Kodierung und CRLF, bleibt unverändert; die alte Datei wird nicht
+angefasst. Dasselbe geht in der Automatik („Update: Setup.inf ist die
+Vorversion“) und auf der Kommandozeile mit `update` oder `auto --update-auf`.
+
 Der Package Editor hat links den Baum „Alle Abschnitte“ und rechts die
 Setup.inf in zwei Ansichten, umschaltbar mit Strg+W: die Normalansicht mit
 Schlüssel-Wert-Tabelle beziehungsweise Anweisungsliste je Sektion, die

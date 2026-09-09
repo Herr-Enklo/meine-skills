@@ -495,6 +495,20 @@ class AutomationDialog(simpledialog.Dialog):
         self.overwrite_var = tk.BooleanVar(value=False)
         ttk.Checkbutton(master, text="Vorhandene Setup.inf im Package Store ersetzen",
                         variable=self.overwrite_var).grid(row=6, column=0, sticky="w", **pad)
+        u = ttk.LabelFrame(master, text="Quelle")
+        u.grid(row=8, column=0, columnspan=2, sticky="ew", **pad)
+        self.source_mode = tk.StringVar(value="build")
+        ttk.Radiobutton(u, text="Setup.inf so uebernehmen (neues Paket, z. B. aus dem Repo)",
+                        variable=self.source_mode, value="build").pack(anchor="w", padx=6, pady=2)
+        row = ttk.Frame(u)
+        row.pack(anchor="w", padx=6, pady=2)
+        ttk.Radiobutton(row, text="Update: Setup.inf ist die Vorversion, neue Version:",
+                        variable=self.source_mode, value="update").pack(side="left")
+        self.new_version_var = tk.StringVar()
+        ttk.Entry(row, textvariable=self.new_version_var, width=18).pack(side="left", padx=6)
+        ttk.Label(u, text="Beim Update kommt die Vorversion in V_OldVersion, Build und Historie werden "
+                          "fortgeschrieben, Installernamen mit der alten Version werden umbenannt.",
+                  wraplength=600, foreground="#555").pack(anchor="w", padx=6, pady=2)
         is_windows = platform.system() == "Windows"
         self.mode_var = tk.StringVar(value=self.settings.get("run_mode", "real" if is_windows else "sim"))
         f = ttk.LabelFrame(master, text="Danach im Package Editor testen")
@@ -532,6 +546,9 @@ class AutomationDialog(simpledialog.Dialog):
         if not self.vars["package_store"].get().strip():
             messagebox.showerror("Automatik", "Bitte einen Package Store angeben.", parent=self)
             return False
+        if self.source_mode.get() == "update" and not self.new_version_var.get().strip():
+            messagebox.showerror("Automatik", "Bitte die neue Version angeben.", parent=self)
+            return False
         return True
 
     def apply(self):
@@ -547,3 +564,4 @@ class AutomationDialog(simpledialog.Dialog):
         self.overwrite = self.overwrite_var.get()
         self.test_mode = self.mode_var.get()
         self.reinstall = self.reinstall_var.get()
+        self.update_to = self.new_version_var.get().strip() if self.source_mode.get() == "update" else ""

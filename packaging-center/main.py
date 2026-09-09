@@ -15,6 +15,8 @@ Betrieb ohne Fenster gibt es eine Kommandozeile:
     python main.py build  Quelle\\setup.inf --store Ordner --files Installerordner
     python main.py roundtrip Pfad\\zur\\Setup.inf [--echt] [--reinstall]   # hin und zurueck
     python main.py auto   Quelle\\setup.inf --store Ordner --files Installerordner --echt
+    python main.py update Alt\\Install\\Setup.inf --version 156.0 --files Installerordner   # Update
+    python main.py auto   Alt\\Install\\Setup.inf --update-auf 156.0 --store Ordner --files Installerordner --echt
 
 Die Simulation aendert nichts am Rechner. Die echte Ausfuehrung schreibt
 Registry und Dateien und startet Programme, wie Setup.exe es taete.
@@ -32,7 +34,7 @@ if _HERE not in sys.path:
 
 from empirum import (load_inf, validate, Runner, RunOptions, SimulationBackend, WindowsBackend,  # noqa: E402
                      find_packages, create_package, Status)
-from empirum.package import PackageSpec, list_templates  # noqa: E402
+from empirum.package import PackageSpec, list_templates, update_package  # noqa: E402
 from empirum.pipeline import build_package, run_roundtrip  # noqa: E402
 
 
@@ -132,6 +134,13 @@ def cmd_build(args) -> int:
     return 0
 
 
+def cmd_update(args) -> int:
+    path = update_package(args.alt, args.version, store=args.store, author=args.autor,
+                          installer=args.installer or "", files_dir=args.files, note=args.notiz or "")
+    print(f"Neue Version angelegt: {path}")
+    return 0
+
+
 def _roundtrip(inf_path: str, args) -> int:
     simulate = not args.echt
     if args.echt and os.name != "nt":
@@ -178,11 +187,17 @@ def cmd_roundtrip(args) -> int:
 
 
 def cmd_auto(args) -> int:
-    res = build_package(args.inf, args.store, files_dir=args.files, overwrite=args.ersetzen)
-    print(f"Paket gebaut: {res.setup_inf}")
-    for n in res.notes:
-        print(f"  Hinweis: {n}")
-    return _roundtrip(res.setup_inf, args)
+    if args.update_auf:
+        path = update_package(args.inf, args.update_auf, store=args.store, author=args.autor,
+                              installer=args.installer or "", files_dir=args.files)
+        print(f"Update angelegt: {path}")
+    else:
+        res = build_package(args.inf, args.store, files_dir=args.files, overwrite=args.ersetzen)
+        path = res.setup_inf
+        print(f"Paket gebaut: {path}")
+        for n in res.notes:
+            print(f"  Hinweis: {n}")
+    return _roundtrip(path, args)
 
 
 def _add_roundtrip_args(p) -> None:
@@ -260,6 +275,16 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--ersetzen", action="store_true", help="vorhandene Setup.inf ersetzen")
     p.set_defaults(func=cmd_build)
 
+    p = sub.add_parser("update", help="Neue Version aus der Setup.inf der Vorversion ableiten")
+    p.add_argument("alt", help="Setup.inf der Vorversion")
+    p.add_argument("--version", required=True, help="neue Version")
+    p.add_argument("--store", help="Package Store (Standard: der der Vorversion)")
+    p.add_argument("--files", help="Ordner mit den neuen Installerdateien")
+    p.add_argument("--installer", help="neue Installerdatei (Name kommt in die FileName-Zeile)")
+    p.add_argument("--autor", default=os.environ.get("USERNAME") or os.environ.get("USER") or "")
+    p.add_argument("--notiz", help="Text der Historienzeile (Standard: 'Update auf <Version>')")
+    p.set_defaults(func=cmd_update)
+
     p = sub.add_parser("roundtrip", help="Installation und Deinstallation hintereinander testen")
     p.add_argument("inf")
     _add_roundtrip_args(p)
@@ -270,6 +295,9 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--store", required=True)
     p.add_argument("--files")
     p.add_argument("--ersetzen", action="store_true")
+    p.add_argument("--update-auf", help="inf ist die Vorversion; neue Version daraus ableiten")
+    p.add_argument("--installer", help="neue Installerdatei beim Update")
+    p.add_argument("--autor", default=os.environ.get("USERNAME") or os.environ.get("USER") or "")
     _add_roundtrip_args(p)
     p.set_defaults(func=cmd_auto)
 

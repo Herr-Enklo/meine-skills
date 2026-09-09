@@ -17,6 +17,7 @@ from empirum import load_inf, validate
 from empirum.package import find_packages, export_zip
 from gui.dialogs import load_settings, save_settings, EnvironmentDialog, ReferenceWindow, AutomationDialog
 from empirum.pipeline import build_package
+from empirum.package import update_package
 from gui.editor import EditorWindow
 from gui.wizard import PackageWizard
 
@@ -130,15 +131,21 @@ class CenterApp:
             return
         save_settings(self.settings)
         try:
-            res = build_package(dlg.source_inf, dlg.store, files_dir=dlg.files_dir or None, overwrite=dlg.overwrite)
+            if dlg.update_to:
+                setup_inf = update_package(dlg.source_inf, dlg.update_to, store=dlg.store,
+                                           author=self.settings.get("author", ""), files_dir=dlg.files_dir or None)
+                notes = []
+            else:
+                res = build_package(dlg.source_inf, dlg.store, files_dir=dlg.files_dir or None, overwrite=dlg.overwrite)
+                setup_inf, notes = res.setup_inf, res.notes
         except (OSError, ValueError) as exc:
             messagebox.showerror("Paket bauen", str(exc), parent=self.root)
             return
         self.refresh_store()
-        self.status.configure(text=f"Paket gebaut: {res.setup_inf}")
-        if res.notes:
-            messagebox.showwarning("Paket gebaut, Hinweise", "\n".join(res.notes), parent=self.root)
-        ed = self.open_editor(res.setup_inf)
+        self.status.configure(text=f"Paket gebaut: {setup_inf}")
+        if notes:
+            messagebox.showwarning("Paket gebaut, Hinweise", "\n".join(notes), parent=self.root)
+        ed = self.open_editor(setup_inf)
         if dlg.test_mode in ("real", "sim") and ed is not None:
             # Editor zuerst aufbauen lassen, dann automatisch starten
             ed.after(400, lambda: ed.start_auto(simulate=dlg.test_mode == "sim", reinstall=dlg.reinstall, ask=False))
