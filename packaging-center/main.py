@@ -12,6 +12,9 @@ Betrieb ohne Fenster gibt es eine Kommandozeile:
     python main.py vars   Pfad\\zur\\Setup.inf        # Variablen nach dem Laden
     python main.py list   Ordner                    # Pakete im Package Store
     python main.py new    --vorlage EXE.inf --hersteller X --produkt Y --version 1.0 --store Ordner
+    python main.py build  Quelle\\setup.inf --store Ordner --files Installerordner
+    python main.py roundtrip Pfad\\zur\\Setup.inf [--echt] [--reinstall]   # hin und zurueck
+    python main.py auto   Quelle\\setup.inf --store Ordner --files Installerordner --echt
 
 Die Simulation aendert nichts am Rechner. Die echte Ausfuehrung schreibt
 Registry und Dateien und startet Programme, wie Setup.exe es taete.
@@ -30,6 +33,7 @@ if _HERE not in sys.path:
 from empirum import (load_inf, validate, Runner, RunOptions, SimulationBackend, WindowsBackend,  # noqa: E402
                      find_packages, create_package, Status)
 from empirum.package import PackageSpec, list_templates  # noqa: E402
+from empirum.pipeline import build_package, run_roundtrip  # noqa: E402
 
 
 def cmd_check(args) -> int:
@@ -117,6 +121,82 @@ def cmd_new(args) -> int:
     return 0
 
 
+def cmd_build(args) -> int:
+    res = build_package(args.inf, args.store, files_dir=args.files, overwrite=args.ersetzen)
+    print(f"Paket: {res.package_root}")
+    print(f"Setup.inf: {res.setup_inf}")
+    for f in res.copied_files:
+        print(f"  kopiert: {f}")
+    for n in res.notes:
+        print(f"  Hinweis: {n}")
+    return 0
+
+
+def _roundtrip(inf_path: str, args) -> int:
+    simulate = not args.echt
+    if args.echt and os.name != "nt":
+        print("Echte Ausfuehrung gibt es nur unter Windows.")
+        return 2
+    base = RunOptions(bits=args.bits, version_compare="string" if args.string_compare else "numeric")
+    for item in args.var or []:
+        k, _, v = item.partition("=")
+        base.env_overrides[k.strip()] = v
+
+    def factory(mode, previous):
+        if not simulate:
+            return WindowsBackend()
+        be = SimulationBackend()
+        be.default_exit_code = args.exit_code
+        be.execute_programs = args.programme
+        if previous is not None:
+            be.inherit(previous)
+        return be
+
+    def on_phase(label, mode):
+        print(f"\n=== {label} ===")
+
+    def on_log(entry):
+        if args.verbose or entry.level in ("ERROR", "WARN", "ECHO"):
+            print(entry.format())
+
+    rt = run_roundtrip(inf_path, simulate=simulate, reinstall=args.reinstall, base_options=base,
+                       backend_factory=factory, on_phase=on_phase, runner_hooks={"on_log": on_log},
+                       report_path=args.bericht)
+    print()
+    for p in rt.phases:
+        print(f"{p.label:<36} {p.result.status.value:<10} ErrorLevel {p.result.error_level}")
+        for name, passed, detail in p.checks:
+            print(f"    [{'x' if passed else ' '}] {name}" + (f" ({detail})" if detail else ""))
+    print("\n" + rt.summary())
+    if rt.report_path:
+        print(f"Testbericht: {rt.report_path}")
+    return 0 if rt.ok else 1
+
+
+def cmd_roundtrip(args) -> int:
+    return _roundtrip(args.inf, args)
+
+
+def cmd_auto(args) -> int:
+    res = build_package(args.inf, args.store, files_dir=args.files, overwrite=args.ersetzen)
+    print(f"Paket gebaut: {res.setup_inf}")
+    for n in res.notes:
+        print(f"  Hinweis: {n}")
+    return _roundtrip(res.setup_inf, args)
+
+
+def _add_roundtrip_args(p) -> None:
+    p.add_argument("--echt", action="store_true", help="echter Testlauf (nur Windows, als Administrator)")
+    p.add_argument("--programme", action="store_true", help="Mischmodus: Programme echt, Rest simuliert")
+    p.add_argument("--reinstall", action="store_true", help="zwischen Installation und Deinstallation erneut installieren")
+    p.add_argument("--bericht", help="Pfad des Testberichts (Standard: Versionsordner des Pakets)")
+    p.add_argument("--bits", type=int, default=64, choices=(32, 64))
+    p.add_argument("--var", action="append", help="Variable setzen, z. B. --var VM_Umgebung=Test")
+    p.add_argument("--exit-code", type=int, default=0, help="angenommener Rueckgabewert in der Simulation")
+    p.add_argument("--string-compare", action="store_true")
+    p.add_argument("-v", "--verbose", action="store_true")
+
+
 def main(argv: list[str] | None = None) -> int:
     argv = sys.argv[1:] if argv is None else argv
     if not argv:
@@ -172,6 +252,26 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--platform", help="[Setup] Platform: *, x86, x64")
     p.add_argument("--store", required=True, help="Zielordner (Package Store)")
     p.set_defaults(func=cmd_new)
+
+    p = sub.add_parser("build", help="Paketordner aus Setup.inf und Installerordner zusammensetzen")
+    p.add_argument("inf", help="Quell-Setup.inf (z. B. aus dem Paketierungs-Repo)")
+    p.add_argument("--store", required=True, help="Package Store (Zielordner)")
+    p.add_argument("--files", help="Ordner mit Installerdateien, wird nach Files\\ kopiert")
+    p.add_argument("--ersetzen", action="store_true", help="vorhandene Setup.inf ersetzen")
+    p.set_defaults(func=cmd_build)
+
+    p = sub.add_parser("roundtrip", help="Installation und Deinstallation hintereinander testen")
+    p.add_argument("inf")
+    _add_roundtrip_args(p)
+    p.set_defaults(func=cmd_roundtrip)
+
+    p = sub.add_parser("auto", help="Paket bauen und danach hin und zurueck testen")
+    p.add_argument("inf", help="Quell-Setup.inf")
+    p.add_argument("--store", required=True)
+    p.add_argument("--files")
+    p.add_argument("--ersetzen", action="store_true")
+    _add_roundtrip_args(p)
+    p.set_defaults(func=cmd_auto)
 
     args = parser.parse_args(argv)
     return args.func(args)

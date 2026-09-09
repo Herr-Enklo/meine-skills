@@ -29,10 +29,11 @@ from empirum.script import parse_section, parse_statement
 from empirum.package import import_reg_file, TEMPLATE_DIR, list_templates
 from empirum.backend import parse_reg_flags
 from empirum.runner import LogEntry
+from empirum.pipeline import run_roundtrip, RoundtripResult
 
 from gui.highlight import configure_tags, highlight_all, highlight_line, Completer
 from gui.dialogs import (DebugStartDialog, EnvironmentDialog, RegistryAssumptionsDialog, ExitCodeDialog,
-                         AskKillDialog, ReferenceWindow, FindDialog, load_settings, save_settings)
+                         AskKillDialog, ReferenceWindow, FindDialog, AutoRunDialog, load_settings, save_settings)
 
 MONO = ("Consolas", 10)
 
@@ -137,6 +138,8 @@ class EditorWindow(tk.Toplevel):
         m.add_command(label="Naechster Schritt", command=self.debug_step, accelerator="F12")
         m.add_command(label="Stopp", command=self.debug_stop, accelerator="Umschalt+F5")
         m.add_separator()
+        m.add_command(label="Automatischer Testlauf: hin und zurueck...", command=self.start_auto, accelerator="F6")
+        m.add_separator()
         m.add_command(label="Haltepunkt umschalten", command=self.toggle_breakpoint, accelerator="F9")
         m.add_command(label="Alle Haltepunkte loeschen", command=self.clear_breakpoints)
         menubar.add_cascade(label="Debug", menu=m)
@@ -181,6 +184,8 @@ class EditorWindow(tk.Toplevel):
         self.btn_next.pack(side="left", padx=2)
         self.btn_stop = ttk.Button(bar, text="Stopp", command=self.debug_stop, state="disabled")
         self.btn_stop.pack(side="left", padx=(2, 8))
+        self.btn_auto = ttk.Button(bar, text="Hin und zurueck", command=self.start_auto)
+        self.btn_auto.pack(side="left", padx=(0, 8))
         ttk.Button(bar, text="Pruefen", command=self.check).pack(side="left")
 
     def _build_body(self):
@@ -334,6 +339,7 @@ class EditorWindow(tk.Toplevel):
         self.bind("<F10>", lambda e: self._f12())
         self.bind("<F9>", lambda e: self.toggle_breakpoint())
         self.bind("<F7>", lambda e: self.check())
+        self.bind("<F6>", lambda e: self.start_auto())
         self.bind("<F1>", lambda e: ReferenceWindow(self))
         self.text.bind("<Control-z>", lambda e: self._text_edit("undo") or "break")
         self.text.bind("<Control-y>", lambda e: self._text_edit("redo") or "break")
@@ -1038,6 +1044,7 @@ class EditorWindow(tk.Toplevel):
             self.settings["_real_confirmed"] = True
             backend = WindowsBackend()
         self.step_mode = "step" if single_step else "run"
+        self._auto_stop = False
         self.resume.clear()
         self.current_line = 0
         self._clear_marks()
@@ -1049,6 +1056,93 @@ class EditorWindow(tk.Toplevel):
                              ask_hook=self._ask_hook)
         self.debug_thread = threading.Thread(target=self._debug_worker, daemon=True)
         self.debug_thread.start()
+
+    # -- Automatischer Testlauf (hin und zurueck) ---------------------------------
+
+    def start_auto(self, simulate: bool | None = None, reinstall: bool | None = None,
+                   ask: bool = True):
+        """Installation, wahlweise erneute Installation und Deinstallation hintereinander,
+        sichtbar im Editor, mit Testbericht neben dem Paket."""
+        if self.debug_thread and self.debug_thread.is_alive():
+            messagebox.showinfo("Testlauf", "Es laeuft schon ein Testlauf.", parent=self)
+            return
+        if not self.path:
+            messagebox.showinfo("Testlauf", "Bitte die Setup.inf zuerst im Paketordner speichern.", parent=self)
+            return
+        if self.modified and messagebox.askyesno("Testlauf", "Die Datei ist geaendert. Vor dem Testlauf speichern?", parent=self):
+            self.save()
+        self._sync_from_text()
+        if ask:
+            dlg = AutoRunDialog(self, self.settings)
+            if not dlg.confirmed:
+                return
+            simulate = dlg.simulate
+            reinstall = dlg.reinstall
+            save_settings(self.settings)
+        simulate = True if simulate is None else simulate
+        reinstall = bool(reinstall)
+        if not simulate:
+            if os.name != "nt":
+                messagebox.showerror("Testlauf", "Echte Ausfuehrung gibt es nur unter Windows.", parent=self)
+                return
+            if not _is_admin() and not messagebox.askyesno(
+                    "Administratorrechte", "Das Programm laeuft nicht als Administrator. Trotzdem starten?",
+                    parent=self, icon="warning"):
+                return
+        base = RunOptions(bits=int(self.settings.get("bits", 64)),
+                          version_compare=self.settings.get("version_compare", "numeric"),
+                          once_rule=self.settings.get("once_rule", True),
+                          apply_registration=self.settings.get("apply_registration", True),
+                          emulate_installers=self.settings.get("emulate_installers", True),
+                          env_overrides=dict(self.settings.get("env_overrides", {})))
+        exec_programs = bool(self.settings.get("execute_programs", False)) and simulate
+        default_code = int(self.settings.get("default_exit_code", 0))
+
+        def factory(mode, previous):
+            if not simulate:
+                return WindowsBackend()
+            be = SimulationBackend(read_real_registry=self.settings.get("read_real_registry", True))
+            be.default_exit_code = default_code
+            be.execute_programs = exec_programs
+            if previous is not None:
+                be.inherit(previous)
+            elif self.sim_state is not None and base.emulate_installers:
+                be.inherit(self.sim_state)
+            self._apply_registry_assumptions(be)
+            return be
+
+        self.step_mode = "run"
+        self._auto_stop = False
+        self.resume.clear()
+        self.current_line = 0
+        self._clear_marks()
+        self._clear_run_views()
+        self._set_debug_state(True)
+        self.mode_label.configure(text="Automatischer Testlauf", foreground="#d32f2f")
+        self.runner = None
+        path = self.path
+
+        def on_phase(label, mode):
+            self.events.put(("phase", label, mode))
+
+        def worker():
+            try:
+                rt = run_roundtrip(path, simulate=simulate, reinstall=reinstall, base_options=base,
+                                   backend_factory=factory, on_phase=on_phase,
+                                   runner_hooks={"on_log": self._on_log, "step_hook": self._auto_step_hook,
+                                                 "ask_hook": self._ask_hook})
+                self.events.put(("auto_done", rt))
+            except Exception as exc:  # pragma: no cover
+                self.events.put(("crash", repr(exc)))
+
+        self.debug_thread = threading.Thread(target=worker, daemon=True)
+        self.debug_thread.start()
+
+    def _auto_step_hook(self, st, runner):
+        self.runner = runner
+        if getattr(self, "_auto_stop", False):
+            runner.stop_flag.set()
+        self._step_hook(st, runner)
 
     def _apply_registry_assumptions(self, backend: SimulationBackend):
         for raw in self.settings.get("registry_assumptions", []):
@@ -1104,6 +1198,7 @@ class EditorWindow(tk.Toplevel):
             self.resume.set()
 
     def debug_stop(self):
+        self._auto_stop = True
         if self.runner:
             self.runner.stop_flag.set()
         self.step_mode = "run"
@@ -1120,6 +1215,7 @@ class EditorWindow(tk.Toplevel):
         self.btn_continue.configure(state="normal" if running else "disabled")
         self.btn_next.configure(state="normal" if running else "disabled")
         self.btn_stop.configure(state="normal" if running else "disabled")
+        self.btn_auto.configure(state=state)
         self.text.configure(state="disabled" if running else "normal")
 
     def _clear_run_views(self):
@@ -1179,6 +1275,15 @@ class EditorWindow(tk.Toplevel):
         elif kind == "done":
             result = ev[1]
             self._finish_run(result)
+        elif kind == "phase":
+            _, label, mode = ev
+            self.text.tag_remove("executed", "1.0", "end")
+            self.mode_label.configure(text=f"Automatischer Testlauf: {label}", foreground="#d32f2f")
+            self.log.configure(state="normal")
+            self.log.insert("end", f"\n===== {label} =====\n", ("INFO",))
+            self.log.configure(state="disabled")
+        elif kind == "auto_done":
+            self._finish_auto(ev[1])
         elif kind == "crash":
             self._set_debug_state(False)
             self.mode_label.configure(text="Bearbeiten", foreground="#1b7f3b")
@@ -1236,6 +1341,41 @@ class EditorWindow(tk.Toplevel):
             body += f"\nNeustart angefordert: {result.reboot}"
         body += f"\n{result.warnings} Warnungen, {result.errors} Fehler, {len(result.actions)} Aktionen"
         (messagebox.showinfo if ok else messagebox.showwarning)(title, body, parent=self)
+
+    def _finish_auto(self, rt: RoundtripResult):
+        self._set_debug_state(False)
+        self.text.tag_remove("current", "1.0", "end")
+        self.current_line = 0
+        self._draw_gutter()
+        if self.runner is not None and isinstance(self.runner.backend, SimulationBackend):
+            self.sim_state = self.runner.backend
+        if rt.phases:
+            last = rt.phases[-1].result
+            self._last_vars = last.variables
+            self._refresh_vars()
+            self.actions_tree.delete(*self.actions_tree.get_children())
+            for p in rt.phases:
+                self.actions_tree.insert("", "end", values=("", f"== {p.label}", "", ""))
+                for a in p.result.actions:
+                    self.actions_tree.insert("", "end", values=(a.kind, a.operation, a.target, a.detail))
+        self.last_log_path = rt.report_path
+        self.mode_label.configure(text="Bearbeiten", foreground="#1b7f3b")
+        self._set_status(rt.summary())
+        lines = [rt.summary(), ""]
+        for p in rt.phases:
+            lines.append(f"{p.label}: {p.result.status.value}, ErrorLevel {p.result.error_level}")
+            if p.result.trigger:
+                lines.append(f"    {p.result.trigger}")
+            for name, passed, detail in p.checks:
+                lines.append(f"    [{'x' if passed else ' '}] {name}")
+        if rt.report_path:
+            lines += ["", f"Testbericht: {rt.report_path}"]
+        self.log.configure(state="normal")
+        self.log.insert("end", "\n" + "\n".join(lines) + "\n", ("INFO" if rt.ok else "ERROR",))
+        self.log.see("end")
+        self.log.configure(state="disabled")
+        (messagebox.showinfo if rt.ok else messagebox.showwarning)(
+            "Automatischer Testlauf " + ("bestanden" if rt.ok else "nicht bestanden"), "\n".join(lines), parent=self)
 
     # -- Hilfe --------------------------------------------------------------------
 

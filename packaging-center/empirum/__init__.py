@@ -10,6 +10,7 @@ from .runner import Runner, RunOptions, RunResult, Status
 from .backend import SimulationBackend, WindowsBackend, make_backend
 from .validator import validate, Finding
 from .package import Package, find_packages, create_package, export_zip
+from .pipeline import build_package, run_roundtrip, BuildResult, RoundtripResult
 
 __all__ = [
     "InfFile", "Section", "Line", "load_inf", "parse_inf",
@@ -17,4 +18,5 @@ __all__ = [
     "SimulationBackend", "WindowsBackend", "make_backend",
     "validate", "Finding",
     "Package", "find_packages", "create_package", "export_zip",
+    "build_package", "run_roundtrip", "BuildResult", "RoundtripResult",
 ]

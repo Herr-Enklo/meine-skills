@@ -24,6 +24,7 @@ from empirum.variables import Variables, Expander  # noqa: E402
 from empirum.script import parse_statement, parse_section  # noqa: E402
 from empirum.runner import compare  # noqa: E402
 from empirum.package import PackageSpec, create_package, export_zip, find_packages, import_reg_file  # noqa: E402
+from empirum.pipeline import build_package, run_roundtrip  # noqa: E402
 
 TEMPLATE_DIR = os.path.join(_ROOT, "empirum", "templates")
 
@@ -627,6 +628,81 @@ class PackageTests(unittest.TestCase):
             self.assertIn('-HKLM,"SOFTWARE\\Acme\\Demo","Weg"', lines)
             self.assertIn('HKLM,"SOFTWARE\\Acme\\Demo","",0x00000000,"Standard"', lines)
             self.assertIn('-HKCU,"Software\\Old"', lines)
+
+
+class PipelineTests(unittest.TestCase):
+    def test_build_and_roundtrip(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            # Quelle wie im Paketierungs-Repo: setup.inf in einem Versionsordner ohne Install\
+            src_dir = os.path.join(tmp, "repo", "demo", "releases", "1.2.3")
+            os.makedirs(src_dir)
+            src = os.path.join(src_dir, "setup.inf")
+            with open(src, "wb") as fh:
+                fh.write(MINI.replace("\n", "\r\n").encode("cp1252"))
+            with open(os.path.join(src_dir, "Setup.ico"), "wb") as fh:
+                fh.write(b"ICO")
+            files = os.path.join(tmp, "installer")
+            os.makedirs(os.path.join(files, "sub"))
+            with open(os.path.join(files, "setup64.exe"), "wb") as fh:
+                fh.write(b"MZ")
+            with open(os.path.join(files, "sub", "extra.dat"), "wb") as fh:
+                fh.write(b"x")
+            store = os.path.join(tmp, "store")
+            res = build_package(src, store, files_dir=files)
+            self.assertTrue(res.setup_inf.endswith(os.path.join("Acme", "Demo", "1.2.3", "Install", "Setup.inf")))
+            self.assertTrue(os.path.isfile(os.path.join(res.package_root, "Files", "setup64.exe")))
+            self.assertTrue(os.path.isfile(os.path.join(res.package_root, "Files", "sub", "extra.dat")))
+            self.assertTrue(os.path.isfile(os.path.join(res.package_root, "Install", "Setup.ico")))
+            with open(src, "rb") as a, open(res.setup_inf, "rb") as b:
+                self.assertEqual(a.read(), b.read())      # byteerhaltend
+            # zweiter Aufruf mit identischer Quelle ist erlaubt, geaenderte Quelle nicht
+            build_package(src, store, files_dir=files)
+            with open(src, "ab") as fh:
+                fh.write(b"; geaendert\r\n")
+            with self.assertRaises(FileExistsError):
+                build_package(src, store)
+            build_package(src, store, overwrite=True)
+
+            phases_seen = []
+            rt = run_roundtrip(res.setup_inf, simulate=True, reinstall=True,
+                               backend_factory=lambda mode, prev: _sim(prev),
+                               on_phase=lambda label, mode: phases_seen.append(mode))
+            self.assertEqual(phases_seen, ["install", "reinstall", "uninstall"])
+            self.assertTrue(rt.ok, rt.summary())
+            self.assertEqual([p.result.status for p in rt.phases], [Status.SUCCESS] * 3)
+            for p in rt.phases:
+                self.assertTrue(all(ok for _, ok, _ in p.checks), p.checks)
+            logs = {p.result.log_path for p in rt.phases}
+            self.assertEqual(len(logs), 3)          # jede Phase ein eigenes Protokoll
+            self.assertTrue(os.path.isfile(rt.report_path))
+            with open(rt.report_path, encoding="utf-8") as fh:
+                report = fh.read()
+            self.assertIn("**bestanden**", report)
+            self.assertIn("Deinstallation", report)
+            self.assertIn("[x] Uninstall-Schluessel", report)
+
+    def test_roundtrip_failure_is_reported(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = _write_package(tmp)
+
+            def factory(mode, prev):
+                be = _sim(prev)
+                be.exit_code_rules = [("*setup64.exe*", 1603)]
+                return be
+
+            rt = run_roundtrip(path, simulate=True, backend_factory=factory)
+            self.assertFalse(rt.ok)
+            self.assertEqual(rt.phases[0].result.status, Status.FAILURE)
+            self.assertIn("Abbruch in Zeile", rt.phases[0].result.trigger)
+            with open(rt.report_path, encoding="utf-8") as fh:
+                self.assertIn("nicht bestanden", fh.read())
+
+
+def _sim(prev):
+    be = SimulationBackend(read_real_registry=False)
+    if prev is not None:
+        be.inherit(prev)
+    return be
 
 
 if __name__ == "__main__":

@@ -75,6 +75,7 @@ class RunOptions:
     emulate_installers: bool = True    # Simulation: Wirkung von Installern nachbilden
     env_overrides: dict[str, str] = field(default_factory=dict)
     log_path: str | None = None
+    log_suffix: str = ""           # z. B. ".1" bei mehreren Phasen eines automatischen Laufs
     command_line: str = ""
 
     @classmethod
@@ -1062,7 +1063,7 @@ class Runner:
                 base = tempfile.gettempdir()
             folder = os.path.join(base, "PackagingCenter")
             name = f"{self.vars.get('DeveloperName') or 'Paket'}.{self.vars.get('ProductName') or ''}." \
-                   f"{self.vars.get('Version') or ''}.{self.options.mode}.log"
+                   f"{self.vars.get('Version') or ''}.{self.options.mode}{self.options.log_suffix}.log"
             name = re.sub(r'[<>:"/\\|?*]', "_", name)
             path = os.path.join(folder, name)
         try:
