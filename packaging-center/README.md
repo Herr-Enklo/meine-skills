@@ -60,9 +60,18 @@ würden, schreibt der Lauf eine Warnung ins Protokoll. Zweitens die Regel, dass
 ergibt nur Sinn, wenn die Set-Zeilen darin beim Rückwärtslauf ausgeführt
 werden.
 
-## Simulation und echte Ausführung
+## Echter Testlauf, Simulation, Mischmodus
 
-Die Simulation ist der Normalfall. Sie startet keine Programme, schreibt keine
+Der echte Testlauf ist unter Windows der Normalfall. Er tut, was Setup.exe
+täte: Installer starten, Registry und Dateien schreiben, Verknüpfungen anlegen,
+das Paket registrieren. Der Lauf mit `/U` nimmt alles wieder zurück. So lässt
+sich ein Paket am Testrechner hin und zurück prüfen, mit Einzelschritt und
+Haltepunkten. Dazu das Programm als Administrator starten; ohne erhöhte
+Rechte warnt der Editor, weil HKLM und Program Files sonst nicht beschreibbar
+sind. SystemShutdown wird auch im echten Lauf unterdrückt, ein angeforderter
+Neustart erscheint nur im Ergebnis.
+
+Die Simulation ist der Trockenlauf. Sie startet keine Programme, schreibt keine
 Registry und keine Dateien. Lesende Zugriffe gehen ans echte System, damit
 Bedingungen wie `DoesRegKeyExist` realistisch ausfallen; unter Windows auch die
 Registry. Was das Skript schreibt, landet in einer Überlagerung, die spätere
@@ -70,10 +79,11 @@ Lesezugriffe desselben Laufs sehen. Für jeden Programmaufruf fragt der Editor
 nach dem Rückgabewert (0, 3010, 1603 ...), damit sich auch die Fehlerpfade
 prüfen lassen; das lässt sich abschalten.
 
-Die echte Ausführung gibt es nur unter Windows. Sie schreibt Registry und
-Dateien, startet Programme und legt Verknüpfungen an, wie Setup.exe es täte.
-Dazu das Programm als Administrator starten. SystemShutdown wird auch dort
-unterdrückt, ein angeforderter Neustart erscheint nur im Ergebnis.
+Der Mischmodus liegt dazwischen: Programmaufrufe (Call, CallHidden, MsiExec)
+laufen echt, die Registry-, Datei- und Verknüpfungszeilen des Skripts bleiben
+simuliert. Im Rückgabewert-Dialog gibt es außerdem je Aufruf den Knopf
+„Wirklich ausführen“. Auf der Kommandozeile heißt der Mischmodus
+`--programme`.
 
 ## Voraussetzungen
 
@@ -108,7 +118,7 @@ ihrer Kodierung und CRLF.
 DEBUG (F5) und EINZELSCHRITT (F12) fragen wie das Original zuerst nach dem
 Setup-Befehl. `/U` schaltet auf Deinstallation, `/R` auf Neuinstallation,
 `/AW` auf den Benutzerteil, `/S0` bis `/S4` setzt die Anzeigestufe. Im selben
-Dialog wählt man Simulation oder echte Ausführung, 32 oder 64 Bit und den
+Dialog wählt man echten Testlauf oder Simulation, 32 oder 64 Bit und den
 Vergleichsmodus. Während des Laufs zeigt der Editor die aktuelle Zeile,
 Protokoll, Variablen, Aufrufstapel und danach die Liste aller Aktionen; ein
 Doppelklick im Protokoll oder in der Prüfung springt zur Zeile. Das Protokoll

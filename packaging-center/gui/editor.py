@@ -36,6 +36,17 @@ from gui.dialogs import (DebugStartDialog, EnvironmentDialog, RegistryAssumption
 
 MONO = ("Consolas", 10)
 
+
+def _is_admin() -> bool:
+    """Unter Windows: laeuft der Prozess mit Administratorrechten?"""
+    if os.name != "nt":
+        return True
+    try:
+        import ctypes
+        return bool(ctypes.windll.shell32.IsUserAnAdmin())  # type: ignore[attr-defined]
+    except Exception:
+        return True
+
 GROUP_ORDER = [
     ("Paketinformation", ("setupinfo", "vardefinfo", "setup", "requirements")),
     ("Anwendung", ("application", "environment", "encryption", "processes", "prompts")),
@@ -992,14 +1003,29 @@ class EditorWindow(tk.Toplevel):
             backend = SimulationBackend(read_real_registry=dlg.read_real_registry,
                                         read_real_files=dlg.read_real_registry)
             backend.default_exit_code = dlg.default_exit_code
-            if dlg.ask_exit_codes:
+            backend.execute_programs = dlg.execute_programs
+            if dlg.ask_exit_codes and not dlg.execute_programs:
                 backend.call_hook = self._ask_exit_code
+            if dlg.execute_programs and not messagebox.askyesno(
+                    "Programme wirklich starten",
+                    "Call, CallHidden und MsiExec werden in diesem Lauf wirklich gestartet. Installer "
+                    "veraendern den Rechner. Fortfahren?", parent=self, icon="warning"):
+                return
             self._apply_registry_assumptions(backend)
         else:
-            if not messagebox.askyesno("Echte Ausfuehrung",
-                                       "Der Lauf schreibt Registry und Dateien und startet Programme auf diesem "
-                                       "Rechner, genau wie Setup.exe. Fortfahren?", parent=self, icon="warning"):
+            if not _is_admin():
+                if not messagebox.askyesno("Administratorrechte",
+                                           "Das Programm laeuft nicht als Administrator. Setup.exe laeuft als SYSTEM; "
+                                           "ohne erhoehte Rechte scheitern HKLM-Eintraege, Program Files und die "
+                                           "meisten Installer. Trotzdem starten?", parent=self, icon="warning"):
+                    return
+            elif not self.settings.get("_real_confirmed") and not messagebox.askyesno(
+                    "Echter Testlauf",
+                    "Der Lauf schreibt Registry und Dateien und startet Programme auf diesem Rechner, "
+                    "genau wie Setup.exe. Fortfahren? (Diese Frage kommt in dieser Sitzung nur einmal.)",
+                    parent=self, icon="warning"):
                 return
+            self.settings["_real_confirmed"] = True
             backend = WindowsBackend()
         self.step_mode = "step" if single_step else "run"
         self.resume.clear()

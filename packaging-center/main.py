@@ -7,6 +7,7 @@ Betrieb ohne Fenster gibt es eine Kommandozeile:
     python main.py                                  # Oberflaeche
     python main.py check  Pfad\\zur\\Setup.inf        # Paketpruefung
     python main.py run    Pfad\\zur\\Setup.inf [/U] [/AW] [/S1]   # Simulation
+    python main.py run    Pfad\\zur\\Setup.inf --programme   # Installer echt starten, Rest simulieren
     python main.py run    Pfad\\zur\\Setup.inf --echt  # echte Ausfuehrung (Windows, Admin)
     python main.py vars   Pfad\\zur\\Setup.inf        # Variablen nach dem Laden
     python main.py list   Ordner                    # Pakete im Package Store
@@ -64,6 +65,7 @@ def cmd_run(args) -> int:
     else:
         backend = SimulationBackend()
         backend.default_exit_code = args.exit_code
+        backend.execute_programs = args.programme
     verbose = args.verbose
 
     def on_log(entry):
@@ -131,6 +133,8 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("inf")
     p.add_argument("switches", nargs="*", help="Setup.exe-Schalter: /U /R /AW /S0..4")
     p.add_argument("--echt", action="store_true", help="wirklich ausfuehren (nur Windows)")
+    p.add_argument("--programme", action="store_true",
+                   help="Mischmodus: Programmaufrufe wirklich starten, Rest simulieren")
     p.add_argument("--bits", type=int, default=64, choices=(32, 64))
     p.add_argument("--var", action="append", help="Variable setzen, z. B. --var VM_Umgebung=Test")
     p.add_argument("--exit-code", type=int, default=0, help="angenommener Rueckgabewert fuer Programmaufrufe")

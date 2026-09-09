@@ -425,6 +425,28 @@ class RunnerTests(unittest.TestCase):
             self.assertFalse(be.reg_key_exists("HKLM", "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Matrix42 - Acme Demo 1.2.3"))
             self.assertEqual(res2.variables["V_Done"] if "V_Done" in res2.variables else "", "")
 
+    def test_mixed_mode_executes_programs(self):
+        # Mischmodus: Programmaufrufe laufen wirklich, der echte Rueckgabewert landet in %ErrorLevel%
+        text = MINI.replace('Call "%Src%\\%V_SourceDir%\\%V_Installer%" /S', 'Call sh -c "exit 7"')
+        with tempfile.TemporaryDirectory() as tmp:
+            path = _write_package(tmp, text)
+            be = SimulationBackend(read_real_registry=False)
+            be.execute_programs = True
+            res, runner, be = self._run(path, backend=be)
+            self.assertEqual(res.status, Status.FAILURE)
+            self.assertEqual(res.error_level, "7")
+            prog = [a for a in res.actions if a.kind == "Programm"]
+            self.assertTrue(prog and prog[0].executed and "wirklich" in prog[0].detail)
+            # Einzelfall ueber den call_hook
+            be = SimulationBackend(read_real_registry=False)
+            be.call_hook = lambda cmd, hidden: SimulationBackend.EXECUTE
+            res, runner, be = self._run(path, backend=be)
+            self.assertEqual(res.error_level, "7")
+            be = SimulationBackend(read_real_registry=False)
+            be.call_hook = lambda cmd, hidden: 0
+            res, runner, be = self._run(path, backend=be)
+            self.assertEqual(res.status, Status.SUCCESS)
+
     def test_command_line_switches(self):
         opts = RunOptions.from_command_line('Setup.exe "C:\\p\\Setup.inf" /S2 /U /AW')
         self.assertEqual((opts.mode, opts.user_part, opts.display_level), ("uninstall", True, 2))

@@ -26,7 +26,7 @@ def load_settings() -> dict:
 def save_settings(data: dict) -> None:
     try:
         with open(SETTINGS_PATH, "w", encoding="utf-8") as fh:
-            json.dump(data, fh, indent=2, ensure_ascii=False)
+            json.dump({k: v for k, v in data.items() if not k.startswith("_")}, fh, indent=2, ensure_ascii=False)
     except OSError:
         pass
 
@@ -70,19 +70,21 @@ class DebugStartDialog(simpledialog.Dialog):
 
         mode = ttk.LabelFrame(master, text="Art des Laufs")
         mode.grid(row=3, column=0, columnspan=3, sticky="ew", **pad)
-        self.mode_var = tk.StringVar(value=self.settings.get("run_mode", "sim"))
-        ttk.Radiobutton(mode, text="Simulation: nichts wird veraendert, Programme werden nicht gestartet, "
-                              "Registry und Dateien werden nur gelesen", variable=self.mode_var,
-                        value="sim").pack(anchor="w", padx=6, pady=2)
-        real = ttk.Radiobutton(mode, text="Echte Ausfuehrung: Registry, Dateien, Programme wie bei Setup.exe "
+        is_windows = platform.system() == "Windows"
+        self.mode_var = tk.StringVar(value=self.settings.get("run_mode", "real" if is_windows else "sim"))
+        real = ttk.Radiobutton(mode, text="Echter Testlauf (Standard): Programme, Registry, Dateien und "
+                                     "Verknuepfungen genau wie Setup.exe; die Deinstallation nimmt alles zurueck "
                                      "(nur Windows, als Administrator starten)", variable=self.mode_var,
                                value="real")
         real.pack(anchor="w", padx=6, pady=2)
-        if platform.system() != "Windows":
+        ttk.Radiobutton(mode, text="Simulation (Trockenlauf): nichts wird veraendert, Programme werden nicht "
+                              "gestartet, Registry und Dateien werden nur gelesen", variable=self.mode_var,
+                        value="sim").pack(anchor="w", padx=6, pady=2)
+        if not is_windows:
             real.state(["disabled"])
             self.mode_var.set("sim")
 
-        opt = ttk.LabelFrame(master, text="Simulation")
+        opt = ttk.LabelFrame(master, text="Nur fuer die Simulation")
         opt.grid(row=4, column=0, columnspan=3, sticky="ew", **pad)
         self.ask_var = tk.BooleanVar(value=self.settings.get("ask_exit_codes", True))
         ttk.Checkbutton(opt, text="Rueckgabewert jedes Programmaufrufs abfragen (0, 3010, 1603 ...)",
@@ -92,6 +94,10 @@ class DebugStartDialog(simpledialog.Dialog):
         ttk.Label(row, text="Sonst angenommener Rueckgabewert:").pack(side="left")
         self.code_var = tk.StringVar(value=str(self.settings.get("default_exit_code", 0)))
         ttk.Entry(row, textvariable=self.code_var, width=8).pack(side="left", padx=4)
+        self.exec_var = tk.BooleanVar(value=self.settings.get("execute_programs", False))
+        ttk.Checkbutton(opt, text="Mischmodus: Programmaufrufe wirklich starten (Call, CallHidden, MsiExec), "
+                             "Registry-, Datei- und Verknuepfungszeilen des Skripts bleiben simuliert",
+                        variable=self.exec_var).pack(anchor="w", padx=6, pady=2)
         self.real_reg_var = tk.BooleanVar(value=self.settings.get("read_real_registry", True))
         ttk.Checkbutton(opt, text="Registry und Dateien des Testrechners lesen (sonst nur die Annahmen aus der Testumgebung)",
                         variable=self.real_reg_var).pack(anchor="w", padx=6, pady=2)
@@ -154,6 +160,7 @@ class DebugStartDialog(simpledialog.Dialog):
         self.result_options = opts
         self.simulate = self.mode_var.get() == "sim"
         self.ask_exit_codes = self.ask_var.get()
+        self.execute_programs = self.exec_var.get()
         self.read_real_registry = self.real_reg_var.get()
         switches = " ".join(p for p in cmd.split() if p.startswith("/"))
         self.settings.update({
@@ -161,7 +168,7 @@ class DebugStartDialog(simpledialog.Dialog):
             "ask_exit_codes": self.ask_exit_codes, "default_exit_code": self.default_exit_code,
             "bits": int(self.bits_var.get()), "version_compare": self.cmp_var.get(),
             "once_rule": self.once_var.get(), "apply_registration": self.reg_var.get(),
-            "read_real_registry": self.read_real_registry,
+            "read_real_registry": self.read_real_registry, "execute_programs": self.execute_programs,
         })
 
 
@@ -252,11 +259,12 @@ class ExitCodeDialog(simpledialog.Dialog):
         self.cmdline = cmdline
         self.hidden = hidden
         self.default = default
-        self.code: int | None = None
+        self.code: int | str | None = None
         super().__init__(parent, "Programmaufruf (Simulation)")
 
     def body(self, master):
-        ttk.Label(master, text="Dieser Aufruf wird nicht ausgefuehrt. Welchen Rueckgabewert soll er liefern?").pack(anchor="w", padx=6, pady=4)
+        ttk.Label(master, text="Rueckgabewert annehmen (Aufruf wird nicht gestartet) oder das Programm jetzt "
+                               "wirklich starten und den echten Rueckgabewert verwenden?").pack(anchor="w", padx=6, pady=4)
         box = tk.Text(master, height=4, width=90, wrap="word", font=("Consolas", 9))
         box.insert("1.0", ("[versteckt] " if self.hidden else "") + self.cmdline)
         box.configure(state="disabled")
@@ -272,6 +280,19 @@ class ExitCodeDialog(simpledialog.Dialog):
         entry = ttk.Entry(row, textvariable=self.var, width=8)
         entry.pack(side="left", padx=4)
         return entry
+
+    def buttonbox(self):
+        box = ttk.Frame(self)
+        ttk.Button(box, text="Wert annehmen", command=self.ok, default="active").pack(side="left", padx=4, pady=6)
+        ttk.Button(box, text="Wirklich ausfuehren", command=self._execute).pack(side="left", padx=4, pady=6)
+        ttk.Button(box, text="Abbrechen", command=self.cancel).pack(side="left", padx=4, pady=6)
+        self.bind("<Return>", self.ok)
+        self.bind("<Escape>", self.cancel)
+        box.pack()
+
+    def _execute(self):
+        self.code = "execute"
+        self.destroy()
 
     def validate(self):
         try:

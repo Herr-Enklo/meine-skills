@@ -249,25 +249,47 @@ class SimulationBackend(Backend):
         self.shortcuts: dict[str, str] = {}
         self.killed: list[str] = []
         self.simulate_sleep = False
+        # Mischmodus: Programmaufrufe (Call, CallHidden, MsiExec ...) wirklich starten,
+        # alles andere weiter simulieren. So laesst sich ein Installer am Testrechner
+        # hin und zurueck laufen lassen, ohne dass Registry- und Dateizeilen des
+        # Skripts den Rechner veraendern.
+        self.execute_programs = False
+        self._executor = WindowsBackend()
         # Vorgaben fuer Exit-Codes: Muster (fnmatch auf Kommandozeile) -> Code
         self.exit_code_rules: list[tuple[str, int]] = []
 
     # -- Programme ---------------------------------------------------------
+    EXECUTE = "execute"   # Antwort des call_hook: diesen Aufruf wirklich starten
+
     def run(self, cmdline: str, hidden: bool = False, timeout: float | None = None,
             wait: bool = True) -> int:
         code: int | None = None
+        execute = self.execute_programs
         for pattern, value in self.exit_code_rules:
             if fnmatch.fnmatch(cmdline.lower(), pattern.lower()):
                 code = value
                 break
         if self.call_hook is not None:
             answer = self.call_hook(cmdline, hidden)
-            if answer is not None:
+            if answer == self.EXECUTE:
+                execute = True
+            elif answer is not None:
                 code = answer
+                execute = False
+        if execute:
+            return self._execute(cmdline, hidden, timeout, wait)
         if code is None:
             code = self.default_exit_code
         how = "versteckt" if hidden else "sichtbar"
         self.record("Programm", "starten", cmdline, f"{how}, angenommener Rueckgabewert {code}")
+        return code
+
+    def _execute(self, cmdline: str, hidden: bool, timeout: float | None, wait: bool) -> int:
+        self._executor.actions.clear()
+        code = self._executor.run(cmdline, hidden=hidden, timeout=timeout, wait=wait)
+        a = self.record("Programm", "starten", cmdline,
+                        f"{'versteckt' if hidden else 'sichtbar'}, wirklich ausgefuehrt, Rueckgabewert {code}")
+        a.executed = True
         return code
 
     # -- Dateien -----------------------------------------------------------
@@ -458,7 +480,9 @@ class SimulationBackend(Backend):
         return 0
 
     def sleep(self, ms: int) -> None:
-        if self.simulate_sleep:
+        if self.execute_programs:
+            time.sleep(ms / 1000.0)
+        elif self.simulate_sleep:
             time.sleep(min(ms, 2000) / 1000.0)
 
 
