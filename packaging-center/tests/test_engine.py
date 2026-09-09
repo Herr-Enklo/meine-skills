@@ -467,6 +467,29 @@ class RunnerTests(unittest.TestCase):
             res3, runner3, be3 = self._run(path, backend=be3, emulate_installers=False)
             self.assertEqual(be3.find_uninstall_key("Demo", "x64"), "")
 
+    def test_mixed_mode_materializes_simulated_dirs(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            be = SimulationBackend(read_real_registry=False)
+            be.execute_programs = True
+            target = os.path.join(tmp, "App")
+            win_path = "C:\\" + target.replace("/", "\\").lstrip("\\")   # nur fuer den Mustertest
+            be.make_dir(win_path)
+            # Der reale Pfad wird ueber _local() angelegt; unter Linux entspricht C:\x nicht /x,
+            # daher direkt mit einem Pfad ohne Laufwerksbuchstaben pruefen:
+            be.dirs_created.add(be._norm(target))
+            be._PATH_RE = __import__("re").compile(r'"([^"]+)"')
+            code = be.run(f'sh -c "exit 0" "{target}\\install.log"')
+            self.assertEqual(code, 0)
+            self.assertTrue(os.path.isdir(target))
+            self.assertTrue(any("fuer echten Programmaufruf" in a.operation for a in be.actions))
+
+    def test_app_dir_created_at_start(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = _write_package(tmp)
+            res, runner, be = self._run(path)
+            first = [a for a in res.actions if a.kind == "Ordner"]
+            self.assertTrue(first and first[0].target.endswith("\\Acme\\Demo\\1.2.3"), first)
+
     def test_abort_trigger_message(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = _write_package(tmp)

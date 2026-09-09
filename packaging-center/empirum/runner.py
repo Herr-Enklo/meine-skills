@@ -304,6 +304,11 @@ class Runner:
             self.log("INFO", f"Paket: {self.vars.get('DeveloperName')} {self.vars.get('ProductName')} "
                              f"{self.vars.get('Version')} Rev. {self.vars.get('Revision')}  (Quelle %Src% = {self.vars.get('Src')})")
             self._check_platform()
+            app_dir = (self.vars.get("ApplicationDir") or "").strip()
+            if app_dir and not opts.uninstall:
+                # Setup.exe legt den Anwendungsordner zu Beginn an (Setup.inf wird dorthin kopiert)
+                self.log("INFO", f"Anwendungsordner anlegen: {app_dir}")
+                self.backend.make_dir(app_dir)
             self._run_options()
             if opts.apply_registration:
                 self._registration()

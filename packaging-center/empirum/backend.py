@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import fnmatch
 import os
+import re
 import platform
 import shutil
 import subprocess
@@ -298,7 +299,32 @@ class SimulationBackend(Backend):
         self.record("Programm", "starten", cmdline, f"{how}, angenommener Rueckgabewert {code}")
         return code
 
+    _PATH_RE = re.compile(r'"([A-Za-z]:\\[^"]+)"|([A-Za-z]:\\[^\s"]+)')
+
+    def _materialize_dirs(self, cmdline: str) -> None:
+        """Mischmodus: Ordner, die das Skript bisher nur simuliert angelegt hat, vor einem
+        echten Programmaufruf wirklich anlegen, wenn die Kommandozeile sie nennt
+        (z. B. der Ordner der MSI-Logdatei). Es entstehen nur Ordner, keine Dateien."""
+        for m in self._PATH_RE.finditer(cmdline):
+            path = (m.group(1) or m.group(2)).rstrip("\\")
+            candidates = [path]
+            head, sep, tail = path.replace("/", "\\").rpartition("\\")
+            if sep and "." in tail:
+                candidates.append(head)
+            for cand in candidates:
+                key = self._norm(cand)
+                simulated = key in self.dirs_created or any(
+                    f.startswith(key + "\\") or f.startswith(key + os.sep) for f in self.files_created)
+                if simulated and not os.path.isdir(_local(cand)):
+                    try:
+                        os.makedirs(_local(cand), exist_ok=True)
+                        a = self.record("Ordner", "anlegen (fuer echten Programmaufruf)", cand)
+                        a.executed = True
+                    except OSError as exc:
+                        self.record("Ordner", "anlegen (fuer echten Programmaufruf)", cand, str(exc))
+
     def _execute(self, cmdline: str, hidden: bool, timeout: float | None, wait: bool) -> int:
+        self._materialize_dirs(cmdline)
         self._executor.actions.clear()
         code = self._executor.run(cmdline, hidden=hidden, timeout=timeout, wait=wait)
         a = self.record("Programm", "starten", cmdline,
