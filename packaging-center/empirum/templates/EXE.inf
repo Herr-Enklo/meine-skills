@@ -1,0 +1,296 @@
+[SetupInfo]
+Author                  = 
+CreationDate            = 
+InventoryID             = 
+Description             = 
+Method                  = Unattended
+Tested on               = Win11 (22H2)
+Dependencies            = 
+Command line options    = /S0
+Last Change             = 
+Build                   = 1.00
+Templateversion			= 12.10.2023
+Auftragsnummer			= 
+Besteller				= 
+Abhängige Programme		= 
+
+Buildnr.	Datum		Name			Beschreibung
+1.00		12.10.2023				Initialpaket
+
+[VarDefInfo]
+
+[Setup]
+Version=14.2
+ShowCaption=1
+BlockInput=0
+Platform=
+
+[Requirements]
+
+[Application]
+ProductName={ProductName}
+DeveloperName={DeveloperName}
+Version={Version}
+Revision=0
+SetupName=%ProductName% %Version% %SetupWizard%
+Text1="%ProductName% %Version%",         Arial,           30, , 2170F3, 4,    , LEFT BOLD ITALIC
+Text2="%DeveloperName%",                 Arial,           24, , 2170F3, 4,    , LEFT BOLD ITALIC
+Text8="%Company%",                       Arial,           18, , 2170F3, 4,  10, RIGHT BOLD ITALIC
+Text9="%InstallationFor% %WindowsUser%", Arial,           16, , 2170F3, 4, -18, BOTTOM ITALIC LEFT
+BackgroundColor=EFEFEF,000000
+; BackgroundPicture=Logo.bmp, -10#, -10#, 0, 0, 000000, NORMAL
+CopyDialogRect=0%, 77%, 100%, 100%, HCENTER
+
+; Register all installations in common registry key
+UserKeyName=$Matrix42Packages$\%DeveloperName%\%ProductName%
+MachineKeyName=$Matrix42Packages$\%DeveloperName%\%ProductName%\%Version%
+UninstallKeyName=Matrix42 - %DeveloperName% %ProductName% %Version%
+UninstallDisplayName=Matrix42 - %DeveloperName% %ProductName% %Version%
+UninstallString=%ReinstallString% /U
+ReinstallString="%CommonSetupDir%\Setup.exe" "%App%\%SetupInfDir%\Setup.inf"
+UninstallDisplayIcon="%ApplicationDir%\%SetupInfDir%\Setup.ico",0
+UninstallOptions=NOREMOVE NOREPAIR NOMODIFY
+ReinstallMode=1
+SrcDir=..
+
+; Matrix42 Scripts are copied in a common scripts directory
+ApplicationDir=%CommonAppData%\$Matrix42Scripts$\%DeveloperName%\%ProductName%\%Version%
+
+SetupInfDir=Install
+DataDir=%Personal%
+AskUninstallOld=0
+ShellLinks=1
+CommonShellLinks=1
+CreateUnresolvableShellLinks=1
+UseStringSection=Strings:09
+UseSysStringSection=SysStrings:09
+DateWarning=1
+SizeWarning=0
+Reboot=0
+PreventExternalReboot=1
+StartServicesOnReboot=0
+CallTimeOut=3600
+AbortAfterCallTimeOut=1
+DisableCancelButton=1
+ShowEndMessage=1
+EndMessage=%EndMessageDesc%
+
+[Strings:07]
+Disk1=Installationsmedium 1
+EndMessageDesc=Die Installation wurde erfolgreich abgeschlossen!
+ErrorLogMessage=Die Installation/Deinstallation wurde mit einer Fehlermeldung abgebrochen!
+InstallationFor=Installation für:
+InstallerDesc=Dienstprogramm zum Installieren einzelner Komponenten.
+InstallerName=Installationsprogramm
+SetupWizard=Installations-Assistent
+Uninstallation=deinstallieren
+ErrorLogMessage=Fehler
+CallingText=beim Aufruf von
+
+[Strings:09]
+Disk1=Installation media 1
+EndMessageDesc=Installation was completed successfully!
+ErrorLogMessage=The installation/uninstallation aborted with an error message!
+InstallationFor=Installation for:
+InstallerDesc=Service program to install single components.
+InstallerName=Setup program
+SetupWizard=Installation Wizard
+Uninstallation=Uninstallation
+ErrorLogMessage=Error
+CallingText=launching
+
+[SysStrings:07]
+; German - use this section to define variables that are different in German / English 
+Users=Benutzer
+
+[SysStrings:09]
+; English - use this section to define variables that are different in German / English
+Users=Users
+
+[Environment]
+; Directory-Definitions
+V_SourceDir=Files
+
+; Import computer variable
+; V_ClientUmgebung=%%%V_MachineValuesPath%\%ComputerName%.ini,%ComputerName%,Intern-ClientUmgebung%%
+
+CommonSetupDir=%CommonFilesDir%\Setup%SetupBits%
+V_MachineValuesPath=\\%EmpirumServer%\Values$\MachineValues\%DomainName%
+V_UserValuesPath=%HKLM,"Software\matrix42\Software Depot","HomeServer"%\Values$\UserValues\%UserDomain%
+LogFile=%Temp%\%ProductName%.%Version%.%Revision%.log
+
+[Encryption]
+
+[Disks]
+1=%Disk1%
+
+[Options]
+Installer = %InstallerName%, COPYALWAYS, Installer, "%InstallerDesc%"
+Product   = %ProductName%,   COPYALWAYS, Product,   "%ProductDesc%"
+
+[Installer]
+1:..\..\..\..\User\Setup.exe,          %CommonSetupDir%, OPTIONAL USEFILENAME DIRECTORY NOSIZEWARNING SETUP, 0
+1:..\..\..\..\User\SetupDeu.chm,       %CommonSetupDir%, OPTIONAL USEFILENAME DIRECTORY NOSIZEWARNING SETUP, 0
+1:..\..\..\..\User\SetupEnu.chm,       %CommonSetupDir%, OPTIONAL USEFILENAME DIRECTORY NOSIZEWARNING SETUP, 0
+1:%Temp%\Setup64.exe,                  %CommonSetupDir%\Setup.exe, OPTIONAL ALWAYS NOSIZEWARNING SETUP WINDOWS64,     0
+1:..\..\..\..\User\Setup64.exe,        %CommonSetupDir%\Setup.exe, OPTIONAL ALWAYS NOSIZEWARNING SETUP WINDOWS64,     0
+1:%SetupInfDir%\Setup.inf,                             , ALWAYS,                                             0
+1:%SetupInfDir%\Setup.ico,                             , NORMAL,                                           0
+
+[Processes]
+;Proc1=ProcessName1.exe, Bitte beenden Sie "%ProductName%", KILLPROCESS ABORT
+
+[Product]
+#Set:Win64, WINDOWS64 DONTDELETE
+#Set:Win32, WINDOWS32 DONTDELETE
+#Set:Product, DONTDELETE
+#Set:RemOldKeys, DONTDELETE
+#Set:UninstallCheck, DELETE
+#Set:NewerVersion, DONTDELETE
+#Set:Win64, WINDOWS64 DELETE
+#Set:Win32, WINDOWS32 DELETE
+; -KillProcess "<Process>.EXE",0
+; -AskKillProcesses 600, Proc1
+
+[Set:Win32]
+Set V_UnattendFileName={UnattInst}
+Set V_UnattendParameter={UnattInstPar}
+Set V_UnattendUninstParameter=
+Set V_RegWin=\WOW6432Node
+Set V_Arch=x86
+Set V_UnattendDisplayName=
+Set V_OldVersion=
+
+[Set:Win64]
+Set V_UnattendFileName={UnattInst}
+Set V_UnattendParameter={UnattInstPar}
+Set V_UnattendUninstParameter=
+Set V_RegWin=
+Set V_Arch=x64
+Set V_UnattendDisplayName=
+Set V_OldVersion=
+
+[Set:Product]
+Del "%LogFile%"
+Set V_UnattendGUID = GetUninstallKeyName("%V_UnattendDisplayName%", %V_Arch%)
+ReplaceEnv V_UnattendGUID
+; Check if a newer version already installed
+Set V_InstalledDisplayVersion = %%HKLM,"SOFTWARE%V_RegWin%\Microsoft\Windows\CurrentVersion\Uninstall\%V_UnattendGUID%","DisplayVersion"%%
+ReplaceEnv V_InstalledDisplayVersion
+If "%V_InstalledDisplayVersion%" >= "%Version%" Then "Set:NewerVersion" EndIf
+If "%V_NewerVersion%" <> "1" Then "Set:CloseApplication" EndIf
+
+If "%V_UnattendGUID%" <> "" & "%V_NewerVersion%" == "" Then "Set:Repair" EndIf
+If "%V_UnattendGUID%" == "" & "%V_NewerVersion%" == "" Then "Set:Installation" EndIf
+
+; Hide application from Softwarelist
+If %V_UnattendGUID% <> "" Then "Reg:SystemComponent" EndIf
+
+; Delete Uninstall Link / Desktop Links / CommonPrograms Folder ("%CommonPrograms%" = "C:\ProgramData\Microsoft\Windows\Start Menu\Programs")
+; Deltree "%CommonPrograms%\<FolderName>"
+; Del "%CommonDesktop%\<FileName>.lnk"
+
+[Set:CloseApplication]
+; Prompt to the User if the application is running? Close the program after timeout
+; AskKillProcesses 600, Proc1
+; Kill Process without asking the User
+; KillProcess "<Process>.EXE",0
+
+[Set:Installation]
+Set ErrorLogMessage=Fehler beim Installieren von %V_UnattendFileName%.
+Call "%Src%\%V_SourceDir%\%V_UnattendFileName%" %V_UnattendParameter%
+If "%ErrorLevel%" == "3010" Then "RebootRequired" EndIf
+Set V_UnattendGUID = GetUninstallKeyName("%V_UnattendDisplayName%", %V_Arch%)
+ReplaceEnv V_UnattendGUID
+If "%V_UnattendGUID%" == "" Then "Set:ErrorLogMsg" EndIf
+
+[Set:Repair]
+; Uninstall
+Set ErrorLogMessage=Fehler beim Deinstallieren (Repair) von %V_UnattendGUID%.
+#Set:UninstallCheck
+
+; Installation
+#Set:Installation
+
+[Set:Uninstall]
+#Reg:SystemComponent
+-Del "%LogFile%"
+Set ErrorLogMessage=Fehler beim Deinstallieren von %V_UnattendGUID%.
+Call "%V_UninstallString%" %V_UnattendUninstParameter%
+If "%ErrorLevel%" <> "0" & "%ErrorLevel%" <> "3010" Then "Set:ErrorLogMsg" EndIf
+If "%ErrorLevel%" == "3010" Then "RebootRequired" EndIf
+-Call "%V_UninstallString%" %V_UnattendUninstParameter%
+Set ErrorLogMessage=Fehler beim Deinstallieren von %V_UnattendGUID%.
+Del "%LogFile%"
+
+[Set:UninstallCheck]
+Set ErrorLogMessage=Fehler im UninstallCheck. UninstallString Datei konnte nicht gefunden werden.
+Set V_UninstallString = %%HKLM,"SOFTWARE%V_RegWin%\Microsoft\Windows\CurrentVersion\Uninstall\%V_UnattendGUID%","UninstallString"%%
+ReplaceEnv V_UninstallString
+Set V_UninstallStringCheck=RemoveFromLeft (%V_UninstallString%, 0)
+ReplaceEnv V_UninstallStringCheck
+If %V_UninstallString% <> %V_UninstallStringCheck% Then "Set:UninstallString" EndIf
+If DoesFileExist (%V_UninstallString%) == "1" Then "Set:Uninstall" Else "Set:ErrorLogMsg" EndIf
+If %V_UninstallString% <> %V_UninstallStringCheck% Then "Set:UninstallString" EndIf
+-ReplaceEnv V_UninstallStringCheck
+-Set V_UninstallStringCheck=RemoveFromLeft (%V_UninstallString%, 0)
+-ReplaceEnv V_UninstallString
+-Set V_UninstallString = %%HKLM,"SOFTWARE%V_RegWin%\Microsoft\Windows\CurrentVersion\Uninstall\%V_UnattendGUID%","UninstallString"%%
+-ReplaceEnv V_UnattendGUID
+-Set V_UnattendGUID = GetUninstallKeyName("%V_UnattendDisplayName%", %V_Arch%)
+-Set ErrorLogMessage=Fehler im UninstallCheck. UninstallString Datei konnte nicht gefunden werden.
+
+[Set:UninstallString]
+ReplaceEnv V_UninstallString
+Set V_UninstallString=%V_UninstallStringCheck%
+ReplaceEnv V_UninstallString
+
+[Reg:SystemComponent]
+; SystemComponent
+HKLM,"SOFTWARE%V_RegWin%\Microsoft\Windows\CurrentVersion\Uninstall\%V_UnattendGUID%","SystemComponent",0x00010001,"1"
+
+[Set:RemOldKeys]
+Set V_AnzahlOldVersion = Tokenize (V_OldVersion)
+For Zaehler,1,%V_AnzahlOldVersion%,1,Set:CheckOldKeys
+
+If DoesRegKeyExist ("HKLM,SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\%DeveloperName% %ProductName% %Version%,AlreadyInstalledCondition") == "1" Then "Reg:RemOldAICKeys1" EndIf
+
+[Set:CheckOldKeys]
+Set V_RemOldVersion=%%V_OldVersion%Zaehler%%%
+ReplaceEnv V_RemOldVersion 
+
+If %V_RemOldVersion% <> "" Then "Reg:RemOldKeys" EndIf
+If DoesRegKeyExist ("HKLM,SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\%DeveloperName% %ProductName% %V_RemOldVersion%,AlreadyInstalledCondition") == "1" Then "Reg:RemOldAICKeys2" EndIf
+
+[Reg:RemOldKeys]
+; Remove old regkeys 
+-HKLM,"SOFTWARE%V_RegWin%\Microsoft\Windows\CurrentVersion\Uninstall\Matrix42 - %DeveloperName% %ProductName% %V_RemOldVersion%"
+-HKLM,"SOFTWARE%V_RegWin%\Microsoft\Windows\CurrentVersion\Uninstall\%ProductName% %V_RemOldVersion%"
+-HKLM,"SOFTWARE%V_RegWin%\$Matrix42Packages$\%DeveloperName%\%ProductName%\%V_RemOldVersion%"
+
+[Reg:RemOldAICKeys1]
+-HKLM,"SOFTWARE%V_RegWin%\Microsoft\Windows\CurrentVersion\Uninstall\%DeveloperName% %ProductName% %Version%"
+
+[Reg:RemOldAICKeys2]
+-HKLM,"SOFTWARE%V_RegWin%\Microsoft\Windows\CurrentVersion\Uninstall\%DeveloperName% %ProductName% %V_RemOldVersion%"
+
+[RebootRequired]
+SetReboot 1
+-SetReboot 1
+
+[Set:NewerVersion]
+If "%V_NewerVersion%" == 1 Then "Set:NewerVersionExit" EndIf
+Set V_NewerVersion=1
+
+[Set:NewerVersionExit]
+#Shell:Product
+Exit Software ist bereits in der Version "%V_InstalledDisplayVersion%" installiert. Installation wurde übersprungen.
+
+[Set:ErrorLogMsg]
+ErrorLogMsg %ErrorLogMessage% ErrorLevel: %ErrorLevel%
+Abort %ErrorLogMessage% ErrorLevel: %ErrorLevel%
+-Abort %ErrorLogMessage% ErrorLevel: %ErrorLevel%
+-ErrorLogMsg %ErrorLogMessage% ErrorLevel: %ErrorLevel%
+
+[Shell:Product]
+; %Programs%\Verknüpfungsname,"%ProgramFilesDir%\Pfad\FileName.exe",,"%ProgramFilesDir%\Pfad","","%ProgramFilesDir%\Pfad\FileName.exe",0,-1,0

@@ -44,6 +44,15 @@ Beschreibung Platz im Systemprompt jeder Session.
 | `agency-ux` | Design und Frontend-Qualität | 6 Agents |
 | `agency-iot` | IoT und Embedded | 3 Agents |
 
+## Werkzeuge im Repo
+
+Neben den Plugins liegen zwei eigenständige Python-Programme hier, jeweils mit eigener README:
+
+| Ordner | Inhalt |
+|---|---|
+| `datenrettung/` | Sucht NTFS-, FAT- und exFAT-Datenträger nach gelöschten Dateien ab |
+| `packaging-center/` | Nachbau des Empirum Packaging Center 24.0: Package Wizard, Package Editor mit Debugger und Paketprüfung, um Setup.inf-Pakete ohne Empirum-Server lokal zu testen |
+
 ## Skills und Agents aufrufen
 
 Skills rufst du als Slash-Befehl auf:
