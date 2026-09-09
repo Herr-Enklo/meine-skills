@@ -238,7 +238,7 @@ class RegistryAssumptionsDialog(simpledialog.Dialog):
 
     def __init__(self, parent, settings: dict):
         self.settings = settings
-        super().__init__(parent, "Registry-Annahmen fuer die Simulation")
+        super().__init__(parent, "Annahmen fuer die Simulation")
 
     def body(self, master):
         ttk.Label(master, text="Eine Registryzeile je Zeile (Setup.inf-Schreibweise). Werden vor dem "
@@ -248,6 +248,12 @@ class RegistryAssumptionsDialog(simpledialog.Dialog):
         self.text.pack(fill="both", expand=True, padx=6, pady=4)
         self.text.insert("1.0", "\n".join(self.settings.get("registry_assumptions", [])))
         ttk.Button(master, text="Beispiel: installierte Vorversion einfuegen", command=self._example).pack(anchor="w", padx=6)
+        ttk.Label(master, text="Dateien und Ordner (mit \\ am Ende), die in der Simulation als vorhanden gelten, "
+                               "z. B. C:\\Program Files\\Opera\\launcher.exe", wraplength=600,
+                  justify="left").pack(anchor="w", padx=6, pady=(10, 4))
+        self.files_text = scrolledtext.ScrolledText(master, width=90, height=6, font=("Consolas", 10))
+        self.files_text.pack(fill="both", expand=True, padx=6, pady=4)
+        self.files_text.insert("1.0", "\n".join(self.settings.get("file_assumptions", [])))
         return self.text
 
     def _example(self):
@@ -258,6 +264,7 @@ class RegistryAssumptionsDialog(simpledialog.Dialog):
 
     def apply(self):
         self.settings["registry_assumptions"] = [ln for ln in self.text.get("1.0", "end").splitlines() if ln.strip()]
+        self.settings["file_assumptions"] = [ln.strip() for ln in self.files_text.get("1.0", "end").splitlines() if ln.strip()]
 
 
 class ExitCodeDialog(simpledialog.Dialog):

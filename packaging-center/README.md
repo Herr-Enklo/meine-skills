@@ -157,9 +157,11 @@ fehlende Dateien, doppelte Sektionen, falsche Registrytypen und nie
 aufgerufene Sektionen.
 
 Die Testumgebung (Extras) ersetzt, was sonst der Server liefert: Werte für
-`VM_`- und `VU_`-Variablen, ComputerName, EmpirumServer, Pfade. Die
-Registry-Annahmen füllen die simulierte Registry vor dem Lauf, zum Beispiel
-mit einer installierten Vorversion, um Reparatur und Update zu prüfen.
+`VM_`- und `VU_`-Variablen, ComputerName, EmpirumServer, Pfade. Die Annahmen
+für die Simulation füllen die simulierte Registry vor dem Lauf, zum Beispiel
+mit einer installierten Vorversion, und lassen Dateien als vorhanden gelten,
+etwa den Deinstaller einer Software (`C:\Program Files\Opera\launcher.exe`);
+auf der Kommandozeile `--datei`.
 
 „Registrierung importieren“ wandelt eine `.reg`-Datei in Registryzeilen für
 eine `[Reg:...]`-Sektion um.

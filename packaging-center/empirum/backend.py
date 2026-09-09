@@ -259,6 +259,19 @@ class SimulationBackend(Backend):
         # Vorgaben fuer Exit-Codes: Muster (fnmatch auf Kommandozeile) -> Code
         self.exit_code_rules: list[tuple[str, int]] = []
 
+    def assume_files(self, paths) -> None:
+        """Dateien, die in der Simulation als vorhanden gelten sollen (z. B. der
+        Deinstaller einer schon installierten Software)."""
+        for path in paths:
+            path = str(path).strip()
+            if not path:
+                continue
+            if path.endswith("\\") or path.endswith("/"):
+                self.dirs_created.add(self._norm(path.rstrip("\\/")))
+            else:
+                self.files_created[self._norm(path)] = "(Annahme)"
+                self.files_deleted.discard(self._norm(path))
+
     def inherit(self, other: "SimulationBackend") -> int:
         """Simulierte Registry, Dateien und Verknuepfungen eines frueheren Laufs
         uebernehmen, damit Installation und Deinstallation hintereinander gehen.

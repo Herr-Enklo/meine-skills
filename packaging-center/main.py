@@ -73,6 +73,7 @@ def cmd_run(args) -> int:
         backend = SimulationBackend()
         backend.default_exit_code = args.exit_code
         backend.execute_programs = args.programme
+        backend.assume_files(args.datei or [])
     verbose = args.verbose
 
     def on_log(entry):
@@ -159,6 +160,7 @@ def _roundtrip(inf_path: str, args) -> int:
         be.execute_programs = args.programme
         if previous is not None:
             be.inherit(previous)
+        be.assume_files(args.datei or [])
         return be
 
     def on_phase(label, mode):
@@ -207,6 +209,7 @@ def _add_roundtrip_args(p) -> None:
     p.add_argument("--bericht", help="Pfad des Testberichts (Standard: Versionsordner des Pakets)")
     p.add_argument("--bits", type=int, default=64, choices=(32, 64))
     p.add_argument("--var", action="append", help="Variable setzen, z. B. --var VM_Umgebung=Test")
+    p.add_argument("--datei", action="append", help="Simulation: Datei gilt als vorhanden (mehrfach moeglich)")
     p.add_argument("--exit-code", type=int, default=0, help="angenommener Rueckgabewert in der Simulation")
     p.add_argument("--string-compare", action="store_true")
     p.add_argument("-v", "--verbose", action="store_true")
@@ -235,6 +238,7 @@ def main(argv: list[str] | None = None) -> int:
                    help="Mischmodus: Programmaufrufe wirklich starten, Rest simulieren")
     p.add_argument("--bits", type=int, default=64, choices=(32, 64))
     p.add_argument("--var", action="append", help="Variable setzen, z. B. --var VM_Umgebung=Test")
+    p.add_argument("--datei", action="append", help="Simulation: Datei gilt als vorhanden (mehrfach moeglich)")
     p.add_argument("--exit-code", type=int, default=0, help="angenommener Rueckgabewert fuer Programmaufrufe")
     p.add_argument("--string-compare", action="store_true", help="Vergleiche als Zeichenketten statt numerisch")
     p.add_argument("--no-once", action="store_true", help="Sektionen duerfen mehrfach per # laufen")

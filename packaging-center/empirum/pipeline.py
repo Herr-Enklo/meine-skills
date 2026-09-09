@@ -247,6 +247,15 @@ def _checks(runner: Runner, backend: Backend, mode: str, display: str) -> list[t
     return checks
 
 
+def _sha256(path: str) -> str:
+    import hashlib
+    h = hashlib.sha256()
+    with open(path, "rb") as fh:
+        for chunk in iter(lambda: fh.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
 def write_report(rt: RoundtripResult, path: str | None = None) -> str:
     """Testbericht als Markdown neben das Paket schreiben (Versionsordner)."""
     if path is None:
@@ -287,6 +296,14 @@ def write_report(rt: RoundtripResult, path: str | None = None) -> str:
                 lines.append(f"- Zeile {e.line} [{e.section}] {e.level}: {e.text}")
             if len(problems) > 40:
                 lines.append(f"- ... und {len(problems) - 40} weitere")
+    files_dir = os.path.join(os.path.dirname(os.path.dirname(rt.setup_inf)), "Files")
+    if os.path.isdir(files_dir):
+        lines += ["", "## Dateien in Files\\", "", "| Datei | Groesse | SHA-256 |", "|---|---|---|"]
+        for dirpath, _, names in os.walk(files_dir):
+            for name in sorted(names):
+                full = os.path.join(dirpath, name)
+                rel = os.path.relpath(full, files_dir)
+                lines.append(f"| {rel} | {os.path.getsize(full):,} | {_sha256(full)} |".replace(",", "."))
     errors = [f for f in rt.findings if f.level == "Fehler"]
     warnings = [f for f in rt.findings if f.level == "Warnung"]
     lines += ["", "## Paketpruefung", "",

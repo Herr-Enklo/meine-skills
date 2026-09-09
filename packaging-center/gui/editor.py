@@ -147,7 +147,7 @@ class EditorWindow(tk.Toplevel):
         m = tk.Menu(menubar, tearoff=0)
         m.add_command(label="Paketpruefung", command=self.check, accelerator="F7")
         m.add_command(label="Testumgebung (Variablen)...", command=self.edit_environment)
-        m.add_command(label="Registry-Annahmen fuer die Simulation...", command=self.edit_registry_assumptions)
+        m.add_command(label="Annahmen fuer die Simulation (Registry, Dateien)...", command=self.edit_registry_assumptions)
         m.add_command(label="Simulierte Registry zuruecksetzen", command=self.reset_simulation)
         m.add_separator()
         m.add_command(label="Paketordner oeffnen", command=self.open_folder)
@@ -1145,6 +1145,7 @@ class EditorWindow(tk.Toplevel):
         self._step_hook(st, runner)
 
     def _apply_registry_assumptions(self, backend: SimulationBackend):
+        backend.assume_files(self.settings.get("file_assumptions", []))
         for raw in self.settings.get("registry_assumptions", []):
             inf = parse_inf("[Reg:X]\n" + raw + "\n")
             st = parse_statement(inf.sections[0].lines[0], inf.sections[0])

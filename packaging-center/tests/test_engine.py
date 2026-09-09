@@ -491,6 +491,13 @@ class RunnerTests(unittest.TestCase):
             first = [a for a in res.actions if a.kind == "Ordner"]
             self.assertTrue(first and first[0].target.endswith("\\Acme\\Demo\\1.2.3"), first)
 
+    def test_file_assumptions(self):
+        be = SimulationBackend(read_real_registry=False)
+        be.assume_files(["C:\\Program Files\\Opera\\launcher.exe", "C:\\Program Files\\Opera\\"])
+        self.assertTrue(be.file_exists("c:\\program files\\opera\\LAUNCHER.EXE"))
+        self.assertTrue(be.dir_exists("C:\\Program Files\\Opera"))
+        self.assertFalse(be.file_exists("C:\\Program Files\\Opera\\opera.exe"))
+
     def test_abort_trigger_message(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = _write_package(tmp)
