@@ -308,9 +308,9 @@ class SimulationBackend(Backend):
         for m in self._PATH_RE.finditer(cmdline):
             path = (m.group(1) or m.group(2)).rstrip("\\")
             candidates = [path]
-            head, sep, tail = path.replace("/", "\\").rpartition("\\")
-            if sep and "." in tail:
-                candidates.append(head)
+            idx = max(path.rfind("\\"), path.rfind("/"))
+            if idx > 0 and "." in path[idx + 1:]:
+                candidates.append(path[:idx])
             for cand in candidates:
                 key = self._norm(cand)
                 simulated = key in self.dirs_created or any(
