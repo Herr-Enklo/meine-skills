@@ -1,7 +1,7 @@
 {
   "name": "paketierung",
-  "description": "Skills für die Arbeit am Paketierungsprojekt",
-  "version": "1.0.0",
+  "description": "Skills für das Paketierungsprojekt: /paketieren (Software aus einem Guss paketieren) und /code-review",
+  "version": "1.1.0",
   "author": {
     "name": "Paul"
   }

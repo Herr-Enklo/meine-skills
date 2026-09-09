@@ -659,6 +659,10 @@ class Runner:
 
     def _run_program(self, st: Statement, cmdline: str, hidden: bool, wait: bool = True) -> None:
         cmd = self.expand(cmdline).strip()
+        # Vorlagenmuster: Call "%V_UninstallString%" mit einem bereits in Anfuehrungszeichen stehenden
+        # Registry-Wert ergibt ""Pfad"" - wie Setup.exe auf ein Paar Anfuehrungszeichen zurueckfuehren.
+        if cmd.startswith('""'):
+            cmd = '"' + cmd[2:].replace('""', '"', 1)
         timeout = self.options.call_timeout
         if timeout is None:
             try:

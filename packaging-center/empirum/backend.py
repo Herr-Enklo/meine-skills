@@ -623,7 +623,10 @@ class WindowsBackend(Backend):
             return False
 
     # -- Registry ----------------------------------------------------------
-    def _open(self, root: str, key: str, write: bool = False):
+    def _open(self, root: str, key: str, write: bool = False, create: bool = True):
+        """Schluessel oeffnen. ``write`` mit ``create`` legt ihn bei Bedarf an (Schreiben);
+        ``write`` ohne ``create`` oeffnet nur (Loeschen von Werten), damit ein bereits
+        entfernter Schluessel nicht leer neu entsteht."""
         if winreg is None:
             raise OSError("Registry nur unter Windows verfuegbar")
         roots = {
@@ -635,7 +638,8 @@ class WindowsBackend(Backend):
         access = winreg.KEY_READ | winreg.KEY_WOW64_64KEY
         if write:
             access |= winreg.KEY_WRITE
-            return winreg.CreateKeyEx(hroot, key.strip("\\"), 0, access)
+            if create:
+                return winreg.CreateKeyEx(hroot, key.strip("\\"), 0, access)
         return winreg.OpenKey(hroot, key.strip("\\"), 0, access)
 
     def reg_read(self, root: str, key: str, value: str = "") -> str:
@@ -715,7 +719,9 @@ class WindowsBackend(Backend):
         if winreg is None:
             return
         try:
-            with self._open(root, key, write=True) as h:
+            # nur oeffnen, nicht anlegen: ein vom Uninstaller schon entfernter Schluessel
+            # darf durch das Zuruecknehmen eines Werts nicht leer neu entstehen
+            with self._open(root, key, write=True, create=False) as h:
                 winreg.DeleteValue(h, value)
             self.record("Registry", "Wert loeschen", f"{normalize_root(root)}\\{key}\\{value}")
         except OSError as exc:
