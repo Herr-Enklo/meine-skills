@@ -999,7 +999,8 @@ class EditorWindow(tk.Toplevel):
             if messagebox.askyesno("Testlauf", "Die Datei ist geaendert. Vor dem Testlauf speichern?", parent=self):
                 self.save()
         self._sync_from_text()
-        dlg = DebugStartDialog(self, self.path, self.settings, single_step)
+        switches = self.inf.value("SetupInfo", "Command line options") or ""
+        dlg = DebugStartDialog(self, self.path, self.settings, single_step, default_switches=switches)
         if dlg.result_options is None:
             return
         save_settings(self.settings)

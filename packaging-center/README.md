@@ -131,8 +131,10 @@ Haltepunkten (F9 oder Klick auf die Zeilennummer) und Vervollständigung
 ihrer Kodierung und CRLF.
 
 DEBUG (F5) und EINZELSCHRITT (F12) fragen wie das Original zuerst nach dem
-Setup-Befehl. `/U` schaltet auf Deinstallation, `/R` auf Neuinstallation,
-`/AW` auf den Benutzerteil, `/S0` bis `/S4` setzt die Anzeigestufe. Im selben
+Setup-Befehl, vorbelegt mit den „Command line options“ aus `[SetupInfo]`.
+`/U` schaltet auf Deinstallation, `/R` auf Neuinstallation, `/AW` auf den
+Benutzerteil, `/S0` bis `/S4` setzt die Anzeigestufe von Setup.exe; der
+Nachbau zeigt kein Setup-Fenster, der Wert ändert am Ablauf nichts. Im selben
 Dialog wählt man echten Testlauf oder Simulation, 32 oder 64 Bit und den
 Vergleichsmodus. Während des Laufs zeigt der Editor die aktuelle Zeile,
 Protokoll, Variablen, Aufrufstapel und danach die Liste aller Aktionen; ein

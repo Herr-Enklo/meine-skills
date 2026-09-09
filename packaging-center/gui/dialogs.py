@@ -38,10 +38,12 @@ class DebugStartDialog(simpledialog.Dialog):
     /U schaltet auf Deinstallation, /AW auf den Benutzerteil, /S0..4 setzt
     die Anzeigestufe."""
 
-    def __init__(self, parent, inf_path: str, settings: dict, single_step: bool):
+    def __init__(self, parent, inf_path: str, settings: dict, single_step: bool,
+                 default_switches: str = ""):
         self.inf_path = inf_path
         self.settings = settings
         self.single_step = single_step
+        self.default_switches = default_switches.strip()
         self.result_options: RunOptions | None = None
         self.simulate = True
         self.ask_exit_codes = False
@@ -51,7 +53,9 @@ class DebugStartDialog(simpledialog.Dialog):
     def body(self, master):
         pad = {"padx": 6, "pady": 3}
         ttk.Label(master, text="Setup-Befehl (wie Setup.exe ihn erhaelt):").grid(row=0, column=0, sticky="w", **pad)
-        last = self.settings.get("last_command_switches", "/S1")
+        # Vorbelegung: die "Command line options" aus [SetupInfo] des Pakets, so wie der
+        # Agent das Paket aufruft; sonst die Schalter des letzten Laufs.
+        last = self.default_switches or self.settings.get("last_command_switches", "/S0")
         self.cmd_var = tk.StringVar(value=f'Setup.exe "{self.inf_path}" {last}')
         entry = ttk.Entry(master, textvariable=self.cmd_var, width=90)
         entry.grid(row=1, column=0, columnspan=3, sticky="ew", **pad)
@@ -62,7 +66,9 @@ class DebugStartDialog(simpledialog.Dialog):
         for label, switch in (("Installation", ""), ("/U Deinstallation", "/U"), ("/R Neuinstallation", "/R"),
                               ("/AW Benutzerteil", "/AW")):
             ttk.Button(sw, text=label, command=lambda s=switch: self._toggle(s)).pack(side="left", padx=2)
-        self.level_var = tk.StringVar(value="1")
+        import re as _re
+        m = _re.search(r"/S([0-4])\b", last.upper())
+        self.level_var = tk.StringVar(value=m.group(1) if m else "0")
         ttk.Label(sw, text="  Anzeige /S").pack(side="left")
         ttk.Combobox(sw, textvariable=self.level_var, values=("0", "1", "2", "3", "4"), width=3,
                      state="readonly").pack(side="left")
