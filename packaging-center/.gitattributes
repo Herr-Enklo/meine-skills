@@ -1,0 +1,4 @@
+# Setup.inf-Vorlagen behalten ihre Bytes (Windows-1252, CRLF). Git darf sie nicht normalisieren.
+*.inf -text
+*.py text eol=lf
+*.md text eol=lf
