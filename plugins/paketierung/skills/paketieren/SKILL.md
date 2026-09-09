@@ -9,11 +9,10 @@ Ziel: Aus einem Softwarenamen ein getestetes Empirum-Paket samt Dokumentation im
 
 ## Orte und Werkzeuge
 
-- Lokale Paketablage: `C:\Users\Pauld\OneDrive\Desktop\Matrix42\<DeveloperName>\<ProductName>\<Version>\` mit `Install\setup.inf`, `Files\<Installer>`, `changes.diff`, `paket.md`. Installer bleiben hier, nie im Repo.
-- Repo: `C:\Users\Pauld\Documents\Projects\matrix42-paketierung` (GitHub Herr-Enklo/matrix42-paketierung). Ablage `software/<produkt-slug>/releases/<version>/` mit `setup.inf`, `changes.diff`, `paket.md`; Regeln in `AGENTS.md`, Templates in `templates/`.
+- Repo und Paketablage in einem: `C:\Users\Pauld\Documents\Projects\matrix42-paketierung` (GitHub Herr-Enklo/matrix42-paketierung). Jedes Paket unter `<DeveloperName>\<ProductName>\<Version>\` mit `Install\setup.inf`, `Files\<Installer>` (per .gitignore ausgeschlossen, nur `Files\README.md` ist versioniert), `changes.diff`, `paket.md`, Testberichte. Ordnernamen sind die Werte aus `[Application]`. Regeln in `AGENTS.md`, Templates in `templates/`. Der frühere Ordner `OneDrive\Desktop\Matrix42` ist nur noch Altbestand.
 - Packaging Center (Nachbau des Empirum Package Editors): `C:\temp\packagingcenter\packaging-center`, Aufruf `python main.py check|run|roundtrip ...`.
 - Werkzeuge im Repo: `tools/simulation-szenarien.py` (Simulation mit Produktprofil), `tools/echter-test.ps1` (erhöhter echter Lauf mit Rückstandsprüfung), Profile unter `tools/profile/`.
-- Beispiele für Stil und Tiefe: vorhandene Pakete im Repo und in der lokalen Ablage (Chrome, Firefox, Notepad++, Opera).
+- Beispiele für Stil und Tiefe: vorhandene Pakete im Repo (Chrome, Firefox, Notepad++, Opera, 7-Zip).
 
 ## Ablauf
 
@@ -66,8 +65,8 @@ Die Phasen der Reihe nach. Nach jeder Phase kurz melden, was herauskam. Nichts e
 
 ### 8. Übernahme ins Repo
 
-- Im Repo Branch `claude/<produkt-slug>-<version>` von `main`. Zielordner `software/<produkt-slug>/releases/<version>/` mit `setup.inf` (aus `Install\`), `changes.diff`, `paket.md`; dazu produktspezifische Testskripte und der bestandene Testbericht als Markdown. Keine Installer, keine Logs.
-- `.gitattributes` schützt `*.inf` vor Normalisierung; vor dem Commit prüfen, dass setup.inf byteidentisch zur lokalen Datei ist.
+- Vor Branch-Arbeit den Klon mit `git fetch origin && git reset --hard origin/main` auf den aktuellen Stand bringen. Branch `claude/<produkt-slug>-<version>` von `main`. Der Paketordner `<DeveloperName>\<ProductName>\<Version>\` liegt bereits im Repo; committet werden `Install\setup.inf`, `Files\README.md` (erwartete Installerdateien), `changes.diff`, `paket.md` und der bestandene Testbericht als Markdown. Keine Installer, keine Logs.
+- `.gitattributes` schützt `*.inf` vor Normalisierung; vor dem Commit `grep -c $'\xc3' setup.inf` muss 0 liefern (keine UTF-8-Bytes).
 - Commit mit kurzer Beschreibung, Push, Pull Request mit `gh pr create` (Titel `<Produkt> <Version>`, Text: Herkunft, Prüfsumme, Anpassungen, Testergebnis, offene Punkte). Wenn `gh` nicht angemeldet ist, Branch pushen und den Compare-Link nennen.
 - Nicht selbst mergen. Die Freigabe ist die Entscheidung des Nutzers; danach paket.md-Status auf "Freigegeben" setzen.
 
