@@ -127,6 +127,13 @@ Matroska/WebM) sowie PSD und SQLite-Datenbanken. Container wie ftyp (MP4/MOV/HEI
 und RIFF (WAV/AVI/WebP) bekommen die passende Endung anhand ihrer Marke. Die
 Signaturen stehen in `recovery/signatures.py` und lassen sich dort erweitern.
 
+Das Dateiende wird je nach Typ unterschiedlich bestimmt. Bei JPEG folgt das
+Werkzeug der Marker-Struktur und überspringt so das in EXIF eingebettete
+Vorschaubild, das ein eigenes Endmuster trägt; sonst käme von jedem Kamerafoto
+nur die Vorschau heraus. PDFs mit inkrementellen Updates enden am letzten
+`%%EOF`, RTF-Dokumente an der äußersten Klammergruppe. Typen ohne Endmuster
+(TIFF/RAW, Archive, Videos) enden spätestens am nächsten Header desselben Typs.
+
 Fehlt einer Datei das Endmuster (etwa weil sie teilweise überschrieben wurde),
 wird sie als unvollständig bestmöglich gerettet, statt sie zu verwerfen. Solche
 Funde tragen `_unvollstaendig` im Namen.
@@ -158,19 +165,28 @@ aus.
 FAT12/16/32 und exFAT werden über einen eigenen Undelete-Weg gelesen (Namen,
 Pfade, Zeitstempel). Die Cluster-Kette gelöschter Dateien ist meist freigegeben,
 deshalb wird zusammenhängende Speicherung angenommen; fragmentierte Dateien
-kommen dann unvollständig heraus. Die verkürzten Langnamen (LFN) gelöschter
-FAT-Einträge lassen sich nur näherungsweise rekonstruieren.
+kommen dann unvollständig heraus. Die Langnamen (LFN) gelöschter FAT-Einträge
+bleiben in der Regel erhalten und werden übernommen; nur ihre Reihenfolge ist
+nach dem Löschen nicht mehr abgesichert.
 
 Ist die Partitionstabelle verloren oder überschrieben, rekonstruiert `--reconstruct`
 die Volumes über eine Boot-Sektor-Suche (der Ansatz von TestDisk, in Python
 nachgebaut). Das Werkzeug durchsucht den Datenträger nach NTFS-, FAT- und
 exFAT-Boot-Sektoren, zieht bei NTFS bei Bedarf die Kopie am Volume-Ende heran und
-errechnet aus dem BPB Anfang und Größe der Partition. Die so gefundenen Volumes
-werden anschließend über ihr Dateisystem ausgelesen.
+errechnet aus dem BPB Anfang und Größe der Partition. Die Boot-Sektor-Kopien von
+FAT32 (Sektor 6) und exFAT (Sektor 12) werden dabei erkannt und nicht als eigene
+Volumes gemeldet. Die so gefundenen Volumes werden anschließend über ihr
+Dateisystem ausgelesen – NTFS, FAT/exFAT und das USN-Journal gleichermaßen.
 
 Standardmäßig wird von 512-Byte-Sektoren ausgegangen. Datenträger mit reinen
 4K-Sektoren (4Kn) lassen sich über `--sector 4096` beziehungsweise die Option
-„4K-Sektoren" verarbeiten.
+„4K-Sektoren" verarbeiten; die Sektorgröße fließt in die Umrechnung der
+MBR-/GPT-Einträge und in die Fixups der MFT-Einträge ein.
+
+Große Funde (Videos, Archive) werden blockweise geschrieben und liegen nie
+komplett im Speicher. Jede Datei entsteht erst unter der Endung `.part` und wird
+zum Schluss umbenannt – ein Abbruch mitten in einer Datei hinterlässt also keine
+unvollständige Datei, die bei der Fortsetzung fälschlich als fertig gilt.
 
 Ein Scan über eine große Platte liest sie einmal vollständig und dauert
 entsprechend. Für einen ersten Test empfiehlt sich ein kleines Image.

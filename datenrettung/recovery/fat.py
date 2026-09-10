@@ -14,12 +14,9 @@ bleiben erhalten, Zeitstempel werden aus dem Eintrag uebernommen.
 from __future__ import annotations
 
 import struct
-from typing import Callable, Iterator, Optional
+from typing import Iterator, Optional
 
-from .models import Finding
-
-ProgressCb = Callable[[str, float, int], None]
-CancelCb = Callable[[], bool]
+from .models import CancelCb, Finding, ProgressCb, safe_name
 
 ATTR_LFN = 0x0F
 ATTR_DIRECTORY = 0x10
@@ -166,7 +163,9 @@ def scan_fat(source, base_offset: int = 0, deleted_only: bool = True,
 
     findings: list[Finding] = []
     counter = [0]
-    _walk(source, boot, None, "", 0, findings, counter, deleted_only, set(),
+    # FAT12/16: Wurzelverzeichnis in festem Bereich; FAT32: in einer Cluster-Kette.
+    root = boot.root_cluster if boot.fat_type == "fat32" else None
+    _walk(source, boot, root, "", 0, findings, counter, deleted_only, set(),
           should_cancel)
     for f in findings:
         yield f
@@ -187,12 +186,12 @@ def _walk(source, boot: FatBoot, start_cluster: Optional[int], path: str,
             continue
         attr = entry[0x0B]
         if attr == ATTR_LFN:
-            # Bei geloeschten Eintraegen ist die Reihenfolge unsicher; wir haengen
-            # die Teile in physischer Reihenfolge an (beste Naeherung).
-            if first == DELETED:
-                lfn = _lfn_chars(entry) + lfn
-            else:
-                lfn = _lfn_chars(entry) + lfn
+            # LFN-Teile liegen physisch in umgekehrter Reihenfolge (letzter
+            # Teil zuerst) vor dem 8.3-Eintrag; jeder neue Teil kommt also
+            # vorne dran. Bei geloeschten Eintraegen ist die Sequenznummer
+            # ueberschrieben – die physische Reihenfolge bleibt die beste
+            # Naeherung und liefert den vollen Namen zurueck.
+            lfn = _lfn_chars(entry) + lfn
             continue
         if attr & ATTR_VOLUME_ID and not (attr & ATTR_DIRECTORY):
             lfn = ""
@@ -200,9 +199,9 @@ def _walk(source, boot: FatBoot, start_cluster: Optional[int], path: str,
 
         deleted = (first == DELETED)
         short = _short_name(entry, deleted)
-        name = (lfn.strip() or short) if not deleted else short
+        name = lfn.strip() or short
         lfn = ""
-        if short.startswith(".") or entry[0:1] in (b".", b"\x2e"):
+        if short.startswith("."):           # "." und ".." ueberspringen
             continue
 
         first_cluster = (struct.unpack_from("<H", entry, 0x14)[0] << 16) \
@@ -229,24 +228,12 @@ def _walk(source, boot: FatBoot, start_cluster: Optional[int], path: str,
             kind="fat",
             type_name="FAT-Datei" + ("" if not deleted else " (geloescht)"),
             ext=ext,
-            name=f"{counter[0]:06d}_{_safe(full)}",
+            name=f"{counter[0]:06d}_{safe_name(full)}",
             offset=boot.cluster_offset(first_cluster),
             size=size,
             extra={"path": full, "modified": _fat_datetime(entry),
                    "fs": boot.fat_type},
         ))
-
-
-def _safe(name: str) -> str:
-    keep = []
-    for ch in name:
-        if ch in '<>:"\\|?*' or ord(ch) < 32:
-            keep.append("_")
-        elif ch == "/":
-            keep.append("_")
-        else:
-            keep.append(ch)
-    return "".join(keep).strip(" .") or "unbenannt"
 
 
 def is_fat(source, base_offset: int = 0) -> bool:

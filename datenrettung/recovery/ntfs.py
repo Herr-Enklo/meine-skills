@@ -22,15 +22,13 @@ from __future__ import annotations
 import datetime
 import struct
 from dataclasses import dataclass
-from typing import Callable, Iterator, Optional
+from typing import Iterator, Optional
 
-from .models import Finding
-
-ProgressCb = Callable[[str, float, int], None]
-CancelCb = Callable[[], bool]
+from .models import CancelCb, Finding, ProgressCb, safe_name
 
 # Attributtypen
 ATTR_STANDARD_INFORMATION = 0x10
+ATTR_ATTRIBUTE_LIST = 0x20
 ATTR_FILE_NAME = 0x30
 ATTR_DATA = 0x80
 ATTR_END = 0xFFFFFFFF
@@ -149,6 +147,25 @@ def parse_data_runs(buf: bytes) -> list[tuple[Optional[int], int]]:
             continue
         i += off_size
     return runs
+
+
+def read_runs(source, runs, cluster_size: int, base_offset: int,
+              real_size: int) -> bytes:
+    """Liest einen kleinen, ueber Data-Runs verteilten Inhalt in den Speicher.
+
+    Fuer grosse Inhalte nutzt der Scanner eine blockweise Variante; hier geht es
+    um Attribute wie ``$ATTRIBUTE_LIST``, die selten mehr als ein paar KiB haben.
+    """
+    out = bytearray()
+    for lcn, count in runs:
+        if len(out) >= real_size:
+            break
+        span = min(count * cluster_size, real_size - len(out))
+        if lcn is None:
+            out += b"\x00" * span
+        else:
+            out += source.read(base_offset + lcn * cluster_size, span)
+    return bytes(out[:real_size])
 
 
 class MftReader:
@@ -421,7 +438,7 @@ def _apply_path(finding: Finding, name_map: dict) -> None:
     full = f"{folder}/{raw}" if folder else raw
     finding.extra["path"] = full
     number = finding.name.split("_", 1)[0]
-    finding.name = f"{number}_{_safe_name(full)}"
+    finding.name = f"{number}_{safe_name(full)}"
 
 
 def _finding_from_record(record: bytes, cluster_size: int, base_offset: int,
@@ -480,7 +497,7 @@ def _finding_from_record(record: bytes, cluster_size: int, base_offset: int,
         kind="ntfs",
         type_name="NTFS-Datei" + ("" if in_use else " (geloescht)"),
         ext=ext,
-        name=f"{number:06d}_{_safe_name(name)}",
+        name=f"{number:06d}_{safe_name(name)}",
         offset=record_offset if record_offset is not None else base_offset,
         size=real_size,
         extra=extra,
@@ -491,7 +508,8 @@ def scan_orphan_mft(source, cluster_size: int = 4096, base_offset: int = 0,
                     progress_cb: Optional[ProgressCb] = None,
                     should_cancel: Optional[CancelCb] = None,
                     deleted_only: bool = True,
-                    record_size: int = 1024) -> Iterator[Finding]:
+                    record_size: int = 1024,
+                    bytes_per_sector: int = 512) -> Iterator[Finding]:
     """Sucht MFT-Eintraege ueber den gesamten Datentraeger.
 
     Anders als ``scan_ntfs`` verlaesst sich dieser Durchlauf nicht auf einen
@@ -502,7 +520,9 @@ def scan_orphan_mft(source, cluster_size: int = 4096, base_offset: int = 0,
 
     ``cluster_size`` und ``base_offset`` werden fuer nicht-residente Inhalte
     gebraucht; sind sie unbekannt, liefern residente (kleine) Dateien trotzdem
-    zuverlaessige Ergebnisse.
+    zuverlaessige Ergebnisse. ``record_size`` und ``bytes_per_sector`` stammen
+    idealerweise aus einem gefundenen Boot-Sektor (4Kn-Laufwerke haben
+    4-KiB-Eintraege mit einem einzigen Fixup pro Eintrag).
     """
     total = source.size or 0
     produced = 0
@@ -525,7 +545,8 @@ def scan_orphan_mft(source, cluster_size: int = 4096, base_offset: int = 0,
                     seen.add(abs_off)
                     finding = _try_orphan_record(source, abs_off, record_size,
                                                  cluster_size, base_offset,
-                                                 number, deleted_only)
+                                                 number, deleted_only,
+                                                 bytes_per_sector)
                     if finding is not None:
                         number += 1
                         produced += 1
@@ -535,7 +556,8 @@ def scan_orphan_mft(source, cluster_size: int = 4096, base_offset: int = 0,
 
 def _try_orphan_record(source, abs_off: int, record_size: int,
                        cluster_size: int, base_offset: int, number: int,
-                       deleted_only: bool) -> Optional[Finding]:
+                       deleted_only: bool,
+                       bytes_per_sector: int = 512) -> Optional[Finding]:
     raw = bytearray(source.read(abs_off, record_size))
     if len(raw) < record_size or raw[0:4] != b"FILE":
         return None
@@ -543,25 +565,12 @@ def _try_orphan_record(source, abs_off: int, record_size: int,
     usa_offset = struct.unpack_from("<H", raw, 0x04)[0]
     if usa_offset == 0 or usa_offset > record_size - 4:
         return None
-    bytes_per_sector = 512
     _apply_fixup(raw, bytes_per_sector)
     try:
         return _finding_from_record(raw, cluster_size, base_offset, abs_off,
                                     number, deleted_only)
     except Exception:
         return None
-
-
-def _safe_name(name: str) -> str:
-    """Entschaerft einen Dateinamen fuer die Ablage im Ausgabeordner."""
-    keep = []
-    for ch in name:
-        if ch in '<>:"/\\|?*' or ord(ch) < 32:
-            keep.append("_")
-        else:
-            keep.append(ch)
-    cleaned = "".join(keep).strip(" .")
-    return cleaned or "unbenannt"
 
 
 # -- Volume-Erkennung (MBR/GPT) -----------------------------------------
@@ -576,42 +585,28 @@ def find_ntfs_volumes(source) -> list[int]:
     Jeder Kandidat wird durch Pruefen des Boot-Sektors bestaetigt.
     """
     offsets: list[int] = []
-    seen: set[int] = set()
-
-    def consider(offset: int) -> None:
-        if offset in seen or offset < 0:
-            return
-        seen.add(offset)
+    for offset in partition_offsets(source):
         try:
             if source.read(offset, 512)[3:11] == b"NTFS    ":
                 offsets.append(offset)
         except Exception:
             pass
-
-    sector0 = source.read(0, 512)
-    consider(0)
-
-    if len(sector0) >= 512 and sector0[510:512] == b"\x55\xAA":
-        entries = _parse_mbr(sector0)
-        gpt = False
-        for start_lba, ptype in entries:
-            if ptype == 0xEE:
-                gpt = True
-                continue
-            if start_lba > 0:
-                consider(start_lba * 512)
-        if gpt:
-            for off in _parse_gpt(source):
-                consider(off)
-
     return offsets
+
+
+def _sector_size(source) -> int:
+    """Logische Sektorgroesse der Quelle (LBA-Einheit fuer MBR/GPT)."""
+    return getattr(source, "sector_size", 512) or 512
 
 
 def partition_offsets(source) -> list[int]:
     """Byte-Offsets aller Partitionsanfaenge (MBR/GPT) inklusive Offset 0.
 
     Typunabhaengig – dient der FAT/exFAT-Erkennung, die nicht nur NTFS sucht.
+    LBA-Angaben werden mit der Sektorgroesse der Quelle umgerechnet, damit auch
+    4Kn-Laufwerke (4096 Bytes je Sektor) richtig liegen.
     """
+    ss = _sector_size(source)
     offsets = [0]
     seen = {0}
 
@@ -627,7 +622,7 @@ def partition_offsets(source) -> list[int]:
             if ptype == 0xEE:
                 gpt = True
                 continue
-            add(start_lba * 512)
+            add(start_lba * ss)
         if gpt:
             for off in _parse_gpt(source):
                 add(off)
@@ -647,9 +642,14 @@ def _parse_mbr(sector0: bytes) -> list[tuple[int, int]]:
 
 
 def _parse_gpt(source) -> list[int]:
-    """Liefert Byte-Offsets der GPT-Partitionsanfaenge (Sektorgroesse 512)."""
+    """Liefert Byte-Offsets der GPT-Partitionsanfaenge.
+
+    Der GPT-Header liegt in LBA 1, also bei ``sector_size`` – auf 4Kn-Laufwerken
+    bei 4096, nicht bei 512.
+    """
+    ss = _sector_size(source)
     offsets: list[int] = []
-    header = source.read(512, 512)  # GPT-Header liegt in LBA 1
+    header = source.read(ss, 512)
     if header[0:8] != b"EFI PART":
         return offsets
     part_lba = struct.unpack_from("<Q", header, 72)[0]
@@ -657,7 +657,7 @@ def _parse_gpt(source) -> list[int]:
     entry_size = struct.unpack_from("<I", header, 84)[0]
     if entry_size == 0 or num_parts == 0 or num_parts > 4096:
         return offsets
-    table = source.read(part_lba * 512, num_parts * entry_size)
+    table = source.read(part_lba * ss, num_parts * entry_size)
     zero_guid = b"\x00" * 16
     for i in range(num_parts):
         base = i * entry_size
@@ -668,7 +668,7 @@ def _parse_gpt(source) -> list[int]:
             continue
         first_lba = struct.unpack_from("<Q", table, base + 32)[0]
         if first_lba > 0:
-            offsets.append(first_lba * 512)
+            offsets.append(first_lba * ss)
     return offsets
 
 
@@ -719,8 +719,13 @@ def _reconstruct_ntfs(source, found_offset: int, boot: BootSector) -> Optional[V
     return None
 
 
-def _fat_size(sector: bytes) -> Optional[int]:
-    """Groesse eines FAT-Volumes aus dem Boot-Sektor, oder None wenn kein FAT."""
+def _fat_volume(source, abs_off: int, sector: bytes) -> Optional[VolumeInfo]:
+    """FAT-Volume aus einem Boot-Sektor, oder None wenn kein (echtes) FAT.
+
+    FAT32 haelt in Sektor 6 eine Kopie des Boot-Sektors. Damit die Kopie nicht
+    als eigenes Volume gemeldet wird, muss an der im BPB genannten Stelle die
+    FAT beginnen: ihr erster Eintrag traegt den Medien-Deskriptor (``F8 FF``).
+    """
     if len(sector) < 512 or sector[510:512] != b"\x55\xAA":
         return None
     bps = struct.unpack_from("<H", sector, 0x0B)[0]
@@ -733,7 +738,36 @@ def _fat_size(sector: bytes) -> Optional[int]:
     total16 = struct.unpack_from("<H", sector, 0x13)[0]
     total32 = struct.unpack_from("<I", sector, 0x20)[0]
     total = total16 or total32
-    return total * bps if total else None
+    if not total:
+        return None
+    reserved = struct.unpack_from("<H", sector, 0x0E)[0]
+    media = sector[0x15]
+    try:
+        fat0 = source.read(abs_off + reserved * bps, 2)
+    except Exception:
+        return None
+    if len(fat0) < 2 or fat0[0] != media or fat0[1] != 0xFF:
+        return None
+    return VolumeInfo(abs_off, total * bps, None, "fat", "fat-boot")
+
+
+def _exfat_volume(source, abs_off: int, sector: bytes) -> Optional[VolumeInfo]:
+    """exFAT-Volume aus einem Boot-Sektor; die Backup-Region (Sektor 12) wird
+    ueber den Anfang der FAT (``F8 FF FF FF``) ausgeschlossen."""
+    bps_shift = sector[0x6C]
+    if not (9 <= bps_shift <= 12):
+        return None
+    bps = 1 << bps_shift
+    vol_len = struct.unpack_from("<Q", sector, 0x48)[0]
+    fat_sector = struct.unpack_from("<I", sector, 0x50)[0]
+    try:
+        fat0 = source.read(abs_off + fat_sector * bps, 4)
+    except Exception:
+        return None
+    if fat0 != b"\xf8\xff\xff\xff":
+        return None
+    return VolumeInfo(abs_off, vol_len * bps if vol_len else None, None,
+                      "exfat", "exfat-boot")
 
 
 def _ntfs_boot(sector: bytes) -> Optional[BootSector]:
@@ -750,8 +784,8 @@ def reconstruct_volumes(source, thorough: bool = True,
 
     Auch ohne intakte Partitionstabelle findet dieser Durchlauf NTFS-Volumes,
     indem er den Datentraeger nach Boot-Sektoren (Original und Kopie) absucht und
-    aus deren BPB den Volume-Anfang und die Groesse errechnet. FAT-Volumes werden
-    erkannt und gemeldet (mangels FAT-Parser aber nicht ausgelesen).
+    aus deren BPB den Volume-Anfang und die Groesse errechnet. FAT-/exFAT-Volumes
+    werden ebenfalls erkannt und an den FAT-Parser weitergereicht.
 
     ``thorough=True`` durchsucht die gesamte Quelle Sektor fuer Sektor.
     ``thorough=False`` prueft nur die ueblichen Startsektoren und ist damit
@@ -769,17 +803,13 @@ def reconstruct_volumes(source, thorough: bool = True,
             if boot:
                 add(_reconstruct_ntfs(source, abs_off, boot))
         elif sector[3:11] == b"EXFAT   ":
-            bps_shift = sector[0x6C]
-            vol_len = struct.unpack_from("<Q", sector, 0x48)[0]
-            size = (vol_len << bps_shift) if 9 <= bps_shift <= 12 else None
-            add(VolumeInfo(abs_off, size, None, "exfat", "exfat-boot"))
+            add(_exfat_volume(source, abs_off, sector))
         else:
-            size = _fat_size(sector)
-            if size is not None:
-                add(VolumeInfo(abs_off, size, None, "fat", "fat-boot"))
+            add(_fat_volume(source, abs_off, sector))
 
     if not thorough:
-        candidates = {0, 63 * 512, 2048 * 512, 34 * 512}
+        ss = _sector_size(source)
+        candidates = {0, 63 * ss, 2048 * ss, 34 * ss}
         candidates.update(find_ntfs_volumes(source))
         for off in sorted(candidates):
             sector = source.read(off, 512)

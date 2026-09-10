@@ -16,12 +16,9 @@ ueblich (Flag NoFatChain) oder als bestmoegliche Annahme.
 from __future__ import annotations
 
 import struct
-from typing import Callable, Iterator, Optional
+from typing import Iterator, Optional
 
-from .models import Finding
-
-ProgressCb = Callable[[str, float, int], None]
-CancelCb = Callable[[], bool]
+from .models import CancelCb, Finding, ProgressCb, safe_name
 
 TYPE_FILE = 0x05          # 0x85 & 0x7F
 TYPE_STREAM = 0x40        # 0xC0 & 0x7F
@@ -182,21 +179,11 @@ def _walk(source, boot: ExfatBoot, first_cluster: int, no_fat_chain: bool,
             kind="exfat",
             type_name="exFAT-Datei" + ("" if not deleted else " (geloescht)"),
             ext=ext,
-            name=f"{counter[0]:06d}_{_safe(full)}",
+            name=f"{counter[0]:06d}_{safe_name(full)}",
             offset=boot.cluster_offset(sub_first),
             size=data_len,
             extra={"path": full, "modified": mtime, "fs": "exfat"},
         ))
-
-
-def _safe(name: str) -> str:
-    keep = []
-    for ch in name:
-        if ch in '<>:"\\|?*/' or ord(ch) < 32:
-            keep.append("_")
-        else:
-            keep.append(ch)
-    return "".join(keep).strip(" .") or "unbenannt"
 
 
 def is_exfat(source, base_offset: int = 0) -> bool:

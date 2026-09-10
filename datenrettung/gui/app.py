@@ -329,9 +329,14 @@ class RecoveryApp:
         else:
             targets = list(self.findings)
 
-        source_path = self.sources.get(self.source_var.get())
+        label = self.source_var.get()
+        source_path = self.sources.get(label)
         if not source_path:
             return
+        # Dieselbe Geometrie wie beim Scan, sonst stimmen bei Geraeten ohne
+        # ermittelbare Groesse bzw. bei 4Kn-Laufwerken die Lesegrenzen nicht.
+        known_size = self.source_sizes.get(label)
+        sector = 4096 if self.opt_4kn.get() else 512
 
         self.cancel_flag.clear()
         self._set_busy(True)
@@ -340,7 +345,7 @@ class RecoveryApp:
 
         def work():
             try:
-                with ByteSource(source_path) as src:
+                with ByteSource(source_path, size=known_size, sector_size=sector) as src:
                     ok, skipped, errors = scanner_mod.recover(
                         src, targets, out_dir,
                         progress_cb=lambda done, total, name: self.queue.put(

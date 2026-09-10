@@ -10,20 +10,17 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
-from typing import Callable, Optional
+from typing import Callable, Iterator, Optional
 
-from . import carver, fat, ntfs, usn
-from .models import Finding
+from . import carver, exfat, fat, ntfs, usn
+from .models import CancelCb, Finding, ProgressCb
 from .sources import ByteSource
 
-try:                              # exFAT wird separat ergaenzt; optional laden
-    from . import exfat as _EXFAT
-except Exception:                 # pragma: no cover
-    _EXFAT = None
-
-ProgressCb = Callable[[str, float, int], None]
-CancelCb = Callable[[], bool]
 FindingCb = Callable[[Finding], None]
+
+# Blockgroesse beim Schreiben grosser Funde (Videos, Archive), damit nicht die
+# ganze Datei im Speicher liegt.
+CHUNK = 8 * 1024 * 1024
 
 
 @dataclass
@@ -66,44 +63,52 @@ class Scanner:
                 seen_records.add(rec)
             emit(f)
 
+        opts = self.options
+
+        def cancelled() -> bool:
+            return bool(should_cancel and should_cancel())
+
         # Phase 0: Volumes bestimmen – erst ueber die Partitionstabelle, optional
         # zusaetzlich ueber eine Boot-Sektor-Suche (rekonstruiert auch verlorene
-        # oder beschaedigte Tabellen).
-        first_boot = None
+        # oder beschaedigte Tabellen). Die Rekonstruktion nuetzt allen
+        # dateisystembasierten Verfahren, nicht nur NTFS.
+        first_boot: Optional[tuple[ntfs.BootSector, int]] = None
         recon_fat_offsets: set[int] = set()   # rekonstruierte FAT/exFAT-Volumes
-        if self.options.use_ntfs:
-            # Offset -> vorab rekonstruierter Boot-Sektor (oder None).
-            volumes: dict[int, object] = {}
+        # Offset -> vorab rekonstruierter Boot-Sektor (oder None).
+        volumes: dict[int, Optional[ntfs.BootSector]] = {}
 
+        if opts.use_ntfs or opts.use_usn:
             try:
                 for off in ntfs.find_ntfs_volumes(self.source):
                     volumes.setdefault(off, None)
             except Exception:
                 pass
 
-            if self.options.reconstruct_partitions:
-                try:
-                    for vinfo in ntfs.reconstruct_volumes(
-                            self.source, thorough=True, progress_cb=progress_cb,
-                            should_cancel=should_cancel):
-                        if vinfo.fs_type == "ntfs":
-                            volumes[vinfo.offset] = vinfo.boot
-                        else:
-                            recon_fat_offsets.add(vinfo.offset)
-                except Exception:
-                    pass
+        if opts.reconstruct_partitions and (opts.use_ntfs or opts.use_usn or opts.use_fat):
+            try:
+                for vinfo in ntfs.reconstruct_volumes(
+                        self.source, thorough=True, progress_cb=progress_cb,
+                        should_cancel=should_cancel):
+                    if vinfo.fs_type == "ntfs":
+                        volumes[vinfo.offset] = vinfo.boot
+                    else:
+                        recon_fat_offsets.add(vinfo.offset)
+            except Exception:
+                pass
 
-            # Phase 1: jedes NTFS-Volume ueber seine MFT durchsuchen.
+        # Phase 1: jedes NTFS-Volume ueber seine MFT durchsuchen.
+        if opts.use_ntfs:
             for vol_off in sorted(volumes):
-                if should_cancel and should_cancel():
+                if cancelled():
                     break
                 try:
                     boot = volumes[vol_off] or ntfs.BootSector(self.source.read(vol_off, 512))
+                    volumes[vol_off] = boot
                     if first_boot is None:
-                        first_boot = (boot.cluster_size, vol_off)
+                        first_boot = (boot, vol_off)
                     for f in ntfs.scan_ntfs(self.source, vol_off, progress_cb,
                                             should_cancel,
-                                            deleted_only=self.options.deleted_only,
+                                            deleted_only=opts.deleted_only,
                                             boot=boot):
                         emit_ntfs(f)
                 except ntfs.NtfsError:
@@ -113,123 +118,155 @@ class Scanner:
                     continue
 
         # Phase 2: NTFS-Eintraege ueber den ganzen Datentraeger (optional, findet
-        # auch nach Formatierung/Boot-Schaden). Cluster-Groesse und Basis vom
-        # gefundenen Volume uebernehmen, sonst uebliche Vorgaben.
-        if self.options.use_ntfs and self.options.ntfs_orphan_scan:
-            if not (should_cancel and should_cancel()):
-                cluster_size, base = first_boot or (4096, 0)
-                try:
-                    for f in ntfs.scan_orphan_mft(
-                            self.source, cluster_size=cluster_size, base_offset=base,
-                            progress_cb=progress_cb, should_cancel=should_cancel,
-                            deleted_only=self.options.deleted_only):
-                        emit_ntfs(f)
-                except Exception:
-                    pass
+        # auch nach Formatierung/Boot-Schaden). Geometrie vom gefundenen Volume
+        # uebernehmen, sonst uebliche Vorgaben (4-KiB-Cluster, 1-KiB-Eintraege).
+        if opts.use_ntfs and opts.ntfs_orphan_scan and not cancelled():
+            if first_boot is not None:
+                boot, base = first_boot
+                geometry = dict(cluster_size=boot.cluster_size, base_offset=base,
+                                record_size=boot.record_size,
+                                bytes_per_sector=boot.bytes_per_sector)
+            else:
+                geometry = dict(cluster_size=4096, base_offset=0,
+                                record_size=1024, bytes_per_sector=512)
+            try:
+                for f in ntfs.scan_orphan_mft(
+                        self.source, progress_cb=progress_cb,
+                        should_cancel=should_cancel,
+                        deleted_only=opts.deleted_only, **geometry):
+                    emit_ntfs(f)
+            except Exception:
+                pass
 
         # Phase 2a: USN-Journal auswerten (Namen geloeschter Dateien). Nur ueber
-        # die MFT (guenstig) an jedem gefundenen NTFS-Volume.
-        if self.options.use_usn and not (should_cancel and should_cancel()):
-            try:
-                usn_offsets = ntfs.find_ntfs_volumes(self.source)
-            except Exception:
-                usn_offsets = []
-            for off in usn_offsets:
-                if should_cancel and should_cancel():
+        # die MFT (guenstig) an jedem bekannten NTFS-Volume – auch an
+        # rekonstruierten mit Boot-Sektor aus der Kopie.
+        if opts.use_usn and not cancelled():
+            for off in sorted(volumes):
+                if cancelled():
                     break
                 try:
                     for f in usn.scan_usn(self.source, off,
-                                          only_delete=self.options.deleted_only,
+                                          only_delete=opts.deleted_only,
                                           progress_cb=progress_cb,
                                           should_cancel=should_cancel,
-                                          allow_carve=False):
+                                          allow_carve=False,
+                                          boot=volumes[off]):
                         emit(f)
                 except Exception:
                     continue
 
         # Phase 2b: FAT/exFAT-Undelete an allen Partitionsanfaengen (und an
         # rekonstruierten Volumes, falls die Tabelle fehlt).
-        if self.options.use_fat and not (should_cancel and should_cancel()):
+        if opts.use_fat and not cancelled():
             fat_offsets = list(dict.fromkeys(
                 ntfs.partition_offsets(self.source) + sorted(recon_fat_offsets)))
             for off in fat_offsets:
-                if should_cancel and should_cancel():
+                if cancelled():
                     break
                 try:
                     if fat.is_fat(self.source, off):
                         for f in fat.scan_fat(self.source, off,
-                                              deleted_only=self.options.deleted_only,
+                                              deleted_only=opts.deleted_only,
                                               progress_cb=progress_cb,
                                               should_cancel=should_cancel):
                             emit(f)
-                    elif _EXFAT and _EXFAT.is_exfat(self.source, off):
-                        for f in _EXFAT.scan_exfat(self.source, off,
-                                                   deleted_only=self.options.deleted_only,
-                                                   progress_cb=progress_cb,
-                                                   should_cancel=should_cancel):
+                    elif exfat.is_exfat(self.source, off):
+                        for f in exfat.scan_exfat(self.source, off,
+                                                  deleted_only=opts.deleted_only,
+                                                  progress_cb=progress_cb,
+                                                  should_cancel=should_cancel):
                             emit(f)
                 except Exception:
                     continue
 
         # Phase 3: Carving (findet auch ohne intaktes Dateisystem).
-        if self.options.use_carve:
-            if should_cancel and should_cancel():
-                return findings
+        if opts.use_carve and not cancelled():
             for f in carver.carve(self.source, progress_cb=progress_cb,
-                                   should_cancel=should_cancel,
-                                   max_files=self.options.max_files,
-                                   recover_partial=self.options.recover_partial,
-                                   validate=self.options.validate):
+                                  should_cancel=should_cancel,
+                                  max_files=opts.max_files,
+                                  recover_partial=opts.recover_partial,
+                                  validate=opts.validate):
                 emit(f)
 
         return findings
 
 
-def extract(source: ByteSource, finding: Finding) -> bytes:
-    """Liest die Bytes eines Funds aus der Quelle."""
+def iter_chunks(source: ByteSource, finding: Finding,
+                chunk_size: int = CHUNK) -> Iterator[bytes]:
+    """Liefert die Bytes eines Funds blockweise aus der Quelle.
+
+    So lassen sich auch grosse Funde (Videos, Archive) schreiben, ohne sie
+    komplett im Speicher zu halten.
+    """
     # Carving sowie FAT/exFAT-Undelete liefern einen zusammenhaengenden Bereich.
     if finding.kind in ("carve", "fat", "exfat"):
-        return source.read(finding.offset, finding.size)
+        yield from _iter_range(source, finding.offset, finding.size, chunk_size)
+        return
 
     # USN-Funde tragen keinen Inhalt, nur Metadaten -> als Textnotiz ausgeben.
     if finding.kind == "usn":
         ex = finding.extra
         lines = [
-            "Geloeschte Datei laut USN-Journal",
+            "Datei laut USN-Journal",
             f"Name:         {ex.get('usn_name', '')}",
             f"Zeit:         {ex.get('modified') or 'unbekannt'}",
             f"Grund:        {ex.get('reason', '')}",
             f"MFT-Referenz: {ex.get('usn_ref', '')}",
         ]
-        return ("\n".join(lines) + "\n").encode("utf-8")
+        yield ("\n".join(lines) + "\n").encode("utf-8")
+        return
 
     if finding.kind == "ntfs":
         extra = finding.extra
         real_size = extra.get("real_size", finding.size)
         resident = extra.get("resident_data")
         if resident is not None:
-            return resident[:real_size]
-        runs = extra.get("data_runs", [])
-        cluster_size = extra["cluster_size"]
-        base_offset = extra["base_offset"]
-        return _read_runs(source, runs, cluster_size, base_offset, real_size)
+            yield resident[:real_size]
+            return
+        yield from _iter_runs(source, extra.get("data_runs", []),
+                              extra["cluster_size"], extra["base_offset"],
+                              real_size, chunk_size)
+        return
 
     raise ValueError(f"unbekannter Fundtyp: {finding.kind}")
 
 
-def _read_runs(source: ByteSource, runs, cluster_size: int,
-               base_offset: int, real_size: int) -> bytes:
-    out = bytearray()
-    for lcn, count in runs:
-        if len(out) >= real_size:
+def extract(source: ByteSource, finding: Finding) -> bytes:
+    """Liest die Bytes eines Funds vollstaendig in den Speicher."""
+    return b"".join(iter_chunks(source, finding))
+
+
+def _iter_range(source: ByteSource, offset: int, length: int,
+                chunk_size: int) -> Iterator[bytes]:
+    pos = offset
+    end = offset + length
+    while pos < end:
+        data = source.read(pos, min(chunk_size, end - pos))
+        if not data:
             break
-        span = count * cluster_size
-        if lcn is None:
-            out += b"\x00" * span            # sparse: Nullen
+        yield data
+        pos += len(data)
+
+
+def _iter_runs(source: ByteSource, runs, cluster_size: int, base_offset: int,
+               real_size: int, chunk_size: int) -> Iterator[bytes]:
+    remaining = real_size
+    for lcn, count in runs:
+        if remaining <= 0:
+            break
+        take = min(count * cluster_size, remaining)
+        if lcn is None:                       # sparse: Nullen
+            while take > 0:
+                n = min(chunk_size, take)
+                yield b"\x00" * n
+                take -= n
+                remaining -= n
         else:
-            phys = base_offset + lcn * cluster_size
-            out += source.read(phys, span)
-    return bytes(out[:real_size])
+            for data in _iter_range(source, base_offset + lcn * cluster_size,
+                                    take, chunk_size):
+                yield data
+                remaining -= len(data)
 
 
 def recover(source: ByteSource, findings: list[Finding], output_dir: str,
@@ -240,34 +277,51 @@ def recover(source: ByteSource, findings: list[Finding], output_dir: str,
 
     Ist ``skip_existing`` gesetzt, werden Funde uebersprungen, deren Datei schon
     im Ausgabeordner liegt. Damit laesst sich ein abgebrochener Lauf einfach
-    fortsetzen, ohne erneut zu scannen und ohne Duplikate zu erzeugen.
+    fortsetzen, ohne erneut zu scannen und ohne Duplikate zu erzeugen. Jede
+    Datei wird erst unter ``.part`` geschrieben und zum Schluss umbenannt –
+    ein Abbruch mitten in einer grossen Datei hinterlaesst so keine
+    unvollstaendige Datei, die spaeter faelschlich als fertig gilt.
 
     Rueckgabe: ``(anzahl_geschrieben, anzahl_uebersprungen, liste_der_fehler)``.
     """
     os.makedirs(output_dir, exist_ok=True)
     # Dateien, die schon vor diesem Lauf existierten (fuer die Fortsetzung).
-    preexisting = set(os.listdir(output_dir)) if skip_existing else set()
+    preexisting = {n.lower() for n in os.listdir(output_dir)} if skip_existing else set()
     ok = 0
     skipped = 0
     errors: list[str] = []
     total = len(findings)
-    used: set[str] = set()
+    # Wie oft derselbe Name in diesem Lauf schon vergeben wurde. Der k-te Fund
+    # gleichen Namens bekommt immer denselben Zielnamen (``name_k``), damit die
+    # Fortsetzung ihn eindeutig wiedererkennt.
+    name_count: dict[str, int] = {}
 
     for i, finding in enumerate(findings):
         if should_cancel and should_cancel():
             break
-        if skip_existing and finding.name in preexisting:
+        k = name_count.get(finding.name.lower(), 0)
+        name_count[finding.name.lower()] = k + 1
+        target_name = _numbered(finding.name, k)
+        if skip_existing and target_name.lower() in preexisting:
             skipped += 1
             if progress_cb:
-                progress_cb(i + 1, total, finding.name)
+                progress_cb(i + 1, total, target_name)
             continue
-        target = _unique_path(output_dir, finding.name, used)
+        target = _unique_path(output_dir, target_name)
+        part = target + ".part"
         try:
-            data = extract(source, finding)
-            with open(target, "wb") as fh:
-                fh.write(data)
+            with open(part, "wb") as fh:
+                for chunk in iter_chunks(source, finding, CHUNK):
+                    if should_cancel and should_cancel():
+                        raise _Cancelled()
+                    fh.write(chunk)
+            os.replace(part, target)
             ok += 1
+        except _Cancelled:
+            _remove_quietly(part)
+            break
         except Exception as exc:  # einzelne Fehler nicht den Rest abbrechen lassen
+            _remove_quietly(part)
             errors.append(f"{finding.name}: {exc}")
         if progress_cb:
             progress_cb(i + 1, total, os.path.basename(target))
@@ -275,12 +329,30 @@ def recover(source: ByteSource, findings: list[Finding], output_dir: str,
     return ok, skipped, errors
 
 
-def _unique_path(output_dir: str, name: str, used: set[str]) -> str:
+class _Cancelled(Exception):
+    pass
+
+
+def _remove_quietly(path: str) -> None:
+    try:
+        os.remove(path)
+    except OSError:
+        pass
+
+
+def _numbered(name: str, k: int) -> str:
+    if k == 0:
+        return name
+    base, ext = os.path.splitext(name)
+    return f"{base}_{k}{ext}"
+
+
+def _unique_path(output_dir: str, name: str) -> str:
+    """Freier Zielpfad: weicht nur aus, wenn die Datei schon existiert."""
     base, ext = os.path.splitext(name)
     candidate = name
     counter = 1
-    while candidate.lower() in used or os.path.exists(os.path.join(output_dir, candidate)):
-        candidate = f"{base}_{counter}{ext}"
+    while os.path.exists(os.path.join(output_dir, candidate)):
+        candidate = f"{base}_dup{counter}{ext}"
         counter += 1
-    used.add(candidate.lower())
     return os.path.join(output_dir, candidate)

@@ -30,8 +30,8 @@ from datenrettung.recovery import usn as usn_mod  # noqa: E402
 from datenrettung.recovery.models import Finding  # noqa: E402
 from datenrettung.gui.sorting import order_iids  # noqa: E402
 from datenrettung.tests.make_sample_image import (  # noqa: E402
-    build_carving_image, build_ntfs_image, build_fat_image, build_exfat_image,
-    make_png,
+    build_carving_image, build_ntfs_image, build_fat_image, build_fat32_image,
+    build_exfat_image, make_png, make_pdf, make_usn_record,
 )
 
 
@@ -552,12 +552,10 @@ class UnitTests(unittest.TestCase):
             findings = Scanner(src, ScanOptions(use_ntfs=False)).scan()
             self.assertGreaterEqual(len(findings), 4)
 
-            # Erster Lauf: nach zwei verarbeiteten Funden abbrechen.
-            calls = {"n": 0}
-
+            # Erster Lauf: abbrechen, sobald zwei Dateien fertig geschrieben sind.
             def cancel():
-                calls["n"] += 1
-                return calls["n"] > 2
+                done = [n for n in os.listdir(out_dir) if not n.endswith(".part")]
+                return len(done) >= 2
 
             ok1, skip1, err1 = scanner_mod.recover(src, findings, out_dir,
                                                    should_cancel=cancel)
@@ -571,6 +569,263 @@ class UnitTests(unittest.TestCase):
             written = os.listdir(out_dir)
             self.assertEqual(len(written), len(findings),
                              f"keine Duplikate erwartet: {written}")
+
+
+def _carve_single(path: str, offset: int, ext: str):
+    """Hilfsfunktion: den Carving-Fund mit ``ext`` an ``offset`` samt Bytes holen."""
+    with ByteSource(path) as src:
+        findings = Scanner(src, ScanOptions(use_ntfs=False, use_fat=False)).scan()
+        match = next((f for f in findings if f.ext == ext and f.offset == offset), None)
+        data = extract(src, match) if match else None
+    return match, data, findings
+
+
+def _jpeg_with_thumbnail(app1_len: int | None = None) -> bytes:
+    """JPEG mit eingebettetem EXIF-Vorschaubild (eigenes FF D8 ... FF D9)."""
+    import struct
+    inner = (b"\xff\xd8\xff\xdb\x00\x04\x00\x00" + b"\xff\xda\x00\x02"
+             + b"\x11" * 50 + b"\xff\xd9")
+    payload = b"Exif\x00\x00" + inner
+    length = app1_len if app1_len is not None else 2 + len(payload)
+    app1 = b"\xff\xe1" + struct.pack(">H", length) + payload
+    scan = b"\xff\xda\x00\x02" + b"\x22" * 300 + b"\xff\x00" + b"\xff\xd3" + b"\x33" * 100
+    return b"\xff\xd8" + app1 + scan + b"\xff\xd9"
+
+
+class CarvingBoundaryTests(unittest.TestCase):
+    """Dateiende-Bestimmung: Verschachtelung, mehrfache Footer, footerlose Typen."""
+
+    def test_jpeg_mit_exif_vorschau_wird_komplett_gerettet(self):
+        jpg = _jpeg_with_thumbnail()
+        path = _write_temp(b"\x00" * 512 + jpg + b"\x00" * 512)
+        self.addCleanup(os.remove, path)
+        match, data, findings = _carve_single(path, 512, "jpg")
+        self.assertIsNotNone(match, "JPEG nicht gefunden")
+        self.assertEqual(data, jpg, "JPEG endet am Vorschaubild statt am echten Ende")
+        # Das Vorschaubild darf nicht als eigene Datei auftauchen.
+        self.assertEqual(sum(1 for f in findings if f.ext == "jpg"), 1)
+
+    def test_jpeg_mit_kaputter_segmentlaenge_nutzt_verschachtelte_suche(self):
+        jpg = _jpeg_with_thumbnail(app1_len=0xFFFF)     # Laengenfeld zerstoert
+        path = _write_temp(b"\x00" * 512 + jpg + b"\x00" * 512)
+        self.addCleanup(os.remove, path)
+        match, data, _ = _carve_single(path, 512, "jpg")
+        self.assertIsNotNone(match)
+        self.assertEqual(data, jpg)
+
+    def test_pdf_mit_inkrementellem_update_nimmt_letztes_eof(self):
+        pdf = (make_pdf() + b"\n4 0 obj<< /Type /Page >>endobj\nxref\n0 1\n"
+               b"trailer<< /Root 1 0 R /Prev 9 >>\nstartxref\n120\n%%EOF")
+        path = _write_temp(b"\x00" * 512 + pdf + b"\x00" * 512)
+        self.addCleanup(os.remove, path)
+        match, data, _ = _carve_single(path, 512, "pdf")
+        self.assertIsNotNone(match)
+        self.assertEqual(data, pdf, "PDF wurde am ersten %%EOF abgeschnitten")
+
+    def test_rtf_endet_an_der_aeussersten_klammer(self):
+        rtf = (b"{\\rtf1\\ansi{\\fonttbl{\\f0 Arial;}}"
+               b"\\{maskiert\\} Hallo {\\b fett} Welt}")
+        path = _write_temp(b"\x00" * 512 + rtf + b"\x00" * 512)
+        self.addCleanup(os.remove, path)
+        match, data, _ = _carve_single(path, 512, "rtf")
+        self.assertIsNotNone(match)
+        self.assertEqual(data, rtf, "RTF wurde an einer inneren Klammer abgeschnitten")
+
+    def test_footerloser_typ_endet_am_naechsten_gleichen_header(self):
+        first = b"II\x2a\x00" + b"\x01" * 996
+        second = b"II\x2a\x00" + b"\x02" * 500
+        path = _write_temp(b"\x00" * 512 + first + second + b"\x00" * 512)
+        self.addCleanup(os.remove, path)
+        match, data, findings = _carve_single(path, 512, "tif")
+        self.assertIsNotNone(match)
+        self.assertEqual(data, first, "erste TIFF muss vor der zweiten enden")
+        self.assertTrue(any(f.ext == "tif" and f.offset == 512 + len(first)
+                            for f in findings), "zweite TIFF fehlt")
+
+    def test_blockweises_lesen_liefert_dieselben_bytes(self):
+        img, expected = build_carving_image()
+        path = _write_temp(img)
+        self.addCleanup(os.remove, path)
+        with ByteSource(path) as src:
+            findings = Scanner(src, ScanOptions(use_ntfs=False, use_fat=False)).scan()
+            for f in findings:
+                chunks = list(scanner_mod.iter_chunks(src, f, chunk_size=100))
+                self.assertTrue(all(len(c) <= 100 for c in chunks))
+                self.assertEqual(b"".join(chunks), extract(src, f))
+
+
+class Fat32Tests(unittest.TestCase):
+    def test_fat32_wurzel_und_langer_name_geloeschter_datei(self):
+        img, exp = build_fat32_image()
+        path = _write_temp(img)
+        self.addCleanup(os.remove, path)
+        with ByteSource(path) as src:
+            findings = Scanner(src, ScanOptions(use_ntfs=False, use_carve=False)).scan()
+            match = next((f for f in findings if f.kind == "fat"), None)
+            self.assertIsNotNone(match, "FAT32-Wurzelverzeichnis wurde nicht gelesen")
+            self.assertEqual(match.extra.get("fs"), "fat32")
+            self.assertEqual(match.extra.get("path"), exp["name"],
+                             "langer Name der geloeschten Datei ging verloren")
+            self.assertEqual(match.extra.get("modified"), exp["modified"])
+            self.assertEqual(extract(src, match), exp["data"])
+
+    def test_rekonstruktion_ignoriert_backup_boot_sektoren(self):
+        fat_img, fat_exp = build_fat32_image()
+        ex_img, _ = build_exfat_image(with_backup=True)
+        for img, label in ((fat_img, "FAT32"), (ex_img, "exFAT")):
+            path = _write_temp(img)
+            self.addCleanup(os.remove, path)
+            with ByteSource(path) as src:
+                vols = ntfs_mod.reconstruct_volumes(src, thorough=True)
+                offs = sorted(v.offset for v in vols)
+                self.assertEqual(offs, [0],
+                                 f"{label}: Backup-Boot-Sektor als Volume gemeldet: {vols}")
+
+
+class GptTests(unittest.TestCase):
+    def test_gpt_auf_4kn_laufwerk_wird_mit_sektorgroesse_umgerechnet(self):
+        import struct
+        ss = 4096
+        vol, exp = build_ntfs_image()
+        first_lba = 8
+        vol_off = first_lba * ss
+        disk = bytearray(vol_off + len(vol) + ss)
+        # Schutz-MBR mit GPT-Eintrag (Typ 0xEE).
+        disk[0x1BE + 4] = 0xEE
+        struct.pack_into("<I", disk, 0x1BE + 8, 1)
+        struct.pack_into("<H", disk, 510, 0xAA55)
+        # GPT-Header in LBA 1 (= 4096), Eintraege ab LBA 2.
+        disk[ss:ss + 8] = b"EFI PART"
+        struct.pack_into("<Q", disk, ss + 72, 2)
+        struct.pack_into("<I", disk, ss + 80, 1)
+        struct.pack_into("<I", disk, ss + 84, 128)
+        entry = 2 * ss
+        disk[entry:entry + 16] = b"\x01" * 16                   # Typ-GUID != 0
+        struct.pack_into("<Q", disk, entry + 32, first_lba)
+        disk[vol_off:vol_off + len(vol)] = vol
+        path = _write_temp(bytes(disk))
+        self.addCleanup(os.remove, path)
+
+        with ByteSource(path, sector_size=512) as src:
+            self.assertEqual(ntfs_mod.find_ntfs_volumes(src), [],
+                             "mit 512er-Sektoren liegt der GPT-Header woanders")
+        with ByteSource(path, sector_size=ss) as src:
+            self.assertEqual(ntfs_mod.find_ntfs_volumes(src), [vol_off])
+            findings = Scanner(src, ScanOptions(use_ntfs=True, use_carve=False)).scan()
+            match = next((f for f in findings if exp["name"] in f.name), None)
+            self.assertIsNotNone(match, "Datei in der GPT-Partition nicht gefunden")
+            self.assertEqual(extract(src, match), exp["data"])
+
+
+class UsnJournalTests(unittest.TestCase):
+    def _check(self, usn_mode: str):
+        img, exp = build_ntfs_image(usn=usn_mode)
+        path = _write_temp(img)
+        self.addCleanup(os.remove, path)
+        with ByteSource(path) as src:
+            # Nur ueber die MFT, kein Carving-Rueckfall erlaubt.
+            findings = list(usn_mod.scan_usn(src, 0, only_delete=True, allow_carve=False))
+            names = [f.extra.get("usn_name") for f in findings]
+            self.assertEqual(names, [exp["usn_deleted"]],
+                             f"{usn_mode}: $J nicht ueber die MFT gelesen: {names}")
+            self.assertEqual(findings[0].extra.get("modified"), exp["modified"])
+            # Ueber den Scanner (Phase 2a) kommt derselbe Fund.
+            opts = ScanOptions(use_ntfs=True, use_carve=False, use_fat=False, use_usn=True)
+            via_scanner = [f for f in Scanner(src, opts).scan() if f.kind == "usn"]
+            self.assertEqual([f.extra.get("usn_name") for f in via_scanner],
+                             [exp["usn_deleted"]])
+
+    def test_journal_ueber_mft_direkt(self):
+        self._check("direct")
+
+    def test_journal_ueber_attribute_list(self):
+        self._check("attrlist")
+
+    def test_alle_eintraege_mit_art_der_aenderung(self):
+        img, exp = build_ntfs_image(usn="direct")
+        path = _write_temp(img)
+        self.addCleanup(os.remove, path)
+        with ByteSource(path) as src:
+            findings = list(usn_mod.scan_usn(src, 0, only_delete=False, allow_carve=False))
+            by_name = {f.extra["usn_name"]: f for f in findings}
+            self.assertEqual(set(by_name), {"alt.txt", "weg.docx"})
+            self.assertEqual(by_name["alt.txt"].type_name, "USN-Journal (Aenderung)")
+            self.assertEqual(by_name["weg.docx"].type_name, "USN-Journal (geloescht)")
+
+    def test_reason_text_kennt_rename_und_unbekannte_bits(self):
+        self.assertEqual(usn_mod.reason_text(0x1000 | 0x2000), "RENAME_OLD_NAME|RENAME_NEW_NAME")
+        self.assertEqual(usn_mod.reason_text(0x200 | 0x80000000), "FILE_DELETE|CLOSE")
+        self.assertIn("0x", usn_mod.reason_text(0x40000000))
+
+    def test_carving_liefert_datensatz_an_blockgrenze_nur_einmal(self):
+        # Datensatz komplett im Ueberlappungsbereich (letzte 4 KiB des ersten
+        # 8-MiB-Blocks): frueher doppelt geliefert.
+        ft = _filetime(2021, 6, 15, 12, 0, 0)
+        rec = make_usn_record("doppelt.txt", 0x200 | 0x80000000, ft, ref=77)
+        pos = 8 * 1024 * 1024 - 2000
+        img = bytearray(8 * 1024 * 1024 + 4096)
+        img[pos:pos + len(rec)] = rec
+        path = _write_temp(bytes(img))
+        self.addCleanup(os.remove, path)
+        with ByteSource(path) as src:
+            recs = list(usn_mod._carve(src, True, None, None))
+            self.assertEqual(len(recs), 1, f"Datensatz mehrfach geliefert: {recs}")
+            self.assertEqual(recs[0]["offset"], pos)
+
+    def test_ungerade_namenslaenge_wird_verworfen(self):
+        ft = _filetime(2021, 6, 15)
+        rec = bytearray(make_usn_record("x.txt", 0x200, ft))
+        import struct
+        struct.pack_into("<H", rec, 0x38, 9)                   # 10 -> 9 (ungerade)
+        self.assertIsNone(usn_mod._parse_one(bytes(rec), 0))
+
+
+class RecoverTests(unittest.TestCase):
+    def test_abbruch_mitten_in_datei_hinterlaesst_keine_teildatei(self):
+        img, _ = build_carving_image()
+        path = _write_temp(img)
+        self.addCleanup(os.remove, path)
+        out_dir = tempfile.mkdtemp()
+        with ByteSource(path) as src:
+            findings = Scanner(src, ScanOptions(use_ntfs=False, use_fat=False)).scan()
+            calls = {"n": 0}
+
+            def cancel():
+                calls["n"] += 1
+                return calls["n"] >= 3           # beim zweiten Block der ersten Datei
+
+            with mock.patch.object(scanner_mod, "CHUNK", 64):
+                ok, skipped, errors = scanner_mod.recover(src, findings, out_dir,
+                                                          should_cancel=cancel)
+            self.assertEqual((ok, skipped, errors), (0, 0, []))
+            self.assertEqual(os.listdir(out_dir), [], "Teildatei blieb liegen")
+
+            # Fortsetzung schreibt alles, ohne etwas zu ueberspringen.
+            ok2, skipped2, _ = scanner_mod.recover(src, findings, out_dir)
+            self.assertEqual((ok2, skipped2), (len(findings), 0))
+            self.assertFalse(any(n.endswith(".part") for n in os.listdir(out_dir)))
+
+    def test_gleiche_namen_werden_bei_fortsetzung_wiedererkannt(self):
+        img, expected = build_carving_image()
+        path = _write_temp(img)
+        self.addCleanup(os.remove, path)
+        out_dir = tempfile.mkdtemp()
+        same = [Finding("carve", "PNG-Bild", "png", "bild.png", e["offset"], len(e["data"]))
+                for e in expected[:2]]
+        with ByteSource(path) as src:
+            ok, skipped, _ = scanner_mod.recover(src, same, out_dir)
+            self.assertEqual((ok, skipped), (2, 0))
+            self.assertEqual(sorted(os.listdir(out_dir)), ["bild.png", "bild_1.png"])
+            # Zweiter Lauf: beide bekannt -> beide uebersprungen, kein bild_2.
+            ok, skipped, _ = scanner_mod.recover(src, same, out_dir)
+            self.assertEqual((ok, skipped), (0, 2))
+            self.assertEqual(sorted(os.listdir(out_dir)), ["bild.png", "bild_1.png"])
+            # Dritter gleichnamiger Fund kommt dazu -> nur der wird geschrieben.
+            third = Finding("carve", "PNG-Bild", "png", "bild.png",
+                            expected[2]["offset"], len(expected[2]["data"]))
+            ok, skipped, _ = scanner_mod.recover(src, same + [third], out_dir)
+            self.assertEqual((ok, skipped), (1, 2))
+            self.assertIn("bild_2.png", os.listdir(out_dir))
 
 
 if __name__ == "__main__":
