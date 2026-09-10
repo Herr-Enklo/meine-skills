@@ -81,6 +81,7 @@ class RunOptions:
     call_timeout: int | None = None    # Sekunden; None = CallTimeOut aus [Application]
     apply_registration: bool = True
     emulate_installers: bool = True    # Simulation: Wirkung von Installern nachbilden
+    uninstall_key_lookup: str = "normal"  # "leer": GetUninstallKeyName liefert immer "" (Setup.exe 24.0.3 auf Windows 11 26200)
     env_overrides: dict[str, str] = field(default_factory=dict)
     log_path: str | None = None
     log_suffix: str = ""           # z. B. ".1" bei mehreren Phasen eines automatischen Laufs
@@ -1216,6 +1217,12 @@ def _fn_doestextinfileexist(r: Runner, args, st) -> str:
 def _fn_getuninstallkeyname(r: Runner, args, st) -> str:
     name = r._arg(args[0]) if args else ""
     arch = r._arg(args[1]) if len(args) > 1 else ""
+    if r.options.uninstall_key_lookup == "leer":
+        # Setup.exe 24.0.3 liest hier transaktional (RegOpenKeyTransacted); auf Windows 11 26200 ist der
+        # Transaktions-Ressourcenmanager der Registry nicht aktiv (Fehler 6801), die Funktion liefert immer "".
+        r.log("WARN", f"GetUninstallKeyName(\"{name}\", \"{arch}\") liefert leer (Nachbildung von Setup.exe 24.0.3 auf "
+                      f"Windows 11 26200; Paket braucht einen Rueckfall auf den festen Schluesselnamen)", st.number)
+        return ""
     return r.backend.find_uninstall_key(name, arch)
 
 
