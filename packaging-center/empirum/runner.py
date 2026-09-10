@@ -11,11 +11,19 @@ Ablauf wie bei Setup.exe:
    Deinstallation (/U): von unten nach oben, nur Zeilen mit ``-``;
    ``If``-, ``For``- und ``#``-Zeilen laufen in beiden Richtungen.
 4. Sektionsaufrufe mit Flags: DONTDELETE nur bei Installation, DELETE nur
-   bei Deinstallation, WINDOWS64/WINDOWS32 je nach Bitbreite, CLIENT nur
-   im Benutzerteil (/AW). Eine per ``#`` aufgerufene Sektion laeuft nur
-   einmal, ``#!`` erzwingt einen weiteren Durchlauf.
+   bei Deinstallation, WINDOWS64/WINDOWS32 je nach Bitbreite. Teile des
+   Pakets (real geprueft mit Setup.exe 24.0.3 am 10.09.2026): ``/AW`` ist der
+   Maschinenteil (Arbeitsplatz-Installation), dort werden Sektionen mit nur
+   CLIENT uebersprungen; der Benutzerteil laeuft aus der Skriptkopie unter
+   %ProgramData%\$Matrix42Scripts$ mit ``/C``, dort werden Sektionen mit nur
+   MACHINE uebersprungen; ein Aufruf ohne beide Schalter fuehrt alles aus.
+   Eine per ``#`` aufgerufene Sektion laeuft nur einmal, ``#!`` erzwingt
+   einen weiteren Durchlauf.
 5. Am Ende registriert Setup.exe das Paket (Uninstall-Schluessel,
-   MachineKeyName) bzw. entfernt die Registrierung wieder.
+   MachineKeyName; UserKeyName unter HKCU nur im Benutzerteil) bzw. entfernt
+   die Registrierung des jeweiligen Teils wieder. Eine Deinstallation ohne
+   vorhandenen MachineKeyName-Vermerk tut bei Setup.exe nichts (der Nachbau
+   warnt nur).
 
 Exit beendet mit Erfolg, Abort mit Fehler, AbortReboot mit "Reboot
 Pending", AbortSilent mit Fehler ohne Konsolenmeldung.
@@ -63,7 +71,7 @@ class StopRequested(Exception):
 @dataclass
 class RunOptions:
     mode: str = "install"          # install | uninstall | reinstall
-    user_part: bool = False        # /AW
+    part: str = "all"              # all (ohne Schalter) | machine (/AW) | client (/C)
     display_level: int = 1         # /S0 .. /S4
     bits: int = 64
     language: str = ""             # "07" deutsch, "09" englisch; leer = aus Setup.inf
@@ -90,7 +98,9 @@ class RunOptions:
             elif t == "/R":
                 opts.mode = "reinstall"
             elif t == "/AW":
-                opts.user_part = True
+                opts.part = "machine"
+            elif t == "/C":
+                opts.part = "client"
             elif re.fullmatch(r"/S[0-4]", t):
                 opts.display_level = int(t[2])
         return opts
@@ -101,13 +111,32 @@ class RunOptions:
             parts.append("/U")
         elif self.mode == "reinstall":
             parts.append("/R")
-        if self.user_part:
+        if self.part == "machine":
             parts.append("/AW")
+        elif self.part == "client":
+            parts.append("/C")
         return " ".join(parts)
 
     @property
     def uninstall(self) -> bool:
         return self.mode == "uninstall"
+
+    @property
+    def machine_part(self) -> bool:
+        return self.part == "machine"
+
+    @property
+    def user_part(self) -> bool:
+        """Benutzerteil (/C). Setter fuer aeltere Aufrufer: True = Benutzerteil."""
+        return self.part == "client"
+
+    @user_part.setter
+    def user_part(self, value: bool) -> None:
+        self.part = "client" if value else ("all" if self.part == "client" else self.part)
+
+    @property
+    def part_label(self) -> str:
+        return {"machine": "Maschinenteil (/AW)", "client": "Benutzerteil (/C)"}.get(self.part, "alle Teile (ohne /AW und /C)")
 
 
 @dataclass
@@ -154,9 +183,10 @@ class RunResult:
 
 
 class Frame:
-    def __init__(self, section: Section, reason: str) -> None:
+    def __init__(self, section: Section, reason: str, flags: list[str] | None = None) -> None:
         self.section = section
         self.reason = reason
+        self.flags = [f.upper() for f in (flags or [])]
 
 
 class Runner:
@@ -300,11 +330,12 @@ class Runner:
             self._setup_variables()
             self.log("INFO", f"Setup-Befehl: {opts.command_line or ('Setup.exe ' + (self.inf.path or '') + ' ' + opts.switches())}")
             self.log("INFO", f"Modus: {'Deinstallation' if opts.uninstall else ('Neuinstallation (/R)' if opts.mode == 'reinstall' else 'Installation')}"
-                             f", {'mit' if opts.user_part else 'ohne'} Benutzerteil (/AW), {opts.bits} Bit, "
+                             f", {opts.part_label}, {opts.bits} Bit, "
                              f"Backend: {self.backend.name}")
             self.log("INFO", f"Paket: {self.vars.get('DeveloperName')} {self.vars.get('ProductName')} "
                              f"{self.vars.get('Version')} Rev. {self.vars.get('Revision')}  (Quelle %Src% = {self.vars.get('Src')})")
             self._check_platform()
+            self._check_machine_setup()
             app_dir = (self.vars.get("ApplicationDir") or "").strip()
             if app_dir and not opts.uninstall:
                 # Setup.exe legt den Anwendungsordner zu Beginn an (Setup.inf wird dorthin kopiert)
@@ -407,8 +438,10 @@ class Runner:
             return False, "WINDOWS64: nur auf 64 Bit"
         if "WINDOWS32" in f and opts.bits != 32:
             return False, "WINDOWS32: nur auf 32 Bit"
-        if "CLIENT" in f and not opts.user_part:
-            return False, "CLIENT: Benutzerteil, nur mit /AW"
+        if "CLIENT" in f and "MACHINE" not in f and opts.part == "machine":
+            return False, "CLIENT: nur im Benutzerteil (/C), nicht im Maschinenteil (/AW)"
+        if "MACHINE" in f and "CLIENT" not in f and opts.part == "client":
+            return False, "MACHINE: nur im Maschinenteil (/AW), nicht im Benutzerteil (/C)"
         return True, ""
 
     def run_section(self, sec: Section, reason: str, flags: list[str] | None = None,
@@ -424,7 +457,7 @@ class Runner:
         if len(self.stack) > 200:
             raise ScriptExit(Status.FAILURE, f"Rekursion zu tief bei [{sec.name}]")
         self.executed.add(sec.key)
-        self.stack.append(Frame(sec, reason))
+        self.stack.append(Frame(sec, reason, flags))
         self.log("INFO", f"Sektion [{sec.name}] ({reason})", sec.header_line)
         try:
             stmts = [s for s in parse_section(sec) if s.kind != "empty"]
@@ -555,8 +588,11 @@ class Runner:
             return
         if "WINDOWS32" in flags and self.options.bits != 32:
             return
-        if "CLIENT" in flags and not self.options.user_part:
-            self.log("DEBUG", f"Kopierzeile mit CLIENT-Flag uebersprungen (kein /AW): {st.src}", st.number)
+        if "CLIENT" in flags and "MACHINE" not in flags and self.options.part == "machine":
+            self.log("DEBUG", f"Kopierzeile mit CLIENT-Flag im Maschinenteil (/AW) uebersprungen: {st.src}", st.number)
+            return
+        if "MACHINE" in flags and "CLIENT" not in flags and self.options.part == "client":
+            self.log("DEBUG", f"Kopierzeile mit MACHINE-Flag im Benutzerteil (/C) uebersprungen: {st.src}", st.number)
             return
         src = self.expand(st.src)
         if not (len(src) > 1 and (src[1] == ":" or src.startswith("\\\\"))):
@@ -599,13 +635,20 @@ class Runner:
                 self.backend.reg_delete_key(root, key)
             return
         if self.options.uninstall and not on_uninstall_section:
-            # Bei Deinstallation werden geschriebene Werte wieder entfernt
+            # Bei Deinstallation werden geschriebene Werte wieder entfernt. Der Benutzerteil (/C /U)
+            # nimmt HKCU-Werte immer zurueck, HKLM-Werte nur aus Sektionen mit CLIENT ohne MACHINE;
+            # HKLM-Werte gemeinsamer Sektionen gehoeren zum Maschinenteil (real geprueft, 10.09.2026).
+            if self.options.part == "client" and root != "HKCU":
+                ff = [f.upper() for f in _frame_flags(self)]
+                if not ("CLIENT" in ff and "MACHINE" not in ff):
+                    self.log("DEBUG", f"Registry bleibt (Maschinenteil): {root}\\{key}\\{value}", st.number)
+                    return
             self.log("CMD", f"Registry zuruecknehmen {root}\\{key}\\{value}", st.number)
             if st.value:
                 self.backend.reg_delete_value(root, key, value)
             return
-        if root == "HKCU" and not self.options.user_part and "CLIENT" not in [f.upper() for f in _frame_flags(self)]:
-            self.log("WARN", f"HKCU-Eintrag ausserhalb des Benutzerteils: {key} (wird als SYSTEM geschrieben)", st.number)
+        if root == "HKCU" and self.options.part != "client" and "CLIENT" not in [f.upper() for f in _frame_flags(self)]:
+            self.log("WARN", f"HKCU-Eintrag ausserhalb des Benutzerteils: {key} (unter Empirum als SYSTEM geschrieben)", st.number)
         flags = parse_reg_flags(st.reg_flags)
         self.log("CMD", f"Registry schreiben {root}\\{key}\\{value or '(Standard)'} = {data}", st.number)
         self.backend.reg_write(root, key, value, flags, data)
@@ -1019,15 +1062,22 @@ class Runner:
         uninstall_key = self.expand(app.get("UninstallKeyName") or "")
         machine_key = self.expand(app.get("MachineKeyName") or "")
         user_key = self.expand(app.get("UserKeyName") or "")
+        part = self.options.part
         if self.options.uninstall:
-            if uninstall_key:
+            # /AW /U und /U ohne Schalter nehmen die Maschinenregistrierung zurueck,
+            # /C /U und /U ohne Schalter den Benutzervermerk (real geprueft, 10.09.2026).
+            if uninstall_key and part != "client":
                 self.log("INFO", f"Registrierung entfernen: HKLM\\{UNINSTALL_KEY}\\{uninstall_key}")
                 self.backend.reg_delete_key("HKLM", f"{UNINSTALL_KEY}\\{uninstall_key}")
-            if machine_key:
+            if machine_key and part != "client":
                 self.backend.reg_delete_key("HKLM", f"SOFTWARE\\{machine_key}")
-            if user_key and self.options.user_part:
+            if user_key and part != "machine":
                 self.backend.reg_delete_key("HKCU", f"SOFTWARE\\{user_key}")
             return
+        if part == "client":
+            # Der Benutzerteil registriert nur den Benutzervermerk, nicht das Paket.
+            uninstall_key = ""
+            machine_key = ""
         if uninstall_key:
             key = f"{UNINSTALL_KEY}\\{uninstall_key}"
             self.log("INFO", f"Paket registrieren: HKLM\\{key}")
@@ -1052,10 +1102,20 @@ class Runner:
             self.log("INFO", f"Maschinenteil vermerken: HKLM\\{key}")
             self.backend.reg_write("HKLM", key, "Version", 0, self.expand(app.get("Version") or ""))
             self.backend.reg_write("HKLM", key, "Revision", 0, self.expand(app.get("Revision") or ""))
-        if user_key and self.options.user_part:
+        if user_key and part == "client":
             key = f"SOFTWARE\\{user_key}"
             self.log("INFO", f"Benutzerteil vermerken: HKCU\\{key}")
             self.backend.reg_write("HKCU", key, "Version", 0, self.expand(app.get("Version") or ""))
+
+    def _check_machine_setup(self) -> None:
+        """Setup.exe tut bei /U ohne MachineKeyName-Vermerk nichts (ExitCode -1); der Nachbau warnt."""
+        if not self.options.uninstall or self.options.part == "client":
+            return
+        app = self.inf.find("Application")
+        machine_key = self.expand((app.get("MachineKeyName") if app else "") or "")
+        if machine_key and not self.backend.reg_read("HKLM", f"SOFTWARE\\{machine_key}", "Version"):
+            self.log("WARN", f"Kein MachineKeyName-Vermerk unter HKLM\\SOFTWARE\\{machine_key}: das echte Setup.exe "
+                             f"wuerde die Deinstallation ohne Aktion beenden (ExitCode -1). Der Nachbau laeuft weiter.")
 
     # -- Protokolldatei ---------------------------------------------------------
 
@@ -1266,7 +1326,12 @@ _FUNCTIONS = {
 
 
 def _frame_flags(runner: Runner) -> list[str]:
-    return []
+    """Flags des Sektionsaufrufs, der den aktuellen Teil bestimmt: der innerste Aufruf mit
+    CLIENT oder MACHINE, sonst die Flags der innersten Sektion."""
+    for frame in reversed(runner.stack):
+        if "CLIENT" in frame.flags or "MACHINE" in frame.flags:
+            return list(frame.flags)
+    return list(runner.stack[-1].flags) if runner.stack else []
 
 
 def _win_path(path: str) -> str:

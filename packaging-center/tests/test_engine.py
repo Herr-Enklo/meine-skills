@@ -504,8 +504,86 @@ class RunnerTests(unittest.TestCase):
 
     def test_command_line_switches(self):
         opts = RunOptions.from_command_line('Setup.exe "C:\\p\\Setup.inf" /S2 /U /AW')
-        self.assertEqual((opts.mode, opts.user_part, opts.display_level), ("uninstall", True, 2))
+        self.assertEqual((opts.mode, opts.part, opts.machine_part, opts.user_part, opts.display_level),
+                         ("uninstall", "machine", True, False, 2))
         self.assertEqual(opts.switches(), "/S2 /U /AW")
+        opts = RunOptions.from_command_line('Setup.exe "C:\\p\\Setup.inf" /C /S0')
+        self.assertEqual((opts.part, opts.user_part), ("client", True))
+        self.assertEqual(opts.switches(), "/S0 /C")
+        opts = RunOptions.from_command_line('Setup.exe "C:\\p\\Setup.inf" /S0')
+        self.assertEqual((opts.part, opts.user_part, opts.machine_part), ("all", False, False))
+        opts.user_part = True
+        self.assertEqual(opts.part, "client")
+
+    # Flag-Test wie am 10.09.2026 mit Setup.exe 24.0.3: je eine Reg-Sektion ohne Flag,
+    # nur MACHINE, nur CLIENT, CLIENT MACHINE; dazu Installationslogik mit MACHINE.
+    FLAGS = MINI.replace("#Set:Product, DONTDELETE\n#Set:Uninstall, DELETE\n",
+                         "#Reg:OhneFlag\n#Reg:NurMachine, MACHINE\n#Reg:NurClient, CLIENT\n"
+                         "#Reg:ClientUndMachine, CLIENT MACHINE\n#Set:Product, DONTDELETE MACHINE\n"
+                         "#Set:Uninstall, DELETE MACHINE\n") + \
+        "\n[Reg:OhneFlag]\nHKLM,\"SOFTWARE\\Flagtest\",\"OhneFlag\",0x00000000,\"1\"\nHKCU,\"SOFTWARE\\Flagtest\",\"OhneFlag\",0x00000000,\"1\"\n" \
+        "\n[Reg:NurMachine]\nHKLM,\"SOFTWARE\\Flagtest\",\"NurMachine\",0x00000000,\"1\"\n" \
+        "\n[Reg:NurClient]\nHKLM,\"SOFTWARE\\Flagtest\",\"NurClient\",0x00000000,\"1\"\nHKCU,\"SOFTWARE\\Flagtest\",\"NurClient\",0x00000000,\"1\"\n" \
+        "\n[Reg:ClientUndMachine]\nHKLM,\"SOFTWARE\\Flagtest\",\"ClientUndMachine\",0x00000000,\"1\"\n"
+
+    def _flag_values(self, be):
+        return {root: sorted(n for n in ("OhneFlag", "NurMachine", "NurClient", "ClientUndMachine")
+                             if be.reg_read(root, "SOFTWARE\\Flagtest", n))
+                for root in ("HKLM", "HKCU")}
+
+    def test_parts_all_machine_client(self):
+        m42 = "SOFTWARE\\$Matrix42Packages$\\Acme\\Demo"
+        with tempfile.TemporaryDirectory() as tmp:
+            path = _write_package(tmp, self.FLAGS)
+            # ohne Schalter: alles laeuft, Paket registriert, kein Benutzervermerk
+            res, runner, be = self._run(path, part="all")
+            self.assertEqual(res.status, Status.SUCCESS, res.summary())
+            self.assertEqual(self._flag_values(be), {"HKLM": ["ClientUndMachine", "NurClient", "NurMachine", "OhneFlag"],
+                                                     "HKCU": ["NurClient", "OhneFlag"]})
+            self.assertTrue(be.reg_read("HKLM", m42 + "\\1.2.3", "Version"))
+            self.assertFalse(be.reg_read("HKCU", m42, "Version"))
+            res, runner, be = self._run(path, mode="uninstall", backend=be, part="all")
+            self.assertEqual(res.status, Status.SUCCESS, res.summary())
+            self.assertEqual(self._flag_values(be), {"HKLM": [], "HKCU": []})
+            self.assertFalse(be.reg_read("HKLM", m42 + "\\1.2.3", "Version"))
+
+            # Maschinenteil /AW: nur-CLIENT uebersprungen, Set:Product (MACHINE) laeuft
+            res, runner, be = self._run(path, part="machine")
+            self.assertEqual(res.status, Status.SUCCESS, res.summary())
+            self.assertEqual(self._flag_values(be), {"HKLM": ["ClientUndMachine", "NurMachine", "OhneFlag"],
+                                                     "HKCU": ["OhneFlag"]})
+            self.assertIn("Produkt x64", [e.text for e in res.log if e.level == "ECHO"])
+            self.assertTrue(be.reg_read("HKLM", m42 + "\\1.2.3", "Version"))
+            self.assertFalse(be.reg_read("HKCU", m42, "Version"))
+
+            # Benutzerteil /C aus der Skriptkopie: nur-MACHINE uebersprungen, kein Installer, UserKeyName
+            res, runner, be = self._run(path, backend=be, part="client")
+            self.assertEqual(res.status, Status.SUCCESS, res.summary())
+            self.assertEqual(self._flag_values(be), {"HKLM": ["ClientUndMachine", "NurClient", "NurMachine", "OhneFlag"],
+                                                     "HKCU": ["NurClient", "OhneFlag"]})
+            self.assertNotIn("Produkt x64", [e.text for e in res.log if e.level == "ECHO"])
+            self.assertTrue(be.reg_read("HKCU", m42, "Version"))
+            self.assertTrue(any("MACHINE: nur im Maschinenteil" in e.text for e in res.log))
+
+            # /C /U nimmt nur den Benutzerteil zurueck, Maschinenregistrierung bleibt
+            res, runner, be = self._run(path, mode="uninstall", backend=be, part="client")
+            self.assertEqual(res.status, Status.SUCCESS, res.summary())
+            self.assertEqual(self._flag_values(be)["HKCU"], [])
+            self.assertEqual(self._flag_values(be)["HKLM"], ["ClientUndMachine", "NurMachine", "OhneFlag"])
+            self.assertFalse(be.reg_read("HKCU", m42, "Version"))
+            self.assertTrue(be.reg_read("HKLM", m42 + "\\1.2.3", "Version"))
+
+            # /AW /U nimmt den Maschinenteil zurueck
+            res, runner, be = self._run(path, mode="uninstall", backend=be, part="machine")
+            self.assertEqual(res.status, Status.SUCCESS, res.summary())
+            self.assertEqual(self._flag_values(be), {"HKLM": [], "HKCU": []})
+            self.assertFalse(be.reg_read("HKLM", m42 + "\\1.2.3", "Version"))
+
+    def test_uninstall_without_machine_setup_warns(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = _write_package(tmp)
+            res, runner, be = self._run(path, mode="uninstall")
+            self.assertTrue(any("Kein MachineKeyName-Vermerk" in e.text and e.level == "WARN" for e in res.log))
 
     def test_once_rule_and_force(self):
         text = MINI.replace("[Set:Registered]\n", "[Set:Registered]\n#Set:Twice\n#Set:Twice\n#!Set:Twice\n") + \

@@ -26,7 +26,11 @@ Beispielpakete und die öffentliche Dokumentation es belegen:
   `[Security:Product]`.
 - Sektionsaufrufe `#Sektion, FLAGS` mit DONTDELETE, DELETE, WINDOWS64,
   WINDOWS32, MACHINE und CLIENT; eine Sektion läuft je Lauf einmal, `#!`
-  erzwingt die Wiederholung.
+  erzwingt die Wiederholung. MACHINE und CLIENT trennen Maschinen- und
+  Benutzerteil: im Maschinenteil (`/AW`) werden Sektionen mit nur CLIENT
+  übersprungen, im Benutzerteil (`/C`, aus der Skriptkopie unter
+  `%ProgramData%\$Matrix42Scripts$`) Sektionen mit nur MACHINE; ohne
+  beide Schalter läuft alles.
 - Deinstallation (`/U`): Sektionen von unten nach oben, nur Zeilen mit `-`,
   dazu `If`, `For`, `#`-Aufrufe und Variablenzuweisungen. Kopierzeilen löschen
   ihre Ziele wieder, Registryzeilen nehmen ihre Werte zurück, Verknüpfungen
@@ -48,10 +52,16 @@ Beispielpakete und die öffentliche Dokumentation es belegen:
   `[Shell:...]`-Sektionen.
 - Am Ende registriert der Lauf das Paket wie Setup.exe: Uninstall-Schlüssel mit
   DisplayName, UninstallString, NoRemove/NoModify/NoRepair, dazu
-  MachineKeyName und im Benutzerteil UserKeyName. Die Deinstallation entfernt
-  das wieder.
+  MachineKeyName; der Benutzerteil (`/C`) vermerkt stattdessen nur
+  UserKeyName unter HKCU. `/AW /U` und `/U` nehmen die Maschinenregistrierung
+  zurück, `/C /U` und `/U` den Benutzervermerk. Bei `/U` ohne vorhandenen
+  MachineKeyName-Vermerk tut das echte Setup.exe nichts; der Nachbau warnt
+  und läuft weiter.
 
-Zwei Punkte sind Annahmen, weil die Dokumentation sie nicht klärt. Erstens der
+Die Bedeutung von `/AW` und `/C` und die Wirkung der Flags MACHINE und CLIENT
+sind seit dem 10.09.2026 mit dem echten Setup.exe 24.0.3 belegt (Flag-Test,
+siehe matrix42-paketierung, Testbericht_SetupExe_2026-09-10.md im
+Vectorworks-Paket). Zwei Punkte sind Annahmen, weil die Dokumentation sie nicht klärt. Erstens der
 Vergleich von Versionen: Standard ist numerisch (`8.10.0 > 8.9.8`), umschaltbar
 auf Zeichenkettenvergleich; wenn beide Arten ein anderes Ergebnis liefern
 würden, schreibt der Lauf eine Warnung ins Protokoll. Zweitens die Regel, dass
@@ -143,7 +153,8 @@ ihrer Kodierung und CRLF.
 DEBUG (F5) und EINZELSCHRITT (F12) fragen wie das Original zuerst nach dem
 Setup-Befehl, vorbelegt mit den „Command line options“ aus `[SetupInfo]`.
 `/U` schaltet auf Deinstallation, `/R` auf Neuinstallation, `/AW` auf den
-Benutzerteil, `/S0` bis `/S4` setzt die Anzeigestufe von Setup.exe; der
+Maschinenteil, `/C` auf den Benutzerteil (Empirum startet ihn aus der
+Skriptkopie), `/S0` bis `/S4` setzt die Anzeigestufe von Setup.exe; der
 Nachbau zeigt kein Setup-Fenster, der Wert ändert am Ablauf nichts. Im selben
 Dialog wählt man echten Testlauf oder Simulation, 32 oder 64 Bit und den
 Vergleichsmodus. Während des Laufs zeigt der Editor die aktuelle Zeile,

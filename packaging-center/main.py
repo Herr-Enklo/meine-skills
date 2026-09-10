@@ -6,7 +6,7 @@ Betrieb ohne Fenster gibt es eine Kommandozeile:
 
     python main.py                                  # Oberflaeche
     python main.py check  Pfad\\zur\\Setup.inf        # Paketpruefung
-    python main.py run    Pfad\\zur\\Setup.inf [/U] [/AW] [/S1]   # Simulation
+    python main.py run    Pfad\\zur\\Setup.inf [/U] [/AW] [/C] [/S1]   # Simulation (/AW Maschinenteil, /C Benutzerteil)
     python main.py run    Pfad\\zur\\Setup.inf --programme   # Installer echt starten, Rest simulieren
     python main.py run    Pfad\\zur\\Setup.inf --echt  # echte Ausfuehrung (Windows, Admin)
     python main.py vars   Pfad\\zur\\Setup.inf        # Variablen nach dem Laden
@@ -227,7 +227,9 @@ def main(argv: list[str] | None = None) -> int:
 
     p = sub.add_parser("run", help="Setup.inf ausfuehren (Standard: Simulation)")
     p.add_argument("inf")
-    p.add_argument("switches", nargs="*", help="Setup.exe-Schalter: /U /R /AW /S0..4")
+    p.add_argument("switches", nargs="*",
+                   help="Setup.exe-Schalter: /U /R /S0..4, /AW Maschinenteil (CLIENT-Sektionen uebersprungen), "
+                        "/C Benutzerteil (MACHINE-Sektionen uebersprungen); ohne beide laufen alle Sektionen")
     p.add_argument("--echt", action="store_true", help="wirklich ausfuehren (nur Windows)")
     p.add_argument("--keine-nachbildung", action="store_true",
                    help="Simulation: Wirkung von Installern nicht nachbilden")

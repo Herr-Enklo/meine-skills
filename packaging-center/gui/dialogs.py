@@ -35,8 +35,8 @@ class DebugStartDialog(simpledialog.Dialog):
     """Fragt vor DEBUG/EINZELSCHRITT nach dem Setup-Befehl und der Art des Laufs.
 
     Das Original fragt an dieser Stelle nach der Kommandozeile von Setup.exe;
-    /U schaltet auf Deinstallation, /AW auf den Benutzerteil, /S0..4 setzt
-    die Anzeigestufe."""
+    /U schaltet auf Deinstallation, /AW auf den Maschinenteil, /C auf den
+    Benutzerteil, /S0..4 setzt die Anzeigestufe."""
 
     def __init__(self, parent, inf_path: str, settings: dict, single_step: bool,
                  default_switches: str = ""):
@@ -64,7 +64,7 @@ class DebugStartDialog(simpledialog.Dialog):
         sw.grid(row=2, column=0, columnspan=3, sticky="w", **pad)
         ttk.Label(sw, text="Schalter:").pack(side="left")
         for label, switch in (("Installation", ""), ("/U Deinstallation", "/U"), ("/R Neuinstallation", "/R"),
-                              ("/AW Benutzerteil", "/AW")):
+                              ("/AW Maschinenteil", "/AW"), ("/C Benutzerteil", "/C")):
             ttk.Button(sw, text=label, command=lambda s=switch: self._toggle(s)).pack(side="left", padx=2)
         import re as _re
         m = _re.search(r"/S([0-4])\b", last.upper())
@@ -139,11 +139,12 @@ class DebugStartDialog(simpledialog.Dialog):
         cmd = self.cmd_var.get()
         parts = cmd.split()
         base = [p for p in parts if p.upper() not in ("/U", "/R")] if switch in ("", "/U", "/R") else parts
-        if switch == "/AW":
-            if "/AW" in [p.upper() for p in parts]:
-                base = [p for p in parts if p.upper() != "/AW"]
+        if switch in ("/AW", "/C"):
+            # Maschinenteil und Benutzerteil schliessen sich aus
+            if switch in [p.upper() for p in parts]:
+                base = [p for p in parts if p.upper() != switch]
             else:
-                base = parts + ["/AW"]
+                base = [p for p in parts if p.upper() not in ("/AW", "/C")] + [switch]
         elif switch:
             base = base + [switch]
         self.cmd_var.set(" ".join(base))
