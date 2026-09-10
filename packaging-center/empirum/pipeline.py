@@ -158,7 +158,8 @@ def make_options(inf: InfFile, mode: str, base: RunOptions | None = None) -> Run
                      "call_timeout", "apply_registration", "emulate_installers", "log_path"):
             setattr(opts, name, getattr(base, name))
         opts.env_overrides = dict(base.env_overrides)
-        opts.user_part = base.user_part or opts.user_part
+        if base.part != "all":
+            opts.part = base.part
     opts.mode = "install" if mode == "reinstall" else mode
     opts.command_line = f'Setup.exe "{inf.path}" {opts.switches()}'
     return opts
