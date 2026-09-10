@@ -58,6 +58,13 @@ Beispielpakete und die öffentliche Dokumentation es belegen:
   MachineKeyName-Vermerk tut das echte Setup.exe nichts; der Nachbau warnt
   und läuft weiter.
 
+`--getuninstallkeyname-leer` (beziehungsweise `RunOptions.uninstall_key_lookup="leer"`)
+bildet nach, dass `GetUninstallKeyName` mit Setup.exe 24.0.3 auf Windows 11 26200
+immer leer liefert: die Funktion liest die Registry transaktional
+(RegOpenKeyTransacted), und der Transaktions-Ressourcenmanager der Registry ist dort
+nicht aktiv (Fehler 6801, real geprüft am 10.09.2026). Pakete brauchen deshalb einen
+Rückfall auf den festen Schlüsselnamen.
+
 Die Bedeutung von `/AW` und `/C` und die Wirkung der Flags MACHINE und CLIENT
 sind seit dem 10.09.2026 mit dem echten Setup.exe 24.0.3 belegt (Flag-Test,
 siehe matrix42-paketierung, Testbericht_SetupExe_2026-09-10.md im

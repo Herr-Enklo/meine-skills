@@ -155,7 +155,7 @@ def make_options(inf: InfFile, mode: str, base: RunOptions | None = None) -> Run
     opts = RunOptions.from_command_line(switches)
     if base is not None:
         for name in ("bits", "language", "once_rule", "version_compare", "abort_on_unknown_command",
-                     "call_timeout", "apply_registration", "emulate_installers", "log_path"):
+                     "call_timeout", "apply_registration", "emulate_installers", "log_path", "uninstall_key_lookup"):
             setattr(opts, name, getattr(base, name))
         opts.env_overrides = dict(base.env_overrides)
         if base.part != "all":

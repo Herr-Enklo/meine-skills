@@ -59,7 +59,8 @@ def cmd_run(args) -> int:
     opts = RunOptions.from_command_line(switches, bits=args.bits,
                                         version_compare="string" if args.string_compare else "numeric",
                                         once_rule=not args.no_once,
-                                        emulate_installers=not args.keine_nachbildung)
+                                        emulate_installers=not args.keine_nachbildung,
+                                        uninstall_key_lookup="leer" if args.getuninstallkeyname_leer else "normal")
     opts.command_line = f'Setup.exe "{inf.path}" {switches}'.strip()
     for item in args.var or []:
         k, _, v = item.partition("=")
@@ -233,6 +234,8 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--echt", action="store_true", help="wirklich ausfuehren (nur Windows)")
     p.add_argument("--keine-nachbildung", action="store_true",
                    help="Simulation: Wirkung von Installern nicht nachbilden")
+    p.add_argument("--getuninstallkeyname-leer", action="store_true",
+                   help="GetUninstallKeyName liefert immer leer, wie Setup.exe 24.0.3 auf Windows 11 26200 (transaktionaler Registry-Zugriff)")
     p.add_argument("--programme", action="store_true",
                    help="Mischmodus: Programmaufrufe wirklich starten, Rest simulieren")
     p.add_argument("--bits", type=int, default=64, choices=(32, 64))
