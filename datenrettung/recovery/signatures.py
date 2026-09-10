@@ -45,6 +45,21 @@ class Signature:
     # prueft interne Merkmale (z.B. PNG-CRC, ZIP-Kompressionsmethode) und
     # verwirft Fehltreffer. Gibt ``False`` zurueck, wird der Fund fallengelassen.
     validator: Optional[Callable[[bytes, int], bool]] = None
+    # Optionaler struktureller Ende-Finder: bekommt eine Lesefunktion
+    # ``read(offset, laenge)``, den Dateianfang und eine Obergrenze und liefert
+    # das absolute Dateiende (exklusiv) oder None, wenn die Struktur nicht
+    # sauber verfolgt werden kann (dann greift die Footer-Suche).
+    end_finder: Optional[Callable[[Callable[[int, int], bytes], int, int],
+                                  Optional[int]]] = None
+    # Optionale Verschachtelung ``(oeffner_regex, schliesser_regex)``: das
+    # Endmuster zaehlt erst, wenn alle inneren Oeffner geschlossen sind. Fuer
+    # Formate, die sich selbst enthalten koennen (JPEG-Vorschaubild in EXIF,
+    # RTF-Klammergruppen).
+    nesting: Optional[tuple[bytes, bytes]] = None
+    # Optionaler Test, ob die Datei hinter einem gefundenen Endmuster weitergeht
+    # (PDF mit inkrementellen Updates hat mehrere ``%%EOF``). Bekommt die Bytes
+    # direkt hinter dem Footer; ``True`` = weitersuchen.
+    footer_continue: Optional[Callable[[bytes], bool]] = None
 
 
 def _le_size_at(pos: int, width: int, add: int = 0):
@@ -165,6 +180,108 @@ def _riff_quick(head: bytes) -> bool:
     return len(head) < 12 or head[8:12] in (b"WAVE", b"AVI ", b"WEBP")
 
 
+# -- Struktureller Ende-Finder fuer JPEG ---------------------------------
+
+def _jpeg_end(read, start: int, limit: int) -> Optional[int]:
+    """Verfolgt die Marker-Struktur eines JPEG bis zum ``FF D9``.
+
+    Segmente mit Laengenfeld (APPn, DQT, SOF, DHT ...) werden uebersprungen –
+    damit liegt ein in EXIF eingebettetes Vorschaubild samt eigenem ``FF D9``
+    ausserhalb der Suche und beendet die Datei nicht mehr vorzeitig. Nach
+    einem SOS-Segment werden die Entropiedaten bis zum naechsten echten Marker
+    ueberlesen (``FF 00`` und Restart-Marker ``FF D0..D7`` gehoeren zu den
+    Daten). Progressive JPEGs mit mehreren SOS-Segmenten werden so ebenfalls
+    korrekt verfolgt.
+
+    Liefert None, sobald die Struktur nicht mehr plausibel ist (dann greift
+    der Aufrufer auf die Footer-Suche zurueck).
+    """
+    window = 64 * 1024
+    pos = start + 2                                    # hinter FF D8
+    # Kleiner Lesepuffer, damit die Marker nicht einzeln gelesen werden.
+    buf = b""
+    buf_pos = 0
+
+    def get(at: int, n: int) -> bytes:
+        nonlocal buf, buf_pos
+        if at < buf_pos or at + n > buf_pos + len(buf):
+            want = min(max(n, window), limit - at)
+            if want <= 0:
+                return b""
+            buf = read(at, want)
+            buf_pos = at
+        return buf[at - buf_pos:at - buf_pos + n]
+
+    while pos + 2 <= limit:
+        head = get(pos, 4)
+        if len(head) < 2 or head[0] != 0xFF:
+            return None
+        marker = head[1]
+        if marker == 0xFF:                             # Fuellbyte
+            pos += 1
+            continue
+        if marker == 0xD9:                             # EOI
+            return pos + 2
+        if marker == 0xD8 or 0xD0 <= marker <= 0xD7 or marker == 0x01:
+            pos += 2                                   # Marker ohne Laengenfeld
+            continue
+        if len(head) < 4:
+            return None
+        seg_len = int.from_bytes(head[2:4], "big")
+        if seg_len < 2:
+            return None
+        pos += 2 + seg_len
+        if marker != 0xDA:                             # kein SOS -> naechstes Segment
+            continue
+        # Entropiedaten: bis zum naechsten Marker, der nicht zu den Daten gehoert.
+        while True:
+            chunk = get(pos, window)
+            if not chunk:
+                return None
+            i = 0
+            found = -1
+            while True:
+                i = chunk.find(b"\xff", i)
+                if i < 0 or i + 1 >= len(chunk):
+                    break                              # kein FF mehr / FF am Blockende
+                nxt = chunk[i + 1]
+                if nxt == 0x00 or 0xD0 <= nxt <= 0xD7:
+                    i += 2
+                    continue
+                if nxt == 0xFF:
+                    i += 1
+                    continue
+                found = i
+                break
+            if found >= 0:
+                pos += found
+                break
+            if i < 0:                                  # kein FF im Block
+                pos += len(chunk)
+            elif len(chunk) < window:                  # FF am Quellenende
+                return None
+            else:
+                pos += i                               # FF an Blockgrenze: neu ansetzen
+            if pos >= limit:
+                return None
+    return None
+
+
+def _pdf_continues(tail: bytes) -> bool:
+    """Geht ein PDF hinter ``%%EOF`` weiter (inkrementelles Update)?
+
+    Nach einem Update folgen neue Objekte (``N G obj``), ``xref``, ``trailer``
+    oder ``startxref``; Nullen oder ein fremder Dateikopf bedeuten Ende.
+    """
+    import re
+    text = tail.lstrip(b"\r\n\t ")
+    if not text:
+        return False
+    if text.startswith((b"xref", b"trailer", b"startxref", b"%")):
+        return True
+    return re.match(rb"\d+\s+\d+\s+obj", text) is not None
+
+
 # -- Struktur-Validatoren (Kategorie 3) ---------------------------------
 # Pruefen interne Merkmale eines Fundes und verwerfen Fehltreffer.
 
@@ -211,9 +328,12 @@ def _ole_valid(data: bytes, size: int) -> bool:
 
 # Reihenfolge = grobe Prioritaet bei ueberlappenden Headern.
 SIGNATURES: list[Signature] = [
+    # JPEG: erst die Marker-Struktur verfolgen (ueberspringt EXIF-Vorschau-
+    # bilder); scheitert das, zaehlt die Footer-Suche verschachtelte SOI/EOI.
     Signature("JPEG-Bild", "jpg",
               header=b"\xFF\xD8\xFF", footer=b"\xFF\xD9", max_size=30 * MB,
-              validator=_jpeg_valid),
+              validator=_jpeg_valid, end_finder=_jpeg_end,
+              nesting=(rb"\xFF\xD8\xFF", rb"\xFF\xD9")),
     Signature("PNG-Bild", "png",
               header=b"\x89PNG\r\n\x1a\n",
               footer=b"IEND\xaeB`\x82", max_size=30 * MB, validator=_png_valid),
@@ -234,8 +354,10 @@ SIGNATURES: list[Signature] = [
               header=b"FUJIFILMCCD-RAW", max_size=100 * MB),
     Signature("Panasonic-RAW", "rw2",
               header=b"II\x55\x00", max_size=100 * MB),
+    # PDF: bei inkrementellen Updates gilt das letzte ``%%EOF``.
     Signature("PDF-Dokument", "pdf",
-              header=b"%PDF-", footer=b"%%EOF", max_size=100 * MB),
+              header=b"%PDF-", footer=b"%%EOF", max_size=100 * MB,
+              footer_continue=_pdf_continues),
     Signature("ZIP/Office-Dokument", "zip",
               header=b"PK\x03\x04", footer=b"PK\x05\x06", max_size=200 * MB,
               footer_size=_zip_eocd_size, validator=_zip_valid),
@@ -251,8 +373,11 @@ SIGNATURES: list[Signature] = [
     Signature("OLE-Dokument (doc/xls/ppt)", "ole",
               header=b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1", max_size=200 * MB,
               validator=_ole_valid),
+    # RTF: Klammergruppen zaehlen, das Ende ist die schliessende Klammer der
+    # aeussersten Gruppe (maskierte ``\{``/``\}`` werden nicht gezaehlt).
     Signature("RTF-Dokument", "rtf",
-              header=b"{\\rtf", footer=b"}", max_size=30 * MB),
+              header=b"{\\rtf", footer=b"}", max_size=30 * MB,
+              nesting=(rb"(?<!\\)\{", rb"(?<!\\)\}")),
     Signature("Photoshop-Datei", "psd",
               header=b"8BPS", max_size=500 * MB),
     # TIFF und die meisten Kamera-RAW-Formate (CR2, NEF, ARW, DNG, ORF ...).

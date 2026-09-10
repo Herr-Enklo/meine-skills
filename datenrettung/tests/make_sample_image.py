@@ -147,23 +147,60 @@ def _file_name_content(name: str, parent_ref: int = 5) -> bytes:
 
 
 def _nonresident_data_attr(runs: bytes, real_size: int,
-                           last_vcn: int) -> bytes:
-    runs_off = 0x40
+                           last_vcn: int, name: str = "",
+                           start_vcn: int = 0) -> bytes:
+    name16 = name.encode("utf-16-le")
+    runs_off = _align8(0x40 + len(name16))
     length = _align8(runs_off + len(runs))
     attr = bytearray(length)
     struct.pack_into("<I", attr, 0x00, 0x80)           # $DATA
     struct.pack_into("<I", attr, 0x04, length)
     attr[0x08] = 1                                      # nicht resident
-    attr[0x09] = 0
-    struct.pack_into("<H", attr, 0x0A, 0)
-    struct.pack_into("<Q", attr, 0x10, 0)              # Start-VCN
+    attr[0x09] = len(name)                              # Namenslaenge (Zeichen)
+    struct.pack_into("<H", attr, 0x0A, 0x40)           # Namensoffset
+    struct.pack_into("<Q", attr, 0x10, start_vcn)      # Start-VCN
     struct.pack_into("<Q", attr, 0x18, last_vcn)       # letzte VCN
     struct.pack_into("<H", attr, 0x20, runs_off)       # Offset Mapping Pairs
     struct.pack_into("<Q", attr, 0x28, (last_vcn + 1) * CLUSTER)  # alloziert
     struct.pack_into("<Q", attr, 0x30, real_size)      # echte Groesse
     struct.pack_into("<Q", attr, 0x38, real_size)      # initialisierte Groesse
+    attr[0x40:0x40 + len(name16)] = name16
     attr[runs_off:runs_off + len(runs)] = runs
     return bytes(attr)
+
+
+def _attribute_list_entry(atype: int, name: str, start_vcn: int, ref: int) -> bytes:
+    """Ein Eintrag der ``$ATTRIBUTE_LIST`` (verweist auf einen MFT-Eintrag)."""
+    name16 = name.encode("utf-16-le")
+    length = _align8(0x1A + len(name16))
+    entry = bytearray(length)
+    struct.pack_into("<I", entry, 0x00, atype)
+    struct.pack_into("<H", entry, 0x04, length)
+    entry[0x06] = len(name)
+    entry[0x07] = 0x1A
+    struct.pack_into("<Q", entry, 0x08, start_vcn)
+    struct.pack_into("<Q", entry, 0x10, ref)            # MFT-Referenz (ohne Sequenz)
+    entry[0x1A:0x1A + len(name16)] = name16
+    return bytes(entry)
+
+
+def make_usn_record(name: str, reason: int, timestamp: int, ref: int = 100,
+                    parent: int = 5) -> bytes:
+    """Ein USN_RECORD_V2, wie er im ``$J``-Strom liegt."""
+    name16 = name.encode("utf-16-le")
+    name_off = 0x3C
+    rec_len = (name_off + len(name16) + 7) & ~7
+    rec = bytearray(rec_len)
+    struct.pack_into("<I", rec, 0, rec_len)
+    struct.pack_into("<H", rec, 4, 2)                   # MajorVersion
+    struct.pack_into("<Q", rec, 0x08, ref)
+    struct.pack_into("<Q", rec, 0x10, parent)
+    struct.pack_into("<Q", rec, 0x20, timestamp)
+    struct.pack_into("<I", rec, 0x28, reason)
+    struct.pack_into("<H", rec, 0x38, len(name16))
+    struct.pack_into("<H", rec, 0x3A, name_off)
+    rec[name_off:name_off + len(name16)] = name16
+    return bytes(rec)
 
 
 def _put_attrs(rec: bytearray, attrs: list[bytes]) -> None:
@@ -175,10 +212,21 @@ def _put_attrs(rec: bytearray, attrs: list[bytes]) -> None:
     struct.pack_into("<I", rec, 0x18, off + 8)         # genutzte Groesse
 
 
+USN_FILE_DELETE = 0x00000200
+USN_CLOSE = 0x80000000
+
+
 def build_ntfs_image(file_name: str = "geheim.txt",
-                     file_data: bytes = b"Vertrauliche Notizen. Bitte wiederherstellen!\n"
+                     file_data: bytes = b"Vertrauliche Notizen. Bitte wiederherstellen!\n",
+                     usn: str = "",
                      ) -> tuple[bytes, dict]:
-    """Baut ein NTFS-Volume mit einer geloeschten Datei in MFT-Eintrag 2."""
+    """Baut ein NTFS-Volume mit einer geloeschten Datei in MFT-Eintrag 2.
+
+    ``usn`` ergaenzt ein ``$UsnJrnl`` mit einem ``$J``-Strom, der eine Loeschung
+    von ``weg.docx`` protokolliert: ``"direct"`` legt die Data-Runs direkt in
+    den Eintrag, ``"attrlist"`` verteilt sie ueber eine ``$ATTRIBUTE_LIST`` auf
+    zwei Erweiterungseintraege (wie bei grossen Journalen).
+    """
     total_sectors = 64
     image = bytearray(total_sectors * SECTOR)
 
@@ -194,7 +242,8 @@ def build_ntfs_image(file_name: str = "geheim.txt",
     image[0:SECTOR] = boot
 
     mft_offset = MFT_LCN * CLUSTER
-    mft_bytes = NUM_RECORDS * RECORD_SIZE               # 4096 Bytes = 8 Cluster
+    num_records = NUM_RECORDS + (3 if usn else 0)       # + $UsnJrnl (+ Erweiterungen)
+    mft_bytes = num_records * RECORD_SIZE               # 2 Cluster je Eintrag
     mft_clusters = mft_bytes // CLUSTER
 
     # Eintrag 0: $MFT mit nicht-residentem $DATA, das die MFT selbst abbildet.
@@ -222,6 +271,41 @@ def build_ntfs_image(file_name: str = "geheim.txt",
     _put_attrs(rec3, [_resident_attr(0x30, _file_name_content("Ordner", parent_ref=5))])
 
     records = [rec0, _blank_record(0x00), rec2, rec3]
+
+    if usn:
+        # $J: zwei Cluster hinter der MFT, je ein USN-Datensatz pro Cluster.
+        j_lcn = MFT_LCN + mft_clusters + 2
+        j_bytes = 2 * CLUSTER
+        rec_a = make_usn_record("alt.txt", 0x100 | USN_CLOSE, modified_ft, ref=40)
+        rec_b = make_usn_record("weg.docx", USN_FILE_DELETE | USN_CLOSE,
+                                modified_ft, ref=41)
+        image[j_lcn * CLUSTER: j_lcn * CLUSTER + len(rec_a)] = rec_a
+        image[(j_lcn + 1) * CLUSTER: (j_lcn + 1) * CLUSTER + len(rec_b)] = rec_b
+
+        rec4 = _blank_record(flags=0x01)                # $UsnJrnl (Basis-Eintrag)
+        name_attr = _resident_attr(0x30, _file_name_content("$UsnJrnl", parent_ref=11))
+        if usn == "direct":
+            runs = bytes([0x11, 2, j_lcn, 0x00])
+            _put_attrs(rec4, [name_attr,
+                              _nonresident_data_attr(runs, j_bytes, 1, name="$J")])
+            ext = [_blank_record(0x00), _blank_record(0x00)]
+        else:
+            # Zwei Teilstuecke in den Erweiterungseintraegen 5 und 6, die
+            # $ATTRIBUTE_LIST im Basiseintrag verweist darauf.
+            alist = (_attribute_list_entry(0x80, "$J", 0, 5)
+                     + _attribute_list_entry(0x80, "$J", 1, 6))
+            _put_attrs(rec4, [_resident_attr(0x20, alist), name_attr])
+            rec5 = _blank_record(flags=0x01)
+            _put_attrs(rec5, [_nonresident_data_attr(bytes([0x11, 1, j_lcn, 0x00]),
+                                                     j_bytes, 0, name="$J",
+                                                     start_vcn=0)])
+            rec6 = _blank_record(flags=0x01)
+            _put_attrs(rec6, [_nonresident_data_attr(bytes([0x11, 1, j_lcn + 1, 0x00]),
+                                                     j_bytes, 1, name="$J",
+                                                     start_vcn=1)])
+            ext = [rec5, rec6]
+        records += [rec4] + ext
+
     for i, rec in enumerate(records):
         pos = mft_offset + i * RECORD_SIZE
         image[pos:pos + RECORD_SIZE] = rec
@@ -233,6 +317,7 @@ def build_ntfs_image(file_name: str = "geheim.txt",
         "mft_offset": mft_offset,
         "path": f"Ordner/{file_name}",
         "modified": "2021-06-15 12:00:00",
+        "usn_deleted": "weg.docx",
     }
     return bytes(image), expected
 
@@ -254,10 +339,13 @@ def build_fat_image(file_name_83: bytes = b"HALLO   TXT",
     struct.pack_into("<H", boot, 0x11, 16)              # Wurzeleintraege
     struct.pack_into("<H", boot, 0x13, total_sectors)   # Gesamtsektoren
     struct.pack_into("<H", boot, 0x16, 1)               # Sektoren/FAT
+    boot[0x15] = 0xF8                                     # Medien-Deskriptor
+    boot[0x36:0x3B] = b"FAT12"
     struct.pack_into("<H", boot, bps - 2, 0xAA55)       # Boot-Signatur
     image[0:bps] = boot
 
     # Layout: reservierte(1) + FAT(1) + Wurzel(1) -> erster Datensektor = 3.
+    image[bps:bps + 3] = b"\xf8\xff\xff"                 # FAT[0]/FAT[1] (FAT12)
     root_offset = (1 + 1) * bps                          # Sektor 2
     data_offset = 3 * bps                                # Cluster 2
 
@@ -281,10 +369,95 @@ def build_fat_image(file_name_83: bytes = b"HALLO   TXT",
     return bytes(image), expected
 
 
-def build_exfat_image(name: str = "geheim.txt",
-                      file_data: bytes = b"exFAT geloeschte Datei.\n"
+def _lfn_entry(seq: int, chars: str, checksum: int, deleted: bool) -> bytes:
+    """Ein LFN-Verzeichniseintrag (13 Zeichen) fuer FAT."""
+    text = (chars + "\x00").ljust(13, "￿")[:13].encode("utf-16-le")
+    entry = bytearray(32)
+    entry[0] = 0xE5 if deleted else seq
+    entry[1:11] = text[0:10]
+    entry[0x0B] = 0x0F
+    entry[0x0D] = checksum
+    entry[14:26] = text[10:22]
+    entry[28:32] = text[22:26]
+    return bytes(entry)
+
+
+def build_fat32_image(long_name: str = "Urlaubsfoto 2021.jpg",
+                      file_data: bytes = b"FAT32 geloeschte Datei mit langem Namen.\n"
                       ) -> tuple[bytes, dict]:
-    """Baut ein winziges exFAT-Volume mit einer geloeschten Datei im Wurzelverzeichnis."""
+    """Baut ein FAT32-Volume (nur der belegte Anfang) mit einer geloeschten Datei.
+
+    FAT32 hat kein festes Wurzelverzeichnis, sondern eine Cluster-Kette ab
+    ``root_cluster``; ausserdem liegt in Sektor 6 eine Kopie des Boot-Sektors.
+    Die Datei traegt einen langen Namen (LFN), der auch nach dem Loeschen
+    erhalten bleibt. Die Datei ist auf ``total_sectors`` deklariert, die
+    Bytes hinter dem letzten belegten Cluster werden aber nicht geschrieben.
+    """
+    bps = 512
+    reserved = 32
+    cluster_count = 66000                                # > 65525 -> FAT32
+    fat_sectors = (cluster_count * 4 + bps - 1) // bps
+    total_sectors = reserved + fat_sectors + cluster_count
+    data_sector = reserved + fat_sectors                 # Cluster 2
+
+    boot = bytearray(bps)
+    boot[3:11] = b"MSDOS5.0"
+    struct.pack_into("<H", boot, 0x0B, bps)
+    boot[0x0D] = 1                                        # Sektoren/Cluster
+    struct.pack_into("<H", boot, 0x0E, reserved)
+    boot[0x10] = 1                                        # Anzahl FATs
+    boot[0x15] = 0xF8                                     # Medien-Deskriptor
+    struct.pack_into("<I", boot, 0x20, total_sectors)
+    struct.pack_into("<I", boot, 0x24, fat_sectors)      # Sektoren/FAT (FAT32)
+    struct.pack_into("<I", boot, 0x2C, 2)               # Wurzel-Cluster
+    struct.pack_into("<H", boot, 0x32, 6)               # Backup-Boot-Sektor
+    boot[0x52:0x5A] = b"FAT32   "
+    struct.pack_into("<H", boot, bps - 2, 0xAA55)
+
+    image = bytearray((data_sector + 2) * bps)
+    image[0:bps] = boot
+    image[6 * bps:7 * bps] = boot                        # Kopie in Sektor 6
+    fat_off = reserved * bps
+    struct.pack_into("<III", image, fat_off, 0x0FFFFFF8, 0x0FFFFFFF, 0x0FFFFFFF)
+
+    # Wurzelverzeichnis (Cluster 2): LFN-Teile + geloeschter 8.3-Eintrag.
+    short = b"URLAUB~1JPG"
+    checksum = 0
+    for b in short:
+        checksum = (((checksum & 1) << 7) + (checksum >> 1) + b) & 0xFF
+    parts = [long_name[i:i + 13] for i in range(0, len(long_name), 13)]
+    entries = b""
+    for k in range(len(parts) - 1, -1, -1):
+        seq = (k + 1) | (0x40 if k == len(parts) - 1 else 0)
+        entries += _lfn_entry(seq, parts[k], checksum, deleted=True)
+    entry = bytearray(32)
+    entry[0:11] = b"\xe5" + short[1:]
+    entry[0x0B] = 0x20
+    struct.pack_into("<H", entry, 0x14, 0)              # Cluster high
+    struct.pack_into("<H", entry, 0x16, 24576)          # 12:00:00
+    struct.pack_into("<H", entry, 0x18, 21199)          # 2021-06-15
+    struct.pack_into("<H", entry, 0x1A, 3)              # Startcluster 3
+    struct.pack_into("<I", entry, 0x1C, len(file_data))
+    entries += bytes(entry)
+    root_off = data_sector * bps
+    image[root_off:root_off + len(entries)] = entries
+    data_off = (data_sector + 1) * bps
+    image[data_off:data_off + len(file_data)] = file_data
+
+    expected = {"name": long_name, "data": file_data,
+                "modified": "2021-06-15 12:00:00", "backup_offset": 6 * bps}
+    return bytes(image), expected
+
+
+def build_exfat_image(name: str = "geheim.txt",
+                      file_data: bytes = b"exFAT geloeschte Datei.\n",
+                      with_backup: bool = False,
+                      ) -> tuple[bytes, dict]:
+    """Baut ein winziges exFAT-Volume mit einer geloeschten Datei im Wurzelverzeichnis.
+
+    ``with_backup`` schreibt zusaetzlich die Backup-Boot-Region in Sektor 12,
+    wie sie echte exFAT-Volumes tragen.
+    """
     bps = 512
     image = bytearray(32 * bps)
 
@@ -301,6 +474,9 @@ def build_exfat_image(name: str = "geheim.txt",
     boot[0x6E] = 1                                        # Anzahl FATs
     struct.pack_into("<H", boot, bps - 2, 0xAA55)
     image[0:bps] = boot
+    image[4 * bps:4 * bps + 8] = b"\xf8\xff\xff\xff\xff\xff\xff\xff"  # FAT[0], FAT[1]
+    if with_backup:
+        image[12 * bps:13 * bps] = boot
 
     root_off = 8 * bps                                   # Cluster 2
     data_off = 9 * bps                                   # Cluster 3
