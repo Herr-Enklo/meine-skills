@@ -4,6 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1c5537">
+<meta name="application-name" content="Tutto">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Tutto">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <title>Tutto</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -45,8 +53,8 @@ body{
     linear-gradient(180deg,var(--felt-light),var(--felt) 45%,var(--felt-dark));
   color:var(--cream);
   font-family:Nunito,"Segoe UI",system-ui,sans-serif;font-size:16px;line-height:1.4;
-  padding-inline:16px;padding-block:10px calc(18px + env(safe-area-inset-bottom));
-  -webkit-tap-highlight-color:transparent;
+  padding-inline:max(16px,env(safe-area-inset-left)) max(16px,env(safe-area-inset-right));padding-block:calc(10px + env(safe-area-inset-top)) calc(18px + env(safe-area-inset-bottom));
+  -webkit-tap-highlight-color:transparent;overscroll-behavior:none;
 }
 h1,h2,h3{font-family:"Baloo 2","Trebuchet MS",sans-serif;line-height:1.1;margin:0;text-wrap:balance}
 button{font:inherit;cursor:pointer}
@@ -227,8 +235,8 @@ button:focus-visible,input:focus-visible,select:focus-visible,[tabindex]:focus-v
 .logbtn{display:none}
 @media (max-width:879px){
   :root{--die:clamp(36px,min(22vw,8.5vh),96px);--die-small:clamp(24px,min(7vw,3.6vh),44px)}
-  body{padding-block:8px calc(8px + env(safe-area-inset-bottom))}
-  .app{min-height:0;height:calc(100vh - 16px - env(safe-area-inset-bottom));height:calc(100dvh - 16px - env(safe-area-inset-bottom));grid-template-rows:auto auto auto minmax(0,1fr);gap:10px}
+  body{padding-block:calc(8px + env(safe-area-inset-top)) calc(8px + env(safe-area-inset-bottom))}
+  .app{min-height:0;height:calc(100vh - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom));height:calc(100dvh - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom));grid-template-rows:auto auto auto minmax(0,1fr);gap:10px}
   .topbar{flex-wrap:nowrap;gap:6px}
   .logo svg{height:38px}
   .topbar .tools{flex-wrap:nowrap;gap:6px}
@@ -1067,6 +1075,11 @@ document.addEventListener('toggle',e=>{ if(e.target.classList&&e.target.classLis
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape'&&ui.overlay&&ui.overlay!=='over'&&G){ closeOverlay(); }
 });
+
+/* ---------- Web-App ---------- */
+if('serviceWorker' in navigator && location.protocol.startsWith('http')){
+  window.addEventListener('load',()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); });
+}
 
 /* ---------- Start ---------- */
 (function init(){

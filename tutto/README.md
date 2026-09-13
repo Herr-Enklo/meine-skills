@@ -11,6 +11,20 @@ Das Würfelspiel Tutto (Reiner Knizia, Abacusspiele) als Webversion in einer ein
 
 Die Oberfläche passt sich der Bildschirmbreite an: Auf dem Handy liegen Karte, Würfel und Knöpfe untereinander, auf breiten Bildschirmen nebeneinander. Würfel und Knöpfe sind groß genug für Fingerbedienung.
 
+## Als App auf dem Handy
+
+Das Spiel ist eine installierbare Web-App (PWA). Dafür muss es über eine Webadresse mit HTTPS erreichbar sein, zum Beispiel über GitHub Pages:
+
+1. Im Repo unter Settings → Pages die Quelle „Deploy from a branch“ wählen, Branch `main`, Ordner `/ (root)`.
+2. Nach ein bis zwei Minuten liegt das Spiel unter `https://<benutzer>.github.io/meine-skills/tutto/`.
+3. iPhone: Seite in Safari öffnen, Teilen → „Zum Home-Bildschirm“. Android: Chrome bietet „App installieren“ an.
+
+Nach dem ersten Öffnen legt der Service Worker (`sw.js`) alle Dateien und die Schriften im Browser ab. Danach startet das Spiel auch ohne Internet vom Home-Bildschirm, randlos und ohne Adressleiste. Bei einer neuen Version die Nummer `CACHE` in `sw.js` erhöhen, damit die Geräte sie beim nächsten Start übernehmen.
+
+Zum Ausprobieren im eigenen WLAN reicht ein lokaler Server im Ordner `tutto`, etwa `python3 -m http.server 8000`, und auf dem Handy die IP des Rechners mit Port 8000. Ohne HTTPS funktioniert dann alles außer dem Offline-Betrieb.
+
+Dateien: `manifest.webmanifest` (Name, Farben, Symbole), `sw.js` (Offline-Cache), `icon.svg` (Vorlage) und die daraus erzeugten `icon-180.png`, `icon-192.png`, `icon-512.png`.
+
 ## Regeln
 
 Umgesetzt sind die Regeln der Abacus-Ausgabe mit 6 Würfeln und 56 Karten:
