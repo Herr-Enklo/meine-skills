@@ -31,8 +31,8 @@
   --purple:#7a4bb8;
   --white:#ffffff;
   --shadow:0 10px 26px rgba(0,0,0,.42);
-  --die:clamp(50px,13vw,88px);
-  --die-small:clamp(32px,7.5vw,48px);
+  --die:clamp(64px,24vw,110px);
+  --die-small:clamp(32px,8vw,52px);
 }
 *{box-sizing:border-box}
 html{color-scheme:light;min-height:100%;background:var(--felt)}
@@ -51,10 +51,12 @@ body{
 h1,h2,h3{font-family:"Baloo 2","Trebuchet MS",sans-serif;line-height:1.1;margin:0;text-wrap:balance}
 button{font:inherit;cursor:pointer}
 button:focus-visible,input:focus-visible,select:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--yellow);outline-offset:2px}
-.app{max-width:1080px;margin:0 auto;display:grid;gap:14px;grid-template-columns:1fr}
+.app{width:100%;margin:0 auto;display:grid;gap:14px;grid-template-columns:1fr;min-height:calc(100vh - 28px - env(safe-area-inset-bottom))}
 @media (min-width:880px){
-  .app{grid-template-columns:340px 1fr;align-items:start}
+  :root{--die:clamp(64px,min(7.5vw,13vh),150px);--die-small:clamp(40px,min(3.4vw,6vh),68px)}
+  .app{grid-template-columns:minmax(300px,27vw) 1fr;grid-template-rows:auto auto 1fr auto;align-items:stretch;gap:16px 20px}
   .topbar,.scoreboard,.logpanel{grid-column:1/-1}
+  .cardpanel,.table{align-self:stretch}
 }
 
 /* Kopfzeile */
@@ -97,8 +99,10 @@ button:focus-visible,input:focus-visible,select:focus-visible,[tabindex]:focus-v
 
 /* Kartenbereich */
 .cardpanel{display:grid;gap:14px;grid-template-columns:minmax(130px,170px) 1fr;align-items:start}
-@media (min-width:880px){.cardpanel{grid-template-columns:1fr;justify-items:center}}
+@media (min-width:880px){.cardpanel{grid-template-columns:1fr;justify-items:center;align-content:start;gap:18px}.cardinfo p{font-size:15px}.totals{gap:10px}.total .val{font-size:30px}}
+.cardwrap{width:100%;display:grid;justify-items:center}
 .cardslot{position:relative;width:100%;max-width:210px;aspect-ratio:2/3;perspective:900px}
+@media (min-width:880px){.cardslot{max-width:min(320px,20vw,27vh)}}
 .cardslot .card{position:absolute;inset:0;filter:drop-shadow(0 10px 14px rgba(0,0,0,.5))}
 .cardslot .card img,.card-svg{width:100%;height:100%;display:block;border-radius:6%}
 .cardslot.flip .card{animation:flip .5s cubic-bezier(.2,.7,.3,1)}
@@ -130,8 +134,9 @@ button:focus-visible,input:focus-visible,select:focus-visible,[tabindex]:focus-v
     inset 0 0 0 11px var(--wood-light),
     inset 0 0 70px 14px rgba(0,0,0,.45),
     0 10px 24px rgba(0,0,0,.35);
-  display:grid;gap:14px;min-height:320px;align-content:start;overflow:hidden;
+  display:grid;gap:14px;min-height:340px;grid-template-rows:auto auto auto 1fr auto auto;align-content:stretch;overflow:hidden;
 }
+@media (min-width:880px){.table{padding:18px 22px;gap:16px}.msg{font-size:clamp(18px,1.6vw,24px)}.tablehead h2{font-size:clamp(24px,2.4vw,34px)}.actions .btn{font-size:clamp(18px,1.5vw,22px);min-height:56px}}
 .tablehead{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;padding:4px 4px 0}
 .tablehead h2{font-size:clamp(20px,5vw,28px);text-shadow:0 2px 0 rgba(0,0,0,.35)}
 .tablehead .hint{font-size:13px;opacity:.85}
@@ -145,7 +150,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,[tabindex]:focus-v
 .msg.ok{background:linear-gradient(180deg,rgba(58,166,85,.55),rgba(40,120,60,.55))}
 .aside{display:flex;gap:6px;flex-wrap:wrap;min-height:var(--die-small);align-items:center;padding:0 4px}
 .aside .lbl,.dice .lbl{font-size:11px;letter-spacing:.1em;text-transform:uppercase;opacity:.75;width:100%}
-.dice{position:relative;display:flex;gap:clamp(6px,2vw,12px);flex-wrap:wrap;justify-content:center;align-items:center;min-height:calc(var(--die) + 12px);padding:6px 0}
+.dice{position:relative;display:flex;gap:clamp(10px,3vw,18px);flex-wrap:wrap;justify-content:center;align-items:center;align-self:center;min-height:calc(var(--die) + 16px);padding:8px 0}
 .die{
   width:var(--die);height:var(--die);border:0;background:none;padding:0;border-radius:18%;
   transition:transform .15s ease;position:relative;transform-style:preserve-3d;
@@ -800,7 +805,7 @@ function renderCardPanel(){
       <div class="total"><div class="lbl">Diese Karte</div><div class="val">${c&&c.type==='strasse'?'–':fmt(t.cardPoints)}</div><div class="sub">${cardPtsSub||'Würfelpunkte'}</div></div>
     </div>
   </div>`;
-  return `<section class="cardpanel"><div>${slot}</div>${info}</section>`;
+  return `<section class="cardpanel"><div class="cardwrap">${slot}</div>${info}</section>`;
 }
 function renderTable(){
   const t=G.turn, c=card(), p=cur();
