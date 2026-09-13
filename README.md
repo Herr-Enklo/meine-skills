@@ -46,12 +46,13 @@ Beschreibung Platz im Systemprompt jeder Session.
 
 ## Werkzeuge im Repo
 
-Neben den Plugins liegen zwei eigenständige Python-Programme hier, jeweils mit eigener README:
+Neben den Plugins liegen eigenständige Programme hier, jeweils mit eigener README:
 
 | Ordner | Inhalt |
 |---|---|
 | `datenrettung/` | Sucht NTFS-, FAT- und exFAT-Datenträger nach gelöschten Dateien ab |
 | `packaging-center/` | Nachbau des Empirum Packaging Center 24.0: Package Wizard, Package Editor mit Debugger und Paketprüfung, um Setup.inf-Pakete ohne Empirum-Server lokal zu testen |
+| `tutto/` | Das Würfelspiel Tutto als Browserversion in einer HTML-Datei, für Handy und Desktop, mit Computerspielern |
 
 ## Skills und Agents aufrufen
 
