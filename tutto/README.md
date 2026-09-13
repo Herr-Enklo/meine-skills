@@ -24,9 +24,16 @@ Umgesetzt sind die Regeln der Abacus-Ausgabe mit 6 Würfeln und 56 Karten:
 
 Die vollständigen Regeln mit Kartenübersicht stehen im Spiel unter „Regeln“.
 
-## Grafik
+## Grafik und eigene Bilder
 
-Die Original-Illustrationen der Abacus-Ausgabe sind urheberrechtlich geschützt und deshalb nicht enthalten. Karten und Würfel sind als SVG im Stil des Originals nachgezeichnet und direkt in die Datei eingebettet. Die Schriften Baloo 2 und Nunito werden von Google Fonts geladen; ohne Internet greift die Systemschrift.
+Die Original-Illustrationen der Abacus-Ausgabe sind urheberrechtlich geschützt und deshalb nicht im Repo. Karten und Würfel sind als SVG im Stil des Originals gezeichnet und direkt in die Datei eingebettet. Die Schriften Baloo 2 und Nunito kommen von Google Fonts; ohne Internet greift die Systemschrift.
+
+Wer die Originalkarten besitzt, kann sie für den eigenen Gebrauch einscannen und in den Ordner `tutto/img/` legen. Sobald dort eine `back.png` liegt, sucht das Spiel beim Start nach folgenden Dateien und verwendet jede vorhandene statt der gezeichneten Grafik:
+
+- Karten: `back.png`, `stop.png`, `bonus200.png`, `bonus300.png`, `bonus400.png`, `bonus500.png`, `bonus600.png`, `x2.png`, `feuerwerk.png`, `strasse.png`, `plusminus.png`, `kleeblatt.png` (Seitenverhältnis 2:3)
+- Würfel: `die1.png` bis `die6.png` (quadratisch, am besten mit transparentem Hintergrund)
+
+Fehlende Dateien werden weiter gezeichnet, es müssen also nicht alle vorhanden sein. Der Ordner steht in `.gitignore`, damit die Scans nicht versehentlich veröffentlicht werden.
 
 ## Computerspieler
 
