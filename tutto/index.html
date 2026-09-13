@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1c5537">
+<title>Tutto</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&family=Nunito:wght@400;600;700;800&display=swap">
+<style>
+:root{
+  --felt:#1c5537;
+  --felt-light:#2a7a50;
+  --felt-dark:#113a25;
+  --line:rgba(255,255,255,.14);
+  --cream:#fff6e2;
+  --cream-2:#f3e2bd;
+  --ink:#2b1d12;
+  --ink-soft:#6e5847;
+  --orange:#f28a2c;
+  --orange-dark:#c4661c;
+  --yellow:#ffd23f;
+  --red:#c9382d;
+  --green:#3aa655;
+  --blue:#2f6fbf;
+  --purple:#7a4bb8;
+  --white:#ffffff;
+  --shadow:0 8px 22px rgba(0,0,0,.38);
+  --radius:14px;
+  --die:clamp(46px,12.5vw,84px);
+  --die-small:clamp(30px,7vw,46px);
+}
+*{box-sizing:border-box}
+html{color-scheme:light}
+body{
+  margin:0;
+  min-height:100vh;
+  background:var(--felt) radial-gradient(ellipse 120% 70% at 50% -10%, var(--felt-light) 0%, var(--felt) 50%, var(--felt-dark) 100%) fixed;
+  color:var(--cream);
+  font-family:Nunito,"Segoe UI",system-ui,sans-serif;
+  font-size:16px;
+  line-height:1.4;
+  padding-inline:16px;
+  padding-block:10px calc(18px + env(safe-area-inset-bottom));
+  -webkit-tap-highlight-color:transparent;
+}
+h1,h2,h3{font-family:"Baloo 2","Trebuchet MS",sans-serif;line-height:1.1;margin:0;text-wrap:balance}
+button{font:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible,select:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--yellow);outline-offset:2px}
+.app{max-width:1080px;margin:0 auto;display:grid;gap:14px;grid-template-columns:1fr}
+@media (min-width:880px){
+  .app{grid-template-columns:330px 1fr;align-items:start}
+  .topbar,.scoreboard,.logpanel{grid-column:1/-1}
+}
+
+/* Kopfzeile */
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.logo{font-family:"Baloo 2","Trebuchet MS",sans-serif;font-weight:800;font-size:clamp(30px,7vw,44px);letter-spacing:.02em;color:var(--yellow);text-shadow:0 3px 0 var(--orange-dark),0 6px 14px rgba(0,0,0,.4);line-height:1}
+.logo small{display:block;font-family:Nunito,sans-serif;font-weight:700;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--cream);text-shadow:none;opacity:.85}
+.topbar .tools{display:flex;gap:8px;flex-wrap:wrap}
+.btn{
+  border:0;border-radius:12px;padding:12px 18px;min-height:48px;
+  font-weight:800;font-size:16px;letter-spacing:.01em;
+  background:var(--orange);color:var(--ink);
+  box-shadow:0 4px 0 var(--orange-dark),0 6px 14px rgba(0,0,0,.3);
+  transition:transform .08s ease,box-shadow .08s ease,opacity .15s;
+}
+.btn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--orange-dark),0 3px 8px rgba(0,0,0,.3)}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.btn.secondary{background:var(--cream);box-shadow:0 4px 0 #c9b48a,0 6px 14px rgba(0,0,0,.3)}
+.btn.secondary:active{box-shadow:0 1px 0 #c9b48a,0 3px 8px rgba(0,0,0,.3)}
+.btn.ghost{background:transparent;color:var(--cream);box-shadow:inset 0 0 0 2px var(--line);min-height:42px;padding:8px 14px}
+.btn.ghost:active{transform:none}
+.btn.danger{background:var(--red);color:#fff;box-shadow:0 4px 0 #8a2119,0 6px 14px rgba(0,0,0,.3)}
+.btn.big{font-size:18px;padding:14px 22px;flex:1 1 auto}
+
+/* Spielstand */
+.scoreboard{display:flex;gap:8px;overflow-x:auto;padding-block:4px;scrollbar-width:thin}
+.player{
+  flex:1 1 130px;min-width:120px;border-radius:12px;padding:8px 12px;
+  background:rgba(0,0,0,.22);box-shadow:inset 0 0 0 2px var(--line);
+  display:grid;gap:2px;
+}
+.player.active{background:var(--cream);color:var(--ink);box-shadow:0 0 0 3px var(--yellow),var(--shadow)}
+.player .name{font-weight:800;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.player .name .bot{font-size:11px;font-weight:700;opacity:.7;margin-left:4px}
+.player .score{font-family:"Baloo 2",sans-serif;font-size:28px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+.player .pending{font-size:12px;font-weight:700;color:var(--orange-dark);min-height:1.2em;font-variant-numeric:tabular-nums}
+.player.active .pending{color:var(--orange-dark)}
+.player:not(.active) .pending{opacity:.7}
+.player .lead{font-size:11px;letter-spacing:.08em;text-transform:uppercase;opacity:.75}
+
+/* Kartenbereich */
+.cardpanel{display:grid;gap:12px;grid-template-columns:minmax(120px,160px) 1fr;align-items:start}
+@media (min-width:880px){.cardpanel{grid-template-columns:1fr;justify-items:center}}
+.cardslot{position:relative;width:100%;max-width:200px;aspect-ratio:2/3}
+.cardslot .card{position:absolute;inset:0;filter:drop-shadow(0 8px 12px rgba(0,0,0,.45))}
+.card-svg{width:100%;height:100%;display:block}
+.cardslot.flip .card{animation:flip .45s ease-out}
+@keyframes flip{0%{transform:rotateY(90deg) scale(.9);opacity:.2}100%{transform:none;opacity:1}}
+.deckbtn{background:none;border:0;padding:0;width:100%;height:100%;display:block}
+.deckinfo{font-size:12px;opacity:.8;text-align:center;margin-top:6px}
+.cardinfo{display:grid;gap:8px;align-content:start}
+.cardinfo h2{font-size:clamp(20px,5vw,26px);color:var(--yellow)}
+.cardinfo p{margin:0;font-size:14px;opacity:.92}
+.totals{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.total{background:rgba(0,0,0,.25);border-radius:10px;padding:8px 10px;box-shadow:inset 0 0 0 2px var(--line)}
+.total .lbl{font-size:11px;letter-spacing:.08em;text-transform:uppercase;opacity:.8}
+.total .val{font-family:"Baloo 2",sans-serif;font-size:26px;font-weight:800;line-height:1.1;font-variant-numeric:tabular-nums}
+.total.hot .val{color:var(--yellow)}
+.total .sub{font-size:11px;opacity:.7}
+@media (min-width:880px){.cardinfo{width:100%}}
+
+/* Würfeltisch */
+.table{
+  background:rgba(0,0,0,.18);border-radius:18px;padding:14px;
+  box-shadow:inset 0 0 0 2px var(--line),inset 0 0 60px rgba(0,0,0,.25);
+  display:grid;gap:14px;min-height:300px;align-content:start;
+}
+.tablehead{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+.tablehead h2{font-size:clamp(20px,5vw,28px)}
+.tablehead .hint{font-size:13px;opacity:.85}
+.msg{
+  font-weight:800;font-size:clamp(16px,4.2vw,20px);min-height:1.5em;
+  padding:10px 14px;border-radius:12px;background:rgba(255,255,255,.08);
+}
+.msg.null{background:var(--red);color:#fff}
+.msg.tutto{background:var(--yellow);color:var(--ink)}
+.msg.ok{background:rgba(58,166,85,.35)}
+.aside{display:flex;gap:6px;flex-wrap:wrap;min-height:var(--die-small);align-items:center}
+.aside .lbl,.dice .lbl{font-size:11px;letter-spacing:.1em;text-transform:uppercase;opacity:.75;width:100%}
+.dice{display:flex;gap:clamp(6px,2vw,12px);flex-wrap:wrap;justify-content:center;align-items:center;min-height:var(--die)}
+.die{
+  width:var(--die);height:var(--die);border:0;background:none;padding:0;border-radius:18%;
+  transition:transform .12s ease;position:relative;
+}
+.die svg{width:100%;height:100%;display:block;filter:drop-shadow(0 4px 6px rgba(0,0,0,.45))}
+.die .face{fill:var(--white);stroke:#cfc3a8;stroke-width:2}
+.die .pip{fill:#1a1a1a}
+.die.sel{transform:translateY(-8px) scale(1.06)}
+.die.sel .face{fill:var(--yellow);stroke:var(--orange-dark);stroke-width:4}
+.die.dim .face{fill:#e6e0d2}
+.die.dim .pip{fill:#8a8378}
+.die.small{width:var(--die-small);height:var(--die-small)}
+.die.small .face{fill:var(--cream-2)}
+.die.small.new .face{fill:var(--yellow)}
+.die.rolling{animation:tumble .5s ease-in-out}
+@keyframes tumble{0%{transform:rotate(0) translateY(0)}25%{transform:rotate(-25deg) translateY(-12px)}50%{transform:rotate(20deg) translateY(4px)}75%{transform:rotate(-10deg) translateY(-6px)}100%{transform:rotate(0) translateY(0)}}
+.die.blank .face{fill:#d9d1bd;stroke-dasharray:6 6}
+.actions{display:flex;gap:10px;flex-wrap:wrap}
+.actions .btn{flex:1 1 160px}
+.preview{font-size:14px;opacity:.9;text-align:center}
+.logpanel{background:rgba(0,0,0,.18);border-radius:12px;padding:10px 14px;box-shadow:inset 0 0 0 2px var(--line)}
+.logpanel summary{cursor:pointer;font-weight:800}
+.logpanel ol{margin:8px 0 0;padding-left:20px;font-size:14px;display:grid;gap:3px;max-height:220px;overflow:auto}
+.logpanel li.me{color:var(--yellow)}
+
+/* Setup, Regeln, Spielende */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:grid;place-items:center;padding:16px;z-index:10;overflow:auto}
+.panel{
+  background:var(--cream);color:var(--ink);border-radius:18px;padding:20px;width:min(560px,100%);
+  box-shadow:var(--shadow);display:grid;gap:14px;max-height:calc(100vh - 32px);overflow:auto;
+}
+.panel h2{font-size:26px;color:var(--orange-dark)}
+.panel h3{font-size:18px;margin-top:6px}
+.panel p,.panel li{font-size:15px;margin:0}
+.panel ul{margin:0;padding-left:20px;display:grid;gap:4px}
+.panel .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.panel input[type=text],.panel input[type=number],.panel select{
+  font:inherit;padding:10px 12px;border-radius:10px;border:2px solid #cdb992;background:#fff;min-height:44px;
+}
+.panel input[type=text]{flex:1 1 140px;min-width:0}
+.prow{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center}
+.seg{display:inline-flex;border-radius:10px;overflow:hidden;box-shadow:inset 0 0 0 2px #cdb992}
+.seg button{border:0;background:transparent;padding:10px 12px;min-height:44px;font-weight:700;color:var(--ink-soft)}
+.seg button.on{background:var(--orange);color:var(--ink)}
+.iconbtn{border:0;background:#e9dbbd;border-radius:10px;width:44px;height:44px;font-size:20px;font-weight:800;color:var(--ink-soft)}
+.panel .actions{justify-content:flex-end}
+.panel .actions .btn{flex:0 1 auto}
+.ranking{display:grid;gap:6px}
+.ranking .r{display:flex;justify-content:space-between;padding:10px 12px;border-radius:10px;background:#fff;box-shadow:inset 0 0 0 2px #e6d7b6;font-weight:700;font-variant-numeric:tabular-nums}
+.ranking .r.win{background:var(--yellow);box-shadow:inset 0 0 0 2px var(--orange-dark)}
+.scoretable{font-size:15px;border-collapse:collapse;width:100%}
+.scoretable td{padding:4px 6px;border-bottom:1px solid #e6d7b6;font-variant-numeric:tabular-nums}
+.scoretable td:last-child{text-align:right;font-weight:800}
+.cardgallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:8px}
+.cardgallery figure{margin:0;display:grid;gap:4px;justify-items:center}
+.cardgallery figcaption{font-size:11px;text-align:center;line-height:1.2}
+.cardgallery .card-svg{width:100%;height:auto;filter:drop-shadow(0 3px 4px rgba(0,0,0,.3))}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important}
+}
+</style>
+</head>
+<body>
+<div id="app" class="app" aria-live="polite"></div>
+<script>
+'use strict';
+
+/* ---------- Karten ---------- */
+const CARDS = {
+  bonus200:{type:'bonus',bonus:200,name:'Bonus 200',count:5},
+  bonus300:{type:'bonus',bonus:300,name:'Bonus 300',count:5},
+  bonus400:{type:'bonus',bonus:400,name:'Bonus 400',count:5},
+  bonus500:{type:'bonus',bonus:500,name:'Bonus 500',count:5},
+  bonus600:{type:'bonus',bonus:600,name:'Bonus 600',count:5},
+  x2:{type:'x2',name:'Verdopplung',count:5},
+  feuerwerk:{type:'feuerwerk',name:'Feuerwerk',count:5},
+  strasse:{type:'strasse',name:'Straße',count:5},
+  plusminus:{type:'plusminus',name:'Plus/Minus',count:5},
+  kleeblatt:{type:'kleeblatt',name:'Kleeblatt',count:1},
+  stop:{type:'stop',name:'Stop',count:10},
+};
+const CARD_HELP = {
+  bonus:'Schaffst du ein Tutto, bekommst du den Bonus zusätzlich zu den Würfelpunkten. Ohne Tutto zählen nur die Würfelpunkte.',
+  x2:'Schaffst du ein Tutto, werden die Würfelpunkte dieser Karte verdoppelt. Ohne Tutto zählen sie einfach.',
+  feuerwerk:'Du würfelst so lange, bis eine Null fällt. Alle Punkte bis dahin zählen, die Null kostet nichts. Nach einem Tutto geht es mit allen sechs Würfeln weiter. Danach ist der Zug beendet.',
+  strasse:'Würfle 1, 2, 3, 4, 5 und 6. Jede neue Zahl legst du beiseite, Einsen und Fünfen zählen hier nicht extra. Die fertige Straße bringt 2000 Punkte und gilt als Tutto. Eine Null kostet alle Punkte des Zuges.',
+  plusminus:'Schaffst du ein Tutto, bekommst du 1000 Punkte, und wer von den anderen führt, verliert 1000 Punkte. Die Würfelpunkte selbst zählen nicht.',
+  kleeblatt:'Zwei Tutto hintereinander mit dieser Karte gewinnen sofort das Spiel. Sonst bringt die Karte nichts.',
+  stop:'Der Zug ist sofort beendet. Alles, was du in diesem Zug schon gesammelt hast, bleibt dir erhalten.',
+};
+
+/* ---------- Grafik ---------- */
+const PIPS = {
+  1:[[50,50]],2:[[27,27],[73,73]],3:[[27,27],[50,50],[73,73]],
+  4:[[27,27],[73,27],[27,73],[73,73]],5:[[27,27],[73,27],[50,50],[27,73],[73,73]],
+  6:[[27,27],[73,27],[27,50],[73,50],[27,73],[73,73]],
+};
+function dieSVG(v){
+  const pips=(PIPS[v]||[]).map(([x,y])=>`<circle class="pip" cx="${x}" cy="${y}" r="9"/>`).join('');
+  return `<svg viewBox="0 0 100 100" aria-hidden="true"><rect class="face" x="4" y="4" width="92" height="92" rx="20"/>${pips}</svg>`;
+}
+function miniDie(v,x,y,s){
+  const pips=(PIPS[v]||[]).map(([px,py])=>`<circle cx="${px}" cy="${py}" r="9" fill="#1a1a1a"/>`).join('');
+  return `<g transform="translate(${x},${y}) scale(${s})"><rect x="4" y="4" width="92" height="92" rx="20" fill="#fff" stroke="#8a6a3a" stroke-width="4"/>${pips}</g>`;
+}
+const F_DISPLAY = `font-family="'Baloo 2','Trebuchet MS',sans-serif" font-weight="800"`;
+function cardSVG(id){
+  const c = id ? CARDS[id] : null;
+  const label = c ? c.name : 'Kartenrückseite';
+  const head = (txt,fill)=>`<rect x="14" y="14" width="172" height="42" rx="10" fill="${fill}"/>
+    <text x="100" y="44" text-anchor="middle" ${F_DISPLAY} font-size="${txt.length>9?22:26}" fill="#fff">${txt}</text>`;
+  const foot = (txt)=>`<text x="100" y="278" text-anchor="middle" font-family="Nunito,sans-serif" font-weight="700" font-size="14" fill="#6e5847">${txt}</text>`;
+  let inner='';
+  if(!c){
+    let stripes='';
+    for(let i=-6;i<12;i++) stripes+=`<line x1="${i*30}" y1="0" x2="${i*30+150}" y2="300" stroke="#c4661c" stroke-width="10" opacity=".55"/>`;
+    inner=`<clipPath id="cb"><rect x="3" y="3" width="194" height="294" rx="16"/></clipPath>
+      <g clip-path="url(#cb)">${stripes}</g>
+      <rect x="22" y="22" width="156" height="256" rx="12" fill="none" stroke="#ffd23f" stroke-width="4"/>
+      <circle cx="100" cy="150" r="56" fill="#ffd23f" stroke="#c4661c" stroke-width="5"/>
+      <text x="100" y="164" text-anchor="middle" ${F_DISPLAY} font-size="38" fill="#c4661c">TUTTO</text>`;
+    return wrap('#f28a2c',inner,label);
+  }
+  switch(c.type){
+    case 'bonus':
+      inner = head('BONUS','#c4661c') +
+        `<circle cx="100" cy="150" r="64" fill="#ffd23f" stroke="#c4661c" stroke-width="6"/>
+         <circle cx="100" cy="150" r="52" fill="none" stroke="#fff" stroke-width="3" stroke-dasharray="6 5"/>
+         <text x="100" y="168" text-anchor="middle" ${F_DISPLAY} font-size="52" fill="#7a3b10">${c.bonus}</text>
+         <text x="100" y="240" text-anchor="middle" ${F_DISPLAY} font-size="18" fill="#c4661c">+${c.bonus} bei Tutto</text>` + foot('Würfelpunkte + Bonus');
+      return wrap('#fff1c9',inner,label);
+    case 'x2':
+      inner = head('VERDOPPLUNG','#7a4bb8') +
+        `<circle cx="100" cy="150" r="64" fill="#e9defa" stroke="#7a4bb8" stroke-width="6"/>
+         <text x="100" y="178" text-anchor="middle" ${F_DISPLAY} font-size="80" fill="#7a4bb8">×2</text>
+         <text x="100" y="240" text-anchor="middle" ${F_DISPLAY} font-size="18" fill="#7a4bb8">Punkte ×2 bei Tutto</text>` + foot('Nur die Würfelpunkte der Karte');
+      return wrap('#f6efff',inner,label);
+    case 'feuerwerk': {
+      let rays='';
+      const cols=['#c9382d','#f28a2c','#ffd23f','#2f6fbf','#3aa655','#7a4bb8'];
+      for(let i=0;i<12;i++){
+        const a=i*Math.PI/6, r1=22, r2=i%2?60:74;
+        rays+=`<line x1="${100+Math.cos(a)*r1}" y1="${152+Math.sin(a)*r1}" x2="${100+Math.cos(a)*r2}" y2="${152+Math.sin(a)*r2}" stroke="${cols[i%6]}" stroke-width="6" stroke-linecap="round"/>
+               <circle cx="${100+Math.cos(a)*(r2+9)}" cy="${152+Math.sin(a)*(r2+9)}" r="5" fill="${cols[(i+3)%6]}"/>`;
+      }
+      inner = head('FEUERWERK','#c9382d') +
+        `<rect x="14" y="62" width="172" height="196" rx="10" fill="#1b2a4a"/>${rays}
+         <circle cx="100" cy="152" r="14" fill="#ffd23f"/>
+         <path d="M100 258 L100 232" stroke="#ffd23f" stroke-width="4" stroke-dasharray="4 5"/>` + foot('Würfeln bis zur Null');
+      return wrap('#ffe6e0',inner,label);
+    }
+    case 'strasse':
+      inner = head('STRASSE','#2f6fbf') +
+        `<path d="M40 258 L70 66 L130 66 L160 258 Z" fill="#5a5f66"/>
+         <path d="M100 250 L100 74" stroke="#ffd23f" stroke-width="5" stroke-dasharray="14 12"/>
+         ${miniDie(1,52,212,.34)}${miniDie(2,112,212,.34)}${miniDie(3,56,160,.32)}${miniDie(4,110,160,.32)}${miniDie(5,62,110,.28)}${miniDie(6,108,110,.28)}` +
+        foot('1 bis 6 = 2000 Punkte');
+      return wrap('#e4efff',inner,label);
+    case 'plusminus':
+      inner = head('PLUS / MINUS','#3a3a3a') +
+        `<rect x="26" y="66" width="148" height="88" rx="10" fill="#3aa655"/>
+         <text x="100" y="128" text-anchor="middle" ${F_DISPLAY} font-size="44" fill="#fff">+1000</text>
+         <rect x="26" y="162" width="148" height="88" rx="10" fill="#c9382d"/>
+         <text x="100" y="224" text-anchor="middle" ${F_DISPLAY} font-size="44" fill="#fff">−1000</text>` + foot('Bei Tutto: du + / Führender −');
+      return wrap('#f4f4ee',inner,label);
+    case 'kleeblatt': {
+      const leaf=(rot)=>`<path transform="rotate(${rot} 100 150)" d="M100 150 C 92 118, 60 116, 62 140 C 63 156, 84 156, 100 150 Z" fill="#3aa655" stroke="#1f6b35" stroke-width="3"/>`;
+      inner = head('KLEEBLATT','#1f6b35') +
+        `<path d="M100 152 C 104 190, 96 220, 110 250" stroke="#1f6b35" stroke-width="5" fill="none" stroke-linecap="round"/>
+         ${leaf(0)}${leaf(90)}${leaf(180)}${leaf(270)}
+         <circle cx="100" cy="150" r="5" fill="#ffd23f"/>` + foot('2 × Tutto = sofort gewonnen');
+      return wrap('#e8f7ec',inner,label);
+    }
+    case 'stop':
+      inner = head('STOP','#c9382d') +
+        `<polygon points="100,80 149,100 170,150 149,200 100,220 51,200 30,150 51,100" fill="#c9382d" stroke="#fff" stroke-width="6"/>
+         <text x="100" y="166" text-anchor="middle" ${F_DISPLAY} font-size="44" fill="#fff">STOP</text>` + foot('Zug sofort beendet, Punkte bleiben');
+      return wrap('#ffe3df',inner,label);
+  }
+  return '';
+  function wrap(fill,body,lbl){
+    return `<svg class="card-svg" viewBox="0 0 200 300" role="img" aria-label="${lbl}">
+      <rect x="3" y="3" width="194" height="294" rx="16" fill="${fill}" stroke="#7a3b10" stroke-width="3"/>${body}</svg>`;
+  }
+}
+
+/* ---------- Wertung ---------- */
+function scoreGroup(v,c){
+  const triples=Math.floor(c/3), rest=c%3;
+  if(v===1) return triples*1000 + rest*100;
+  if(v===5) return triples*500 + rest*50;
+  if(rest!==0) return -1;
+  return triples*v*100;
+}
+function evalSelection(values){
+  if(!values.length) return {valid:false,points:0};
+  const counts={}; values.forEach(v=>counts[v]=(counts[v]||0)+1);
+  let pts=0;
+  for(const v in counts){ const p=scoreGroup(+v,counts[v]); if(p<0) return {valid:false,points:0,reason:'Von der '+v+' zählen nur drei gleiche.'}; pts+=p; }
+  return {valid:true,points:pts};
+}
+function scoringIndexes(dice,freeIdx){
+  const counts={}; freeIdx.forEach(i=>{const v=dice[i].v; counts[v]=(counts[v]||0)+1;});
+  return freeIdx.filter(i=>{const v=dice[i].v; return v===1||v===5||counts[v]>=3;});
+}
+function strasseNewIdx(dice,freeIdx){
+  const have=new Set(dice.filter(d=>d.aside).map(d=>d.v));
+  return freeIdx.filter(i=>!have.has(dice[i].v));
+}
+
+/* ---------- Zustand ---------- */
+const STORE='tutto.state.v1';
+let G=null, rolling=false, botTimer=null;
+
+function shuffle(a){ for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; }
+function buildDeck(){ const d=[]; for(const id in CARDS) for(let i=0;i<CARDS[id].count;i++) d.push(id); return shuffle(d); }
+function freshDice(){ return Array.from({length:6},()=>({v:0,aside:false,sel:false,fresh:false})); }
+function newTurn(){ return {step:'draw',card:null,turnPoints:0,cardPoints:0,dice:freshDice(),tuttos:0,msg:'',msgKind:'',rolled:false}; }
+function cur(){ return G.players[G.cur]; }
+function card(){ return G.turn.card ? CARDS[G.turn.card] : null; }
+function freeIdx(){ return G.turn.dice.map((d,i)=>d.aside?-1:i).filter(i=>i>=0); }
+function selIdx(){ return G.turn.dice.map((d,i)=>d.sel?i:-1).filter(i=>i>=0); }
+function log(text){ G.log.push({p:G.cur,t:text}); if(G.log.length>80) G.log.shift(); }
+function save(){ try{ localStorage.setItem(STORE,JSON.stringify(G)); }catch(e){} }
+function load(){ try{ const s=localStorage.getItem(STORE); if(s){ const g=JSON.parse(s); if(g&&g.players&&g.phase) return g; } }catch(e){} return null; }
+function fmt(n){ return n.toLocaleString('de-DE'); }
+
+function startGame(players,target){
+  G={phase:'play',players:players.map(p=>({name:p.name,bot:p.bot,score:0})),target,deck:buildDeck(),discard:[],cur:0,finalRound:false,turn:newTurn(),log:[],winner:null,winReason:''};
+  log('Neues Spiel bis '+fmt(target)+' Punkte.');
+  render();
+}
+
+/* ---------- Spielzug ---------- */
+function drawCard(){
+  const t=G.turn; if(t.step!=='draw'||rolling) return;
+  if(!G.deck.length){ G.deck=shuffle(G.discard); G.discard=[]; log('Der Nachziehstapel wurde neu gemischt.'); }
+  t.card=G.deck.pop(); G.discard.push(t.card);
+  const c=CARDS[t.card];
+  t.cardPoints=0; t.dice=freshDice(); t.rolled=false; t.flip=true;
+  log(cur().name+' deckt „'+c.name+'“ auf.');
+  if(c.type==='stop'){
+    t.msg = t.turnPoints ? 'Stop! Der Zug endet, '+fmt(t.turnPoints)+' Punkte sind sicher.' : 'Stop! Der Zug ist sofort vorbei.';
+    t.msgKind = t.turnPoints ? 'ok' : 'null';
+    bank(); return;
+  }
+  t.msg=CARD_HELP[c.type]; t.msgKind='';
+  t.step='roll';
+  render();
+}
+function roll(){
+  const t=G.turn; if(rolling) return;
+  if(t.step!=='roll'&&t.step!=='decide') return;
+  const free=freeIdx(); if(!free.length) return;
+  rolling=true; t.step='roll'; t.flip=false;
+  t.dice.forEach(d=>{d.sel=false;d.fresh=false;});
+  const finals=free.map(()=>1+Math.floor(Math.random()*6));
+  render();
+  animateRoll(free,finals,()=>{
+    free.forEach((i,k)=>t.dice[i].v=finals[k]);
+    t.rolled=true; rolling=false;
+    const c=card();
+    const ok = c.type==='strasse' ? strasseNewIdx(t.dice,free).length>0 : scoringIndexes(t.dice,free).length>0;
+    if(!ok){ nullRoll(); return; }
+    t.step='select';
+    t.msg = c.type==='strasse' ? 'Tippe eine neue Zahl für die Straße an.' : 'Tippe die Würfel an, die du beiseitelegen willst (Einsen, Fünfen, Drillinge).';
+    t.msgKind='';
+    render();
+  });
+}
+function animateRoll(free,finals,done){
+  const reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let frame=0, frames=reduce?1:7;
+  const tick=()=>{
+    free.forEach((i,k)=>{
+      const el=document.querySelector('[data-die="'+i+'"]');
+      if(el){ el.classList.add('rolling'); el.innerHTML=dieSVG(frame<frames-1?1+Math.floor(Math.random()*6):finals[k]); }
+    });
+    frame++;
+    if(frame<frames) setTimeout(tick,70); else setTimeout(done,reduce?0:120);
+  };
+  tick();
+}
+function toggleDie(i){
+  const t=G.turn; if(t.step!=='select'||rolling||cur().bot) return;
+  const d=t.dice[i]; if(d.aside) return;
+  d.sel=!d.sel; render();
+}
+function selectionState(){
+  const t=G.turn, c=card(), sel=selIdx();
+  if(!sel.length) return {valid:false,points:0,reason:'Mindestens einen Würfel auswählen.'};
+  if(c.type==='strasse'){
+    const have=new Set(t.dice.filter(d=>d.aside).map(d=>d.v));
+    const vals=sel.map(i=>t.dice[i].v);
+    if(vals.some(v=>have.has(v))) return {valid:false,points:0,reason:'Diese Zahl liegt schon in der Straße.'};
+    if(new Set(vals).size!==vals.length) return {valid:false,points:0,reason:'Jede Zahl nur einmal.'};
+    return {valid:true,points:0};
+  }
+  return evalSelection(sel.map(i=>t.dice[i].v));
+}
+function confirmSelection(){
+  const t=G.turn; if(t.step!=='select'||rolling) return;
+  const st=selectionState(); if(!st.valid) return;
+  const c=card(), sel=selIdx();
+  sel.forEach(i=>{t.dice[i].aside=true;t.dice[i].sel=false;t.dice[i].fresh=true;});
+  t.cardPoints+=st.points;
+  const left=freeIdx().length;
+  if(c.type==='strasse') log(cur().name+' legt '+sel.map(i=>t.dice[i].v).sort().join(', ')+' zur Straße.');
+  else log(cur().name+' legt '+sel.map(i=>t.dice[i].v).sort().join(', ')+' beiseite (+'+st.points+').');
+  if(left===0){ tutto(); return; }
+  if(c.type==='feuerwerk'||c.type==='strasse'){
+    t.step='roll';
+    t.msg = c.type==='strasse' ? 'Weiter, noch '+left+' Zahl'+(left>1?'en':'')+' bis zur Straße.' : 'Feuerwerk! Weiter mit '+left+' Würfel'+(left>1?'n':'')+'.';
+    t.msgKind='ok';
+  } else {
+    t.step='decide';
+    t.msg = left+' Würfel übrig. Weiterwürfeln oder aufhören?';
+    t.msgKind='';
+  }
+  render();
+}
+function nullRoll(){
+  const t=G.turn, c=card();
+  t.dice.forEach(d=>d.sel=false);
+  if(c.type==='feuerwerk'){
+    t.turnPoints+=t.cardPoints;
+    log(cur().name+' würfelt eine Null, das Feuerwerk brachte '+fmt(t.cardPoints)+' Punkte.');
+    t.msg='Null. Das Feuerwerk ist vorbei, '+fmt(t.turnPoints)+' Punkte sind sicher.'; t.msgKind='ok';
+    t.cardPoints=0;
+    bank(); return;
+  }
+  const lost=t.turnPoints+t.cardPoints;
+  log(cur().name+' würfelt eine Null'+(lost?' und verliert '+fmt(lost)+' Punkte.':'.'));
+  t.msg = lost ? 'Null! '+fmt(lost)+' Punkte sind weg.' : 'Null! Nichts gewonnen, nichts verloren.';
+  t.msgKind='null';
+  t.turnPoints=0; t.cardPoints=0; t.step='end';
+  render();
+}
+function stopTurn(){
+  const t=G.turn; if(rolling) return;
+  if(t.step!=='decide'&&t.step!=='tutto') return;
+  const c=card();
+  if(t.step==='decide'){
+    if(c.type==='bonus'||c.type==='x2'){ t.turnPoints+=t.cardPoints; }
+    else if(c.type==='kleeblatt'||c.type==='plusminus'){ /* keine Punkte ohne Tutto */ }
+    t.cardPoints=0;
+  }
+  t.msg = t.turnPoints ? cur().name+' hört auf und sichert '+fmt(t.turnPoints)+' Punkte.' : cur().name+' hört auf.';
+  t.msgKind = t.turnPoints ? 'ok' : '';
+  bank();
+}
+function tutto(){
+  const t=G.turn, c=card();
+  t.tuttos++;
+  switch(c.type){
+    case 'bonus':
+      t.turnPoints+=t.cardPoints+c.bonus;
+      log(cur().name+' schafft ein Tutto: '+fmt(t.cardPoints)+' + Bonus '+c.bonus+'.');
+      t.msg='Tutto! '+fmt(t.cardPoints)+' Punkte + '+c.bonus+' Bonus.'; t.cardPoints=0; t.step='tutto'; break;
+    case 'x2':
+      t.turnPoints+=t.cardPoints*2;
+      log(cur().name+' schafft ein Tutto: '+fmt(t.cardPoints)+' × 2.');
+      t.msg='Tutto! '+fmt(t.cardPoints)+' × 2 = '+fmt(t.cardPoints*2)+' Punkte.'; t.cardPoints=0; t.step='tutto'; break;
+    case 'strasse':
+      t.turnPoints+=2000;
+      log(cur().name+' schafft die Straße: 2000 Punkte.');
+      t.msg='Straße! 2000 Punkte.'; t.cardPoints=0; t.step='tutto'; break;
+    case 'plusminus': {
+      t.turnPoints+=1000;
+      const others=G.players.filter((p,i)=>i!==G.cur);
+      const max=Math.max(...others.map(p=>p.score));
+      const hit=G.players.filter((p,i)=>i!==G.cur&&p.score===max);
+      hit.forEach(p=>p.score-=1000);
+      log(cur().name+' schafft ein Tutto mit Plus/Minus: +1000, '+hit.map(p=>p.name).join(' und ')+' −1000.');
+      t.msg='Tutto! +1000 für dich, −1000 für '+hit.map(p=>p.name).join(' und ')+'.'; t.cardPoints=0; t.step='tutto'; break;
+    }
+    case 'feuerwerk':
+      log(cur().name+' schafft ein Tutto im Feuerwerk und würfelt weiter.');
+      t.msg='Tutto! Das Feuerwerk geht mit allen sechs Würfeln weiter.'; t.dice=freshDice(); t.step='roll'; break;
+    case 'kleeblatt':
+      if(t.tuttos>=2){
+        log(cur().name+' schafft zwei Tutto mit dem Kleeblatt und gewinnt sofort!');
+        G.winner=G.cur; G.winReason='Zwei Tutto hintereinander mit dem Kleeblatt.'; G.phase='over'; render(); return;
+      }
+      log(cur().name+' schafft das erste Tutto mit dem Kleeblatt.');
+      t.msg='Erstes Tutto! Noch eines mit allen sechs Würfeln, dann ist das Spiel gewonnen.'; t.dice=freshDice(); t.step='decide'; break;
+  }
+  t.msgKind='tutto';
+  render();
+}
+function newCard(){
+  const t=G.turn; if(t.step!=='tutto'||rolling) return;
+  t.card=null; t.cardPoints=0; t.dice=freshDice(); t.tuttos=0; t.step='draw'; t.rolled=false;
+  t.msg='Neue Karte, alle sechs Würfel sind wieder frei.'; t.msgKind='';
+  render();
+}
+function bank(){
+  const t=G.turn, p=cur();
+  p.score+=t.turnPoints;
+  if(t.turnPoints) log(p.name+' schreibt '+fmt(t.turnPoints)+' Punkte gut (jetzt '+fmt(p.score)+').');
+  if(p.score>=G.target&&!G.finalRound){ G.finalRound=true; log(p.name+' hat '+fmt(G.target)+' erreicht. Die Runde wird zu Ende gespielt.'); }
+  t.step='end';
+  render();
+}
+function nextPlayer(){
+  const t=G.turn; if(t.step!=='end'||rolling) return;
+  if(G.finalRound&&G.cur===G.players.length-1){
+    const max=Math.max(...G.players.map(p=>p.score));
+    const w=G.players.map((p,i)=>p.score===max?i:-1).filter(i=>i>=0);
+    G.winner=w.length===1?w[0]:w; G.winReason='';
+    G.phase='over'; render(); return;
+  }
+  G.cur=(G.cur+1)%G.players.length;
+  G.turn=newTurn();
+  render();
+}
+
+/* ---------- Computerspieler ---------- */
+function botStep(){
+  botTimer=null;
+  if(!G||G.phase!=='play'||rolling||!cur().bot) return;
+  const t=G.turn, c=card(), free=freeIdx();
+  switch(t.step){
+    case 'draw': drawCard(); break;
+    case 'roll': roll(); break;
+    case 'select': {
+      let pick;
+      if(c.type==='strasse'){
+        const seen=new Set(); pick=[];
+        strasseNewIdx(t.dice,free).forEach(i=>{const v=t.dice[i].v; if(!seen.has(v)){seen.add(v);pick.push(i);}});
+      } else {
+        const counts={}; free.forEach(i=>{const v=t.dice[i].v;counts[v]=(counts[v]||0)+1;});
+        const taken={}; const all=[];
+        free.forEach(i=>{const v=t.dice[i].v; const limit=(v===1||v===5)?6:Math.floor(counts[v]/3)*3; taken[v]=(taken[v]||0); if(taken[v]<limit){taken[v]++; all.push(i);}});
+        const must=all.filter(i=>t.dice[i].v!==5||counts[5]>=3);
+        pick = (must.length && free.length-must.length>=3 && c.type!=='feuerwerk') ? must : all;
+        if(!evalSelection(pick.map(i=>t.dice[i].v)).valid) pick=all;
+      }
+      pick.forEach(i=>t.dice[i].sel=true);
+      render();
+      break;
+    }
+    case 'decide': {
+      const left=free.length;
+      const atRisk = (c.type==='plusminus'||c.type==='kleeblatt') ? t.turnPoints : t.turnPoints+t.cardPoints;
+      let go;
+      if(c.type==='kleeblatt'&&t.tuttos>0) go=true;
+      else if(left>=4) go=true;
+      else if(left===3) go=atRisk<1000;
+      else if(left===2) go=atRisk<350;
+      else go=atRisk===0;
+      if(go) roll(); else stopTurn();
+      break;
+    }
+    case 'tutto': {
+      const need=G.target-cur().score;
+      if(t.turnPoints<800 || (t.turnPoints<need&&need-t.turnPoints<400)) newCard(); else stopTurn();
+      break;
+    }
+    case 'end': nextPlayer(); break;
+  }
+}
+function scheduleBot(){
+  if(botTimer) clearTimeout(botTimer);
+  if(!G||G.phase!=='play'||!cur().bot||rolling) return;
+  const t=G.turn;
+  let wait=900;
+  if(t.step==='select'){ wait = selIdx().length ? 700 : 900; }
+  if(t.step==='end') wait=2400;
+  if(t.step==='draw') wait=600;
+  if(t.step==='select'&&selIdx().length){ botTimer=setTimeout(()=>{botTimer=null;confirmSelection();},wait); return; }
+  botTimer=setTimeout(botStep,wait);
+}
+
+/* ---------- Darstellung ---------- */
+const app=document.getElementById('app');
+let ui={overlay:null};
+function esc(s){ return String(s).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])); }
+
+function render(){
+  if(G&&G.phase!=='setup') save();
+  if(!G){ app.innerHTML=renderShell(null); renderOverlay('setup'); return; }
+  app.innerHTML=renderShell(G);
+  if(G.phase==='over') renderOverlay('over');
+  else if(ui.overlay) renderOverlay(ui.overlay);
+  else closeOverlay();
+  scheduleBot();
+}
+function renderShell(g){
+  const top=`<header class="topbar">
+    <div class="logo">Tutto<small>Würfelspiel</small></div>
+    <div class="tools">
+      ${g?`<span class="btn ghost" style="cursor:default">Ziel ${fmt(g.target)}</span>`:''}
+      <button class="btn ghost" data-act="rules">Regeln</button>
+      <button class="btn ghost" data-act="setup">Neues Spiel</button>
+    </div></header>`;
+  if(!g) return top;
+  return top + renderScoreboard() + renderCardPanel() + renderTable() + renderLog();
+}
+function renderScoreboard(){
+  const t=G.turn;
+  const max=Math.max(...G.players.map(p=>p.score));
+  return `<section class="scoreboard" aria-label="Spielstand">${G.players.map((p,i)=>{
+    const active=i===G.cur&&G.phase==='play';
+    const pending = active ? (t.turnPoints+t.cardPoints ? '+'+fmt(t.turnPoints+t.cardPoints)+' im Zug' : 'am Zug') : '';
+    return `<div class="player${active?' active':''}">
+      <div class="name">${esc(p.name)}${p.bot?'<span class="bot">PC</span>':''}</div>
+      <div class="score">${fmt(p.score)}</div>
+      <div class="pending">${pending||(p.score===max&&max>0?'<span class="lead">führt</span>':'')}</div>
+    </div>`;}).join('')}</section>`;
+}
+function renderCardPanel(){
+  const t=G.turn, c=card();
+  const clickable = t.step==='draw' && !cur().bot && G.phase==='play';
+  const slot = `<div class="cardslot${t.flip?' flip':''}">
+      ${clickable
+        ? `<button class="deckbtn card" data-act="draw" aria-label="Karte aufdecken">${cardSVG(null)}</button>`
+        : `<div class="card">${cardSVG(t.card)}</div>`}
+    </div>
+    <div class="deckinfo">${G.deck.length} Karten im Stapel</div>`;
+  const risk=t.turnPoints+t.cardPoints;
+  let cardPtsSub='';
+  if(c&&(c.type==='plusminus'||c.type==='kleeblatt')) cardPtsSub='zählen hier nicht';
+  else if(c&&c.type==='strasse') cardPtsSub=t.dice.filter(d=>d.aside).length+' von 6 Zahlen';
+  const info=`<div class="cardinfo">
+    <h2>${c?esc(c.name):(t.step==='draw'?'Karte aufdecken':'')}</h2>
+    <p>${c?CARD_HELP[c.type]:'Jeder Zug beginnt mit einer Karte vom Stapel.'}</p>
+    <div class="totals">
+      <div class="total${t.turnPoints?' hot':''}"><div class="lbl">Im Zug gesammelt</div><div class="val">${fmt(t.turnPoints)}</div><div class="sub">${t.step==='end'?'gesichert':'bis zum Aufhören riskiert'}</div></div>
+      <div class="total"><div class="lbl">Diese Karte</div><div class="val">${c&&c.type==='strasse'?'–':fmt(t.cardPoints)}</div><div class="sub">${cardPtsSub||'Würfelpunkte'}</div></div>
+    </div>
+  </div>`;
+  return `<section class="cardpanel"><div>${slot}</div>${info}</section>`;
+}
+function renderTable(){
+  const t=G.turn, c=card(), p=cur();
+  const asideDice=t.dice.map((d,i)=>d.aside?`<span class="die small${d.fresh?' new':''}" aria-label="Beiseite: ${d.v}">${dieSVG(d.v)}</span>`:'').join('');
+  const free=freeIdx();
+  const canTap = t.step==='select'&&!p.bot;
+  let scoringSet=new Set();
+  if(t.step==='select') scoringSet=new Set(c.type==='strasse'?strasseNewIdx(t.dice,free):scoringIndexes(t.dice,free));
+  const dice=t.dice.map((d,i)=>{
+    if(d.aside) return '';
+    const cls=['die']; if(d.sel) cls.push('sel'); if(!d.v) cls.push('blank'); if(t.step==='select'&&!scoringSet.has(i)&&!d.sel) cls.push('dim');
+    return `<button class="${cls.join(' ')}" data-die="${i}" ${canTap?'':'tabindex="-1"'} aria-pressed="${d.sel}" aria-label="Würfel ${d.v||'leer'}${d.sel?', ausgewählt':''}">${dieSVG(d.v)}</button>`;
+  }).join('');
+  let actions='', preview='';
+  const busy=rolling||p.bot;
+  switch(t.step){
+    case 'draw': actions=`<button class="btn big" data-act="draw" ${busy?'disabled':''}>Karte aufdecken</button>`; break;
+    case 'roll': actions=`<button class="btn big" data-act="roll" ${busy?'disabled':''}>Würfeln (${free.length})</button>`; break;
+    case 'select': {
+      const st=selectionState();
+      preview = st.valid ? (c.type==='strasse'?'Neue Zahl in die Straße':'+'+fmt(st.points)+' Punkte') : (st.reason||'');
+      actions=`<button class="btn big" data-act="confirm" ${st.valid&&!busy?'':'disabled'}>Beiseitelegen${st.valid&&c.type!=='strasse'?' (+'+fmt(st.points)+')':''}</button>`;
+      break;
+    }
+    case 'decide': {
+      const keep = (c.type==='bonus'||c.type==='x2') ? t.turnPoints+t.cardPoints : t.turnPoints;
+      actions=`<button class="btn big" data-act="roll" ${busy?'disabled':''}>Weiterwürfeln (${free.length})</button>
+               <button class="btn big secondary" data-act="stop" ${busy?'disabled':''}>Aufhören (${fmt(keep)})</button>`;
+      break;
+    }
+    case 'tutto':
+      actions=`<button class="btn big" data-act="newcard" ${busy?'disabled':''}>Neue Karte ziehen</button>
+               <button class="btn big secondary" data-act="stop" ${busy?'disabled':''}>Aufhören (${fmt(t.turnPoints)})</button>`;
+      break;
+    case 'end':
+      actions=`<button class="btn big" data-act="next" ${rolling?'disabled':''}>${G.finalRound&&G.cur===G.players.length-1?'Endstand anzeigen':'Nächster Spieler'}</button>`;
+      break;
+  }
+  const hint = p.bot ? 'Computer spielt …' : (t.step==='select'?'Hell markierte Würfel zählen':'');
+  return `<section class="table" aria-label="Würfeltisch">
+    <div class="tablehead"><h2>${esc(p.name)} ist am Zug</h2><span class="hint">${hint}</span></div>
+    <div class="msg ${t.msgKind}">${esc(t.msg||'')}</div>
+    <div class="aside"><span class="lbl">Beiseitegelegt${c&&c.type==='strasse'?' (Straße)':''}</span>${asideDice||'<span style="opacity:.5;font-size:13px">noch nichts</span>'}</div>
+    <div class="dice">${dice}</div>
+    <div class="preview">${esc(preview)}</div>
+    <div class="actions">${actions}</div>
+  </section>`;
+}
+function renderLog(){
+  const items=G.log.slice(-40).reverse().map(l=>`<li class="${l.p===G.cur?'me':''}">${esc(l.t)}</li>`).join('');
+  return `<details class="logpanel" ${ui.logOpen?'open':''}><summary>Verlauf</summary><ol>${items}</ol></details>`;
+}
+
+/* ---------- Überlagerungen ---------- */
+function renderOverlay(kind){
+  closeOverlay();
+  ui.overlay=kind;
+  const ov=document.createElement('div'); ov.className='overlay'; ov.id='overlay';
+  ov.setAttribute('role','dialog'); ov.setAttribute('aria-modal','true');
+  if(kind==='setup') ov.innerHTML=setupHTML();
+  else if(kind==='rules') ov.innerHTML=rulesHTML();
+  else if(kind==='over') ov.innerHTML=overHTML();
+  document.body.appendChild(ov);
+  const first=ov.querySelector('input'); const panel=ov.querySelector('.panel');
+  if(first) first.focus(); else if(panel){ panel.tabIndex=-1; panel.focus({preventScroll:true}); }
+}
+function closeOverlay(){ const o=document.getElementById('overlay'); if(o) o.remove(); ui.overlay=null; }
+
+let setupPlayers = [{name:'Spieler 1',bot:false},{name:'Computer',bot:true}];
+let setupTarget = 6000;
+function setupHTML(){
+  const rows=setupPlayers.map((p,i)=>`<div class="prow">
+      <input type="text" id="pname${i}" value="${esc(p.name)}" maxlength="16" aria-label="Name Spieler ${i+1}">
+      <div class="seg" role="group" aria-label="Spielertyp">
+        <button type="button" data-setup="human" data-i="${i}" class="${p.bot?'':'on'}">Mensch</button>
+        <button type="button" data-setup="bot" data-i="${i}" class="${p.bot?'on':''}">PC</button>
+      </div>
+      <button type="button" class="iconbtn" data-setup="remove" data-i="${i}" aria-label="Spieler entfernen" ${setupPlayers.length<=2?'disabled':''}>×</button>
+    </div>`).join('');
+  return `<div class="panel">
+    <h2>Neues Spiel</h2>
+    <p>Zwei bis sechs Spieler. Wer als Erster das Ziel erreicht, löst die letzte Runde aus; danach gewinnt der höchste Punktestand.</p>
+    <div style="display:grid;gap:8px">${rows}</div>
+    <div class="row">
+      <button type="button" class="btn secondary" data-setup="add" ${setupPlayers.length>=6?'disabled':''}>+ Spieler</button>
+      <label class="row" style="margin-left:auto">Ziel
+        <select id="target" aria-label="Zielpunkte">
+          ${[3000,4000,5000,6000,8000,10000].map(v=>`<option value="${v}" ${v===setupTarget?'selected':''}>${fmt(v)}</option>`).join('')}
+        </select>
+      </label>
+    </div>
+    <div class="actions">
+      ${G?'<button type="button" class="btn ghost" style="color:var(--ink);box-shadow:inset 0 0 0 2px #cdb992" data-setup="cancel">Zurück zum Spiel</button>':''}
+      <button type="button" class="btn" data-setup="start">Spiel starten</button>
+    </div>
+  </div>`;
+}
+function readSetupNames(){ setupPlayers.forEach((p,i)=>{const el=document.getElementById('pname'+i); if(el) p.name=el.value.trim()||('Spieler '+(i+1));}); const t=document.getElementById('target'); if(t) setupTarget=+t.value; }
+function rulesHTML(){
+  const gallery=['bonus400','x2','feuerwerk','strasse','plusminus','kleeblatt','stop'].map(id=>`<figure>${cardSVG(id)}<figcaption>${esc(CARDS[id].name)}${id==='bonus400'?' (200–600)':''}</figcaption></figure>`).join('');
+  return `<div class="panel">
+    <h2>Spielregeln</h2>
+    <p>Tutto ist ein Würfelspiel von Reiner Knizia (Abacusspiele) für zwei bis sechs Spieler mit sechs Würfeln und 56 Karten. Wer zuerst 6000 Punkte erreicht, löst die letzte Runde aus. Danach gewinnt, wer die meisten Punkte hat.</p>
+    <h3>Ein Zug</h3>
+    <ul>
+      <li>Du deckst die oberste Karte auf. Sie gilt für die folgenden Würfe.</li>
+      <li>Du würfelst mit allen sechs Würfeln. Nach jedem Wurf musst du mindestens einen Würfel mit Punktwert beiseitelegen. Welche du nimmst, entscheidest du.</li>
+      <li>Danach würfelst du mit den restlichen Würfeln weiter oder hörst auf. Wer aufhört, schreibt sich die gesammelten Punkte gut.</li>
+      <li>Fällt ein Wurf ohne Punktwert, ist das eine <strong>Null</strong>: Der Zug ist vorbei, und alle in diesem Zug gesammelten Punkte sind verloren.</li>
+      <li>Liegen alle sechs Würfel beiseite, hast du ein <strong>Tutto</strong>. Du darfst eine neue Karte aufdecken und mit allen sechs Würfeln weitermachen, oder du hörst auf. Die Punkte bleiben so lange im Risiko, bis du aufhörst.</li>
+    </ul>
+    <h3>Punkte</h3>
+    <table class="scoretable">
+      <tr><td>Eine 1</td><td>100</td></tr>
+      <tr><td>Eine 5</td><td>50</td></tr>
+      <tr><td>Drei Einsen</td><td>1000</td></tr>
+      <tr><td>Drei Zweien</td><td>200</td></tr>
+      <tr><td>Drei Dreien</td><td>300</td></tr>
+      <tr><td>Drei Vieren</td><td>400</td></tr>
+      <tr><td>Drei Fünfen</td><td>500</td></tr>
+      <tr><td>Drei Sechsen</td><td>600</td></tr>
+    </table>
+    <p>Drei gleiche müssen in einem Wurf fallen. Ein vierter gleicher Würfel zählt nur als einzelne 1 oder 5, zwei Drillinge in einem Wurf zählen beide.</p>
+    <h3>Die Karten</h3>
+    <div class="cardgallery">${gallery}</div>
+    <ul>
+      <li><strong>Bonus 200 bis 600</strong> (je 5): Bei Tutto gibt es den Bonus zusätzlich zu den Würfelpunkten.</li>
+      <li><strong>Verdopplung</strong> (5): Bei Tutto zählen die Würfelpunkte dieser Karte doppelt.</li>
+      <li><strong>Feuerwerk</strong> (5): Du würfelst so lange, bis eine Null fällt. Alle Punkte bis dahin zählen, die Null kostet nichts. Danach ist der Zug zu Ende.</li>
+      <li><strong>Straße</strong> (5): Würfle 1 bis 6, nach jedem Wurf mindestens eine neue Zahl. Die fertige Straße bringt 2000 Punkte und gilt als Tutto. Eine Null kostet alle Punkte des Zuges.</li>
+      <li><strong>Plus/Minus</strong> (5): Bei Tutto bekommst du 1000 Punkte, und der führende Mitspieler verliert 1000. Die Würfelpunkte zählen nicht. Bei Gleichstand trifft es alle Führenden.</li>
+      <li><strong>Kleeblatt</strong> (1): Zwei Tutto hintereinander mit dieser Karte gewinnen sofort das Spiel. Sonst bringt sie nichts.</li>
+      <li><strong>Stop</strong> (10): Der Zug ist sofort beendet. Die bisher gesammelten Punkte bleiben.</li>
+    </ul>
+    <h3>Spielende</h3>
+    <p>Erreicht ein Spieler das Ziel, wird die laufende Runde zu Ende gespielt, damit alle gleich oft am Zug waren. Wer dann die meisten Punkte hat, gewinnt. Punktestände können durch Plus/Minus auch negativ werden.</p>
+    <div class="actions"><button type="button" class="btn" data-act="close">Schließen</button></div>
+  </div>`;
+}
+function overHTML(){
+  const order=G.players.map((p,i)=>({...p,i})).sort((a,b)=>b.score-a.score);
+  const winners=Array.isArray(G.winner)?G.winner:[G.winner];
+  const title = winners.length>1 ? 'Unentschieden!' : esc(G.players[winners[0]].name)+' gewinnt!';
+  return `<div class="panel">
+    <h2>${title}</h2>
+    ${G.winReason?`<p>${esc(G.winReason)}</p>`:'<p>Die letzte Runde ist gespielt.</p>'}
+    <div class="ranking">${order.map(p=>`<div class="r${winners.includes(p.i)?' win':''}"><span>${esc(p.name)}${p.bot?' (PC)':''}</span><span>${fmt(p.score)}</span></div>`).join('')}</div>
+    <div class="actions">
+      <button type="button" class="btn secondary" data-act="setup">Neues Spiel</button>
+      <button type="button" class="btn" data-act="rematch">Revanche</button>
+    </div>
+  </div>`;
+}
+
+/* ---------- Ereignisse ---------- */
+document.addEventListener('click',e=>{
+  const die=e.target.closest('[data-die]');
+  if(die){ toggleDie(+die.dataset.die); return; }
+  const s=e.target.closest('[data-setup]');
+  if(s){
+    readSetupNames();
+    const i=+s.dataset.i;
+    switch(s.dataset.setup){
+      case 'human': setupPlayers[i].bot=false; break;
+      case 'bot': setupPlayers[i].bot=true; break;
+      case 'remove': if(setupPlayers.length>2) setupPlayers.splice(i,1); break;
+      case 'add': if(setupPlayers.length<6) setupPlayers.push({name:'Spieler '+(setupPlayers.length+1),bot:false}); break;
+      case 'cancel': closeOverlay(); return;
+      case 'start': closeOverlay(); startGame(setupPlayers,setupTarget); return;
+    }
+    renderOverlay('setup'); return;
+  }
+  const a=e.target.closest('[data-act]');
+  if(!a) return;
+  switch(a.dataset.act){
+    case 'draw': drawCard(); break;
+    case 'roll': roll(); break;
+    case 'confirm': confirmSelection(); break;
+    case 'stop': stopTurn(); break;
+    case 'newcard': newCard(); break;
+    case 'next': nextPlayer(); break;
+    case 'rules': renderOverlay('rules'); break;
+    case 'close': closeOverlay(); if(G&&G.phase==='over') renderOverlay('over'); break;
+    case 'setup':
+      if(G){ setupPlayers=G.players.map(p=>({name:p.name,bot:p.bot})); setupTarget=G.target; }
+      renderOverlay('setup'); break;
+    case 'rematch': startGame(G.players.map(p=>({name:p.name,bot:p.bot})),G.target); break;
+  }
+});
+document.addEventListener('toggle',e=>{ if(e.target.classList&&e.target.classList.contains('logpanel')) ui.logOpen=e.target.open; },true);
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'&&ui.overlay&&ui.overlay!=='over'&&G){ closeOverlay(); }
+});
+
+/* ---------- Start ---------- */
+(function init(){
+  const saved=load();
+  if(saved&&saved.phase!=='setup'){ G=saved; if(G.turn) G.turn.flip=false; render(); }
+  else render();
+})();
+</script>
+</body>
+</html>
