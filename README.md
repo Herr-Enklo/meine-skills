@@ -52,7 +52,7 @@ Neben den Plugins liegen eigenständige Programme hier, jeweils mit eigener READ
 |---|---|
 | `datenrettung/` | Sucht NTFS-, FAT- und exFAT-Datenträger nach gelöschten Dateien ab |
 | `packaging-center/` | Nachbau des Empirum Packaging Center 24.0: Package Wizard, Package Editor mit Debugger und Paketprüfung, um Setup.inf-Pakete ohne Empirum-Server lokal zu testen |
-| `tutto/` | Das Würfelspiel Tutto als Browserversion in einer HTML-Datei, für Handy und Desktop, mit Computerspielern |
+| [Tutto im Repository Spiele](https://github.com/Herr-Enklo/Spiele/tree/main/tutto) | Das Würfelspiel wurde in das Repository `Spiele` verschoben. |
 
 ## Skills und Agents aufrufen
 

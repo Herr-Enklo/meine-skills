@@ -18,6 +18,3 @@ Thumbs.db
 node_modules/
 __pycache__/
 *.pyc
-
-# Eigene Tutto-Kartenscans (urheberrechtlich geschützt, nur lokal)
-tutto/img/
