@@ -52,6 +52,7 @@ Neben den Plugins liegen eigenständige Programme hier, jeweils mit eigener READ
 |---|---|
 | `datenrettung/` | Sucht NTFS-, FAT- und exFAT-Datenträger nach gelöschten Dateien ab |
 | `packaging-center/` | Nachbau des Empirum Packaging Center 24.0: Package Wizard, Package Editor mit Debugger und Paketprüfung, um Setup.inf-Pakete ohne Empirum-Server lokal zu testen |
+| `fahrzeugkunde/` | Interaktive Fahrzeugkunde zum TLF 3000 (DIN 14530-22) mit Rundgang, Rechnern, Karteikarten und Quiz, dazu der Recherchebericht mit Quellen |
 | [Tutto im Repository Spiele](https://github.com/Herr-Enklo/Spiele/tree/main/tutto) | Das Würfelspiel wurde in das Repository `Spiele` verschoben. |
 
 ## Skills und Agents aufrufen

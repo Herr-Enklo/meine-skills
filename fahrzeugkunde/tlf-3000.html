@@ -1,0 +1,1794 @@
+<title>Fahrzeugkunde TLF 3000</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&display=swap">
+<style>
+:root{
+  --ground:#E8EBED;
+  --surface:#FFFFFF;
+  --surface-2:#F3F5F6;
+  --ink:#15181B;
+  --ink-2:#414A52;
+  --muted:#66707A;
+  --line:#D2D8DC;
+  --line-strong:#A9B2BA;
+  --accent:#B3261E;
+  --accent-text:#A3221B;
+  --accent-soft:#F7E2DF;
+  --signal:#F2C200;
+  --signal-soft:#FFF3C4;
+  --signal-text:#5E4A00;
+  --water:#1F63AD;
+  --water-soft:#DDE9F6;
+  --ok:#2A7A4B;
+  --ok-soft:#DCEFE3;
+  --focus:#1F63AD;
+  --radius:10px;
+  --font-display:"Barlow Condensed","Arial Narrow","Roboto Condensed",sans-serif;
+  --font-body:"Source Sans 3","Segoe UI",system-ui,-apple-system,sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --ground:#0F1214;
+    --surface:#171B1E;
+    --surface-2:#1E2327;
+    --ink:#E6E9EB;
+    --ink-2:#B9C1C8;
+    --muted:#8C96A0;
+    --line:#2A3136;
+    --line-strong:#3F484F;
+    --accent:#C9362C;
+    --accent-text:#FF8B7E;
+    --accent-soft:#3A1C19;
+    --signal:#F2C200;
+    --signal-soft:#352D0E;
+    --signal-text:#F6D862;
+    --water:#78AEEB;
+    --water-soft:#152A42;
+    --ok:#62C391;
+    --ok-soft:#14301F;
+    --focus:#F2C200;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --ground:#0F1214;
+  --surface:#171B1E;
+  --surface-2:#1E2327;
+  --ink:#E6E9EB;
+  --ink-2:#B9C1C8;
+  --muted:#8C96A0;
+  --line:#2A3136;
+  --line-strong:#3F484F;
+  --accent:#C9362C;
+  --accent-text:#FF8B7E;
+  --accent-soft:#3A1C19;
+  --signal:#F2C200;
+  --signal-soft:#352D0E;
+  --signal-text:#F6D862;
+  --water:#78AEEB;
+  --water-soft:#152A42;
+  --ok:#62C391;
+  --ok-soft:#14301F;
+  --focus:#F2C200;
+}
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{background:var(--ground);color:var(--ink);font-family:var(--font-body);font-size:16px;line-height:1.55}
+a{color:var(--accent-text);text-underline-offset:2px}
+h1,h2,h3,h4{font-family:var(--font-display);line-height:1.08;margin:0;text-wrap:balance}
+h2{font-size:30px;font-weight:700;letter-spacing:.005em}
+h3{font-size:21px;font-weight:600}
+h4{font-size:17px;font-weight:600;letter-spacing:.02em}
+p,ul,ol{margin:0}
+ul,ol{padding-left:1.25em}
+li+li{margin-top:4px}
+.wrap{max-width:1140px;margin-inline:auto;padding-inline:16px}
+.mono{font-family:var(--font-mono);font-size:.92em}
+.muted{color:var(--muted)}
+.small{font-size:14px}
+.stack{display:flex;flex-direction:column;gap:12px}
+.stack-lg{display:flex;flex-direction:column;gap:28px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.prose{max-width:70ch}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+
+/* Kopf */
+.masthead{position:sticky;top:env(safe-area-inset-top,0px);z-index:30;background:var(--surface);border-bottom:1px solid var(--line)}
+.mast-row{display:flex;align-items:center;gap:12px;padding-block:10px 4px}
+.plate{font-family:var(--font-display);font-weight:700;font-size:23px;letter-spacing:.05em;background:var(--accent);color:#fff;padding:1px 10px 0;border-radius:4px;text-decoration:none;line-height:1.35}
+.mast-sub{display:flex;flex-direction:column;line-height:1.2}
+.mast-sub b{font-family:var(--font-display);font-size:18px;font-weight:600;letter-spacing:.02em}
+.mast-sub span{font-family:var(--font-mono);font-size:12px;color:var(--muted)}
+.tabs{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;margin-inline:-6px}
+.tabs::-webkit-scrollbar{display:none}
+.tabs a{flex:none;padding:9px 10px 8px;font-family:var(--font-display);font-weight:600;font-size:17px;letter-spacing:.02em;color:var(--muted);text-decoration:none;border-bottom:3px solid transparent}
+.tabs a:hover{color:var(--ink)}
+.tabs a[aria-current="page"]{color:var(--ink);border-bottom-color:var(--accent)}
+main{padding-block:26px 56px}
+.view{display:flex;flex-direction:column;gap:28px}
+.sec-head{display:flex;flex-direction:column;gap:6px;max-width:74ch}
+.sec-head p{color:var(--ink-2)}
+.eyebrow{font-family:var(--font-display);text-transform:uppercase;letter-spacing:.14em;font-size:13px;font-weight:600;color:var(--accent-text)}
+
+/* Kennzeichnung */
+.lvl{display:inline-block;font-family:var(--font-display);font-size:12.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;padding:0 7px;border-radius:999px;line-height:19px;white-space:nowrap;vertical-align:1px;border:1px solid transparent}
+.lvl.norm{background:var(--ink);color:var(--surface)}
+.lvl.norm-i{border-color:var(--ink);color:var(--ink)}
+.lvl.land{background:var(--water-soft);color:var(--water);border-color:var(--water-soft)}
+.lvl.praxis{border:1px dashed var(--line-strong);color:var(--ink-2)}
+.lvl.regel{background:var(--surface-2);color:var(--ink-2);border-color:var(--line)}
+.lvl.calc{background:var(--ok-soft);color:var(--ok)}
+.flag{display:inline-block;font-family:var(--font-display);font-size:12.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;padding:0 7px;border-radius:4px;line-height:19px;background:var(--signal);color:#2B2200;vertical-align:1px;white-space:nowrap}
+.q{font-size:13px;color:var(--muted)}
+.q a{color:var(--muted)}
+.q a:hover{color:var(--accent-text)}
+
+/* Bausteine */
+.block{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.grid-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.grid-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+@media (max-width:900px){.grid-3{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:720px){.grid-2,.grid-3{grid-template-columns:minmax(0,1fr)}}
+.note{border-left:4px solid var(--signal);background:var(--signal-soft);color:var(--ink);padding:10px 14px;border-radius:0 8px 8px 0;font-size:15px}
+.note b{color:var(--signal-text)}
+.callout{border-left:4px solid var(--accent);background:var(--accent-soft);padding:10px 14px;border-radius:0 8px 8px 0;font-size:15px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-family:var(--font-display);font-weight:600;font-size:17px;letter-spacing:.03em;padding:8px 16px;border-radius:8px;border:1px solid var(--line-strong);background:var(--surface);color:var(--ink);text-decoration:none;cursor:pointer;line-height:1.2}
+.btn:hover{border-color:var(--ink-2)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{filter:brightness(1.07)}
+.btn.small{font-size:15px;padding:5px 11px}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+.seg{display:inline-flex;flex-wrap:wrap;background:var(--surface-2);border:1px solid var(--line);border-radius:9px;padding:3px;gap:2px}
+.seg button{font-family:var(--font-display);font-weight:600;font-size:16px;letter-spacing:.02em;padding:6px 12px;border:0;border-radius:6px;background:transparent;color:var(--ink-2);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.14)}
+
+/* Tabellen */
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:15px}
+caption{text-align:left;padding:12px 14px 4px;font-family:var(--font-display);font-size:18px;font-weight:600}
+th,td{text-align:left;vertical-align:top;padding:9px 12px;border-bottom:1px solid var(--line)}
+thead th{font-family:var(--font-display);font-weight:600;font-size:14px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);background:var(--surface-2);white-space:nowrap}
+tbody th{font-weight:600}
+tbody tr:last-child>*{border-bottom:0}
+.num{font-family:var(--font-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.hl td,.hl th{background:var(--accent-soft)}
+
+/* Überblick */
+.hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:28px;align-items:center}
+@media (max-width:860px){.hero{grid-template-columns:minmax(0,1fr)}}
+.hero h1{font-size:clamp(64px,11vw,112px);font-weight:700;letter-spacing:-.005em;line-height:.92}
+.lead{font-size:18.5px;color:var(--ink-2);max-width:48ch}
+.hero-fig{margin:0;display:flex;flex-direction:column;gap:6px}
+.hero-fig figcaption{font-size:13px;color:var(--muted)}
+.figs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+@media (max-width:860px){.figs{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:380px){.figs{grid-template-columns:minmax(0,1fr)}}
+.fig{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;display:flex;flex-direction:column;gap:6px}
+.fig .n{font-family:var(--font-display);font-size:42px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+.fig .n small{font-size:22px;font-weight:600;margin-left:2px}
+.fig .l{font-weight:600;line-height:1.3}
+.fig .s{font-size:14px;color:var(--muted);line-height:1.35}
+.merk{display:flex;flex-direction:column;gap:10px;padding-left:0;list-style:none}
+.merk li{padding-left:16px;border-left:3px solid var(--accent);margin:0}
+.legend-grid{display:grid;grid-template-columns:auto 1fr;gap:8px 12px;align-items:baseline;font-size:15px}
+
+/* Rundgang */
+.tour{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:920px){.tour{grid-template-columns:minmax(0,1fr)}}
+.stage{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:12px 12px 8px;display:flex;flex-direction:column;gap:8px;margin:0}
+.stage figcaption{font-size:14px;color:var(--ink-2);padding-inline:4px}
+.truck{width:100%;height:auto;display:block;color:var(--ink)}
+.truck .zone{cursor:pointer}
+.truck .zone .zs{transition:filter .12s}
+.truck .zone:hover .zs{filter:brightness(1.08)}
+.truck .zone.ov:hover .zs{fill:#FFFFFF;fill-opacity:.16}
+.truck .zone.sel .zs{fill:#FFD84D;fill-opacity:.95;stroke:#7A6000;stroke-width:3}
+.truck .zone.ov.sel .zs{fill-opacity:.4}
+.truck .zone:focus{outline:none}
+.truck .zone:focus-visible .zs{stroke:var(--focus);stroke-width:4;stroke-dasharray:8 5}
+.truck .zl{font-family:var(--font-display);font-weight:700;pointer-events:none}
+.truck .tx{font-family:var(--font-display);font-weight:600;letter-spacing:.04em}
+.zone-panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;display:flex;flex-direction:column;gap:12px}
+@media (min-width:921px){.zone-panel{position:sticky;top:calc(env(safe-area-inset-top,0px) + 104px)}}
+.zp-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.zp-id{font-family:var(--font-display);font-size:44px;font-weight:700;line-height:.9;color:var(--accent-text)}
+.zp-where{font-family:var(--font-display);font-size:20px;font-weight:600}
+.zp-theme{font-weight:600}
+.zp-items{list-style:none;padding:0;display:flex;flex-direction:column;gap:8px}
+.zp-items li{margin:0;display:flex;gap:8px;align-items:flex-start;line-height:1.4}
+.zp-items li .lvl,.zp-items li .flag{flex:none;margin-top:1px}
+.zp-note{font-size:15px;color:var(--ink-2)}
+.mynote label{font-family:var(--font-display);font-weight:600;font-size:16px}
+textarea,input[type="number"],input[type="text"],select{font:inherit;color:var(--ink);background:var(--surface-2);border:1px solid var(--line-strong);border-radius:8px;padding:8px 10px;width:100%}
+textarea{min-height:74px;resize:vertical}
+.zone-links{display:flex;flex-wrap:wrap;gap:6px}
+.zone-links button{font-family:var(--font-display);font-weight:600;font-size:16px;min-width:48px;padding:5px 10px;border-radius:6px;border:1px solid var(--line-strong);background:var(--surface);color:var(--ink);cursor:pointer}
+.zone-links button[aria-pressed="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+
+/* Maschinist */
+details.proc{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius)}
+details.proc>summary{cursor:pointer;list-style:none;padding:14px 18px;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+details.proc>summary::-webkit-details-marker{display:none}
+details.proc>summary h3{flex:1 1 auto}
+details.proc>summary::after{content:"+";font-family:var(--font-display);font-size:24px;line-height:1;color:var(--muted)}
+details.proc[open]>summary::after{content:"–"}
+.proc-body{padding:0 18px 16px;display:flex;flex-direction:column;gap:10px}
+.steps{counter-reset:s;list-style:none;padding:0;display:flex;flex-direction:column;gap:8px}
+.steps li{counter-increment:s;display:grid;grid-template-columns:30px 1fr;gap:10px;margin:0;align-items:start}
+.steps li::before{content:counter(s);font-family:var(--font-display);font-weight:700;font-size:17px;width:28px;height:28px;border-radius:50%;background:var(--ink);color:var(--surface);display:flex;align-items:center;justify-content:center}
+
+/* Rechner */
+.calc{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:860px){.calc{grid-template-columns:minmax(0,1fr)}}
+.calc-row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:7px 0;border-bottom:1px solid var(--line)}
+.calc-row:last-child{border-bottom:0}
+.calc-row .fl{font-family:var(--font-mono);font-size:13px;color:var(--muted)}
+.stepper{display:inline-flex;align-items:center;border:1px solid var(--line-strong);border-radius:8px;overflow:hidden}
+.stepper button{width:34px;height:34px;border:0;background:var(--surface-2);color:var(--ink);font-size:20px;line-height:1;cursor:pointer}
+.stepper output{min-width:34px;text-align:center;font-family:var(--font-mono);font-weight:500}
+.result{display:flex;flex-direction:column;gap:6px}
+.result .big{font-family:var(--font-display);font-size:56px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums;color:var(--water)}
+.bars{display:flex;flex-direction:column;gap:6px;font-size:14px}
+.bar{display:grid;grid-template-columns:minmax(0,1fr) 64px;gap:8px;align-items:center}
+.bar .lab{grid-column:1/-1;line-height:1.25;color:var(--ink-2)}
+.bar .track{height:12px;background:var(--surface-2);border-radius:3px;overflow:hidden}
+.bar .fillb{height:100%;background:var(--line-strong);border-radius:3px}
+.bar.me .fillb{background:var(--water)}
+.bar.me .lab{color:var(--ink);font-weight:600}
+.bar .val{font-family:var(--font-mono);font-size:13px;text-align:right}
+.presets{display:flex;gap:6px;flex-wrap:wrap}
+.presets button{font-family:var(--font-mono);font-size:14px;padding:5px 10px;border-radius:6px;border:1px solid var(--line-strong);background:var(--surface);color:var(--ink);cursor:pointer}
+.presets button[aria-pressed="true"]{background:var(--water);border-color:var(--water);color:#fff}
+.field{display:flex;flex-direction:column;gap:4px}
+.field label{font-weight:600;font-size:15px}
+.fields-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+@media (max-width:420px){.fields-2{grid-template-columns:minmax(0,1fr)}}
+input[type="range"]{width:100%;accent-color:var(--water)}
+
+/* Lernen */
+.learn-top{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{font-family:var(--font-display);font-weight:600;font-size:15px;padding:4px 11px;border-radius:999px;border:1px solid var(--line-strong);background:var(--surface);color:var(--ink-2);cursor:pointer}
+.chips button[aria-pressed="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.flash{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:22px 24px;display:flex;flex-direction:column;gap:16px;min-height:260px}
+.flash .cat{font-family:var(--font-display);text-transform:uppercase;letter-spacing:.12em;font-size:13px;font-weight:600;color:var(--muted)}
+.flash .front{font-family:var(--font-display);font-size:28px;font-weight:600;line-height:1.18;text-wrap:balance}
+.flash .back{font-size:17.5px;border-top:3px solid var(--accent);padding-top:12px;line-height:1.5}
+.progress{height:8px;background:var(--surface-2);border-radius:99px;overflow:hidden;border:1px solid var(--line)}
+.progress span{display:block;height:100%;background:var(--ok);width:0}
+.quiz-opts{display:flex;flex-direction:column;gap:8px}
+.quiz-opts button{text-align:left;font:inherit;font-size:16.5px;padding:11px 14px;border-radius:9px;border:1px solid var(--line-strong);background:var(--surface);color:var(--ink);cursor:pointer;line-height:1.35}
+.quiz-opts button:hover:not([disabled]){border-color:var(--ink-2)}
+.quiz-opts button.correct{background:var(--ok-soft);border-color:var(--ok);color:var(--ink)}
+.quiz-opts button.wrong{background:var(--accent-soft);border-color:var(--accent);color:var(--ink)}
+.quiz-opts button[disabled]{cursor:default}
+.explain{font-size:15.5px;color:var(--ink-2)}
+.chat{display:flex;flex-direction:column;gap:10px}
+.msg{padding:10px 14px;border-radius:10px;max-width:92%;white-space:pre-wrap;line-height:1.5}
+.msg.me{align-self:flex-end;background:var(--water-soft);color:var(--ink)}
+.msg.ai{align-self:flex-start;background:var(--surface-2);border:1px solid var(--line)}
+.msg.sys{align-self:center;font-size:14px;color:var(--muted)}
+.src-list{list-style:none;padding:0;display:flex;flex-direction:column;gap:6px}
+.src-list li{margin:0;font-size:15px}
+footer.foot{border-top:1px solid var(--line);padding-block:18px 28px;font-size:14px;color:var(--muted)}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important;scroll-behavior:auto!important}}
+</style>
+
+<header class="masthead">
+  <div class="wrap">
+    <div class="mast-row">
+      <a class="plate" href="#ueberblick">TLF 3000</a>
+      <div class="mast-sub"><b>Fahrzeugkunde</b><span>DIN 14530-22:2019-11</span></div>
+    </div>
+    <nav class="tabs" aria-label="Kapitel">
+      <a href="#ueberblick" data-tab="ueberblick" aria-current="page">Überblick</a>
+      <a href="#rundgang" data-tab="rundgang">Rundgang</a>
+      <a href="#beladung" data-tab="beladung">Beladung</a>
+      <a href="#technik" data-tab="technik">Technik</a>
+      <a href="#maschinist" data-tab="maschinist">Maschinist</a>
+      <a href="#einsatz" data-tab="einsatz">Einsatz</a>
+      <a href="#vergleich" data-tab="vergleich">Vergleich</a>
+      <a href="#lernen" data-tab="lernen">Lernen</a>
+      <a href="#quellen" data-tab="quellen">Quellen</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+
+<!-- ÜBERBLICK -->
+<section class="view" data-view="ueberblick" aria-labelledby="h-ueberblick">
+  <div class="hero">
+    <div class="stack">
+      <p class="eyebrow">Tanklöschfahrzeug · Truppfahrzeug</p>
+      <h1 id="h-ueberblick">TLF 3000</h1>
+      <p class="lead">Löschfahrzeug mit mindestens 3000&nbsp;l Löschwasser, vom Fahrzeugmotor angetriebener Feuerlöschkreiselpumpe und einem Trupp als Besatzung. Es bringt Wasser dorthin, wo Hydranten fehlen: in wasserarme Gebiete und abseits befestigter Straßen.</p>
+      <div class="row">
+        <a class="btn primary" href="#rundgang">Rundgang ums Fahrzeug</a>
+        <a class="btn" href="#lernen">Wissen abfragen</a>
+      </div>
+    </div>
+    <figure class="hero-fig">
+      <div id="heroTruck"></div>
+      <figcaption>Schema eines Norm-TLF 3000 mit Truppkabine, Fahrerseite. Ein Geräteraum antippen öffnet den Rundgang.</figcaption>
+    </figure>
+  </div>
+
+  <div class="figs">
+    <div class="fig"><span class="n">3000<small>l</small></span><span class="l">Löschwasser, mindestens <span class="lvl norm">Norm</span></span><span class="s">Reale Fahrzeuge: 3000 bis 4000&nbsp;l</span></div>
+    <div class="fig"><span class="n">1/2</span><span class="l">Besatzung: ein Trupp, 3 Sitze <span class="lvl norm">Norm</span></span><span class="s">Staffelkabine (1/5) ist verbreitet</span></div>
+    <div class="fig"><span class="n">2000<small>l/min</small></span><span class="l">Pumpe FPN 10-2000 bei 10&nbsp;bar <span class="lvl praxis">Praxis</span></span><span class="s">In allen gefundenen Ausschreibungen; Normtext nicht eingesehen</span></div>
+    <div class="fig"><span class="n">14<small>t</small></span><span class="l">Massenklasse M, Ausgabe 2011: bis 14&nbsp;t <span class="lvl norm">Norm</span></span><span class="s">Real 14 bis 16&nbsp;t, Führerschein Klasse C</span></div>
+  </div>
+
+  <div class="grid-2">
+    <article class="block">
+      <h2>Wofür das TLF 3000 da ist</h2>
+      <p>Die Norm nennt als Hauptaufgabe die Bereitstellung einer größeren Wassermenge, vor allem in wasserarmen Gebieten und abseits befestigter Straßen. Weil nur ein Trupp an Bord ist, fährt das TLF 3000 im Löschzug als wasserführendes Ergänzungsfahrzeug zum HLF oder LF.</p>
+      <ul>
+        <li>Wasser für den Erstangriff, bis eine stabile Wasserversorgung steht</li>
+        <li>HLF oder Drehleiter mit Wasser versorgen</li>
+        <li>Pendelverkehr, wo kein Hydrantennetz vorhanden ist</li>
+        <li>Wald-, Flächen- und Vegetationsbrände</li>
+        <li>Fahrzeugbrände auf Autobahnen und Landstraßen</li>
+      </ul>
+      <span class="q" data-q="din19 siegen goslar kahl"></span>
+    </article>
+    <article class="block">
+      <h2>Sechs Sätze, die sitzen sollten</h2>
+      <ul class="merk">
+        <li>Die Zahl im Namen ist der Mindestwasservorrat in Litern. Das gilt seit April 2011; die Pumpe steht nicht mehr im Namen.</li>
+        <li>Normativ fährt nur ein Trupp mit: Truppführer, Maschinist, Truppmann.</li>
+        <li>Die FPN 10-2000 garantiert 2000&nbsp;l/min nur bei 3&nbsp;m Saughöhe. Bei 7,5&nbsp;m sind es noch 1000&nbsp;l/min.</li>
+        <li>Ein C-Rohr mit 200&nbsp;l/min leert 3000&nbsp;l in 15 Minuten, ein Werfer mit 1600&nbsp;l/min in knapp 2 Minuten.</li>
+        <li>Werfer, Schaum und Waldbrand-Zusatzbeladung sind nach Norm optional. Pump &amp; Roll und Selbstschutzanlage kommen aus dem DFV/AGBF-Pflichtenheft Waldbrand-TLF.</li>
+        <li>Ein teilgefüllter Tank schwappt. Die häufigste TLF-Unfallart ist das Umkippen.</li>
+      </ul>
+    </article>
+  </div>
+
+  <article class="block">
+    <h2>So sind die Angaben gekennzeichnet</h2>
+    <p class="prose">Vieles, was am eigenen Fahrzeug steht, kommt nicht aus der Norm, sondern aus einer Landesvorgabe oder der Bestellung der Kommune. Deshalb trägt jede Angabe ihre Herkunft.</p>
+    <div class="legend-grid">
+      <span class="lvl norm">Norm</span><span>Kurzbeschreibung der DIN 14530-22 (Ausgabe 2019-11, bei „2011“ nur für die alte Ausgabe belegt)</span>
+      <span class="lvl norm-i">Norm (indirekt)</span><span>Normanforderung, die nur über Wikipedia oder normzitierende Ausschreibungen belegt ist</span>
+      <span class="lvl land">Land</span><span>Förderrichtlinie, Landes-Leistungsbeschreibung, Landesbeladeliste, Landesfeuerwehrschule</span>
+      <span class="lvl praxis">Praxis</span><span>Hersteller, Realfahrzeug, kommunale Ausschreibung</span>
+      <span class="lvl regel">Regelwerk</span><span>FwDV, DGUV, DIN EN 1028, DFV/AGBF-Fachempfehlungen, Lehrunterlagen</span>
+      <span class="lvl calc">Rechnung</span><span>aus belegten Eingangswerten gerechnet</span>
+      <span class="flag">unsicher</span><span>Quellen widersprechen sich oder die Zuordnung ist unklar</span>
+    </div>
+    <p class="note"><b>Stand 22.09.2026.</b> Alle Fakten stammen aus Suchzusammenfassungen der verlinkten Seiten; ein Abruf der Volltexte war in der Rechercheumgebung gesperrt, der kostenpflichtige Normtext lag nicht vor. Für die eigene Wache gelten immer Beladeplan und Betriebsanleitung des eigenen Fahrzeugs.</p>
+  </article>
+</section>
+
+<!-- RUNDGANG -->
+<section class="view" data-view="rundgang" aria-labelledby="h-rundgang" hidden>
+  <div class="sec-head">
+    <p class="eyebrow">Rundgang</p>
+    <h2 id="h-rundgang">Einmal ums Fahrzeug</h2>
+    <p>Geräteraum antippen, um die typische Belegung zu sehen. Die Belegung ist eine Musterbelegung aus Beispielfahrzeugen; welcher Raum was enthält, legt die Norm nicht fest. Im Feld „Bei uns“ kannst du notieren, wie es auf eurem Fahrzeug aussieht.</p>
+  </div>
+  <div class="row">
+    <div class="seg" role="group" aria-label="Ansicht">
+      <button type="button" data-side="links" aria-pressed="true">Fahrerseite</button>
+      <button type="button" data-side="rechts" aria-pressed="false">Beifahrerseite</button>
+      <button type="button" data-side="heck" aria-pressed="false">Heck</button>
+      <button type="button" data-side="dach" aria-pressed="false">Dach</button>
+    </div>
+  </div>
+  <div class="tour">
+    <figure class="stage">
+      <div id="tourTruck"></div>
+      <figcaption id="tourCap"></figcaption>
+    </figure>
+    <aside class="zone-panel" id="zonePanel" aria-live="polite"></aside>
+  </div>
+  <div class="grid-2">
+    <article class="block">
+      <h3>So werden Geräteräume gezählt</h3>
+      <p>G1 ist der vorderste Geräteraum auf der linken Seite in Fahrtrichtung, also auf der Fahrerseite. Ungerade Nummern (G1, G3, G5) liegen links, gerade (G2, G4, G6) rechts, jeweils vom Fahrerhaus nach hinten aufsteigend. Der Heckraum heißt GR oder bekommt die letzte ungerade Nummer. Deshalb haben manche TLF 3000 G1 bis G4 plus GR, andere G1 bis G6 plus GR.</p>
+      <span class="q" data-q="sfsw801 lernbar034"></span>
+    </article>
+    <article class="block">
+      <h3>Alle Bereiche</h3>
+      <div class="zone-links" id="zoneLinks"></div>
+      <p class="small muted">Reale Aufbauten haben 4 bis 9 Geräteräume (Lehesten 7, Himbergen 9, Schlingmann VARUS bis 4 je Seite). Bei allen gefundenen Norm-TLF 3000 sitzt die Pumpe mit Bedienstand im Heck.</p>
+    </article>
+  </div>
+</section>
+
+<!-- BELADUNG -->
+<section class="view" data-view="beladung" aria-labelledby="h-beladung" hidden>
+  <div class="sec-head">
+    <p class="eyebrow">Beladung</p>
+    <h2 id="h-beladung">Tabelle 1 für den Löscheinsatz, Tabelle 2 für den Wald</h2>
+    <p>Die DIN 14530-22 teilt die Beladung in Tabelle 1 (feuerwehrtechnische Normbeladung) und Tabelle 2 (Zusatzbeladung Waldbrand). Das Geräteraumkonzept muss beide aufnehmen können. Belegt sind nur einzelne Positionen; die vollständigen Listen mit Stückzahlen stehen in den Landeslisten unten.</p>
+  </div>
+  <div class="tbl">
+    <table>
+      <caption>Belegte Positionen</caption>
+      <thead><tr><th>Position</th><th>Menge</th><th>Herkunft</th><th>Quelle</th></tr></thead>
+      <tbody>
+        <tr><td>Saugschlauch A-110-1500-K</td><td class="num">4</td><td><span class="lvl land">Land (MV)</span></td><td><span class="q" data-q="mvbl"></span></td></tr>
+        <tr><td>Sammelstück A-3B</td><td class="num">1</td><td><span class="lvl land">Land (MV)</span></td><td><span class="q" data-q="mvbl"></span></td></tr>
+        <tr><td>Standrohr 2B</td><td class="num">1</td><td><span class="lvl land">Land (MV)</span></td><td><span class="q" data-q="mvbl"></span></td></tr>
+        <tr><td>Druckschlauch C 42-15 (schnelle Wasserabgabe)</td><td class="num">2</td><td><span class="lvl land">Land (MV)</span></td><td><span class="q" data-q="mvbl wiki"></span></td></tr>
+        <tr><td>Druckschlauch B 75-20</td><td class="num">10 bzw. 14</td><td><span class="lvl land">Land</span> <span class="flag">unsicher</span></td><td><span class="q" data-q="mvbl sfsr"></span></td></tr>
+        <tr><td>Mehrzweckstrahlrohr, Hohlstrahlrohre mit Festkupplung</td><td class="num">k.&nbsp;A.</td><td><span class="lvl land">Land (MV)</span></td><td><span class="q" data-q="mvbl"></span></td></tr>
+        <tr><td>Warnwesten (Tabelle 1, Ausgabe 2011)</td><td class="num">3</td><td><span class="lvl norm-i">Norm (indirekt)</span></td><td><span class="q" data-q="bleialf"></span></td></tr>
+        <tr><td>Pressluftatmer nach DIN EN 137 mit Vollmasken nach DIN EN 136</td><td class="num">k.&nbsp;A.</td><td><span class="lvl praxis">Praxis</span></td><td><span class="q" data-q="pruem"></span></td></tr>
+        <tr><td>Pressluftatmer auf Beispielfahrzeugen (Trupp / Staffel)</td><td class="num">2 / 4</td><td><span class="lvl praxis">Praxis</span></td><td><span class="q" data-q="boppard garlstedt sailauf"></span></td></tr>
+        <tr><td>Fluchthauben (bayerische Mindestausrüstung TLF 3000 St)</td><td class="num">k.&nbsp;A.</td><td><span class="lvl land">Land (BY)</span></td><td><span class="q" data-q="sfsrst"></span></td></tr>
+        <tr><td>Selbstaufrichtender Faltbehälter 10&nbsp;000&nbsp;l (Landesfahrzeug MV)</td><td class="num">1</td><td><span class="lvl land">Land (MV)</span></td><td><span class="q" data-q="mvlb"></span></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="grid-2">
+    <article class="block">
+      <h3>Zusatzbeladung Waldbrand (Tabelle 2)</h3>
+      <p>Optional nach Norm. Belegt sind unter anderem:</p>
+      <ul>
+        <li>Feuerpatsche, Stiel ca. 2,4&nbsp;m</li>
+        <li>Löschrucksack mit Befüllvorrichtung, ca. 20&nbsp;l</li>
+        <li>Dunghaken, Stiel ca. 1400&nbsp;mm</li>
+      </ul>
+      <p class="small muted">Stückzahlen nicht belegt. <span class="lvl land">Land</span></p>
+      <span class="q" data-q="lfvbywb mvbl"></span>
+    </article>
+    <article class="block">
+      <h3>Was Kommunen oft zusätzlich laden</h3>
+      <ul>
+        <li>Stromerzeuger (9 bis 13&nbsp;kVA), Kabeltrommeln, Scheinwerfer</li>
+        <li>Lichtmast (Freyung: 64&nbsp;000&nbsp;lm)</li>
+        <li>Faltbehälter 5000 bis 10&nbsp;000&nbsp;l</li>
+        <li>Tauchpumpe, Trennschleifer, elektrischer Drucklüfter</li>
+        <li>Wärmebildkamera, Mehrzweckzug MZ&nbsp;16, Hygieneboard</li>
+        <li>Steckleiterteile nur im Einzelfall (Boppard 4 Teile, Garlstedt zweiteilig)</li>
+      </ul>
+      <p class="small muted">Ob die Norm eine Leiter vorsieht, blieb offen. <span class="lvl praxis">Praxis</span></p>
+      <span class="q" data-q="heidelberg freyung sailauf boppard garlstedt"></span>
+    </article>
+  </div>
+  <article class="block">
+    <h3>Gliederung im Leistungsverzeichnis</h3>
+    <p class="prose">Schutzausrüstung · Löschgeräte · Schläuche und Armaturen · Rettungsgeräte · Sanitäts- und Wiederbelebungsgerät · Beleuchtungs- und Signalgerät · Arbeitsgerät · Sondergerät · Zusatzbeladung Waldbrand</p>
+    <p class="small muted">Aus einer Ausschreibung auf Basis der Normausgabe 2011. <span class="lvl praxis">Praxis</span> <span class="q" data-q="bleialf"></span></p>
+  </article>
+  <article class="block">
+    <h3>Vollständige Beladelisten</h3>
+    <p class="prose">Wer Stückzahlen braucht, findet sie in diesen Listen. Die bayerische Liste „TLF 3000, Stand 04/2011“ bezieht sich auf die alte Normausgabe und ist veraltet.</p>
+    <ul class="src-list" id="loadLists"></ul>
+  </article>
+</section>
+
+<!-- TECHNIK -->
+<section class="view" data-view="technik" aria-labelledby="h-technik" hidden>
+  <div class="sec-head">
+    <p class="eyebrow">Technik</p>
+    <h2 id="h-technik">Die Norm setzt Untergrenzen, reale Fahrzeuge liegen darüber</h2>
+    <p>Normativ belegt sind nur Rahmenwerte. Die Praxis streut erheblich: 3000 bis 4000&nbsp;l Wasser, 120 bis 300&nbsp;l Schaummittel, 14 bis 16&nbsp;t und 6,65 bis 7,9&nbsp;m Länge.</p>
+  </div>
+  <div class="tbl">
+    <table>
+      <caption>Datenblatt: Norm gegen Praxis</caption>
+      <thead><tr><th>Merkmal</th><th>DIN 14530-22</th><th>Reale Fahrzeuge</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">Norm</th><td>Ausgabe 2019-11; ersetzt 2011-04 und A1:2017-06 <span class="lvl norm">Norm</span></td><td>Ausschreibungen 2026 zitieren weiter 2019-11</td></tr>
+        <tr><th scope="row">Besatzung</th><td>Trupp 1/2, drei Sitze <span class="lvl norm">Norm</span><br><span class="small muted">Staffelvariante in der Ausgabe 2019:</span> <span class="flag">unsicher</span></td><td>Staffel 1/5 häufig; Bayern fördert sie nur mit (H)LF in der Gemeinde; eine Gruppenkabine (Bremervörde)</td></tr>
+        <tr><th scope="row">Masse</th><td>Massenklasse M; 2011: bis 14&nbsp;000&nbsp;kg <span class="lvl norm">Norm</span><br><span class="small muted">14-t-Grenze 2019:</span> <span class="flag">unsicher</span></td><td>14&nbsp;000 bis 16&nbsp;000&nbsp;kg</td></tr>
+        <tr><th scope="row">Antrieb</th><td>Allradpflicht nicht geklärt <span class="flag">unsicher</span></td><td>Fast immer Allrad-Frontlenker, Kategorie 2 (geländefähig); Waldbrand-TLF nach Pflichtenheft: Kategorie 3</td></tr>
+        <tr><th scope="row">Maße</th><td>keine Werte gefunden</td><td class="num">6650–7900 × 2500 × 3150–3300&nbsp;mm</td></tr>
+        <tr><th scope="row">Motor</th><td>keine Werte gefunden</td><td>231 PS (Unimog U 5023) bis 340 PS (MAN TGM 18.340)</td></tr>
+        <tr><th scope="row">Löschwasser</th><td>mindestens 3000&nbsp;l, kein Höchstwert belegt <span class="lvl norm">Norm</span></td><td>3000 bis 4000&nbsp;l (MV-Landesfahrzeug 3500&nbsp;l)</td></tr>
+        <tr><th scope="row">Schaummittel</th><td>optional; wenn vorhanden, für mind. 10&nbsp;min Kombischaumrohr M4/S4, Druckzumischanlage zulässig <span class="lvl norm-i">Norm (indirekt)</span></td><td>120 bis 300&nbsp;l, meist mit Druckzumischanlage</td></tr>
+        <tr><th scope="row">Pumpe</th><td>vom Fahrzeugmotor angetriebene Feuerlöschkreiselpumpe <span class="lvl norm">Norm</span></td><td>FPN 10-2000 als Heckpumpe; teils FPN 10-3000 (Rosenbauer N35); Einbaupumpen schaffen real 2500&nbsp;l/min bei 10&nbsp;bar</td></tr>
+        <tr><th scope="row">Schnelle Wasserabgabe</th><td>Schnellangriffseinrichtung oder Einrichtung zur schnellen Wasserabgabe <span class="lvl norm">Norm</span></td><td>Haspel mit 50&nbsp;m formstabilem Schlauch DN&nbsp;25 (oder 30&nbsp;m DN&nbsp;33), oft elektrisch aufrollbar</td></tr>
+        <tr><th scope="row">Werfer</th><td>optional <span class="lvl norm">Norm</span></td><td>Dachwerfer 1200 bis 2400&nbsp;l/min; Waldbrand: Frontwerfer</td></tr>
+        <tr><th scope="row">Waldbrand</th><td>seit 2019 soll das TLF 3000 auch den Bedarf an einem waldbrandtauglichen TLF decken; Zusatzbeladung Waldbrand optional <span class="lvl norm">Norm</span></td><td>Pump &amp; Roll, Selbstschutzanlage, Frontwerfer nach DFV/AGBF-Pflichtenheft</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="q" data-q="din19 din11 ansi wiki krz ninds mvlb pflichtenheft"></p>
+
+  <div class="grid-3">
+    <article class="block">
+      <h3>Pumpe</h3>
+      <p>FPN 10-2000 heißt: Feuerlöschkreiselpumpe Normaldruck, 2000&nbsp;l/min Nennförderstrom bei 10&nbsp;bar Nennförderdruck, gemessen bei 3&nbsp;m geodätischer Saughöhe. Sie sitzt im Heck und läuft über einen Nebenantrieb.</p>
+      <p>Der Normaldruckteil darf höchstens 17&nbsp;bar Schließdruck erreichen. Kreiselpumpen saugen nicht selbst an; eine automatische Entlüftung zieht die Luft ab.</p>
+      <span class="q" data-q="hlfsb3 bachert prima"></span>
+    </article>
+    <article class="block">
+      <h3>Löschwasserbehälter</h3>
+      <p>Mindestens 3000&nbsp;l. Ein Höchstwert, der Tankwerkstoff und Schwallwände sind in keiner gefundenen Quelle genannt. Real sind Tanks aus Kunststoff oder GFK üblich; Finnentrop nennt einen trinkwassergeeigneten Kunststofftank mit 3400&nbsp;l.</p>
+      <p>Füllen am Hydranten nur über freien Einlauf mit mindestens 100&nbsp;mm Luftstrecke oder über einen Systemtrenner.</p>
+      <span class="q" data-q="din19 giebfinn lfvtw"></span>
+    </article>
+    <article class="block">
+      <h3>Schaum</h3>
+      <p>Auf neueren TLF 3000 ist die elektronisch geregelte Druckzumischanlage hinter der Pumpe die Regel, meist mit 120&nbsp;l Schaummittel. Sie speist auch Werfer und Schnellangriff. Der tragbare Zumischer Z4 kostet 25 bis 30&nbsp;% Druck und liefert fest 400&nbsp;l/min.</p>
+      <p>Druckluftschaum (CAFS) auf einem Norm-TLF 3000 ließ sich nicht sicher belegen.</p>
+      <span class="q" data-q="firedos awg magirus"></span>
+    </article>
+    <article class="block">
+      <h3>Schnellangriff</h3>
+      <p>Laut Wikipedia liegt die Schnellangriffseinrichtung im Geräteraum hinten rechts, ist an die Pumpe angeschlossen und absperrbar; das Strahlrohr lässt sich angekuppelt entnehmen. Alternativ: zwei C&nbsp;42-15 oder zwei D&nbsp;25-15 mit angekuppeltem Strahlrohr.</p>
+      <p>Eine kommunale Leistungsbeschreibung nennt C-Strahlrohr max. 235&nbsp;l/min, D-Strahlrohr max. 100&nbsp;l/min.</p>
+      <span class="q" data-q="wiki krz"></span>
+    </article>
+    <article class="block">
+      <h3>Werfer</h3>
+      <p>Optional. Beschaffungstexte fordern 1600&nbsp;l/min bei 8&nbsp;bar, mittig und möglichst weit vorn auf dem Dach, bei langsamer Fahrt bedienbar <span class="flag">unsicher</span>. Eine andere Leistungsbeschreibung nennt 400 bis 1000&nbsp;l/min.</p>
+      <p>Ziegler VIPER bei 10&nbsp;bar: 800&nbsp;l/min 40&nbsp;m, 1200&nbsp;l/min 45&nbsp;m, 1600&nbsp;l/min 50&nbsp;m Wurfweite (Schaum je 10&nbsp;m weniger).</p>
+      <span class="q" data-q="sfsr krz viper"></span>
+    </article>
+    <article class="block">
+      <h3>Waldbrandausstattung</h3>
+      <p><b>Pump &amp; Roll:</b> Wasserabgabe während der Fahrt über einen fahrunabhängigen Nebenantrieb. <b>Selbstschutzanlage:</b> Düsen legen einen Wasservorhang um das Fahrzeug und besprühen die Räder, damit es durch Flammen flüchten kann.</p>
+      <p>Beides fordert das DFV/AGBF-Pflichtenheft Waldbrand-TLF (2020), nicht die Norm. Der Magirus TLF 3000-W bleibt normkonform und damit förderfähig.</p>
+      <span class="q" data-q="pflichtenheft rbunimog magirusw"></span>
+    </article>
+  </div>
+</section>
+
+<!-- MASCHINIST -->
+<section class="view" data-view="maschinist" aria-labelledby="h-maschinist" hidden>
+  <div class="sec-head">
+    <p class="eyebrow">Maschinist</p>
+    <h2 id="h-maschinist">Pumpe bedienen, Tank im Blick behalten</h2>
+    <p>Die Abläufe sind aus mehreren Lehrunterlagen und Herstelleranleitungen zusammengesetzt. Bedienfelder unterscheiden sich je Hersteller; die Betriebsanleitung des eigenen Fahrzeugs geht vor.</p>
+  </div>
+
+  <div class="tbl">
+    <table>
+      <caption>Garantiepunkte der FPN 10-2000 nach DIN EN 1028-1</caption>
+      <thead><tr><th>Förderstrom</th><th>Druck</th><th>Saughöhe</th><th>Bedeutung</th></tr></thead>
+      <tbody>
+        <tr><td class="num">2000 l/min</td><td class="num">10 bar</td><td class="num">3 m</td><td>Nennpunkt</td></tr>
+        <tr><td class="num">1000 l/min</td><td class="num">15 bar</td><td class="num">3 m</td><td>halber Förderstrom beim 1,5-fachen Druck</td></tr>
+        <tr><td class="num">1000 l/min</td><td class="num">10 bar</td><td class="num">7,5 m</td><td>aus tiefem Gewässer nur die Hälfte</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="q" data-q="greinke demel"></p>
+
+  <div class="stack">
+    <details class="proc" open>
+      <summary><h3>Vor jedem Pumpenbetrieb</h3><span class="lvl regel">Regelwerk</span></summary>
+      <div class="proc-body">
+        <ol class="steps">
+          <li><span>Feststellbremse ziehen und das Fahrzeug zusätzlich mit Unterlegkeilen sichern.</span></li>
+          <li><span>Einsatzstelle nach hinten absichern; das gehört nach FwDV 3 zu den Aufgaben des Maschinisten.</span></li>
+          <li><span>Pumpe über den Nebenantrieb zuschalten. Wie, hängt vom Fahrzeug ab (Rosenbauer LCS, Ziegler Z-Control, Schlingmann, Magirus).</span></li>
+        </ol>
+        <span class="q" data-q="hlfsma nabk fwdv3"></span>
+      </div>
+    </details>
+    <details class="proc">
+      <summary><h3>Tankbetrieb</h3><span class="lvl praxis">Praxis</span></summary>
+      <div class="proc-body">
+        <ol class="steps">
+          <li><span>Absperrorgan am Saugeingang schließen, Tanksaugleitung öffnen.</span></li>
+          <li><span>Druck aufbauen, Druckabgang oder Schnellangriff langsam öffnen.</span></li>
+          <li><span>Tankfüllstand überwachen und Nachschub früh anfordern: 3000&nbsp;l reichen mit zwei C-Rohren à 200&nbsp;l/min nur 7,5 Minuten.</span></li>
+        </ol>
+        <span class="q" data-q="schlingba"></span>
+      </div>
+    </details>
+    <details class="proc">
+      <summary><h3>Hydrantenbetrieb und Einspeisung</h3><span class="lvl regel">Regelwerk</span></summary>
+      <div class="proc-body">
+        <ol class="steps">
+          <li><span>Eingangsdruck beobachten; er soll nicht unter 2&nbsp;bar fallen. Das Druckbegrenzungsventil nach DIN 14381 gilt nur als behelfsmäßige Sicherung.</span></li>
+          <li><span>Trinkwasser schützen: Löschwasser im geschlossenen System ist Flüssigkeitskategorie 4 nach DIN EN 1717. DVGW W 405-B1 fordert mindestens einen Systemtrenner BA; der Feuerwehr-Systemtrenner B-FW ist in DIN 14346 genormt.</span></li>
+          <li><span>Tank nur über freien Einlauf mit mindestens 100&nbsp;mm Luftstrecke füllen. Pumpendruck über die Tankfüllleitung kann den Behälter schädigen.</span></li>
+          <li><span>Je nach Fahrzeug schaltet eine Automatik zwischen Tank und Einspeisung um, etwa die Schlingmann-AWR (Einspeisedruck bis 16&nbsp;bar).</span></li>
+        </ol>
+        <p class="small"><span class="flag">unsicher</span> Ob der Systemtrenner rechtlich Pflicht ist, beantworten die Quellen unterschiedlich.</p>
+        <span class="q" data-q="lfvtw fwubtw dvgw awr"></span>
+      </div>
+    </details>
+    <details class="proc">
+      <summary><h3>Saugbetrieb aus offenem Gewässer</h3><span class="lvl regel">Regelwerk</span></summary>
+      <div class="proc-body">
+        <p>Ablauf nach FwDV 3, Abschnitt 5.5.3. Die Einzelschritte hier sind zusammengefasst.</p>
+        <ol class="steps">
+          <li><span>Saugleitung aus den A-Saugschläuchen (4 × A-110-1500) mit Saugkorb kuppeln und zu Wasser bringen.</span></li>
+          <li><span>Druckabgänge geschlossen halten, Saugeingang öffnen.</span></li>
+          <li><span>Entlüften, bis Wasserdruck ansteht. Die automatische Entlüftung koppelt bei ca. 1,5 bis 2&nbsp;bar selbsttätig ab (Rosenbauer-Doppelkolben 2&nbsp;bar, Ziegler Trokomat 1,5&nbsp;bar).</span></li>
+          <li><span>Druckabgang langsam öffnen, Manovakuummeter beobachten.</span></li>
+          <li><span>Mit Kavitation rechnen, wenn Saughöhe oder Förderstrom zu groß sind oder der Saugkorb verstopft.</span></li>
+        </ol>
+        <p class="small"><span class="flag">unsicher</span> Entlüftungszeit: höchstens 60&nbsp;s bei 7,5&nbsp;m Saughöhe laut Schlingmann-Anleitung, ein anderer Treffer nennt 30&nbsp;s je Vorgang.</p>
+        <span class="q" data-q="fwdv335 lernbar035 rbn25 trokomat"></span>
+      </div>
+    </details>
+    <details class="proc">
+      <summary><h3>Schaumbetrieb</h3><span class="lvl praxis">Praxis</span></summary>
+      <div class="proc-body">
+        <ul>
+          <li>Druckzumischanlage: Zumischrate je nach Mittel stufenlos, typisch 0,1 bis 6&nbsp;%; moderne synthetische Schaummittel meist 1&nbsp;% oder weniger.</li>
+          <li>Zumischer Z4: Druckverlust ca. 25 bis 30&nbsp;%, ausgelegt für 400&nbsp;l/min, Zumischrate bis 6&nbsp;%.</li>
+          <li>Kombischaumrohr M4/S4: Wurfweite 27&nbsp;m (Schwerschaum) bzw. 8&nbsp;m (Mittelschaum).</li>
+          <li>Der Wassertank ist vor dem Schaummittel leer: M4/S4 bei 3&nbsp;% braucht rund 388&nbsp;l/min Wasser, 3000&nbsp;l reichen 7,7 Minuten <span class="lvl calc">Rechnung</span>.</li>
+        </ul>
+        <p class="callout"><b>PFAS:</b> Ab 23.10.2026 müssen PFAS-haltige Schäume gekennzeichnet sein. Öffentliche Feuerwehren dürfen sie nur noch bis 23.04.2027 einsetzen (VO (EU) 2025/1988). Fluorfreie Schaummittel bilden keinen Wasserfilm; entscheidend ist die Verschäumungszahl.</p>
+        <span class="q" data-q="firedos awg gesi dfvschaum"></span>
+      </div>
+    </details>
+    <details class="proc">
+      <summary><h3>Außerbetriebnahme und Nachbereitung</h3><span class="lvl regel">Regelwerk</span></summary>
+      <div class="proc-body">
+        <ol class="steps">
+          <li><span>Gas auf Leerlauf, Ventile schließen, Pumpe abschalten, Saugleitung abkuppeln.</span></li>
+          <li><span>Pumpe vollständig entwässern.</span></li>
+          <li><span>Trockensaugprobe mit dem Manovakuummeter: Der Unterdruck darf höchstens 0,1&nbsp;bar pro Minute abfallen.</span></li>
+          <li><span>Nach Schaumeinsatz Druckzumischanlage und Pumpe mit Klarwasser spülen, Schläuche und Strahlrohre spülen. Bei Around-the-pump-Zumischung das ganze System bis zum Strahlrohr.</span></li>
+          <li><span>Tank und Schaummittelbehälter auffüllen, Beladung nach Liste kontrollieren, Schäden melden.</span></li>
+        </ol>
+        <p class="small"><span class="flag">unsicher</span> Die Reihenfolge in Schritt 1 stammt eher aus dem Tragkraftspritzen-Kontext.</p>
+        <span class="q" data-q="nabk hlfsma grossenrode firedos"></span>
+      </div>
+    </details>
+    <details class="proc">
+      <summary><h3>Frost</h3><span class="lvl regel">Regelwerk</span> <span class="flag">unsicher</span></summary>
+      <div class="proc-body">
+        <ul>
+          <li>Bei längeren Pausen sofort entwässern und Trockensaugprobe machen.</li>
+          <li>Einwintern: Pumpe mit erhöhter Drehzahl laufen lassen, damit das Laufrad Frostschutzmittel bis in die Abgänge verteilt; Gemisch 1:1.</li>
+          <li>Flüssigkeitsring-Entlüfter dauerhaft mit Frostschutz füllen. Trockenlaufende Kolbenentlüfter (Trokomat, Rosenbauer-Doppelkolben) brauchen keine Füllung.</li>
+          <li>Die Umgehungsleitung zum Tank hält etwas Wasser in Bewegung und schützt den Tank vor dem Einfrieren.</li>
+        </ul>
+        <span class="q" data-q="lz3 lernbarlex wikikp"></span>
+      </div>
+    </details>
+  </div>
+
+  <div class="tbl">
+    <table>
+      <caption>Fehlerbilder</caption>
+      <thead><tr><th>Fehlerbild</th><th>Ursache und Gegenmaßnahme</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">Kavitation</th><td>Dampfblasen durch Unterdruck im Saugbetrieb: zu großer Förderstrom, zu große Saughöhe, verstopfter Saugkorb oder freier Auslauf (geplatzter Schlauch). Hörbar am Pumpengeräusch, beschädigt Laufrad und Leitapparat. Im Hydrantenbetrieb keine Gefahr, weil die Zuleitung zusammenfällt.</td></tr>
+        <tr><th scope="row">Heißlaufen</th><td>Bei Förderstrom null erwärmt sich das Wasser. Einbaupumpen führen über eine Umgehungsleitung ständig etwas Wasser in den Tank zurück; neuere Pumpen öffnen bei Übertemperatur einen Bypass.</td></tr>
+        <tr><th scope="row">Druckstoß</th><td>Zu schnelles Schließen eines Absperr- oder Regelorgans. Folgen: Schäden an Pumpe, Hydrant und Trinkwasserleitung, platzende Leitungen. Strahlrohre und Ventile langsam bedienen; ein unter Druck schlagendes Strahlrohr nicht aufheben, erst Leitung drucklos machen.</td></tr>
+        <tr><th scope="row">Rückfluss ins Netz</th><td>Löschwasser ist Flüssigkeitskategorie 4. Systemtrenner B-FW (DIN 14346) oder freier Einlauf mit Luftstrecke.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="q" data-q="moenchhagen hlfsma wikikp sichere dvgw"></p>
+
+  <div class="grid-2">
+    <article class="block">
+      <h3>Bedienfelder der Hersteller</h3>
+      <ul>
+        <li><b>Rosenbauer LCS:</b> einheitliche Symbole und Farben, Pumpendruckregler, Betriebsarten Tanksaugen, offenes Gewässer, Hydrant/Einspeisung; neu mit Eingangsdruckregelung. Fällt das Heckbedienfeld aus, lassen sich die nummerierten Pneumatikventile am Ventilblock über der Pumpe von Hand schalten.</li>
+        <li><b>Ziegler Z-Control:</b> handschuhtaugliche Tasten, Führung über Lichtfarben; zeigt Durchfluss von Wasser und Schaummittel und die Zumischrate.</li>
+        <li><b>Schlingmann:</b> AWR für automatische Umschaltung Tank/Einspeisung, AutoMix-Zumischung ab 0,1&nbsp;% bei 100&nbsp;l/min.</li>
+        <li><b>Magirus:</b> Druckzumischanlage CaddiSys 30, alternativ FireDos.</li>
+      </ul>
+      <p class="small">Die DFV/AGBF-Fachempfehlung „Standardisiertes Pumpenbedienfeld“ (2009) regelt Anordnung, Symbole und Farben, nicht die Pumpentechnik.</p>
+      <span class="q" data-q="lcs lcsnot zcontrol awr automix magirus spbf"></span>
+    </article>
+    <article class="block">
+      <h3>Prüfungen</h3>
+      <p>Der DGUV Grundsatz 305-002 „Prüfgrundsätze für Ausrüstungen, Geräte und Fahrzeuge der Feuerwehr“ wurde im Mai 2021 neu gefasst und im Dezember 2021 korrigiert. Er beschreibt seitdem auch Fahrzeuge.</p>
+      <ul>
+        <li>Feuerlöschkreiselpumpe: Sicht- und Funktionsprüfung alle 12 Monate durch den Gerätewart (befähigte Person). <span class="lvl regel">Regelwerk</span></li>
+        <li>Trockensaugprobe nach jedem Pumpenbetrieb, höchstens 0,1&nbsp;bar/min Abfall. Das Kriterium stammt aus den Maschinisten-Lernunterlagen.</li>
+        <li>Die Prüfungen nach DGUV ergänzen die Hauptuntersuchung, ersetzen sie aber nicht.</li>
+      </ul>
+      <span class="q" data-q="dguv fbfhb nabk hlfsprot"></span>
+    </article>
+  </div>
+</section>
+
+<!-- EINSATZ -->
+<section class="view" data-view="einsatz" aria-labelledby="h-einsatz" hidden>
+  <div class="sec-head">
+    <p class="eyebrow">Einsatz</p>
+    <h2 id="h-einsatz">Drei Sitze, ein Trupp: das TLF 3000 im Löschzug</h2>
+    <p>Mit Truppbesatzung bringt das TLF 3000 keine eigene Staffel oder Gruppe mit. Es wird als wasserführendes Ergänzungsfahrzeug zum HLF oder LF geplant.</p>
+  </div>
+
+  <div class="grid-2">
+    <article class="block">
+      <h3>Besatzung nach FwDV 3</h3>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Funktion</th><th>Aufgabe</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">Truppführer</th><td>führt den Trupp; beim Normfahrzeug zugleich Fahrzeugführer</td></tr>
+            <tr><th scope="row">Maschinist</th><td>Fahrer; bedient Pumpe und Aggregate, sichert das Fahrzeug nach hinten, hilft beim Aufbau der Wasserversorgung, übernimmt auf Befehl die Atemschutzüberwachung</td></tr>
+            <tr><th scope="row">Truppmann</th><td>geht mit dem Truppführer vor</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="callout">Gehen Truppführer und Truppmann unter Atemschutz vor, bleibt nur der Maschinist am Fahrzeug. Die Atemschutzüberwachung muss dann ein anderes Fahrzeug übernehmen, etwa das ersteintreffende HLF. <span class="lvl calc">Schluss&shy;folgerung</span></p>
+      <p class="small">Mit Staffelkabine (TLF 3000 St, 1/5) gelten die Staffelfunktionen: Staffelführer, Maschinist, Angriffstrupp, Wassertrupp. Damit sind auch Hilfeleistungseinsätze möglich.</p>
+      <span class="q" data-q="fwdv3 niederstetten pleckhausen fmstaffel"></span>
+    </article>
+    <article class="block">
+      <h3>Typische Einsätze</h3>
+      <ul>
+        <li><b>Erstangriff</b> mit Schnellangriff aus dem Tank, bis die Wasserversorgung steht.</li>
+        <li><b>Versorgung</b> von HLF oder Drehleiter; in Siegen fährt das TLF 3000 als zweites Löschfahrzeug nach dem HLF.</li>
+        <li><b>Pendelverkehr</b> mit „fliegendem Wechsel“: ein Fahrzeug speist ein, die anderen füllen an der Entnahmestelle nach.</li>
+        <li><b>Vegetationsbrand:</b> Die DFV-Fachempfehlung Nr. 3 (2020) nennt den Angriff vom Ankerpunkt entlang der Feuerkante mit pump-and-roll-fähigem TLF als wirksamste Methode. Kleine, wendige TLF greifen an, große, schwere TLF versorgen.</li>
+        <li><b>Geländefahrt:</b> Der Maschinist konzentriert sich ganz aufs Fahren, der Fahrzeugführer bestimmt den Weg.</li>
+      </ul>
+      <span class="q" data-q="siegen brandfeuer dfvveg pflichtenheft"></span>
+    </article>
+  </div>
+
+  <article class="block" id="rechner">
+    <h3>Wasser-Rechner: Wie lange reicht der Tank?</h3>
+    <p class="small muted">Tankinhalt geteilt durch Abgabe. Die Rechnung nimmt das Nennvolumen; eine Restmenge im Tank bleibt unberücksichtigt, real ist der Tank also etwas früher leer.</p>
+    <div class="calc">
+      <div class="stack">
+        <div class="field">
+          <label for="tankRange">Tankinhalt: <span class="num" id="tankOut">3000 l</span></label>
+          <input id="tankRange" type="range" min="2000" max="5000" step="100" value="3000">
+          <div class="presets" id="tankPresets">
+            <button type="button" data-v="3000" aria-pressed="true">3000 l Norm</button>
+            <button type="button" data-v="3500" aria-pressed="false">3500 l MV</button>
+            <button type="button" data-v="4000" aria-pressed="false">4000 l häufig</button>
+          </div>
+        </div>
+        <div id="flowRows"></div>
+        <div class="fields-2">
+          <div class="field">
+            <label for="werferSel">Dachwerfer</label>
+            <select id="werferSel">
+              <option value="0">aus</option>
+              <option value="1000">1000 l/min</option>
+              <option value="1200">1200 l/min</option>
+              <option value="1600">1600 l/min</option>
+              <option value="2000">2000 l/min</option>
+              <option value="2400">2400 l/min</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="inflow">Zufluss (l/min)</label>
+            <input id="inflow" type="number" min="0" step="50" value="0" inputmode="numeric">
+          </div>
+        </div>
+      </div>
+      <div class="stack">
+        <div class="result">
+          <span class="small muted">Abgabe gesamt <span class="num" id="qOut">200 l/min</span></span>
+          <span class="big" id="tOut">15:00</span>
+          <span id="tNote" class="small">Minuten bis der Tank leer ist</span>
+          <p id="warnPump" class="note" hidden><b>Achtung:</b> Mehr als der Nennförderstrom einer FPN 10-2000 (2000&nbsp;l/min bei 10&nbsp;bar).</p>
+        </div>
+        <div class="bars" id="bars" aria-label="Vergleich der Reichweiten"></div>
+      </div>
+    </div>
+    <span class="q" data-q="herxheim krz awg sfsr magirus"></span>
+  </article>
+
+  <article class="block">
+    <h3>Pendelverkehr: Wie viele Fahrzeuge?</h3>
+    <p class="small muted">Benötigte Fahrzeuge = (Entleerzeit + Fahrzeit + Füllzeit + Rüstzeit) ÷ Entleerzeit, aufgerundet. Übungsbeispiel KFV Uelzen: 3&nbsp;min entleeren, 6,5&nbsp;min Fahrt, 2&nbsp;min füllen ergibt 3,8, also 4 Fahrzeuge.</p>
+    <div class="calc">
+      <div class="fields-2">
+        <div class="field"><label for="pE">Entleerzeit (min)</label><input id="pE" type="number" min="0.5" step="0.5" value="7.5" inputmode="decimal"></div>
+        <div class="field"><label for="pF">Fahrzeit hin und zurück (min)</label><input id="pF" type="number" min="0" step="0.5" value="6.5" inputmode="decimal"></div>
+        <div class="field"><label for="pL">Füllzeit (min)</label><input id="pL" type="number" min="0" step="0.5" value="2" inputmode="decimal"></div>
+        <div class="field"><label for="pR">Rüstzeit (min)</label><input id="pR" type="number" min="0" step="0.5" value="0" inputmode="decimal"></div>
+        <button type="button" class="btn small" id="pTake">Entleerzeit aus dem Wasser-Rechner</button>
+      </div>
+      <div class="result">
+        <span class="big" id="pOut">3</span>
+        <span id="pNote" class="small">Fahrzeuge für eine unterbrechungsfreie Versorgung</span>
+      </div>
+    </div>
+    <span class="q" data-q="uelzen"></span>
+  </article>
+
+  <div class="tbl">
+    <table>
+      <caption>Funkrufnamen: Kenner des TLF 3000 nach Land</caption>
+      <thead><tr><th>Land</th><th>Kenner</th><th>Beispiele</th><th>Beleg</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">Bayern</th><td class="num">21</td><td>Florian Kahl 21/1; zum Vergleich 22 = TLF 2000-Klasse, 23 = TLF 4000-Klasse</td><td><span class="lvl land">Land</span> <span class="q" data-q="lfvbyfunk"></span></td></tr>
+        <tr><th scope="row">Baden-Württemberg</th><td class="num">23</td><td>Florian Heidelberg 1/23, Florian Freiburg 15/23</td><td><span class="lvl praxis">Praxis</span> <span class="q" data-q="heidelberg freiburg"></span></td></tr>
+        <tr><th scope="row">Rheinland-Pfalz</th><td class="num">23</td><td>Florian Landstuhl 1/23-1</td><td><span class="lvl praxis">Praxis</span> <span class="q" data-q="landstuhl"></span></td></tr>
+        <tr><th scope="row">Schleswig-Holstein</th><td class="num">22</td><td>Gruppe „TLF bis 3500 l ab FPN 10-2000“</td><td><span class="lvl land">Land</span> <span class="flag">unsicher</span> <span class="q" data-q="shfunk"></span></td></tr>
+        <tr><th scope="row">Niedersachsen</th><td class="num">23 / 21</td><td>Goslar 11-23-10, Lohne 25-21-1</td><td><span class="flag">unsicher</span> <span class="q" data-q="nlbkfunk"></span></td></tr>
+        <tr><th scope="row">Nordrhein-Westfalen</th><td>Typ im Namen</td><td>Florian Altena 03 TLF 3000 02</td><td><span class="lvl praxis">Praxis</span> <span class="q" data-q="altena"></span></td></tr>
+        <tr><th scope="row">Übrige Länder</th><td>–</td><td>kein aktueller Kenner gefunden (Brandenburg: alte Liste 23 = TLF 16/25)</td><td><span class="flag">unsicher</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note"><b>Verwechslungsgefahr:</b> „23“ ist in Bayern die TLF-4000-Klasse, in Baden-Württemberg und Rheinland-Pfalz das TLF 3000. Bei überörtlicher Hilfe den Fahrzeugtyp im Funk ausdrücklich nennen.</p>
+
+  <div class="grid-2">
+    <article class="block">
+      <h3>Fahren und Sicherheit</h3>
+      <ul>
+        <li><b>Klasse C.</b> Der Feuerwehrführerschein (§ 2 Abs. 10a StVG) reicht nur bis 4,75 bzw. 7,5&nbsp;t.</li>
+        <li><b>Kippgefahr:</b> Teilgefüllte Tanks schwappen in Kurven und beim Bremsen. Tank möglichst voll oder leer fahren.</li>
+        <li><b>Schwerpunkt:</b> Dachkästen, Lichtmasten, Werfer und Leiterlagerung heben ihn. Das Feuerwehr-Magazin nennt Umkippen die häufigste TLF-Unfallart, oft ohne Fremdeinwirkung.</li>
+        <li><b>Höhe kennen:</b> reale TLF 3000 sind 3,15 bis 3,30&nbsp;m hoch.</li>
+        <li><b>Höchstgeschwindigkeit:</b> 100&nbsp;km/h (MV-Vorgabe), Unimog U 5023: 90&nbsp;km/h.</li>
+      </ul>
+      <p class="small muted">Ob die Norm Schwallwände vorschreibt, ließ sich nicht klären.</p>
+      <span class="q" data-q="gvv fahrfrage risiko ninds"></span>
+    </article>
+    <article class="block">
+      <h3>Nach dem Einsatz</h3>
+      <ol class="steps">
+        <li><span>Tank und Schaummittelbehälter auffüllen.</span></li>
+        <li><span>Pumpe entwässern, Trockensaugprobe (≤ 0,1&nbsp;bar/min).</span></li>
+        <li><span>Nach Schaumeinsatz spülen.</span></li>
+        <li><span>Beladung nach Beladeliste kontrollieren, Schäden melden.</span></li>
+      </ol>
+      <p class="small muted">Kraftstoff und AdBlue nachfüllen ist gängige Praxis, in den Quellen aber nicht belegt.</p>
+    </article>
+  </div>
+</section>
+
+<!-- VERGLEICH -->
+<section class="view" data-view="vergleich" aria-labelledby="h-vergleich" hidden>
+  <div class="sec-head">
+    <p class="eyebrow">Vergleich</p>
+    <h2 id="h-vergleich">TLF 2000, 3000, 4000 und der Markt</h2>
+    <p>Seit April 2011 gibt es drei TLF-Typen. Alle haben normativ nur einen Trupp an Bord; nur beim TLF 4000 ist ein fest eingebauter Schaum-Wasserwerfer Pflicht.</p>
+  </div>
+  <div class="tbl">
+    <table>
+      <thead><tr><th>Merkmal</th><th>TLF 2000</th><th>TLF 3000</th><th>TLF 4000</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">Norm</th><td>DIN 14530-18</td><td>DIN 14530-22</td><td>DIN 14530-21</td></tr>
+        <tr><th scope="row">Wasser mindestens</th><td class="num">2000 l</td><td class="num">3000 l</td><td class="num">4000 l</td></tr>
+        <tr><th scope="row">Pumpe</th><td>FPN 10-1000</td><td>FPN 10-2000</td><td>nicht belegt</td></tr>
+        <tr><th scope="row">Masse</th><td class="num">bis 10 t</td><td>Klasse M, 2011: bis 14 t</td><td class="num">18 t</td></tr>
+        <tr><th scope="row">Besatzung</th><td>1/2</td><td>1/2</td><td>1/2</td></tr>
+        <tr><th scope="row">Werfer</th><td>optional</td><td>optional</td><td>Pflicht (Schaum-Wasserwerfer)</td></tr>
+        <tr><th scope="row">Schaummittel</th><td>keine Angabe</td><td>optional, 10 min M4/S4</td><td>Pflicht (Behälter)</td></tr>
+        <tr><th scope="row">Vorgänger</th><td>TLF 8/18</td><td>TLF 16/24-Tr</td><td>TLF 20/40, 20/40-SL</td></tr>
+        <tr><th scope="row">Kenner Bayern</th><td class="num">22</td><td class="num">21</td><td class="num">23</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="small">Zum Vergleich das LF 20/16 (DIN 14530-11:2004-11): ebenfalls FPN 10-2000, aber mindestens 1600&nbsp;l Wasser, eine Gruppe (1/8) und 14,5&nbsp;t. Das TLF 3000 hat dieselbe Pumpenklasse, trägt fast doppelt so viel Wasser und ein Drittel der Besatzung. <span class="q" data-q="fmnamen din19 sfslf"></span></p>
+
+  <div class="grid-2">
+    <article class="block">
+      <h3>Zeitleiste der Norm</h3>
+      <div class="tbl">
+        <table>
+          <tbody>
+            <tr><td class="num">1991-08</td><td>erste gelistete Ausgabe der Teilnummer 22</td></tr>
+            <tr><td class="num">1995-03</td><td>TLF 16/24-Tr, Änderung A1:2002-12</td></tr>
+            <tr><td class="num">um 2010</td><td>Entwurf „TLF 20/30“</td></tr>
+            <tr class="hl"><td class="num">2011-04</td><td>erstmals TLF 3000; neue Typnamen nach Wasservorrat</td></tr>
+            <tr><td class="num">2017-06</td><td>Änderung A1 (Inhalt nicht einsehbar)</td></tr>
+            <tr class="hl"><td class="num">2019-11</td><td>gültige Ausgabe; zusätzlich waldbrandtauglich</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="small muted">In den Wehren ersetzt das TLF 3000 ganz unterschiedliche Altfahrzeuge: TLF 16/25, TLF 24/50, TLF 8 W. Manche Wehren haben ältere TLF bei der Funkumstellung einfach umbenannt. Österreich hat mit dem TLFA 3000 (ÖBFV-Richtlinie FA-21_3/13) eine eigene Vorgabe.</p>
+    </article>
+    <article class="block">
+      <h3>Hersteller und Fahrgestelle</h3>
+      <ul>
+        <li><b>Ziegler</b> (ALPAS-Aufbau): Unimog U 5023, MAN TGM 13.290 und 18.320, Mercedes Atego 1326</li>
+        <li><b>Rosenbauer</b> AT, auch über Giebeler: MAN TGM 16.290, 13.320, 18.340, Atego 1530 AF</li>
+        <li><b>Magirus</b> (AluFire 3): Iveco Eurocargo 150-320, Volvo FL 280</li>
+        <li><b>Schlingmann</b> VARUS 4x4: Allrad-Lkw und Unimog</li>
+        <li><b>Empl, Lentner, Schmitz, BAI</b>, Feuerwehrtechnik Berlin (Renault D)</li>
+      </ul>
+      <p class="small">Häufigstes Fahrgestell ist der MAN TGM 4x4, für die Waldbrandprogramme der Länder der Unimog U 5023 mit 231&nbsp;PS.</p>
+      <span class="q" data-q="ziegler rbvils giebfinn magirus schling"></span>
+    </article>
+  </div>
+
+  <div class="tbl">
+    <table>
+      <caption>Beispielfahrzeuge</caption>
+      <thead><tr><th>Fahrzeug</th><th>Fahrgestell / Aufbau</th><th>Besatzung</th><th>Wasser / Schaum</th><th>Besonderheiten</th></tr></thead>
+      <tbody>
+        <tr><td>FF Kahl a. Main (BY), 2025</td><td>Volvo FL 280 4x4 / Magirus</td><td>1/2</td><td class="num">4000 l</td><td>ersetzt TLF 24/50 von 1991</td></tr>
+        <tr><td>OF Fleestedt (NI), 2025</td><td>MAN TGM 18.320 4x4 / Ziegler</td><td>–</td><td class="num">4000 / 200 l</td><td>Beschaffung ca. 5 Jahre</td></tr>
+        <tr><td>FF Vilsbiburg (BY)</td><td>MAN TGM 16.290 4x4 / Rosenbauer AT</td><td>1/5</td><td class="num">4000 / 120 l</td><td>Pumpe N35, Werfer RM8</td></tr>
+        <tr><td>FF Sailauf (BY)</td><td>MAN TGM 13.290 / Empl</td><td>4 PA</td><td class="num">3000 / 200 l</td><td>Selbstschutzanlage, Stromerzeuger 13 kVA, Faltbehälter 5000 l</td></tr>
+        <tr><td>FF Netphen (NRW), 2024</td><td>Iveco Eurocargo 150-320 4x4 / Magirus</td><td>1/2</td><td class="num">4000 / 120 l</td><td>zGM 15 t, intern „TLF 4000“ genannt</td></tr>
+        <tr><td>Erprobung Niedersachsen, 2021</td><td>Unimog U 5023</td><td>–</td><td class="num">3000 l</td><td>6650 × 2500 × 3150 mm, Wattiefe 1200 mm, Pump &amp; Roll</td></tr>
+        <tr><td>BF Heidelberg (BW), 2026</td><td>Unimog / Schlingmann</td><td>–</td><td class="num">3000 l</td><td>3 Fahrzeuge, Selbstschutzdüsen, Faltbehälter</td></tr>
+        <tr><td>FF Granzin-Greven (MV), 2025</td><td>Renault D280 / Feuerwehrtechnik Berlin</td><td>–</td><td class="num">3000 / 300 l</td><td>Dachwerfer bis 2400 l/min</td></tr>
+        <tr><td>Magirus TLF 3000-W, 2021</td><td>Iveco Eurocargo 150-320</td><td>–</td><td>–</td><td>normkonform, Bodensprühdüsen, Atemluft in der Kabine</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="q" data-q="kahl seevetal rbvils sailauf fmnetphen ninds heidel26 granzin magirusw"></p>
+
+  <div class="tbl">
+    <table>
+      <caption>Landesbeschaffung und Förderung</caption>
+      <thead><tr><th>Land</th><th>Modell</th><th>Technik / Betrag</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">Mecklenburg-Vorpommern</th><td>Programm „Zukunftsfähige Feuerwehr“: 40 TLF 3000 von Schmitz, 70 bis 80&nbsp;% Förderung</td><td>3500 l, 200 l Schaummittel, Faltbehälter 10&nbsp;000 l; 333&nbsp;200&nbsp;€ netto je Fahrzeug <span class="flag">unsicher</span></td></tr>
+        <tr><th scope="row">Rheinland-Pfalz</th><td>8 landeseigene TLF 3000 auf Unimog (BAI), je Leitstellenbereich eines</td><td>3000 l, Pump &amp; Roll, Wasservorhang, Wattiefe 1,20 m; gesamt ca. 3,5 Mio €</td></tr>
+        <tr><th scope="row">Nordrhein-Westfalen</th><td>8 × „TLF 3000 NRW“ auf Unimog; erstes am 01.09.2026 an die Feuerwehr Bonn</td><td>Unimog U 5023, 15 t, ca. 3000 l</td></tr>
+        <tr><th scope="row">Sachsen-Anhalt</th><td>Festbetrag und zentrale Beschaffung, u. a. 11 TLF 3000 St</td><td>Festbetrag 150&nbsp;000 €</td></tr>
+        <tr><th scope="row">Baden-Württemberg</th><td>Festbetrag nach VwV Z-Feu; zusätzlich 6 landeseigene TLF-W auf Unimog</td><td>Festbetrag 80&nbsp;000 € <span class="flag">unsicher</span></td></tr>
+        <tr><th scope="row">Bayern</th><td>Festbetrag nach FwZR; Staffelkabine nur förderfähig mit (H)LF in der Gemeinde</td><td>ältere Anlage (2023): 100&nbsp;100 € bzw. 105&nbsp;170 €</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="small">Kommunale Preise 2023 bis 2025: etwa 400&nbsp;000 bis 580&nbsp;000&nbsp;€ brutto. Brandenburg beschafft kein TLF 3000, sondern 35 TLF-W „Typ Brandenburg“ auf Tatra (ca. 4800&nbsp;l, 18&nbsp;t); das CCFM 3000 in Niedersachsen folgt der französischen Norm. <span class="q" data-q="mvpresse rlp nrw stanh fwzr23 tlfwbb"></span></p>
+</section>
+
+<!-- LERNEN -->
+<section class="view" data-view="lernen" aria-labelledby="h-lernen" hidden>
+  <div class="sec-head">
+    <p class="eyebrow">Lernen</p>
+    <h2 id="h-lernen">Wissen auffrischen</h2>
+    <p>Karteikarten zum Durchgehen, ein Quiz mit zehn Fragen und, wenn verfügbar, ein Ausbilder, der dich abfragt. Dein Lernstand bleibt in diesem Browser gespeichert.</p>
+  </div>
+  <div class="seg" role="group" aria-label="Lernmodus">
+    <button type="button" data-mode="karten" aria-pressed="true">Karteikarten</button>
+    <button type="button" data-mode="quiz" aria-pressed="false">Quiz</button>
+    <button type="button" data-mode="ausbilder" aria-pressed="false">Ausbilder</button>
+  </div>
+
+  <div data-pane="karten" class="stack">
+    <div class="learn-top">
+      <div class="chips" id="cardCats"></div>
+      <span class="small muted" id="cardStat"></span>
+    </div>
+    <div class="progress" aria-hidden="true"><span id="cardProg"></span></div>
+    <div class="flash" id="flash">
+      <span class="cat" id="fCat"></span>
+      <p class="front" id="fFront"></p>
+      <p class="back" id="fBack" hidden></p>
+      <div class="row" id="fActions">
+        <button type="button" class="btn primary" id="fShow">Antwort zeigen</button>
+        <button type="button" class="btn" id="fKnow" hidden>Wusste ich</button>
+        <button type="button" class="btn" id="fAgain" hidden>Nochmal</button>
+      </div>
+    </div>
+    <div class="row"><button type="button" class="btn small" id="fReset">Lernstand zurücksetzen</button></div>
+  </div>
+
+  <div data-pane="quiz" class="stack" hidden>
+    <div class="learn-top">
+      <span class="small muted" id="qzStat"></span>
+      <span class="small muted" id="qzBest"></span>
+    </div>
+    <div class="progress" aria-hidden="true"><span id="qzProg"></span></div>
+    <div class="flash" id="quizBox">
+      <span class="cat" id="qzNum"></span>
+      <p class="front" id="qzQ"></p>
+      <div class="quiz-opts" id="qzOpts"></div>
+      <p class="explain" id="qzExp" hidden></p>
+      <div class="row"><button type="button" class="btn primary" id="qzNext" hidden>Weiter</button></div>
+    </div>
+  </div>
+
+  <div data-pane="ausbilder" class="stack" hidden>
+    <div class="block" id="aiBox">
+      <p id="aiIntro">Der Ausbilder stellt dir Prüfungsfragen zum TLF 3000 und bewertet deine Antworten, oder er beantwortet deine Fragen. Er stützt sich nur auf die Fakten dieser Seite. Jede Antwort nutzt dein Claude-Kontingent; beim ersten Mal fragt die Seite nach deiner Erlaubnis.</p>
+      <p id="aiNone" class="note" hidden><b>Nicht verfügbar.</b> Der Ausbilder funktioniert nur, wenn die Seite in Claude geöffnet ist und du den Zugriff erlaubst. Karteikarten und Quiz gehen immer.</p>
+      <div class="row" id="aiStart">
+        <button type="button" class="btn primary" id="aiExam" disabled>Frag mich ab</button>
+        <button type="button" class="btn" id="aiClear">Neu beginnen</button>
+      </div>
+      <div class="chat" id="aiLog" aria-live="polite"></div>
+      <form class="stack" id="aiForm">
+        <label for="aiInput" class="small"><b>Deine Antwort oder Frage</b></label>
+        <textarea id="aiInput" placeholder="Zum Beispiel: Was bedeutet FPN 10-2000?"></textarea>
+        <div class="row">
+          <button type="submit" class="btn primary" id="aiSend" disabled>Senden</button>
+          <button type="button" class="btn" id="aiStop" hidden>Stopp</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</section>
+
+<!-- QUELLEN -->
+<section class="view" data-view="quellen" aria-labelledby="h-quellen" hidden>
+  <div class="sec-head">
+    <p class="eyebrow">Quellen</p>
+    <h2 id="h-quellen">Woher die Angaben stammen</h2>
+    <p>Recherche vom 22.09.2026. Alle Fakten stammen aus Suchzusammenfassungen der verlinkten Seiten; der direkte Abruf war gesperrt, der Normtext lag nicht vor. Der vollständige Bericht mit rund 300 Quellen liegt im Repository unter <span class="mono">fahrzeugkunde/tlf-3000-recherche.md</span>.</p>
+  </div>
+  <div class="tbl">
+    <table>
+      <caption>Offene Punkte: am Original prüfen</caption>
+      <thead><tr><th>Thema</th><th>Widerspruch oder Lücke</th><th>Prüfen in</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">Staffelkabine</th><td>eine Kurzbeschreibung nennt eine Staffelvariante in der Ausgabe 2019; Bayern behandelt sie als Abweichung</td><td>Normtext, Abschnitt Besatzung</td></tr>
+        <tr><th scope="row">Masse 2019</th><td>2011 „bis 14&nbsp;000&nbsp;kg“, 2019 nur „Massenklasse M“</td><td>Normtext, DIN EN 1846-1</td></tr>
+        <tr><th scope="row">Allrad</th><td>„geländegängiger Allrad“ gegen „4x2 zulässig“</td><td>Normtext</td></tr>
+        <tr><th scope="row">Werfer</th><td>400 bis 1000&nbsp;l/min gegen 1600&nbsp;l/min bei 8&nbsp;bar</td><td>Normtext, SFSR-Liste</td></tr>
+        <tr><th scope="row">Normpumpe</th><td>FPN 10-2000 nur über Ausschreibungen belegt</td><td>Normtext</td></tr>
+        <tr><th scope="row">B-Schläuche</th><td>10 oder 14 B 75-20 je nach Liste</td><td>MV-, SFSR- und Pirna-Liste</td></tr>
+        <tr><th scope="row">Vorgänger</th><td>Norm: TLF 16/24-Tr; Praxis: oft TLF 16/25</td><td>Normvorwort</td></tr>
+        <tr><th scope="row">Hilfeleistung</th><td>Wikipedia: einfache technische Hilfeleistung; Feuerwehr-Magazin: mit Trupp keine</td><td>Tabelle 1, Rettungsgeräte</td></tr>
+        <tr><th scope="row">Kenner NI, SH</th><td>NI 23 gegen 21; SH 22 laut Erlass, 21 laut anderem Treffer</td><td>Landesrichtlinien</td></tr>
+        <tr><th scope="row">Systemtrenner</th><td>Pflicht nach W 405-B1 gegen „noch nicht verpflichtend“</td><td>DVGW W 405-B1</td></tr>
+        <tr><th scope="row">Nicht belegt</th><td>taktisches Zeichen, HU/SP-Fristen, Sonderrechte, Einweisen beim Rückwärtsfahren</td><td>DV 102, StVZO § 29, StVO §§ 35 und 38</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="grid-2" id="srcGroups"></div>
+</section>
+
+</main>
+
+<footer class="foot">
+  <div class="wrap">Fahrzeugkunde TLF 3000 · Stand 22.09.2026 · Bei Abweichungen gelten Beladeplan und Betriebsanleitung eures Fahrzeugs.</div>
+</footer>
+
+<script>
+(function(){
+'use strict';
+
+/* ---------- Speicher (nur dieser Browser) ---------- */
+var STORE_KEY = 'tlf3000-fahrzeugkunde-v1';
+function loadStore(){ try{ return JSON.parse(localStorage.getItem(STORE_KEY) || '{}') || {}; }catch(e){ return {}; } }
+var store = loadStore();
+function saveStore(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(store)); }catch(e){} }
+
+/* ---------- Quellen ---------- */
+var SRC = {
+  din19:['DIN Media 14530-22:2019-11','https://www.dinmedia.de/en/standard/din-14530-22/309015274','Normen'],
+  din11:['DIN Media 14530-22:2011-04','https://www.dinmedia.de/en/standard/din-14530-22/138373027','Normen'],
+  ansi:['ANSI DIN 14530-22:2019','https://webstore.ansi.org/standards/din/din14530222019de','Normen'],
+  fmnamen:['Feuerwehr-Magazin: neue TLF-Bezeichnungen','https://www.feuerwehrmagazin.de/nachrichten/news/neue-bezeichnungen-fur-tankloschfahrzeuge-15868','Fachpresse'],
+  wiki:['Wikipedia Tanklöschfahrzeug','https://de.wikipedia.org/wiki/Tankl%C3%B6schfahrzeug','Nachschlagewerke'],
+  mvbl:['MV Beladungsliste TLF 3000','https://www.regierung-mv.de/static/Regierungsportal/Ministerium%20f%C3%BCr%20Inneres%20und%20Europa/Inhalte/Kommunales/Zukunftsf%C3%A4hige%20Feuerwehr/Dateien/Beladungsliste%20TLF%203000.pdf','Länder'],
+  mvlb:['MV Leistungsbeschreibung TLF 3000','https://www.regierung-mv.de/static/Regierungsportal/Ministerium%20f%C3%BCr%20Inneres%20und%20Europa/Inhalte/Kommunales/Zukunftsf%C3%A4hige%20Feuerwehr/Dateien/Leistungsbeschreibung%20TLF%203000.pdf','Länder'],
+  sfsr:['SFS Regensburg Mindestausrüstung TLF 3000','https://www.sfsr.de/fileadmin/downloads/Bestellliste/Mindestausruestung_fuer_Normfahrzeuge/TLF_3000.pdf','Länder'],
+  sfsrst:['SFS Regensburg Mindestausrüstung TLF 3000 St','https://www.sfsr.de/fileadmin/downloads/Bestellliste/Mindestausruestung_fuer_Normfahrzeuge/TLF_3000_St.pdf','Länder'],
+  pirna:['LK Sächs. Schweiz-Osterzgebirge Beladeliste 11/2019','https://www.landratsamt-pirna.de/download/Beladeliste_TLF_3000-11_2019.docx','Länder'],
+  lfvbywb:['LFV Bayern Beladelisten 2021 (Waldbrand)','https://www.lfv-bayern.de/media/filer_public/b5/34/b534605a-73e4-4371-a1ac-6f50f9bb90b8/beladelisten_loschfahrzeuge_stand_12072021.pdf','Länder'],
+  sfsw801:['SFS Würzburg Merkblatt 8.01','https://kfvschwandorf.feuerwehren.bayern/media/filer_public/21/eb/21eb418c-4293-43c2-a288-d7cab5a29645/merkblatt_08-01_feuerwehrfahrzeuge_version_53_2023-09_sfsw.pdf','Länder'],
+  lernbar034:['Feuerwehr-Lernbar 03-034 Fahrzeuge','https://www.feuerwehr-lernbar.bayern/api/media/3740/raw/Feuerwehrfahrzeuge.pdf?version=1','Lernunterlagen'],
+  lernbar035:['Feuerwehr-Lernbar 03-035 Pumpen','https://www.feuerwehr-lernbar.bayern/api/media/3071/raw/Feuerl%C3%B6schkreiselpumpen%20&%20Entl%C3%BCftungseinrichtungen.pdf?version=1','Lernunterlagen'],
+  lernbarlex:['Feuerwehr-Lernbar Lexikon Pumpen','https://www.feuerwehr-lernbar.bayern/lexikon/f/feuerloeschkreiselpumpen-und-entlueftungseinrichtungen-inkl-saugvorgang-und-handgriffe-des-maschinisten','Lernunterlagen'],
+  lfvbyfunk:['LFV Bayern Funkrufnamen','https://www.lfv-bayern.de/media/filer_public/95/af/95afbe79-1f0f-45ab-b14b-4dd958ca3371/03-fachinfo_funkrufnamen_2015_1.pdf','Länder'],
+  shfunk:['Schleswig-Holstein Erlass Funkrufnamen, Anlage 3','https://www.digitalfunk-sh.de/DFSH/userfiles/files/150619-LPA-2311-Erlass-84-28_Funkrufnamen_Anlage_3.pdf','Länder'],
+  nlbkfunk:['NLBK Funkrufnamen-Richtlinie','https://www.nlbk.niedersachsen.de/download/160684','Länder'],
+  fwdv3:['FwDV 3 (HLFS Hessen)','https://hlfs.hessen.de/sites/hlfs.hessen.de/files/2022-09/FwDV%203%20-%20Homepage.pdf','Regelwerk'],
+  fwdv335:['FwDV 3, 5.5.3 offenes Gewässer','https://feuerwehr-moritzberg.de/dienstvorschriften/Feuerwehr-Dienstvorschrift-3/5-einsatzablauf-in-gruppe-staffel-und-selbstst%C3%A4ndigem-trupp/5-5-einsatzablauf/5-5-3-wasserentnahme-%C3%BCber-saugschl%C3%A4uche-aus-offenem-gew%C3%A4sser','Regelwerk'],
+  niederstetten:['Handout FwDV 3 (Niederstetten)','https://www.feuerwehr-niederstetten.de/fileadmin/Dateien/4_Feuerwehr/Dateien/Downloads/Ausbildungsunterlagen/05_FwDV3_Handout_Zusammenfassung.pdf','Lernunterlagen'],
+  pleckhausen:['Merkblatt FwDV 3 (Pleckhausen)','https://feuerwehr-pleckhausen.de/wp-content/uploads/2020/11/Merkblatt_FWDV_3.pdf','Lernunterlagen'],
+  hlfsma:['HLFS Lernunterlage Feuerlöschkreiselpumpen','https://hlfs.hessen.de/sites/hlfs.hessen.de/files/2022-09/FB-KA-Ma_3.5_LernU_Feuerl%C3%B6schkreiselpumpen_V001_0.pdf','Lernunterlagen'],
+  hlfsb3:['HLFS B-III Feuerlöschkreiselpumpen','https://hlfs.hessen.de/sites/hlfs.hessen.de/files/2023-11/b-iii_lernu_feuerloeschkreiselpumpen_03.00.00.pdf','Lernunterlagen'],
+  nabk:['NABK Lernunterlage Maschinisten','https://www.nlbk.niedersachsen.de/download/48286/Lehrgang_Maschinisten_Lernunterlage_Stand_26.01.2018_.pdf','Lernunterlagen'],
+  hlfsprot:['HLFS Prüfprotokoll FPN/PFPN','https://hlfs.hessen.de/sites/hlfs.hessen.de/files/2022-09/Pr%C3%BCfprotokoll_FPN_PFPN_07_2021_0.pdf','Lernunterlagen'],
+  greinke:['lothar-greinke.de: Feuerlöschkreiselpumpen','http://www.lothar-greinke.de/jfedt/FP-en','Nachschlagewerke'],
+  demel:['demel-net: Pumpennormung alt/neu','https://www.demel-net.de/assets/Uploads/PDFs/Vergleich-alt-neu-Norm-FP.pdf','Nachschlagewerke'],
+  prima:['Betriebsanleitung Prima-Serie','https://docplayer.org/49634997-Prima-serie-feuerloeschkreiselpumpe-nach-din-en-1028-normaldruck-und-kombinierte-nd-hd-ausfuehrung-betriebsanleitung.html','Hersteller'],
+  bachert:['Bachert Einbaupumpe FPN 10-2000','http://bachert-feuerwehrtechnik.de/2.2.2.4.php?lang=de','Hersteller'],
+  rbn25:['Rosenbauer N25 Datenblatt','https://www.rosenbauer.com/Sharepoint/Built-InSystems/Documents%20Built-In%20Pumps/docs/PC267_N25_DataSheet_DE.pdf','Hersteller'],
+  trokomat:['Ziegler Trokomat Plus','https://www.ziegler.de/mediadatabase/products/extinguishing-systems-brochures/ziegler-trokomat-plus-deutsch.pdf/download','Hersteller'],
+  schlingba:['Schlingmann Betriebsanleitung S1000/S2000','https://feuerwehr-uthwerdum.de/wp-content/uploads/2013/05/Betriebsanleitung-S1000-S2000.pdf','Hersteller'],
+  awr:['Schlingmann AWR','https://www.schlingmann112.de/schlingmann-technologie/awr/','Hersteller'],
+  automix:['Schlingmann AutoMix','https://www.schlingmann112.de/schlingmann-technologie/automix/','Hersteller'],
+  lcs:['Rosenbauer LCS','https://www.rosenbauer.com/de/gb/world/fahrzeuge/aufbaukomponenten/rbc-lcs-logic-control-system','Hersteller'],
+  lcsnot:['Rosenbauer: LCS-Notbetrieb','https://www.rosenbauer.com/de/se/rosenbauer-world/laendervarianten/naeher-als-sie-denken/news-menu/tipps-tricks/tipps-tricks-detail/nd/notbetrieb-bei-ausfall-des-lcs-heckpumpenbedienfelds','Hersteller'],
+  zcontrol:['Ziegler TLF 3000','https://www.ziegler.de/de/produkte/normfahrzeuge/tankloeschfahrzeuge/tlf3000','Hersteller'],
+  ziegler:['Ziegler Broschüre TLF 3000','https://www.ziegler.de/media/filer_public/81/f5/81f517b9-740e-40fa-a015-9c8d38d7486f/ziegler-broschuere-tlf3000-deu-web.pdf','Hersteller'],
+  magirus:['Magirus TLF 3000','https://www.magirusgroup.com/de/en/products/fire-engines/medium-pumpers/tlf-3000/','Hersteller'],
+  magirusw:['Feuerwehr-Magazin: Magirus TLF 3000-W','https://www.feuerwehrmagazin.de/nachrichten/news/neues-tankloeschfahrzeug-3000-waldbrand-von-magirus-110481','Fachpresse'],
+  schling:['Schlingmann TLF 3000 VARUS 4x4','https://www.schlingmann112.de/fahrzeuge/tlf-3000-varus-4x4/','Hersteller'],
+  viper:['Ziegler VIPER Werfer','https://www.ziegler.de/de/produkte/loeschsysteme-komponenten/werfer/schaum-wasserwerfer-viper','Hersteller'],
+  rbunimog:['Rosenbauer Datenblatt TLF 3000/100 Unimog','https://www.rosenbauer.com/Sharepoint/VehiclesMT/Documents/PS128_MT_DataSheet_TLF3000%20100%20MB%20UNIMOG%205023%204x4%20E6%20DOKA_DE.pdf','Hersteller'],
+  rbvils:['Rosenbauer: AT TLF 3000 Vilsbiburg','https://www.rosenbauer.com/de/de/world/auslieferungen/alle/alle-detail/fahrzeuguebergaben/show/Fahrzeuguebergaben/at-tlf-3000-ff-vilsbiburg','Hersteller'],
+  giebfinn:['Giebeler: TLF 3000 Finnentrop','https://www.giebeler-feuerschutz.de/de/fahrzeuge/aktuelle-fahrzeugauslieferungen/2025/TLF3000_Finnentrop.php','Hersteller'],
+  firedos:['FireDos: Zumischsysteme','https://www.firedos.de/news/aktuelles/zumischsysteme-fuer-feuerwehrfahrzeuge-welche-technologie-ist-die-richtige','Hersteller'],
+  awg:['AWG Betriebsanleitung Zumischer','https://awg-fittings.com/images/content/downloads/betriebsanleitungen/awg-betriebsanleitung_zumischer-z2-z4-z8_02-2020_de-en.pdf','Hersteller'],
+  pflichtenheft:['DFV/AGBF Pflichtenheft Waldbrand-TLF','https://www.feuerwehrverband.de/app/uploads/2020/05/AGBF_DFV-Fachempfehlung_Waldbrand-TLF.pdf','Regelwerk'],
+  dfvveg:['DFV-Fachempfehlung Vegetationsbrand','https://www.feuerwehrverband.de/app/uploads/2020/06/DFV-FE_Vegetationsbrand_2020.pdf','Regelwerk'],
+  spbf:['DFV/AGBF Standardisiertes Pumpenbedienfeld','https://www.feuerwehrverband.de/app/uploads/2020/06/FE_Pumpenfeld_2009_V1.pdf','Regelwerk'],
+  dfvschaum:['DFV/AGBF Fachempfehlung Schaummittel 01/2025','https://www.feuerwehrverband.de/app/uploads/2025/02/DFV-AGBF-FE_Einsatz_Schaummittel_01.25.pdf','Regelwerk'],
+  dvgw:['DVGW/AGBF/DFV Trinkwasserschutz','https://www.dvgw.de/medien/dvgw/wasser/netze/agbf_dfv_fachempfehlung.pdf','Regelwerk'],
+  lfvtw:['LFV Bayern Trinkwasserschutz','https://www.lfv-bayern.de/media/filer_public/a9/94/a9946a01-a214-4a38-bae4-2224e7cac247/1-__trinkwasserschutz__fachinformation_fb_3__2017-07-29__puettner_.pdf','Regelwerk'],
+  fwubtw:['feuerwehr-ub.de: Schutz des Trinkwassers','https://www.feuerwehr-ub.de/normen-recht-wissen/fachartikel/schutz-des-trinkwassers/','Fachpresse'],
+  gesi:['GESI: PFAS-Verordnung (EU) 2025/1988','https://www.gesi.de/pfas-was-aendert-sich-alles-durch-verordnung-eu-2025-1988-fuer-feuerloeschmittel/','Regelwerk'],
+  dguv:['DGUV Grundsatz 305-002','https://publikationen.dguv.de/regelwerk/dguv-grundsaetze/84/pruefgrundsaetze-fuer-ausruestungen-geraete-und-fahrzeuge-der-feuerwehr','Regelwerk'],
+  fbfhb:['DGUV FBFHB-032 Hinweise','https://publikationen.dguv.de/regelwerk/publikationen-nach-fachbereich/feuerwehren-hilfeleistungen-brandschutz/feuerwehren-und-hilfeleistungsorganisationen/4424/fbfhb-032-wichtige-hinweise-zum-dguv-grundsatz-305-002-pruefgrundsaetze-fuer-ausruestungen-geraete-und','Regelwerk'],
+  grossenrode:['FF Großenrode: Trockensaugprobe','https://www.feuerwehr-grossenrode.de/index.php/info-s/ausbildung/169-trockensaugprobe','Feuerwehren'],
+  lz3:['Löschzug 3: Fachinformation Frost','https://www.xn--lschzug-3-07a.de/app/download/14153649/08_06_2011-07-22.pdf','Feuerwehren'],
+  wikikp:['Wikipedia Feuerlöschkreiselpumpe','https://de.wikipedia.org/wiki/Feuerl%C3%B6schkreiselpumpe','Nachschlagewerke'],
+  moenchhagen:['Feuerwehr Mönchhagen: Kavitation','https://feuerwehr-moenchhagen.de/pumpen/kreiselpumpen_kavitation.html','Feuerwehren'],
+  sichere:['Sichere Feuerwehr: Wasserförderung','https://www.sichere-feuerwehr.de/feuerwehr/taetigkeiten-fw/wasserfoerderung-schlaeuche-und-armaturen','Regelwerk'],
+  herxheim:['FF Herxheim: Mehrzweckstrahlrohre','https://www.feuerwehr-herxheim.de/index.php/technik/geraete/83-mehrzweckstrahlrohre','Feuerwehren'],
+  krz:['Kommunale Leistungsbeschreibung TLF 3000 Trupp','https://sessionnet-oparl.krz.de/Oparl/bodies/5374/downloadfiles/a/00314674.pdf','Ausschreibungen'],
+  bleialf:['Ausschreibung TLF 3000 Bleialf','https://docplayer.org/79848422-Ausschreibungsunterlagen-zur-beschaffung-eines-tlf-3000-fuer-die-feuerwehreinheit-bleialf.html','Ausschreibungen'],
+  pruem:['Leistungsbeschreibung Prüm/Bleialf','http://www.anlagen.pruem.de/ausschreibungen/feuerwehrtlf3000/03leistungsbeschreibung.pdf','Ausschreibungen'],
+  uelzen:['KFV Uelzen: Pendelverkehr','https://www.kfv-uelzen.de/2012/06/30/uebung-wassertransport-im-pendelverkehr-mit-tankloeschfahrzeugen/','Feuerwehren'],
+  risiko:['Feuerwehr-Magazin: Risikofaktor Konstruktion','https://www.feuerwehrmagazin.de/nachrichten/news/immer-wieder-unfaelle-mit-tlf-76968','Fachpresse'],
+  fmstaffel:['Feuerwehr-Magazin: TLF 3000 mit Staffelbesatzung','https://www.feuerwehrmagazin.de/fahrzeuge-modelle/tlf-3000-mit-staffelbesatzung-131069','Fachpresse'],
+  fmnetphen:['Feuerwehr-Magazin: TLF 3000 Netphen','https://www.feuerwehrmagazin.de/fahrzeuge-modelle/tlf-3000-mit-grossem-wasservorrat-142258','Fachpresse'],
+  granzin:['Feuerwehr-Magazin: TLF 3000 Granzin-Greven','https://www.feuerwehrmagazin.de/nachrichten/news/das-exotisches-tlf-3000-der-ff-granzin-greven-135822','Fachpresse'],
+  gvv:['GVV Kommunal: Führerschein für die Feuerwehr','https://gvv-kommunal.de/ratgeber/infothek/artikel/fuehrerschein-fuer-die-feuerwehr','Regelwerk'],
+  fahrfrage:['Führerscheinfrage 2.7.01-202','https://www.fuehrerscheintest-online.de/fuehrerscheintest-fragen/frage-2.7.01-202','Regelwerk'],
+  ninds:['MI Niedersachsen: Technische Daten Unimog-TLF','https://www.mi.niedersachsen.de/download/165860/Technische_Daten.pdf','Länder'],
+  siegen:['Feuerwehr Siegen: TLF 3000','https://feuerwehr-siegen.org/Technik/Loeschfahrzeuge/TLF-3000/','Feuerwehren'],
+  goslar:['FF Goslar: TLF 3000','https://feuerwehr-goslar.de/fahrzeuge/tlf-3000/','Feuerwehren'],
+  kahl:['KFV Aschaffenburg: TLF 3000 Kahl','https://www.kfv-ab.de/index.php/news/nachrichten/nachrichten/neues-tankloeschfahrzeug-tlf-3000-fuer-die-freiwillige-feuerwehr-kahl-am-main','Feuerwehren'],
+  weyh:['Feuerwehr Weyhausen: TLF 3000','https://feuerwehr-weyhausen.de/fahrzeuge/tlf3000','Feuerwehren'],
+  boppard:['FF Boppard: TLF 3000','https://www.feuerwehr-boppard.de/index.php?option=com_content&view=article&id=12&Itemid=315','Feuerwehren'],
+  garlstedt:['OF Garlstedt: TLF 3000','https://stadtfeuerwehr-osterholz-scharmbeck.de/feuerwehr/ofw-garlstedt/fahrzeuge-technik/tlf-3000/','Feuerwehren'],
+  sailauf:['FF Sailauf: TLF 3000','https://feuerwehr-sailauf.feuerwehren.bayern/uber-uns/fahrzeug/tlf-3000/','Feuerwehren'],
+  heidelberg:['Feuerwehr Heidelberg: TLF 3000','https://www.heidelberg.de/Feuerwehr,Lde/feuerwehr/Berufsfeuerwehr/Tankloeschfahrzeug+TLF3000.html','Feuerwehren'],
+  heidel26:['Feuerwehr Heidelberg: neue TLF 3000 (2026)','https://www.heidelberg.de/Feuerwehr/feuerwehr/Aktuelles/16_07_2026+tlf+3000.html','Feuerwehren'],
+  freyung:['FF Freyung: TLF 3000','https://www.ff-freyung.de/tankloeschfahrzeug-tlf-3000/','Feuerwehren'],
+  freiburg:['Feuerwehr Freiburg: TLF 3000 15/23','https://feuerwehr-freiburg.de/blog/fahrzeug/tlf-3000-fl-fr-15-23/','Feuerwehren'],
+  landstuhl:['JF Landstuhl: TLF 3000','https://jugendfeuerwehr.feuerwehr-landstuhl.de/tankloeschfahrzeug-3000-tlf3000-alte-bezeichnung-tlf-16-30/','Feuerwehren'],
+  altena:['Feuerwehr Altena: TLF 3000','https://www.feuerwehr-altena.de/feuerwehr-altena/loeschzuege/loeschzug-3/loeschgruppe-rosmart/tankloeschfahrzeug-tlf3000-der-loeschgruppe-rosmart/','Feuerwehren'],
+  seevetal:['Seevetal-aktuell: TLF 3000 Fleestedt','https://seevetal-aktuell.de/2025/04/01/offizielle-uebergabe-neues-tankloeschfahrzeug-fuer-die-feuerwehr-fleestedt/','Fachpresse'],
+  brandfeuer:['Brand-Feuer.de: Tanklöschfahrzeug','https://brand-feuer.de/index.php?title=Tankl%C3%B6schfahrzeug','Nachschlagewerke'],
+  sfslf:['SFS Bayern Beladeliste LF 20/16','https://ffbt.feuerwehren.bayern/media/filer_public/eb/d9/ebd96417-5d6c-48ce-bc9e-2a4b74470680/beladeliste_lf_20-16_hlf_20-16.pdf','Länder'],
+  mvpresse:['Presseportal IM MV: Aufträge TLF 3000','https://www.presseportal.de/blaulicht/pm/108531/5402993','Länder'],
+  rlp:['MdI RLP: Tanklöschfahrzeug für die Waldbrandbekämpfung','https://mdi.rlp.de/service/pressemitteilungen/detail/ebling-stellt-tankloeschfahrzeug-fuer-die-waldbrandbekaempfung-vor','Länder'],
+  nrw:['land.nrw: Waldbrand-TLF 3000','https://www.land.nrw/node/25474','Länder'],
+  stanh:['MI Sachsen-Anhalt: Beschaffung','https://mi.sachsen-anhalt.de/news/article/sachsenanhalt-setzt-beschaffungsoffensive-bei-feuerwehrfahrzeugen-fort','Länder'],
+  fwzr23:['LFV Bayern FwZR 2023, Anlage 2','https://www.lfv-bayern.de/media/filer_public/dc/6b/dc6b8e03-43c3-45c9-8a9b-6149ae257789/230627_and_fwzr_2023_anlage_2.pdf','Länder'],
+  tlfwbb:['Feuerwehr-Magazin: TLF-W Typ Brandenburg','https://www.feuerwehrmagazin.de/nachrichten/news/erste-neue-tlf-waldbrand-typ-brandenburg-uebergeben-113448','Fachpresse'],
+  lfsbwf4:['LFS BW F4 Löschwasserversorgung','https://www.lfs-bw.de/fileadmin/LFS-BW/themen/lernunterlagen/f4/dokumente/F4_Loeschwasserversorgung.pdf','Lernunterlagen'],
+  hlfsf4:['HLFS F-IV Löschwasserförderung','https://hlfs.hessen.de/sites/hlfs.hessen.de/files/2023-02/f-iv_lernu_loeschwasserfoerderung_v003.pdf','Lernunterlagen']
+};
+function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+function srcLinks(keys){
+  return keys.filter(function(k){ return SRC[k]; }).map(function(k){
+    return '<a href="' + esc(SRC[k][1]) + '" target="_blank" rel="noopener">' + esc(SRC[k][0]) + '</a>';
+  }).join(' · ');
+}
+document.querySelectorAll('[data-q]').forEach(function(el){
+  var html = srcLinks(el.getAttribute('data-q').split(/\s+/));
+  el.classList.add('q');
+  el.innerHTML = html ? 'Quellen: ' + html : '';
+});
+(function(){
+  var ll = document.getElementById('loadLists');
+  ['mvbl','sfsr','sfsrst','pirna','lfvbywb'].forEach(function(k){
+    var li = document.createElement('li');
+    li.innerHTML = srcLinks([k]);
+    ll.appendChild(li);
+  });
+  var groups = {};
+  var order = ['Normen','Länder','Regelwerk','Lernunterlagen','Hersteller','Fachpresse','Nachschlagewerke','Ausschreibungen','Feuerwehren'];
+  Object.keys(SRC).forEach(function(k){ var g = SRC[k][2]; (groups[g] = groups[g] || []).push(k); });
+  var box = document.getElementById('srcGroups');
+  order.forEach(function(g){
+    if(!groups[g]) return;
+    var art = document.createElement('article');
+    art.className = 'block';
+    art.innerHTML = '<h3>' + esc(g) + '</h3><ul class="src-list">' + groups[g].map(function(k){ return '<li>' + srcLinks([k]) + '</li>'; }).join('') + '</ul>';
+    box.appendChild(art);
+  });
+})();
+
+/* ---------- Ansichten ---------- */
+var VIEWS = ['ueberblick','rundgang','beladung','technik','maschinist','einsatz','vergleich','lernen','quellen'];
+function showView(v, scroll){
+  if(VIEWS.indexOf(v) < 0) v = 'ueberblick';
+  document.querySelectorAll('.view').forEach(function(s){ s.hidden = s.getAttribute('data-view') !== v; });
+  document.querySelectorAll('.tabs a').forEach(function(a){
+    if(a.getAttribute('data-tab') === v){ a.setAttribute('aria-current','page'); a.scrollIntoView({block:'nearest',inline:'nearest'}); }
+    else a.removeAttribute('aria-current');
+  });
+  if(scroll) window.scrollTo(0,0);
+}
+window.addEventListener('hashchange', function(){ showView(location.hash.slice(1), true); });
+
+/* ---------- Fahrzeugzeichnung ---------- */
+var C = {red:'#B3261E', redDark:'#86201A', shut:'#CDD3D8', shutLine:'#A9B2BA', tire:'#23272B', rim:'#9AA2A9', glass:'#5F7788', blue:'#2F6FD6', frame:'#2B3035', label:'#1B1F23', alu:'#C3C9CE'};
+var W = 860, H = 392, GY = 356;
+
+var ZONES = {
+  KAB:{id:'Kabine', where:'Mannschaftsraum', theme:'Truppkabine mit drei Sitzplätzen',
+    items:[['Drei Sitzplätze für einen Trupp (1/2)','norm'],['Pressluftatmer in Sitzhalterungen: 2 auf den Beispielfahrzeugen Boppard und Garlstedt, 4 in Sailauf (Staffel)','praxis'],['Warnwesten: 3 Stück (Tabelle 1, Ausgabe 2011)','norm-i'],['Handfunkgeräte, z. B. drei in Netphen','praxis'],['Dachluke: in Weyhausen Löschen aus dem Mannschaftsraum; beim Rosenbauer-Unimog C-Rohr durch die Dachluke beim Pump & Roll','praxis'],['Waldbrand-TLF: Atemluftanschlüsse für die ganze Besatzung (Pflichtenheft)','regel']],
+    note:'Die Staffelkabine (1/5) ist verbreitet. Bayern fördert sie nur, wenn die Gemeinde mindestens ein (H)LF hat.', q:'goslar boppard garlstedt sailauf weyh rbunimog pflichtenheft'},
+  G1:{id:'G1', where:'Fahrerseite vorn', theme:'Beispiel: Beleuchtung und Strom',
+    items:[['Handscheinwerfer, Flutlicht, Kabeltrommeln','praxis'],['Stromerzeuger als Zusatzbeladung, z. B. 9 oder 13 kVA','praxis'],['Lichtmast mit LED-Köpfen, falls verbaut','praxis']],
+    note:'Stromerzeuger und Lichtmast stehen in keiner belegten Normliste. Viele Wehren führen sie als Zusatzbeladung.', q:'weyh sailauf heidelberg'},
+  G3:{id:'G3', where:'Fahrerseite Mitte, über der Hinterachse', theme:'Beispiel: Atemschutz',
+    items:[['Pressluftatmer nach DIN EN 137, Vollmasken nach DIN EN 136','praxis'],['Fluchthauben (bayerische Mindestausrüstung TLF 3000 St)','land'],['Wärmebildkamera, wenn vorhanden','praxis']],
+    note:'Atemschutz liegt je nach Fahrzeug im Aufbau (Weyhausen: G3) oder in Sitzhalterungen der Kabine.', q:'weyh pruem sfsrst'},
+  G5:{id:'G5', where:'Fahrerseite hinten', theme:'Beispiel: Schläuche und Armaturen',
+    items:[['B-Druckschläuche B 75-20: 10 bzw. 14 je nach Landesliste','land','u'],['C-Druckschläuche, Verteiler, Mehrzweck- und Hohlstrahlrohre','land'],['Standrohr 2B, Sammelstück A-3B','land'],['Hydranten- und Kupplungsschlüssel','praxis']],
+    note:'Schläuche und Armaturen liegen meist hinten, nahe der Heckpumpe.', q:'mvbl sfsr weyh'},
+  G2:{id:'G2', where:'Beifahrerseite vorn', theme:'Beispiel: Hilfsgeräte',
+    items:[['Arbeitsgerät und Werkzeug','praxis'],['Sanitätsmaterial','praxis'],['Warnmaterial wie Leitkegel und Warnleuchten','praxis'],['Stromerzeuger 9 kVA mit Beleuchtung und Tauchpumpe (ein Beispielfahrzeug)','praxis','u']],
+    note:'Das Leistungsverzeichnis gliedert die Normbeladung in Schutzausrüstung, Löschgeräte, Schläuche und Armaturen, Rettungsgeräte, Sanitäts- und Wiederbelebungsgerät, Beleuchtungs- und Signalgerät, Arbeitsgerät und Sondergerät.', q:'weyh bleialf'},
+  G4:{id:'G4', where:'Beifahrerseite Mitte, über der Hinterachse', theme:'Beispiel: Löschmittel',
+    items:[['Schaummittel in Kanistern, wenn kein fester Behälter verbaut ist','praxis'],['Zumischer und Ansaugschläuche; entfallen mit Druckzumischanlage','norm-i','u'],['Kombischaumrohr M4/S4','praxis'],['Feuerlöscher','praxis']],
+    note:'Mit fest eingebauter Druckzumischanlage entfallen Zumischer und Ansaugschläuche der Normbeladung.', q:'weyh wiki sfsr'},
+  G6:{id:'G6', where:'Beifahrerseite hinten', theme:'Schnelle Wasserabgabe',
+    items:[['Einrichtung zur schnellen Wasserabgabe: 2 C 42-15 oder 2 D 25-15 mit angekuppeltem Strahlrohr, in Fächern hinten rechts','norm-i'],['Oder: Schnellangriffseinrichtung hinten rechts, an die Pumpe angeschlossen und absperrbar','norm-i'],['Armaturen und Schlauchmaterial (Weyhausen)','praxis']],
+    note:'Die Norm (laut Wikipedia) legt die schnelle Wasserabgabe nach hinten rechts. Bei vielen Fahrzeugen sitzt die Schnellangriffshaspel im Heck über der Pumpe.', q:'wiki mvbl weyh'},
+  GR:{id:'GR', where:'Heck', theme:'Pumpenbedienstand',
+    items:[['Feuerlöschkreiselpumpe FPN 10-2000 als Heckpumpe über Nebenantrieb','praxis'],['1 A-Saugeingang, je 2 B-Druckabgänge links und rechts, 1 B-Füllanschluss, 1 Schnellangriffsabgang (kommunale LB)','praxis'],['Anzeigen: Eingangs- und Ausgangsdruck, Manovakuummeter, Tankfüllstand','regel'],['Schnellangriffshaspel: 50 m formstabil DN 25 oder 30 m DN 33, oft elektrisch aufrollbar','praxis']],
+    note:'Die Bedienfelder unterscheiden sich je Hersteller. Die DFV/AGBF-Fachempfehlung von 2009 vereinheitlicht Anordnung, Symbole und Farben.', q:'krz bachert spbf lernbar035'},
+  DACH:{id:'Dach', where:'Dachkasten und begehbares Dach', theme:'Saugschläuche und selten gebrauchtes Gerät',
+    items:[['4 Saugschläuche A-110-1500','land'],['Feuerpatschen, Planen, Räumgerät (Ziegler-Broschüre)','praxis'],['Waldbrand: Dunghaken (Stiel ca. 1,4 m), Feuerpatschen (Stiel ca. 2,4 m)','land'],['Aufstieg über eine Leiter; Ziegler baut ein begehbares Dach','praxis']],
+    note:'Alles auf dem Dach hebt den Schwerpunkt. Dachkästen, Lichtmasten und Werfer nennt das Feuerwehr-Magazin als Kipprisiko.', q:'mvbl ziegler lfvbywb risiko'},
+  WERFER:{id:'Werfer', where:'Dach, mittig und möglichst weit vorn', theme:'Schaum-Wasserwerfer, nach Norm optional',
+    items:[['Nach Norm optional','norm'],['Beschaffungstexte: 1600 l/min bei 8 bar, bei langsamer Fahrt bedienbar','land','u'],['Kommunale LB: einstellbar 400 bis 1000 l/min','praxis','u'],['Reale Werfer: 1200 l/min (Magirus Serie), Rosenbauer RM8 (Vilsbiburg), bis 2000 bzw. 2400 l/min','praxis']],
+    note:'Ein 1600-l/min-Werfer leert 3000 l in 1,9 Minuten und beansprucht 80 % der Nennleistung einer FPN 10-2000.', q:'din19 sfsr krz magirus rbvils granzin'}
+};
+var LVL_LABEL = {'norm':'Norm','norm-i':'Norm (ind.)','land':'Land','praxis':'Praxis','regel':'Regelwerk'};
+var SIDES = {
+  links:{zones:['G1','G3','G5','KAB','DACH','WERFER'], cap:'Fahrerseite, links in Fahrtrichtung: ungerade Geräteräume G1, G3, G5.'},
+  rechts:{zones:['G2','G4','G6','KAB','DACH','WERFER'], cap:'Beifahrerseite, rechts in Fahrtrichtung: gerade Geräteräume G2, G4, G6.'},
+  heck:{zones:['GR','DACH'], cap:'Heck: Pumpenbedienstand GR mit Heckpumpe; seitlich die B-Druckabgänge, mittig der A-Saugeingang.'},
+  dach:{zones:['DACH','WERFER','KAB'], cap:'Draufsicht, Fahrtrichtung nach links. Oben die Beifahrerseite, unten die Fahrerseite.'}
+};
+var ZONE_ORDER = ['KAB','G1','G2','G3','G4','G5','G6','GR','DACH','WERFER'];
+
+function wheel(cx){ return '<circle cx="'+cx+'" cy="312" r="44" fill="'+C.tire+'"/><circle cx="'+cx+'" cy="312" r="25" fill="'+C.rim+'"/><circle cx="'+cx+'" cy="312" r="9" fill="'+C.frame+'"/>'; }
+function defs(p){
+  return '<defs>' +
+    '<pattern id="'+p+'sh" width="8" height="9" patternUnits="userSpaceOnUse"><rect width="8" height="9" fill="'+C.shut+'"/><rect y="8" width="8" height="1" fill="'+C.shutLine+'"/></pattern>' +
+    '<pattern id="'+p+'ws" width="22" height="22" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="11" height="22" fill="#C62828"/><rect x="11" width="11" height="22" fill="#F5F5F5"/></pattern>' +
+    '<pattern id="'+p+'tr" width="12" height="12" patternUnits="userSpaceOnUse"><rect width="12" height="12" fill="'+C.alu+'"/><rect x="2" y="3" width="5" height="1.6" rx=".8" fill="#AAB2B9" transform="rotate(35 4.5 3.8)"/><rect x="7" y="8" width="5" height="1.6" rx=".8" fill="#AAB2B9" transform="rotate(-35 9.5 8.8)"/></pattern>' +
+    '</defs>';
+}
+function sideStatic(){
+  return '' +
+    '<rect x="40" y="298" width="740" height="14" fill="'+C.frame+'"/>' +
+    '<rect x="752" y="300" width="28" height="30" fill="'+C.frame+'"/>' +
+    '<rect x="258" y="58" width="522" height="242" rx="4" fill="'+C.red+'"/>' +
+    '<rect x="258" y="56" width="522" height="6" fill="'+C.redDark+'"/>' +
+    '<path d="M40,300 L40,116 Q42,78 80,72 L250,72 L250,300 Z" fill="'+C.red+'"/>' +
+    '<path d="M40,118 Q42,80 80,74 L86,88 Q54,94 52,122 Z" fill="'+C.glass+'"/>' +
+    '<rect x="64" y="92" width="84" height="70" rx="6" fill="'+C.glass+'"/>' +
+    '<rect x="162" y="92" width="74" height="70" rx="6" fill="'+C.glass+'"/>' +
+    '<rect x="58" y="86" width="98" height="166" rx="4" fill="none" stroke="'+C.redDark+'" stroke-width="2"/>' +
+    '<rect x="134" y="176" width="16" height="5" rx="2" fill="'+C.redDark+'"/>' +
+    '<line x1="42" y1="104" x2="26" y2="100" stroke="'+C.frame+'" stroke-width="3"/>' +
+    '<rect x="16" y="90" width="11" height="38" rx="3" fill="'+C.frame+'"/>' +
+    '<rect x="92" y="61" width="116" height="11" rx="4" fill="'+C.blue+'"/>' +
+    '<rect x="66" y="264" width="46" height="6" rx="2" fill="'+C.frame+'"/>' +
+    '<rect x="66" y="284" width="46" height="6" rx="2" fill="'+C.frame+'"/>' +
+    '<path d="M119.4,300 A54,54 0 0 1 224.6,300 Z" fill="'+C.frame+'"/>' +
+    '<path d="M507.4,300 A54,54 0 0 1 612.6,300 Z" fill="'+C.frame+'"/>' +
+    wheel(172) + wheel(560) +
+    '<rect x="266" y="44" width="20" height="14" rx="2" fill="'+C.frame+'"/>' +
+    '<line x1="276" y1="46" x2="250" y2="30" stroke="'+C.frame+'" stroke-width="7" stroke-linecap="round"/>' +
+    '<rect x="300" y="40" width="420" height="18" rx="3" fill="'+C.alu+'" stroke="'+C.shutLine+'"/>';
+}
+function mirrorRect(r, flip){ return flip ? {x: W - r.x - r.w, y: r.y, w: r.w, h: r.h} : r; }
+function zoneRect(key, r, label, opts, p){
+  opts = opts || {};
+  var z = ZONES[key];
+  var fill = opts.fill || ('url(#'+p+'sh)');
+  var s = '<g class="zone' + (fill === 'transparent' ? ' ov' : '') + '" data-zone="'+key+'" role="button" tabindex="0" aria-label="'+esc(z.id + ', ' + z.where)+'">' +
+    '<rect class="zs" x="'+r.x+'" y="'+r.y+'" width="'+r.w+'" height="'+r.h+'" rx="'+(opts.rx||4)+'" fill="'+fill+'"' + (opts.stroke ? ' stroke="'+opts.stroke+'" stroke-width="1"' : '') + '/>';
+  if(opts.handle){ s += '<rect x="'+(r.x + r.w/2 - 14)+'" y="'+(r.y + r.h - 12)+'" width="28" height="5" rx="2" fill="'+C.frame+'" opacity=".55" pointer-events="none"/>'; }
+  if(label){
+    var fs = opts.fs || 30;
+    var ty = opts.ty != null ? opts.ty : (r.y + Math.min(r.h/2, 52) + fs*0.35);
+    s += '<text class="zl" x="'+(r.x + r.w/2)+'" y="'+ty+'" text-anchor="middle" font-size="'+fs+'" fill="'+(opts.lc || C.label)+'">'+esc(label)+'</text>';
+  }
+  return s + '</g>';
+}
+function arrowDir(flip){
+  var y = 378;
+  if(!flip) return '<g class="tx" fill="currentColor" opacity=".7"><polygon points="40,'+y+' 52,'+(y-6)+' 52,'+(y+6)+'"/><text x="58" y="'+(y+5)+'" font-size="14">Fahrtrichtung</text></g>';
+  return '<g class="tx" fill="currentColor" opacity=".7"><polygon points="820,'+y+' 808,'+(y-6)+' 808,'+(y+6)+'"/><text x="802" y="'+(y+5)+'" font-size="14" text-anchor="end">Fahrtrichtung</text></g>';
+}
+function drawSide(flip, p, interactive){
+  var s = '<svg class="truck" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Seitenansicht '+(flip?'Beifahrerseite':'Fahrerseite')+' eines TLF 3000">' + defs(p);
+  s += '<line x1="8" y1="'+GY+'" x2="852" y2="'+GY+'" stroke="currentColor" stroke-opacity=".3" stroke-width="2"/>';
+  s += '<g' + (flip ? ' transform="translate('+W+',0) scale(-1,1)"' : '') + '>' + sideStatic() + '</g>';
+  var ids = flip ? ['G2','G4','G6'] : ['G1','G3','G5'];
+  var rects = [{x:268,y:70,w:202,h:220},{x:478,y:70,w:168,h:170},{x:654,y:70,w:118,h:220}];
+  rects.forEach(function(r, i){ s += zoneRect(ids[i], mirrorRect(r, flip), ids[i], {handle:true}, p); });
+  s += zoneRect('KAB', mirrorRect({x:40,y:72,w:210,h:228}, flip), 'Kabine', {fill:'transparent', fs:17, ty:222, lc:'#FFFFFF'}, p);
+  s += zoneRect('DACH', mirrorRect({x:300,y:38,w:420,h:22}, flip), 'Dachkasten', {fill:'transparent', fs:14, ty:54}, p);
+  s += zoneRect('WERFER', mirrorRect({x:240,y:20,w:52,h:40}, flip), '', {fill:'transparent'}, p);
+  var wx = flip ? W - 266 : 266;
+  s += '<text class="tx" x="'+wx+'" y="16" font-size="14" text-anchor="middle" fill="currentColor">Werfer</text>';
+  s += arrowDir(flip);
+  return s + '</svg>';
+}
+function drawRear(p){
+  var s = '<svg class="truck" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Heckansicht eines TLF 3000">' + defs(p);
+  s += '<line x1="8" y1="'+GY+'" x2="852" y2="'+GY+'" stroke="currentColor" stroke-opacity=".3" stroke-width="2"/>';
+  s += '<rect x="306" y="300" width="26" height="56" rx="5" fill="'+C.tire+'"/><rect x="334" y="300" width="26" height="56" rx="5" fill="'+C.tire+'"/>';
+  s += '<rect x="500" y="300" width="26" height="56" rx="5" fill="'+C.tire+'"/><rect x="528" y="300" width="26" height="56" rx="5" fill="'+C.tire+'"/>';
+  s += '<rect x="360" y="318" width="140" height="14" fill="'+C.frame+'"/>';
+  s += '<rect x="305" y="58" width="250" height="242" rx="4" fill="'+C.red+'"/>';
+  s += '<rect x="305" y="56" width="250" height="6" fill="'+C.redDark+'"/>';
+  s += '<rect x="309" y="46" width="20" height="10" rx="3" fill="'+C.blue+'"/><rect x="531" y="46" width="20" height="10" rx="3" fill="'+C.blue+'"/>';
+  s += '<rect x="305" y="300" width="250" height="16" fill="url(#'+p+'ws)"/>';
+  s += '<rect x="298" y="262" width="8" height="10" rx="2" fill="'+C.frame+'"/><rect x="298" y="280" width="8" height="10" rx="2" fill="'+C.frame+'"/>';
+  s += '<rect x="554" y="262" width="8" height="10" rx="2" fill="'+C.frame+'"/><rect x="554" y="280" width="8" height="10" rx="2" fill="'+C.frame+'"/>';
+  s += '<circle cx="430" cy="274" r="14" fill="'+C.frame+'"/><circle cx="430" cy="274" r="8" fill="'+C.rim+'"/>';
+  s += '<text class="tx" x="430" y="296" font-size="12" text-anchor="middle" fill="#FFFFFF">A</text>';
+  s += '<text class="tx" x="290" y="281" font-size="13" text-anchor="end" fill="currentColor">B</text><text class="tx" x="566" y="281" font-size="13" fill="currentColor">B</text>';
+  var lad = '<g fill="'+C.frame+'"><rect x="582" y="66" width="3" height="234"/><rect x="596" y="66" width="3" height="234"/>';
+  for(var y = 80; y < 300; y += 24){ lad += '<rect x="582" y="'+y+'" width="17" height="3"/>'; }
+  s += lad + '</g>';
+  s += '<text class="tx" x="608" y="190" font-size="13" fill="currentColor">Leiter</text>';
+  s += zoneRect('GR', {x:318,y:70,w:224,h:176}, 'GR', {handle:true, fs:34, ty:140}, p);
+  s += '<text x="430" y="170" font-size="15" text-anchor="middle" class="tx" fill="'+C.label+'" pointer-events="none">Pumpe</text>';
+  s += zoneRect('DACH', {x:320,y:38,w:220,h:22}, 'Dachkasten', {fill:C.alu, stroke:C.shutLine, fs:14, ty:54}, p);
+  s += '<text class="tx" x="330" y="378" font-size="13" text-anchor="middle" fill="currentColor" opacity=".7">Fahrerseite</text>';
+  s += '<text class="tx" x="530" y="378" font-size="13" text-anchor="middle" fill="currentColor" opacity=".7">Beifahrerseite</text>';
+  return s + '</svg>';
+}
+function drawTop(p){
+  var s = '<svg class="truck" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Draufsicht eines TLF 3000">' + defs(p);
+  s += '<text class="tx" x="520" y="46" font-size="14" text-anchor="middle" fill="currentColor" opacity=".75">Beifahrerseite (rechts)</text>';
+  s += '<text class="tx" x="520" y="342" font-size="14" text-anchor="middle" fill="currentColor" opacity=".75">Fahrerseite (links)</text>';
+  s += '<rect x="30" y="50" width="12" height="16" rx="3" fill="'+C.frame+'"/><rect x="30" y="314" width="12" height="16" rx="3" fill="'+C.frame+'"/>';
+  s += '<rect x="258" y="65" width="522" height="250" rx="4" fill="'+C.red+'"/>';
+  s += '<rect x="270" y="77" width="498" height="226" rx="3" fill="url(#'+p+'tr)"/>';
+  s += '<rect x="40" y="65" width="210" height="250" rx="16" fill="'+C.red+'"/>';
+  s += '<rect x="42" y="76" width="16" height="228" rx="6" fill="'+C.glass+'"/>';
+  s += '<rect x="96" y="84" width="14" height="212" rx="5" fill="'+C.blue+'"/>';
+  var lad = '<g fill="'+C.frame+'"><rect x="752" y="80" width="3" height="56"/><rect x="766" y="80" width="3" height="56"/>';
+  for(var y = 86; y < 136; y += 12){ lad += '<rect x="752" y="'+y+'" width="17" height="2.5"/>'; }
+  s += lad + '</g>';
+  s += zoneRect('DACH', {x:330,y:86,w:400,h:100}, '', {fill:C.shut, stroke:C.shutLine}, p);
+  var hose = '';
+  for(var i = 0; i < 4; i++){ hose += '<rect x="352" y="'+(98 + i*20)+'" width="150" height="13" rx="6.5" fill="'+C.frame+'" opacity=".82" pointer-events="none"/>'; }
+  s += hose;
+  s += '<text class="tx" x="620" y="130" font-size="18" text-anchor="middle" fill="'+C.label+'" pointer-events="none">Dachkasten</text>';
+  s += '<text class="tx" x="620" y="152" font-size="13" text-anchor="middle" fill="'+C.label+'" pointer-events="none">4 × A-Saugschlauch</text>';
+  s += zoneRect('WERFER', {x:262,y:160,w:64,h:62}, '', {fill:'transparent'}, p);
+  s += '<g pointer-events="none"><circle cx="300" cy="191" r="17" fill="'+C.frame+'"/><line x1="300" y1="191" x2="270" y2="191" stroke="'+C.frame+'" stroke-width="8" stroke-linecap="round"/><circle cx="300" cy="191" r="6" fill="'+C.rim+'"/></g>';
+  s += '<text class="tx" x="300" y="242" font-size="14" text-anchor="middle" fill="'+C.label+'" pointer-events="none">Werfer</text>';
+  s += zoneRect('KAB', {x:40,y:65,w:210,h:250}, 'Kabine', {fill:'transparent', fs:18, ty:196, lc:'#FFFFFF', rx:16}, p);
+  s += '<g class="tx" fill="currentColor" opacity=".7"><polygon points="40,378 52,372 52,384"/><text x="58" y="383" font-size="14">Fahrtrichtung</text></g>';
+  return s + '</svg>';
+}
+function drawTruck(side, p){
+  if(side === 'rechts') return drawSide(true, p);
+  if(side === 'heck') return drawRear(p);
+  if(side === 'dach') return drawTop(p);
+  return drawSide(false, p);
+}
+
+/* Hero-Zeichnung */
+var hero = document.getElementById('heroTruck');
+hero.innerHTML = drawTruck('links','h-');
+bindZones(hero, function(key){ tour.zone = key; tour.side = sideFor(key, 'links'); location.hash = 'rundgang'; renderTour(); });
+
+function bindZones(root, onPick){
+  root.querySelectorAll('.zone').forEach(function(g){
+    g.addEventListener('click', function(){ onPick(g.getAttribute('data-zone')); });
+    g.addEventListener('keydown', function(e){ if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); onPick(g.getAttribute('data-zone')); } });
+  });
+}
+function sideFor(key, current){
+  if(SIDES[current] && SIDES[current].zones.indexOf(key) >= 0) return current;
+  if(['G2','G4','G6'].indexOf(key) >= 0) return 'rechts';
+  if(key === 'GR') return 'heck';
+  return 'links';
+}
+
+/* Rundgang */
+var tour = {side:'links', zone:'G1'};
+var tourBox = document.getElementById('tourTruck');
+var panel = document.getElementById('zonePanel');
+function renderTour(focusKey){
+  document.querySelectorAll('[data-side]').forEach(function(b){ b.setAttribute('aria-pressed', b.getAttribute('data-side') === tour.side ? 'true' : 'false'); });
+  tourBox.innerHTML = drawTruck(tour.side, 't-');
+  document.getElementById('tourCap').textContent = SIDES[tour.side].cap;
+  tourBox.querySelectorAll('.zone').forEach(function(g){ g.classList.toggle('sel', g.getAttribute('data-zone') === tour.zone); });
+  bindZones(tourBox, function(key){ tour.zone = key; renderTour(key); });
+  if(focusKey){ var f = tourBox.querySelector('.zone[data-zone="'+focusKey+'"]'); if(f) f.focus({preventScroll:true}); }
+  renderPanel();
+  document.querySelectorAll('#zoneLinks button').forEach(function(b){ b.setAttribute('aria-pressed', b.getAttribute('data-z') === tour.zone ? 'true' : 'false'); });
+}
+function renderPanel(){
+  var z = ZONES[tour.zone];
+  var items = z.items.map(function(it){
+    return '<li><span class="lvl '+it[1]+'">'+LVL_LABEL[it[1]]+'</span><span>'+esc(it[0])+(it[2] ? ' <span class="flag">unsicher</span>' : '')+'</span></li>';
+  }).join('');
+  var note = '';
+  try{ note = (store.notes && store.notes[tour.zone]) || ''; }catch(e){ note = ''; }
+  panel.innerHTML =
+    '<div class="zp-head"><span class="zp-id">'+esc(z.id)+'</span><span class="zp-where">'+esc(z.where)+'</span></div>' +
+    '<p class="zp-theme">'+esc(z.theme)+'</p>' +
+    '<ul class="zp-items">'+items+'</ul>' +
+    '<p class="zp-note">'+esc(z.note)+'</p>' +
+    '<span class="q">Quellen: '+srcLinks(z.q.split(' '))+'</span>' +
+    '<div class="mynote stack"><label for="zoneNote">Bei uns</label><textarea id="zoneNote" placeholder="Was liegt auf eurem Fahrzeug in diesem Bereich?"></textarea><span class="small muted">Wird nur in diesem Browser gespeichert.</span></div>';
+  var ta = document.getElementById('zoneNote');
+  ta.value = note;
+  var key = tour.zone, t = null;
+  ta.addEventListener('input', function(){
+    clearTimeout(t);
+    t = setTimeout(function(){ store.notes = store.notes || {}; store.notes[key] = ta.value; saveStore(); }, 400);
+  });
+}
+document.querySelectorAll('[data-side]').forEach(function(b){
+  b.addEventListener('click', function(){
+    tour.side = b.getAttribute('data-side');
+    if(SIDES[tour.side].zones.indexOf(tour.zone) < 0) tour.zone = SIDES[tour.side].zones[0];
+    renderTour();
+  });
+});
+(function(){
+  var zl = document.getElementById('zoneLinks');
+  ZONE_ORDER.forEach(function(k){
+    var b = document.createElement('button');
+    b.type = 'button'; b.setAttribute('data-z', k); b.textContent = ZONES[k].id;
+    b.addEventListener('click', function(){ tour.zone = k; tour.side = sideFor(k, tour.side); renderTour(); document.getElementById('tourTruck').scrollIntoView({block:'nearest'}); });
+    zl.appendChild(b);
+  });
+})();
+renderTour();
+
+/* ---------- Wasser-Rechner ---------- */
+var FLOWS = [
+  {id:'dsa', label:'Schnellangriff, D-Strahlrohr (max.)', q:100, n:0},
+  {id:'cmzm', label:'C-Mehrzweckstrahlrohr mit Mundstück', q:100, n:0},
+  {id:'cmz', label:'C-Mehrzweckstrahlrohr ohne Mundstück', q:200, n:1},
+  {id:'csa', label:'Schnellangriff, C-Strahlrohr (max.)', q:235, n:0},
+  {id:'chsr', label:'C-Hohlstrahlrohr, oberer Wert', q:300, n:0},
+  {id:'m4', label:'Kombischaumrohr M4/S4 bzw. Zumischer Z4', q:400, n:0}
+];
+var COMPARE = [
+  ['1 C-Rohr mit Mundstück', 100], ['C-Hohlstrahlrohr, unterer Wert', 130], ['1 C-Rohr ohne Mundstück', 200], ['Schnellangriff C (max.)', 235],
+  ['2 C-Rohre à 200 l/min', 400], ['Dachwerfer 1000 l/min', 1000], ['Dachwerfer 1600 l/min', 1600], ['Volle Nennleistung FPN 10-2000', 2000]
+];
+var calc = {tank:3000};
+var rowsBox = document.getElementById('flowRows');
+FLOWS.forEach(function(f){
+  var row = document.createElement('div');
+  row.className = 'calc-row';
+  row.innerHTML = '<div><div>'+esc(f.label)+'</div><div class="fl">'+f.q+' l/min</div></div>' +
+    '<div class="stepper"><button type="button" aria-label="weniger">−</button><output aria-live="polite">'+f.n+'</output><button type="button" aria-label="mehr">+</button></div>';
+  var bs = row.querySelectorAll('button'), out = row.querySelector('output');
+  bs[0].addEventListener('click', function(){ f.n = Math.max(0, f.n - 1); out.textContent = f.n; updateCalc(); });
+  bs[1].addEventListener('click', function(){ f.n = Math.min(6, f.n + 1); out.textContent = f.n; updateCalc(); });
+  rowsBox.appendChild(row);
+});
+var tankRange = document.getElementById('tankRange');
+tankRange.addEventListener('input', function(){ calc.tank = +tankRange.value; updateCalc(); });
+document.querySelectorAll('#tankPresets button').forEach(function(b){
+  b.addEventListener('click', function(){ calc.tank = +b.getAttribute('data-v'); tankRange.value = calc.tank; updateCalc(); });
+});
+document.getElementById('werferSel').addEventListener('change', updateCalc);
+document.getElementById('inflow').addEventListener('input', updateCalc);
+function fmtMin(m){
+  if(!isFinite(m)) return '∞';
+  var s = Math.round(m * 60);
+  var mm = Math.floor(s / 60), ss = s % 60;
+  return mm + ':' + (ss < 10 ? '0' : '') + ss;
+}
+var lastEmpty = 15;
+function updateCalc(){
+  var q = FLOWS.reduce(function(a, f){ return a + f.q * f.n; }, 0) + (+document.getElementById('werferSel').value || 0);
+  var inflow = Math.max(0, +document.getElementById('inflow').value || 0);
+  var net = q - inflow;
+  document.getElementById('tankOut').textContent = calc.tank + ' l';
+  document.querySelectorAll('#tankPresets button').forEach(function(b){ b.setAttribute('aria-pressed', +b.getAttribute('data-v') === calc.tank ? 'true' : 'false'); });
+  document.getElementById('qOut').textContent = q + ' l/min' + (inflow ? ' (Zufluss ' + inflow + ' l/min)' : '');
+  var tOut = document.getElementById('tOut'), tNote = document.getElementById('tNote');
+  var t = Infinity;
+  if(q === 0){ tOut.textContent = '–'; tNote.textContent = 'Keine Abgabe gewählt'; }
+  else if(net <= 0){ tOut.textContent = '∞'; tNote.textContent = 'Der Zufluss deckt die Abgabe, der Tank wird nicht leer'; }
+  else { t = calc.tank / net; lastEmpty = Math.round(t * 10) / 10; tOut.textContent = fmtMin(t); tNote.textContent = 'Minuten bis der Tank leer ist (' + calc.tank + ' l ÷ ' + net + ' l/min)'; }
+  document.getElementById('warnPump').hidden = q <= 2000;
+  var list = COMPARE.map(function(c){ return {label:c[0] + ' · ' + c[1] + ' l/min', t: calc.tank / c[1], me:false}; });
+  if(isFinite(t)) list.push({label:'Deine Auswahl · ' + net + ' l/min', t:t, me:true});
+  list.sort(function(a, b){ return b.t - a.t; });
+  var max = Math.max.apply(null, list.map(function(x){ return x.t; }));
+  document.getElementById('bars').innerHTML = '<div class="small muted">Reichweite von ' + calc.tank + ' l im Vergleich (Minuten)</div>' + list.map(function(x){
+    return '<div class="bar' + (x.me ? ' me' : '') + '"><span class="lab">' + esc(x.label) + '</span><span class="track"><span class="fillb" style="display:block;width:' + (x.t / max * 100).toFixed(1) + '%"></span></span><span class="val">' + fmtMin(x.t) + '</span></div>';
+  }).join('');
+}
+updateCalc();
+
+/* Pendelverkehr */
+['pE','pF','pL','pR'].forEach(function(id){ document.getElementById(id).addEventListener('input', updatePendel); });
+document.getElementById('pTake').addEventListener('click', function(){ document.getElementById('pE').value = lastEmpty; updatePendel(); });
+function updatePendel(){
+  var e = +document.getElementById('pE').value || 0, f = +document.getElementById('pF').value || 0, l = +document.getElementById('pL').value || 0, r = +document.getElementById('pR').value || 0;
+  var out = document.getElementById('pOut'), note = document.getElementById('pNote');
+  if(e <= 0){ out.textContent = '–'; note.textContent = 'Entleerzeit eingeben'; return; }
+  var raw = (e + f + l + r) / e;
+  out.textContent = Math.ceil(raw - 1e-9);
+  note.textContent = 'Fahrzeuge: (' + [e, f, l, r].join(' + ') + ') ÷ ' + e + ' = ' + raw.toFixed(2).replace('.', ',') + ', aufgerundet';
+}
+updatePendel();
+
+/* ---------- Karteikarten ---------- */
+var CARDS = [
+  ['Norm','Nach welcher Norm ist das TLF 3000 genormt, und welche Ausgabe gilt?','DIN 14530-22. Gültig ist die Ausgabe 2019-11; sie ersetzt die Ausgabe 2011-04 und die Änderung A1:2017-06.'],
+  ['Norm','Wofür steht die Zahl 3000?','Für den Mindestwasservorrat in Litern. Seit April 2011 nennen die TLF-Namen den Wasservorrat, nicht mehr die Pumpe.'],
+  ['Norm','Warum wurden die Tanklöschfahrzeuge 2011 umbenannt?','Für den BOS-Digitalfunk brauchte man einheitliche achtstellige Fahrzeugbezeichnungen.'],
+  ['Norm','Welches Normfahrzeug ersetzt das TLF 3000?','Das TLF 16/24-Tr aus derselben Teilnummer 22. Im Normentwurf hieß es TLF 20/30. In den Wehren ersetzt es oft TLF 16/25, TLF 24/50 oder TLF 8 W.'],
+  ['Norm','Welche Besatzung sieht die Norm vor?','Einen Trupp: 1/2 (Stärke 0/1/2/3), also drei Sitzplätze.'],
+  ['Norm','Was ist in der Ausgabe 2019 neu?','Das TLF 3000 soll auch den Bedarf an einem für die Waldbrandbekämpfung besonders geeigneten TLF decken. Die Zusatzbeladung Waldbrand (Tabelle 2) ist optional.'],
+  ['Norm','Welche Massenklasse gilt?','Massenklasse M nach DIN EN 1846-1 und -2. Die Ausgabe 2011 nannte ausdrücklich bis 14 000 kg.'],
+  ['Norm','Was ist nach Norm optional?','Wasserwerfer, Schaumausrüstung und Zusatzbeladung Waldbrand.'],
+  ['Technik','Was bedeutet FPN 10-2000?','Feuerlöschkreiselpumpe Normaldruck mit 2000 l/min Nennförderstrom bei 10 bar Nennförderdruck, gemessen bei 3 m geodätischer Saughöhe.'],
+  ['Technik','Welche Garantiepunkte hat eine FPN 10-2000 nach DIN EN 1028-1?','2000 l/min bei 10 bar und 3 m; 1000 l/min bei 15 bar und 3 m; 1000 l/min bei 10 bar und 7,5 m Saughöhe.'],
+  ['Technik','Wie viel Schaummittel muss ein TLF 3000 mitführen, wenn es Schaum hat?','Genug für mindestens 10 Minuten Betrieb eines Kombischaumrohrs M4/S4. Bei 3 % Zumischung sind das rund 120 l.'],
+  ['Technik','Was schreibt die Norm zur schnellen Wasserabgabe vor?','Eine Schnellangriffseinrichtung oder eine Einrichtung zur schnellen Wasserabgabe, z. B. 2 C 42-15 oder 2 D 25-15 mit angekuppeltem Strahlrohr hinten rechts.'],
+  ['Technik','Wie ist ein typischer Schnellangriff ausgeführt?','Haspel mit 50 m formstabilem Schlauch DN 25 (oder 30 m DN 33), oft elektrisch aufrollbar. C-Strahlrohr max. 235 l/min, D-Strahlrohr max. 100 l/min.'],
+  ['Technik','Wo sitzt die Pumpe beim Norm-TLF 3000?','Im Heck mit Pumpenbedienstand (GR), angetrieben über einen Nebenantrieb.'],
+  ['Technik','Was ist Pump & Roll?','Wasserabgabe während der Fahrt über einen fahrunabhängigen Nebenantrieb. Keine Normpflicht; gefordert im DFV/AGBF-Pflichtenheft Waldbrand-TLF.'],
+  ['Technik','Was macht eine Selbstschutzanlage?','Düsen legen einen Wasservorhang um das Fahrzeug und besprühen die Räder, damit es durch Flammen flüchten kann. Waldbrandausstattung, keine Normpflicht.'],
+  ['Pumpe','Warum braucht die Kreiselpumpe eine Entlüftungseinrichtung?','Kreiselpumpen saugen nicht selbst an. Die Entlüftung, meist eine trockenlaufende Kolbenpumpe, zieht die Luft ab und koppelt bei ca. 1,5 bis 2 bar selbsttätig ab.'],
+  ['Pumpe','Was ist Kavitation, und woran erkennt man sie?','Dampfblasen durch zu starken Unterdruck im Saugbetrieb, etwa bei zu großer Saughöhe, zu hohem Förderstrom oder verstopftem Saugkorb. Hörbar am Pumpengeräusch; beschädigt Laufrad und Leitapparat.'],
+  ['Pumpe','Was passiert, wenn die Pumpe ohne Wasserabgabe läuft?','Sie heizt das Wasser auf (Heißlaufen). Schutz bieten eine Umgehungsleitung zum Tank oder ein temperaturgesteuerter Bypass.'],
+  ['Pumpe','Welcher Grenzwert gilt bei der Trockensaugprobe?','Der Unterdruck darf höchstens 0,1 bar pro Minute abfallen.'],
+  ['Pumpe','Wie wird der Tank am Hydranten trinkwassersicher befüllt?','Über freien Einlauf mit mindestens 100 mm Luftstrecke, oder über einen Systemtrenner B-FW (DIN 14346). Löschwasser ist Flüssigkeitskategorie 4 nach DIN EN 1717.'],
+  ['Pumpe','Wie vermeidet man Druckstöße?','Strahlrohre und Absperrorgane langsam öffnen und schließen.'],
+  ['Pumpe','Was ist vor jedem Pumpenbetrieb zu tun?','Feststellbremse ziehen und Unterlegkeile anlegen.'],
+  ['Pumpe','Was ist nach einem Schaumeinsatz zu tun?','Druckzumischanlage und Pumpe mit Klarwasser spülen, Schläuche und Strahlrohre spülen. Bei Around-the-pump-Zumischung das ganze System bis zum Strahlrohr.'],
+  ['Pumpe','Welche PFAS-Fristen gelten?','Ab 23.10.2026 Kennzeichnungspflicht für PFAS-haltige Schäume. Öffentliche Feuerwehren dürfen sie nur bis 23.04.2027 einsetzen (VO (EU) 2025/1988).'],
+  ['Beladung','Wie viele Saugschläuche führt das TLF 3000 laut MV-Liste?','Vier Saugschläuche A-110-1500, meist im Dachkasten.'],
+  ['Beladung','Welche Armaturen zur Wasserversorgung sind belegt?','Sammelstück A-3B und Standrohr 2B (MV-Liste).'],
+  ['Beladung','Wie viele B-Schläuche sind geladen?','10 bzw. 14 B 75-20 (200 bzw. 280 m), je nach Landesliste. Eigene Beladeliste prüfen.'],
+  ['Beladung','Wie werden die Geräteräume nummeriert?','G1 vorn links auf der Fahrerseite. Ungerade Nummern links, gerade rechts, jeweils von vorn nach hinten. Der Heckraum heißt GR oder bekommt die letzte ungerade Nummer.'],
+  ['Beladung','Was gehört zur Zusatzbeladung Waldbrand?','Unter anderem Feuerpatschen (Stiel ca. 2,4 m), Löschrucksäcke (ca. 20 l) und Dunghaken.'],
+  ['Einsatz','Welche Rolle hat das TLF 3000 im Löschzug?','Wasserführendes Ergänzungsfahrzeug zum HLF oder LF: Wasser bis zur stabilen Versorgung, Drehleiter speisen, Pendelverkehr, Vegetationsbrand.'],
+  ['Einsatz','Welche Funktionen hat ein selbstständiger Trupp nach FwDV 3?','Truppführer, Maschinist, Truppmann.'],
+  ['Einsatz','Welche Aufgaben hat der Maschinist?','Er fährt, bedient Pumpe und Aggregate, sichert das Fahrzeug nach hinten, hilft beim Aufbau der Wasserversorgung und übernimmt auf Befehl die Atemschutzüberwachung.'],
+  ['Einsatz','Wie berechnet man die Fahrzeuge für einen Pendelverkehr?','(Entleerzeit + Fahrzeit + Füllzeit + Rüstzeit) ÷ Entleerzeit, aufgerundet.'],
+  ['Einsatz','Wie lange reichen 3000 l?','Ein C-Rohr mit 200 l/min: 15 Minuten. Zwei C-Rohre: 7,5 Minuten. Werfer mit 1600 l/min: 1,9 Minuten.'],
+  ['Einsatz','Welchen Funkkenner hat das TLF 3000?','Bayern 21, Baden-Württemberg 23, Rheinland-Pfalz 23, Schleswig-Holstein 22. In NRW steht der Typ im Rufnamen.'],
+  ['Einsatz','Welche Taktik empfiehlt der DFV beim Vegetationsbrand?','Angriff vom Ankerpunkt entlang der Feuerkante mit pump-and-roll-fähigem TLF. Kleine, wendige TLF greifen an, große, schwere TLF versorgen.'],
+  ['Sicherheit','Welche Fahrerlaubnis braucht man für das TLF 3000?','Klasse C. Der Feuerwehrführerschein reicht nur bis 4,75 bzw. 7,5 t.'],
+  ['Sicherheit','Was ist die häufigste TLF-Unfallart?','Das Umkippen. Teilgefüllte Tanks schwappen, Dachaufbauten heben den Schwerpunkt.'],
+  ['Sicherheit','Wie hoch ist ein TLF 3000 ungefähr?','3,15 bis 3,30 m. Die Höhe des eigenen Fahrzeugs muss man kennen.'],
+  ['Sicherheit','Wie oft wird die Pumpe nach DGUV Grundsatz 305-002 geprüft?','Alle 12 Monate als Sicht- und Funktionsprüfung durch den Gerätewart.']
+];
+var CATS = ['Alle','Norm','Technik','Pumpe','Beladung','Einsatz','Sicherheit'];
+var cardState = {cat:'Alle', idx:null};
+store.known = store.known || {};
+function cardKey(c){ return c[1]; }
+function deck(){ return CARDS.filter(function(c){ return cardState.cat === 'Alle' || c[0] === cardState.cat; }); }
+function nextCard(){
+  var d = deck();
+  var open = d.filter(function(c){ return !store.known[cardKey(c)]; });
+  var pool = open.length ? open : d;
+  var pick = pool[Math.floor(Math.random() * pool.length)];
+  if(pool.length > 1 && cardState.idx !== null && pick === CARDS[cardState.idx]){ pick = pool[(pool.indexOf(pick) + 1) % pool.length]; }
+  cardState.idx = CARDS.indexOf(pick);
+  renderCard();
+}
+function renderCard(){
+  var c = CARDS[cardState.idx];
+  var d = deck();
+  var known = d.filter(function(x){ return store.known[cardKey(x)]; }).length;
+  document.getElementById('cardStat').textContent = known + ' von ' + d.length + ' gewusst';
+  document.getElementById('cardProg').style.width = (d.length ? known / d.length * 100 : 0) + '%';
+  document.getElementById('fCat').textContent = c[0] + (store.known[cardKey(c)] ? ' · gewusst' : '');
+  document.getElementById('fFront').textContent = c[1];
+  var back = document.getElementById('fBack');
+  back.textContent = c[2]; back.hidden = true;
+  document.getElementById('fShow').hidden = false;
+  document.getElementById('fKnow').hidden = true;
+  document.getElementById('fAgain').hidden = true;
+}
+(function(){
+  var box = document.getElementById('cardCats');
+  CATS.forEach(function(cat){
+    var b = document.createElement('button');
+    b.type = 'button'; b.textContent = cat; b.setAttribute('aria-pressed', cat === 'Alle' ? 'true' : 'false');
+    b.addEventListener('click', function(){
+      cardState.cat = cat;
+      box.querySelectorAll('button').forEach(function(x){ x.setAttribute('aria-pressed', x === b ? 'true' : 'false'); });
+      nextCard();
+    });
+    box.appendChild(b);
+  });
+})();
+document.getElementById('fShow').addEventListener('click', function(){
+  document.getElementById('fBack').hidden = false;
+  document.getElementById('fShow').hidden = true;
+  document.getElementById('fKnow').hidden = false;
+  document.getElementById('fAgain').hidden = false;
+  document.getElementById('fKnow').focus();
+});
+document.getElementById('fKnow').addEventListener('click', function(){ store.known[cardKey(CARDS[cardState.idx])] = 1; saveStore(); nextCard(); document.getElementById('fShow').focus(); });
+document.getElementById('fAgain').addEventListener('click', function(){ delete store.known[cardKey(CARDS[cardState.idx])]; saveStore(); nextCard(); document.getElementById('fShow').focus(); });
+var resetArmed = false;
+document.getElementById('fReset').addEventListener('click', function(){
+  var b = document.getElementById('fReset');
+  if(!resetArmed){ resetArmed = true; b.textContent = 'Wirklich zurücksetzen?'; setTimeout(function(){ resetArmed = false; b.textContent = 'Lernstand zurücksetzen'; }, 4000); return; }
+  resetArmed = false; b.textContent = 'Lernstand zurücksetzen';
+  store.known = {}; saveStore(); nextCard();
+});
+nextCard();
+
+/* ---------- Quiz ---------- */
+var QUIZ = [
+  ['Wofür steht die „3000“ in TLF 3000?',['Mindestwasservorrat in Litern','Nennförderstrom der Pumpe in l/min','Zulässige Gesamtmasse geteilt durch fünf','Schlauchlänge in Dezimetern'],0,'Seit April 2011 nennen TLF-Namen den Mindestwasservorrat. Die Pumpe steht nicht mehr im Namen.'],
+  ['Welche Ausgabe der DIN 14530-22 gilt aktuell?',['2019-11','2011-04','2017-06','2004-11'],0,'Die Ausgabe 2019-11 ersetzt 2011-04 und die Änderung A1:2017-06.'],
+  ['Welche Besatzung sieht die Norm vor?',['Trupp 1/2','Staffel 1/5','Gruppe 1/8','Trupp 1/1'],0,'Normativ ein Trupp mit drei Sitzen. Die Staffelkabine ist eine verbreitete Abweichung.'],
+  ['Warum wurden die TLF 2011 umbenannt?',['Achtstellige Fahrzeugbezeichnungen für den Digitalfunk','Neue EU-Fahrzeugrichtlinie','Neue Pumpennorm DIN EN 1028','Vereinheitlichung der Förderrichtlinien'],0,'Der BOS-Digitalfunk brauchte einheitliche achtstellige Bezeichnungen.'],
+  ['Was garantiert eine FPN 10-2000 bei 7,5 m Saughöhe?',['1000 l/min bei 10 bar','2000 l/min bei 10 bar','1500 l/min bei 8 bar','500 l/min bei 10 bar'],0,'DIN EN 1028-1: halber Nennförderstrom bei Nenndruck und 7,5 m Saughöhe.'],
+  ['Welches Bauteil ist nach Norm optional?',['Wasserwerfer','Feuerlöschkreiselpumpe','Einrichtung zur schnellen Wasserabgabe','Löschwasserbehälter'],0,'Werfer, Schaumausrüstung und Waldbrand-Zusatzbeladung sind optional.'],
+  ['Wie lange muss mitgeführtes Schaummittel mindestens reichen?',['10 Minuten Kombischaumrohr M4/S4','5 Minuten Zumischer Z2','30 Minuten Werferbetrieb','15 Minuten Schaumrohr S2'],0,'Bei 3 % Zumischung und 400 l/min ergibt das rund 120 l Schaummittel.'],
+  ['Wie lange reichen 3000 l bei einem C-Rohr mit 200 l/min?',['15 Minuten','7,5 Minuten','30 Minuten','10 Minuten'],0,'3000 l ÷ 200 l/min = 15 Minuten.'],
+  ['Nach welcher Zeit ist ein 3000-l-Tank bei einem Werfer mit 1600 l/min leer?',['Nach knapp 2 Minuten','Nach 5 Minuten','Nach 3 Minuten','Nach 30 Sekunden'],0,'3000 l ÷ 1600 l/min ≈ 1,9 Minuten.'],
+  ['Wo liegt der Geräteraum G1?',['Fahrerseite vorn','Beifahrerseite vorn','Im Heck','Fahrerseite hinten'],0,'G1 ist der vorderste Raum links in Fahrtrichtung.'],
+  ['Auf welcher Seite liegen die geraden Geräteräume?',['Rechts, Beifahrerseite','Links, Fahrerseite','Im Heck','Auf dem Dach'],0,'Ungerade links, gerade rechts, jeweils von vorn nach hinten.'],
+  ['Wie viele A-Saugschläuche nennt die MV-Beladungsliste?',['4','2','6','8'],0,'4 × A-110-1500, meist im Dachkasten.'],
+  ['Wo sitzt laut Wikipedia die schnelle Wasserabgabe?',['Hinten rechts','Vorn links','Auf dem Dach','In der Kabine'],0,'In Fächern bzw. im Geräteraum hinten rechts.'],
+  ['Bei welchem Druck koppelt eine automatische Entlüftung typischerweise ab?',['Ca. 1,5 bis 2 bar','Ca. 0,5 bar','Ca. 5 bar','Ca. 10 bar'],0,'Rosenbauer-Doppelkolben 2 bar, Ziegler Trokomat 1,5 bar.'],
+  ['Wie viel darf der Unterdruck bei der Trockensaugprobe abfallen?',['Höchstens 0,1 bar pro Minute','Höchstens 0,5 bar pro Minute','Höchstens 1 bar pro Minute','Er darf gar nicht abfallen'],0,'Kriterium aus den Maschinisten-Lernunterlagen.'],
+  ['Wann droht Kavitation?',['Im Saugbetrieb mit großer Saughöhe oder zu hohem Förderstrom','Im Hydrantenbetrieb mit hohem Eingangsdruck','Im Tankbetrieb bei geschlossenen Abgängen','Beim Schaumbetrieb mit Druckzumischanlage'],0,'Im Hydrantenbetrieb fällt die Zuleitung zusammen; dort droht keine Kavitation.'],
+  ['Welche Luftstrecke gilt beim Befüllen über freien Einlauf mindestens?',['100 mm','10 mm','50 mm','300 mm'],0,'Mindestens 100 mm über dem höchsten Füllstand.'],
+  ['Welche Fahrerlaubnis braucht man für ein TLF 3000?',['Klasse C','Klasse C1','Klasse B mit Feuerwehrführerschein','Klasse CE'],0,'Bei 14 t und mehr reicht weder C1 noch der Feuerwehrführerschein (bis 7,5 t).'],
+  ['Was ist laut Feuerwehr-Magazin die häufigste TLF-Unfallart?',['Umkippen','Auffahrunfall','Reifenplatzer','Bremsversagen'],0,'Oft ohne Fremdeinwirkung; Schwappen und hoher Schwerpunkt begünstigen es.'],
+  ['Welchen Funkkenner hat das TLF 3000 in Bayern?',['21','22','23','24'],0,'22 ist die TLF-2000-Klasse, 23 die TLF-4000-Klasse.'],
+  ['Was bezeichnet der Kenner „23“ in Bayern?',['Die TLF-4000-Klasse','Das TLF 3000','Das TLF 2000','Das HLF 20'],0,'In Baden-Württemberg und Rheinland-Pfalz ist „23“ dagegen das TLF 3000.'],
+  ['Welche Funktionen hat ein selbstständiger Trupp nach FwDV 3?',['Truppführer, Maschinist, Truppmann','Staffelführer, Angriffstrupp, Wassertrupp','Zugführer, Melder, Maschinist','Truppführer, Angriffstrupp, Schlauchtrupp'],0,'Das ist die Normbesatzung des TLF 3000.'],
+  ['Pendelverkehr: 3 min entleeren, 6,5 min Fahrt, 2 min füllen. Wie viele Fahrzeuge?',['4','2','3','6'],0,'(3 + 6,5 + 2) ÷ 3 = 3,8, aufgerundet 4.'],
+  ['Bis wann dürfen öffentliche Feuerwehren PFAS-haltige Schäume einsetzen?',['23.04.2027','23.10.2026','31.12.2025','Unbegrenzt'],0,'VO (EU) 2025/1988; ab 23.10.2026 gilt die Kennzeichnungspflicht.'],
+  ['Was fordert das DFV/AGBF-Pflichtenheft Waldbrand-TLF, die Norm aber nicht?',['Pump & Roll und Selbstschutzanlage','Mindestens 3000 l Wasser','Truppbesatzung','Eine Feuerlöschkreiselpumpe'],0,'Dazu Geländekategorie 3 und Atemluftanschlüsse für die ganze Besatzung.'],
+  ['Welches Fahrzeug ersetzt das TLF 3000 normativ?',['TLF 16/24-Tr','TLF 8/18','TLF 20/40-SL','LF 16/12'],0,'TLF 8/18 ging im TLF 2000 auf, TLF 20/40 im TLF 4000.'],
+  ['Wie oft wird die Feuerlöschkreiselpumpe nach DGUV Grundsatz 305-002 geprüft?',['Alle 12 Monate, Sicht- und Funktionsprüfung','Alle 5 Jahre durch den TÜV','Nur nach Einsätzen','Alle 6 Monate mit Druckprüfung'],0,'Durch den Gerätewart als befähigte Person.']
+];
+var qz = {order:[], i:0, score:0, answered:false};
+function shuffle(a){ for(var i = a.length - 1; i > 0; i--){ var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+function newQuiz(){
+  qz.order = shuffle(QUIZ.map(function(_, i){ return i; })).slice(0, 10);
+  qz.i = 0; qz.score = 0; renderQuiz();
+}
+function renderQuiz(){
+  var best = store.best || 0;
+  document.getElementById('qzBest').textContent = best ? 'Bestes Ergebnis: ' + best + ' von 10' : '';
+  document.getElementById('qzProg').style.width = (qz.i / qz.order.length * 100) + '%';
+  var opts = document.getElementById('qzOpts'), exp = document.getElementById('qzExp'), next = document.getElementById('qzNext');
+  if(qz.i >= qz.order.length){
+    document.getElementById('qzNum').textContent = 'Ergebnis';
+    document.getElementById('qzQ').textContent = qz.score + ' von ' + qz.order.length + ' richtig';
+    document.getElementById('qzStat').textContent = '';
+    opts.innerHTML = ''; exp.hidden = false;
+    exp.textContent = qz.score >= 9 ? 'Sitzt.' : qz.score >= 7 ? 'Solide. Die Karteikarten helfen bei den Lücken.' : 'Die Karteikarten gehen die Themen einzeln durch.';
+    if(qz.score > best){ store.best = qz.score; saveStore(); }
+    next.hidden = false; next.textContent = 'Neue Runde';
+    return;
+  }
+  var q = QUIZ[qz.order[qz.i]];
+  qz.answered = false;
+  document.getElementById('qzNum').textContent = 'Frage ' + (qz.i + 1) + ' von ' + qz.order.length;
+  document.getElementById('qzStat').textContent = qz.score + ' richtig';
+  document.getElementById('qzQ').textContent = q[0];
+  var idx = shuffle(q[1].map(function(_, i){ return i; }));
+  opts.innerHTML = '';
+  idx.forEach(function(oi){
+    var b = document.createElement('button');
+    b.type = 'button'; b.textContent = q[1][oi];
+    b.addEventListener('click', function(){
+      if(qz.answered) return;
+      qz.answered = true;
+      var ok = oi === q[2];
+      if(ok) qz.score++;
+      opts.querySelectorAll('button').forEach(function(x, k){
+        x.disabled = true;
+        if(idx[k] === q[2]) x.classList.add('correct');
+      });
+      if(!ok) b.classList.add('wrong');
+      exp.hidden = false; exp.textContent = (ok ? 'Richtig. ' : 'Nicht ganz. ') + q[3];
+      document.getElementById('qzStat').textContent = qz.score + ' richtig';
+      next.hidden = false; next.textContent = qz.i + 1 < qz.order.length ? 'Weiter' : 'Auswertung'; next.focus();
+    });
+    opts.appendChild(b);
+  });
+  exp.hidden = true; next.hidden = true;
+}
+document.getElementById('qzNext').addEventListener('click', function(){
+  if(qz.i >= qz.order.length){ newQuiz(); return; }
+  qz.i++; renderQuiz();
+});
+newQuiz();
+
+/* Lernmodus-Umschalter */
+document.querySelectorAll('[data-mode]').forEach(function(b){
+  b.addEventListener('click', function(){
+    var m = b.getAttribute('data-mode');
+    document.querySelectorAll('[data-mode]').forEach(function(x){ x.setAttribute('aria-pressed', x === b ? 'true' : 'false'); });
+    document.querySelectorAll('[data-pane]').forEach(function(p){ p.hidden = p.getAttribute('data-pane') !== m; });
+  });
+});
+
+/* ---------- Ausbilder (Claude) ---------- */
+var FACTS = CARDS.map(function(c){ return '- ' + c[1] + ' ' + c[2]; }).join('\n') + '\n' + [
+  '- Reale Fahrzeuge: 3000 bis 4000 l Wasser, 120 bis 300 l Schaummittel, 14 bis 16 t, 6,65 bis 7,9 m lang, 2,50 m breit, 3,15 bis 3,30 m hoch, 231 bis 340 PS, meist Allrad (MAN TGM 4x4, Unimog U 5023).',
+  '- Staffelkabine (1/5) verbreitet; Bayern fördert sie nur, wenn die Gemeinde mindestens ein (H)LF hat. Ob die Norm 2019 eine Staffelvariante enthält, ist widersprüchlich belegt.',
+  '- Werfer: Beschaffungstexte 1600 l/min bei 8 bar (unsicher), kommunale LB 400 bis 1000 l/min, reale Werfer 1200 bis 2400 l/min.',
+  '- Musterbelegung (nicht genormt): G1 Beleuchtung, G2 Hilfsgeräte, G3 Atemschutz, G4 Löschmittel, G5/G6 Schläuche und Armaturen, GR Pumpe, Dachkasten Saugschläuche und Feuerpatschen (Beispiel Weyhausen, Ziegler).',
+  '- Pumpenanschlüsse laut kommunaler LB: 1 A-Saugeingang, je 2 B-Druckabgänge links und rechts, 1 B-Füllanschluss, 1 Schnellangriffsabgang.',
+  '- Hydrantenbetrieb: Eingangsdruck soll nicht unter 2 bar fallen (LFV Bayern). Systemtrenner B-FW nach DIN 14346; ob er Pflicht ist, ist widersprüchlich belegt.',
+  '- Zumischer Z4: Druckverlust 25 bis 30 %, 400 l/min. M4/S4 bei 3 %: 3000 l Wasser reichen 7,7 Minuten, 120 l Schaummittel 10 Minuten.',
+  '- Mit Trupp und zwei Atemschutzgeräteträgern bleibt nur der Maschinist am Fahrzeug; die Atemschutzüberwachung muss ein anderes Fahrzeug übernehmen.',
+  '- Brandenburg beschafft TLF-W Typ Brandenburg (Tatra, ca. 4800 l), kein TLF 3000. MV: 40 TLF 3000 (Schmitz, 3500 l, 200 l Schaum). RLP und NRW: je 8 Waldbrand-TLF 3000 auf Unimog.',
+  '- Nicht belegt: taktisches Zeichen, HU/SP-Fristen, Sonderrechte, Einweisen beim Rückwärtsfahren, Schwallwände in der Norm.'
+].join('\n');
+var RULES = 'Du bist Ausbilder bei einer deutschen Feuerwehr und hilfst bei der Wissensauffrischung zum Tanklöschfahrzeug TLF 3000 nach DIN 14530-22. ' +
+  'Antworte auf Deutsch, sachlich und knapp (höchstens 120 Wörter), ohne Emojis und ohne Markdown-Überschriften. ' +
+  'Stütze dich ausschließlich auf die FAKTENBASIS unten. Wenn etwas dort nicht steht oder als unsicher markiert ist, sag das offen und verweise auf Beladeplan und Betriebsanleitung des eigenen Fahrzeugs oder auf den Normtext. Erfinde keine Zahlen. ' +
+  'Wenn der Nutzer „Frag mich ab“ schreibt: Stelle genau eine Prüfungsfrage aus der Faktenbasis und warte. Bewerte danach seine Antwort kurz (richtig, teilweise, falsch), ergänze das Fehlende und stelle die nächste Frage zu einem anderen Thema. ' +
+  'Wenn der Nutzer eine eigene Frage stellt, beantworte sie.\n\nFAKTENBASIS:\n' + FACTS;
+var ai = {sample:null, turns:[], ctl:null, busy:false};
+var aiLog = document.getElementById('aiLog');
+function addMsg(cls, text){
+  var d = document.createElement('div');
+  d.className = 'msg ' + cls; d.textContent = text;
+  aiLog.appendChild(d);
+  return d;
+}
+function setBusy(b){
+  ai.busy = b;
+  document.getElementById('aiSend').disabled = b;
+  document.getElementById('aiExam').disabled = b;
+  document.getElementById('aiStop').hidden = !b;
+}
+function aiUnavailable(){
+  document.getElementById('aiNone').hidden = false;
+  document.getElementById('aiStart').hidden = true;
+  document.getElementById('aiForm').hidden = true;
+}
+async function askAI(userText){
+  if(!ai.sample || ai.busy) return;
+  ai.turns.push({role:'user', content:userText});
+  if(ai.turns.length > 16) ai.turns = ai.turns.slice(-16);
+  while(ai.turns.length && ai.turns[0].role !== 'user') ai.turns.shift();
+  var bubble = addMsg('ai', 'Denkt nach …');
+  setBusy(true);
+  ai.ctl = new AbortController();
+  try{
+    var res = await ai.sample([{role:'user', content:RULES}].concat(ai.turns), {
+      cache:false, signal:ai.ctl.signal,
+      onText:function(u){ bubble.textContent = u.text; }
+    });
+    bubble.textContent = res.text;
+    ai.turns.push({role:'assistant', content:res.text});
+    if(res.truncated) addMsg('sys', 'Die Antwort wurde gekürzt.');
+  }catch(e){
+    var code = e && e.code;
+    if(e && e.text){ bubble.textContent = e.text; } else { bubble.remove(); }
+    if(code === 'cancelled'){ /* gestoppt */ }
+    else if(['not_granted','sampling_disabled','not_declared','capability_disabled','capability_removed'].indexOf(code) >= 0){ aiUnavailable(); }
+    else if(code === 'rate_limited'){ addMsg('sys', 'Gerade zu viele Anfragen. Bitte später noch einmal versuchen.'); }
+    else if(code === 'session_expired'){ addMsg('sys', 'Bitte bei Claude neu anmelden.'); }
+    else if(code === 'refused'){ addMsg('sys', 'Darauf antwortet der Ausbilder nicht. Bitte anders formulieren.'); }
+    else { addMsg('sys', 'Keine Antwort erhalten. Bitte noch einmal senden.'); }
+    ai.turns.pop();
+  }finally{
+    setBusy(false);
+  }
+}
+document.getElementById('aiExam').addEventListener('click', function(){ addMsg('me', 'Frag mich ab.'); askAI('Frag mich ab.'); });
+document.getElementById('aiClear').addEventListener('click', function(){ if(ai.ctl) ai.ctl.abort(); ai.turns = []; aiLog.innerHTML = ''; });
+document.getElementById('aiStop').addEventListener('click', function(){ if(ai.ctl) ai.ctl.abort(); });
+document.getElementById('aiForm').addEventListener('submit', function(e){
+  e.preventDefault();
+  var ta = document.getElementById('aiInput');
+  var t = ta.value.trim();
+  if(!t || ai.busy) return;
+  ta.value = '';
+  addMsg('me', t);
+  askAI(t);
+});
+(async function(){
+  var s = null;
+  try{ if(window.claude && typeof window.claude.use === 'function'){ s = await window.claude.use('sample'); } }catch(e){ s = null; }
+  if(!s){ aiUnavailable(); return; }
+  ai.sample = s;
+  document.getElementById('aiExam').disabled = false;
+  document.getElementById('aiSend').disabled = false;
+})();
+
+/* Start */
+showView(location.hash.slice(1), false);
+})();
+</script>
