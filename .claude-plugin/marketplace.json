@@ -15,6 +15,11 @@
       "description": "Kritisches Nachfragen zu Plänen, Entscheidungen und Ideen"
     },
     {
+      "name": "jev-ultrafast",
+      "source": "./plugins/jev-ultrafast",
+      "description": "Browser-Agent Jev Ultrafast: klickt, tippt und sucht in einem eigenen Chrome, Ergebnis wird geprüft"
+    },
+    {
       "name": "agency-dev",
       "source": "./plugins/agency-dev",
       "description": "Entwicklung und Architektur: Architekten, Code-Review, Frontend, Backend, Git, Doku"
