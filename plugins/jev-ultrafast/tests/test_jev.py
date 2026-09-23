@@ -7,6 +7,7 @@ import importlib.util
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 SCRIPT = Path(__file__).resolve().parents[1] / "skills" / "jev" / "scripts" / "jev.py"
 spec = importlib.util.spec_from_file_location("jev", SCRIPT)
@@ -179,6 +180,42 @@ class TabAndWindow(unittest.TestCase):
             raise RuntimeError("Browser window not found")
 
         self.assertEqual(jev.maximize_window(broken, "t"), {"fehler": "RuntimeError: Browser window not found"})
+
+# Selbst signierte Test-CA; Fingerabdruck von OpenSSL:
+# openssl x509 -pubkey -noout | openssl pkey -pubin -outform der | openssl dgst -sha256 -binary | base64
+TEST_CA = """-----BEGIN CERTIFICATE-----
+MIIBgzCCASmgAwIBAgIUBZ/gJRHx7tA6tYXApJ3yTcVzetMwCgYIKoZIzj0EAwIw
+FjEUMBIGA1UEAwwLSmV2IFRlc3QgQ0EwIBcNMjYwOTIzMTg1NjMzWhgPMjEyNjA4
+MzAxODU2MzNaMBYxFDASBgNVBAMMC0pldiBUZXN0IENBMFkwEwYHKoZIzj0CAQYI
+KoZIzj0DAQcDQgAE2VKsD18EEXku+4GN4qaEro8o2pS6o4DvUPtEo+DRWKvszHSp
+wT1La9MNZCE9GQmu3/bh5JIUsiZN+95l8ru+DKNTMFEwHQYDVR0OBBYEFDOi1oYN
+vVDCZFmwaQWOA29OgPZdMB8GA1UdIwQYMBaAFDOi1oYNvVDCZFmwaQWOA29OgPZd
+MA8GA1UdEwEB/wQFMAMBAf8wCgYIKoZIzj0EAwIDSAAwRQIgcymZ8YvbL87Wnxdr
+7Fk7Fo9qOB87KEwYqJ3y4wIf0b4CIQCGwkHBSQ6sy0pO+isE9o91RhUDNDR4D2ub
+Rv18JRMWFA==
+-----END CERTIFICATE-----
+"""
+TEST_CA_PIN = "wSKBf4a5xob7ivQ22WG99l5UO/MJ/eQs11b7IPeWPsw="
+
+
+class ProxyCa(unittest.TestCase):
+    def test_pin_matches_openssl_and_duplicates_collapse(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "ca.crt"
+            path.write_text(TEST_CA + TEST_CA, encoding="ascii")
+            with patch.dict(jev.os.environ, {"JEV_PROXY_CA": str(path)}), \
+                    patch.object(jev.Path, "home", return_value=Path(tmp)):
+                self.assertEqual(jev.proxy_ca_pins(), [TEST_CA_PIN])
+
+    def test_cloud_location_is_found_without_variable(self):
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(jev.os.environ), \
+                patch.object(jev.Path, "home", return_value=Path(tmp)):
+            jev.os.environ.pop("JEV_PROXY_CA", None)
+            self.assertEqual(jev.proxy_ca_pins(), [])
+            (Path(tmp) / ".ccr").mkdir()
+            (Path(tmp) / ".ccr" / "agent-proxy-ca.crt").write_text(TEST_CA, encoding="ascii")
+            self.assertEqual(jev.proxy_ca_pins(), [TEST_CA_PIN])
+
 
 if __name__ == "__main__":
     unittest.main()

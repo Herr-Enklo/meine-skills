@@ -131,14 +131,18 @@ Der DevTools-Port 9333 ist nur auf 127.0.0.1 offen. Jedes Programm auf dem eigen
 
 ## Web-Session auf claude.ai/code
 
-Die Cloud-Umgebung hat Chromium, das Skript startet ihn headless. Was fehlt, sind Netz und Schlüssel. Beides stellt der Nutzer in den Einstellungen der Umgebung ein (Umgebungsmenü in der Titelleiste der Session, dann Bearbeiten):
+Die Cloud-Umgebung hat Chromium, das Skript startet ihn headless. Was fehlt, sind Netz und Schlüssel. Beides stellt der Nutzer in den Einstellungen der Umgebung ein: auf claude.ai/code links „Neu“, über dem Eingabefeld den Wolken-Knopf mit dem Namen der Umgebung öffnen, mit der Maus auf die Umgebung, dann das Zahnrad rechts. Das Menü neben dem Sessiontitel gehört nur zum Repository. Im Dialog „Cloud-Umgebung bearbeiten“:
 
 1. Netzwerkzugriff: `openrouter.ai` zu den erlaubten Domains hinzufügen (bei TypeSafe direkt `api.typesafe.ai`). GitHub und PyPI braucht uv für die Installation; in der Umgebung für meine-skills waren beide am 23.09.2026 schon erreichbar, openrouter.ai und api.typesafe.ai dagegen gesperrt.
-2. Netzwerkzugriff auch für jede Seite, die Jev öffnen soll. Chromium geht über denselben Proxy wie alles andere im Container; am 23.09.2026 war auch `de.wikipedia.org` gesperrt. Entweder die Domains einzeln erlauben, etwa `de.wikipedia.org` und `en.wikipedia.org`, oder eine Zugriffsstufe mit vollem Internetzugang wählen. Anfragen, die Chromium von sich aus an Google schickt (`www.google.com`, `redirector.gvt1.com`), dürfen gesperrt bleiben.
-3. Umgebungsvariable `OPENROUTER_API_KEY` mit dem Schlüssel anlegen. Eine `.env`-Datei gibt es in der Cloud nicht; das Skript liest die Variable direkt.
+2. Netzwerkzugriff auch für jede Seite, die Jev öffnen soll. Chromium geht über denselben Proxy wie alles andere im Container; am 23.09.2026 war auch `de.wikipedia.org` gesperrt. Entweder Netzwerkzugriff „Benutzerdefiniert“ mit einer Domain pro Zeile, etwa `de.wikipedia.org` und `en.wikipedia.org`, und dem Häkchen bei der Standardliste der Paketmanager (braucht uv), oder „Vollständig“ für jede Seite. „Vollständig“ gilt für alle Sessions der Umgebung; wer das nur für Jev will, legt dafür eine eigene Umgebung an. Anfragen, die Chromium von sich aus an Google schickt (`www.google.com`, `redirector.gvt1.com`), dürfen gesperrt bleiben.
+3. Unter „Umgebungsvariablen“ die Zeile `OPENROUTER_API_KEY=sk-or-v1-...` eintragen, in einer Zeile. Eine `.env`-Datei gibt es in der Cloud nicht; das Skript liest die Variable direkt. „API-Anmeldedaten“ taugen dafür nicht: Dort sieht die Session den Schlüssel nicht, das Skript braucht ihn aber als Variable.
 
 Eine gesperrte Seite erkennt man an `inspect`: Der Titel ist nur der Hostname, und die Elementliste ist leer, weil Chromium seine Fehlerseite zeigt. Ein gesperrtes openrouter.ai zeigt sich im `run` als „Model connection failed“.
 
 Die Änderung gilt ab der nächsten neuen Session. Den laufenden Chrome sieht man in der Cloud nicht; `--screenshot` liefert ein Bild der Endseite.
 
-Die Beschreibung der Zugriffsstufen steht unter https://code.claude.com/docs/en/claude-code-on-the-web.
+Der Proxy der Cloud stellt Chromium für HTTPS eigene Zertifikate aus, ausgestellt von seiner CA („CCR Upstream Proxy CA“). curl und Python vertrauen ihr über `SSL_CERT_FILE`, Chromium nicht; bis 1.2.1 endete deshalb jede HTTPS-Seite mit `ERR_CERT_AUTHORITY_INVALID`. Das Skript liest die CA aus `~/.ccr/agent-proxy-ca.crt` und gibt Chromium beim Start ihren Fingerabdruck mit (`--ignore-certificate-errors-spki-list`). Chromium nimmt dann zusätzlich genau die Zertifikate dieser CA an. `status` zeigt unter `proxy_ca`, wie viele CAs gefunden wurden. Für einen eigenen Proxy mit eigener CA den Pfad zur PEM-Datei in `JEV_PROXY_CA` setzen. Läuft Chromium schon von vorher, einmal `stop`, damit er mit dem Fingerabdruck neu startet.
+
+Seiten mit Bot-Schutz sperren den Chromium in der Cloud fast immer: Er kommt aus einem Rechenzentrum, läuft ohne Fenster und hat ein leeres Profil. Skyscanner leitete am 23.09.2026 auf eine Captcha-Seite von PerimeterX um. Solche Seiten lokal laufen lassen, wo der Nutzer ein Captcha selbst lösen kann; umgangen wird es nicht.
+
+Die Beschreibung der Zugriffsstufen und des Dialogs steht unter https://code.claude.com/docs/en/cloud-environments.
