@@ -23,6 +23,7 @@ Schlüssel kommen aus der Umgebung oder aus ~/.jev/.env und werden nie ausgegebe
 """
 
 import argparse
+import functools
 import glob
 import json
 import os
@@ -144,6 +145,10 @@ def prepare_runtime(settings):
         post_json.jev_skill = True
         model.post_json = post_json
 
+    from jev_ultrafast import agent
+
+    agent.Browser = tab_browser()
+
 
 # ---------------------------------------------------------------- Chrome
 
@@ -227,6 +232,116 @@ def start_chrome(headless=None):
             break
         time.sleep(0.25)
     raise RuntimeError(f"Chrome antwortet nicht auf {CDP_URL}. Läuft schon ein Chrome mit diesem Profil ohne Port?")
+
+
+# ---------------------------------------------------------------- Tab und Fenster
+
+# Jev setzt diese Seitengröße fest; mit ihr ist er gemessen (docs/performance.md im Jev-Repo).
+VIEW_WIDTH, VIEW_HEIGHT = 1120, 780
+
+
+def front_tab(cdp):
+    """Der Tab, den der Nutzer vor sich hat.
+
+    Jev legt sonst je Lauf einen Hintergrund-Tab an, damit er im Alltags-Chrome keinen fremden Tab
+    anfasst. Dieser Chrome gehört Jev allein; neue Tabs häufen sich nur und laufen am Nutzer vorbei.
+    """
+    pages = [t for t in cdp("Target.getTargets")["targetInfos"]
+             if t["type"] == "page" and not t["url"].startswith(("devtools://", "chrome-extension://"))]
+    for page in pages:
+        session = None
+        try:
+            session = cdp("Target.attachToTarget", targetId=page["targetId"], flatten=True)["sessionId"]
+            state = cdp("Runtime.evaluate", session_id=session, expression="document.visibilityState",
+                        returnByValue=True)
+            if state.get("result", {}).get("value") == "visible":
+                return page["targetId"]
+        except Exception:
+            pass
+        finally:
+            if session:
+                try:
+                    cdp("Target.detachFromTarget", sessionId=session)
+                except Exception:
+                    pass
+    # Kein Tab sichtbar, etwa bei minimiertem Fenster. Versteckte Tabs bleiben unberührt,
+    # darunter der eigene Tab des Browser-Harness-Daemons.
+    return cdp("Target.createTarget", url="about:blank")["targetId"]
+
+
+def fit_window(cdp, target, evaluate):
+    """Fenster so groß wie Jevs Seite, sonst steht sie klein in einem grauen Rahmen."""
+    try:
+        window = cdp("Browser.getWindowForTarget", targetId=target)
+        state = window["bounds"].get("windowState", "normal")
+        if state == "minimized":
+            return
+        if state != "normal":
+            cdp("Browser.setWindowBounds", windowId=window["windowId"], bounds={"windowState": "normal"})
+            time.sleep(0.3)
+        frame_width, frame_height = evaluate("[outerWidth - innerWidth, outerHeight - innerHeight]")
+        # Unplausible Werte kommen von einer Seitengröße, die ein früherer Lauf am Tab hinterlassen hat.
+        if 0 <= frame_width <= 200 and 0 <= frame_height <= 400:
+            cdp("Browser.setWindowBounds", windowId=window["windowId"],
+                bounds={"width": VIEW_WIDTH + frame_width, "height": VIEW_HEIGHT + frame_height})
+    except Exception:
+        pass  # Nur Darstellung; Jev arbeitet auch ohne.
+
+
+@functools.cache
+def tab_browser():
+    """Jevs Browser, aber im vorderen Tab. Erst nach prepare_runtime aufrufen."""
+    from browser_harness.admin import ensure_daemon
+    from browser_harness.helpers import cdp
+    from jev_ultrafast.browser import Browser
+
+    class TabBrowser(Browser):
+        def __init__(self, url):
+            # Wie Browser.__init__ im gepinnten Commit, bis auf Tab und Fenster.
+            ensure_daemon()
+            self.target = front_tab(cdp)
+            self.session = cdp("Target.attachToTarget", targetId=self.target, flatten=True)["sessionId"]
+            fit_window(cdp, self.target, self.evaluate)
+            self.call("Emulation.setDeviceMetricsOverride", width=VIEW_WIDTH, height=VIEW_HEIGHT,
+                      deviceScaleFactor=1, mobile=False)
+            self.call("Emulation.setFocusEmulationEnabled", enabled=True)
+            self.call("Page.navigate", url=url)
+            deadline = time.monotonic() + 15
+            while time.monotonic() < deadline:
+                if self.evaluate("document.readyState") == "complete":
+                    break
+                time.sleep(0.02)
+
+        def release(self):
+            """Tab dem Nutzer überlassen: Die Seite füllt wieder das Fenster, Jevs Sitzung endet.
+
+            Die Sitzung hängt am Daemon, nicht an diesem Prozess. Ohne Lösen bliebe die feste
+            Seitengröße am Tab, bis der Daemon endet.
+            """
+            if not self.target:
+                return
+            for method, params in (("Emulation.clearDeviceMetricsOverride", {}),
+                                   ("Emulation.setFocusEmulationEnabled", {"enabled": False})):
+                try:
+                    self.call(method, **params)
+                except Exception:
+                    pass
+            try:
+                cdp("Target.detachFromTarget", sessionId=self.session)
+            except Exception:
+                pass
+            self.target = None
+
+        def close(self):
+            """Seite leeren statt Tab schließen: Mit dem letzten Tab ginge das Fenster zu."""
+            if self.target:
+                try:
+                    self.call("Page.navigate", url="about:blank")
+                except Exception:
+                    pass
+                self.release()
+
+    return TabBrowser
 
 
 # ---------------------------------------------------------------- Ausführung
@@ -334,7 +449,9 @@ def run_goal(url, goal, *, expect_url=None, expect_text=(), max_steps=40, timeou
             result["screenshot_error"] = str(exc)
     if error:
         result["error"] = error
-    if not keep_open:
+    if keep_open:
+        agent.browser.release()
+    else:
         agent.close()
     return result
 
@@ -362,9 +479,7 @@ def cmd_chrome(args, settings):
 def cmd_inspect(args, settings):
     start_chrome()
     prepare_runtime(settings)
-    from jev_ultrafast import Browser
-
-    browser = Browser(http_url(args.url))
+    browser = tab_browser()(http_url(args.url))
     try:
         page = browser.observe(screenshot=False)
         result = {"url": page["url"], "title": page["title"], "elements": elements_table(page),
@@ -373,7 +488,9 @@ def cmd_inspect(args, settings):
             result["screenshot"] = save_screenshot(browser, args.screenshot)
         return result, 0
     finally:
-        if not args.keep_open:
+        if args.keep_open:
+            browser.release()
+        else:
             browser.close()
 
 
