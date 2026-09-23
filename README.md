@@ -9,6 +9,7 @@ Auswahl an Agents, versioniert und auf jedem Rechner installierbar.
 /plugin marketplace add Herr-Enklo/meine-skills
 /plugin install paketierung@meine-skills
 /plugin install grill-me@meine-skills
+/plugin install jev-ultrafast@meine-skills
 ```
 
 Danach `/reload-plugins`, falls die Installation das meldet.
@@ -35,6 +36,7 @@ Beschreibung Platz im Systemprompt jeder Session.
 |---|---|---|
 | `paketierung` | Skills für das Paketierungsprojekt | 1 Skill |
 | `grill-me` | Kritisches Nachfragen zu Plänen, Entscheidungen und Ideen | 1 Skill |
+| `jev-ultrafast` | Browser-Agent Jev Ultrafast: Webseiten bedienen lassen, Ergebnis prüfen | 1 Skill mit Skript |
 | `agency-dev` | Entwicklung und Architektur | 12 Agents |
 | `agency-ops` | Betrieb und Infrastruktur | 9 Agents |
 | `agency-security` | Sicherheit | 10 Agents |
@@ -61,12 +63,46 @@ Skills rufst du als Slash-Befehl auf:
 ```
 /paketierung:code-review <PR-URL oder Dateipfad>
 /grill-me:grill-me <Plan oder Idee>
+/jev-ultrafast:jev <Browseraufgabe>
 ```
+
+In Web-Sessions auf diesem Repo heißt der Jev-Skill nur `/jev` (siehe unten).
 
 Agents sprichst du im Gespräch an oder lässt Claude sie selbst auswählen:
 
 ```
 Nutze engineering-code-reviewer für diesen Diff.
+```
+
+## jev-ultrafast
+
+[Jev Ultrafast](https://github.com/browser-use/jev-ultrafast) von Browser Use und TypeSafe
+ist ein Browser-Agent: Er liest die Bedienelemente einer Seite als nummerierte Tabelle,
+das Entscheidungsmodell Jev wählt pro Schritt Operation und Element, ein kleines
+Sprachmodell schreibt den Text für Eingabefelder. Der Skill macht daraus ein Werkzeug
+für Claude: Claude formuliert das Ziel und die Prüfkriterien, Jev klickt, Claude prüft
+das Ergebnis auf der Endseite.
+
+Das Skript `plugins/jev-ultrafast/skills/jev/scripts/jev.py` läuft über
+`uv run --script`. uv holt Python 3.12 und Jev in einer festen Version (Commit
+`1231850`, alle Pakete mit Prüfsummen in `jev.py.lock`). Jev steuert einen eigenen
+Chrome mit getrenntem Profil unter `~/.jev/chrome-profile`, nie den Alltags-Chrome.
+Unter Windows und macOS öffnet sich das Fenster sichtbar, in der Cloud läuft Chromium
+headless. Die Telemetrie von Browser Harness ist abgeschaltet.
+
+Gebraucht wird ein OpenRouter-Schlüssel in `~/.jev/.env` (`OPENROUTER_API_KEY=...`).
+Er deckt Jev (`typesafe/jev-1.13`) und das Textmodell ab. Ein TypeSafe-Schlüssel geht
+auch. Einrichtung Schritt für Schritt: `plugins/jev-ultrafast/skills/jev/einrichtung.md`.
+
+Getestet am 23.09.2026 in einer Web-Session mit Chromium 141: `status`, `chrome`,
+`inspect`, `stop` und ein kompletter `run` gegen nachgebaute Modelle
+(`plugins/jev-ultrafast/tests/e2e_offline.py`: tippen, Liste auswählen, zwei Klicks,
+Abschlussprüfung). Ein Lauf mit den echten Modellen steht aus, weil die Cloud-Umgebung
+openrouter.ai und api.typesafe.ai sperrt.
+
+```
+python -m unittest discover -s plugins/jev-ultrafast/tests
+python plugins/jev-ultrafast/tests/e2e_offline.py
 ```
 
 ## Agent-Katalog
@@ -197,10 +233,10 @@ Ordner nicht.
 
 ### Was in diesem Repo eingestellt ist
 
-`.claude/agents/` enthält die 62 Agents und `.claude/skills/` den Paketierungs-Skill,
-damit Web-Sessions beides haben. Damit lokale Sessions sie nicht zusätzlich über die
-global installierten Plugins bekommen und dadurch doppelt führen, stehen alle neun
-Plugins in `.claude/settings.json` auf `false`. Das Projekt-Setting sticht die
+`.claude/agents/` enthält die 62 Agents und `.claude/skills/` den Paketierungs-Skill und
+den Jev-Skill, damit Web-Sessions sie haben. Damit lokale Sessions sie nicht zusätzlich
+über die global installierten Plugins bekommen und dadurch doppelt führen, stehen diese
+zehn Plugins in `.claude/settings.json` auf `false`. Das Projekt-Setting sticht die
 Nutzer-Einstellung, und zwar nur in diesem Repo: in anderen Projekten greifen die
 global installierten Plugins weiter.
 
@@ -226,6 +262,12 @@ cp plugins/agency-dev/NOTICE.md .claude/agents/NOTICE.md
 Der Skill wird von Hand nachgezogen: `plugins/paketierung/skills/code-review/SKILL.md`
 nach `.claude/skills/paketierung-code-review/SKILL.md` kopieren und die Zeile
 `name: paketierung-code-review` im Frontmatter wieder ergänzen.
+
+Der Jev-Skill wird als ganzer Ordner kopiert, Skript und Lockfile gehören dazu:
+
+```
+rm -rf .claude/skills/jev && cp -r plugins/jev-ultrafast/skills/jev .claude/skills/jev
+```
 
 ## Sicherheit
 
