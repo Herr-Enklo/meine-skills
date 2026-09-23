@@ -134,7 +134,10 @@ Der DevTools-Port 9333 ist nur auf 127.0.0.1 offen. Jedes Programm auf dem eigen
 Die Cloud-Umgebung hat Chromium, das Skript startet ihn headless. Was fehlt, sind Netz und Schlüssel. Beides stellt der Nutzer in den Einstellungen der Umgebung ein (Umgebungsmenü in der Titelleiste der Session, dann Bearbeiten):
 
 1. Netzwerkzugriff: `openrouter.ai` zu den erlaubten Domains hinzufügen (bei TypeSafe direkt `api.typesafe.ai`). GitHub und PyPI braucht uv für die Installation; in der Umgebung für meine-skills waren beide am 23.09.2026 schon erreichbar, openrouter.ai und api.typesafe.ai dagegen gesperrt.
-2. Umgebungsvariable `OPENROUTER_API_KEY` mit dem Schlüssel anlegen. Eine `.env`-Datei gibt es in der Cloud nicht; das Skript liest die Variable direkt.
+2. Netzwerkzugriff auch für jede Seite, die Jev öffnen soll. Chromium geht über denselben Proxy wie alles andere im Container; am 23.09.2026 war auch `de.wikipedia.org` gesperrt. Entweder die Domains einzeln erlauben, etwa `de.wikipedia.org` und `en.wikipedia.org`, oder eine Zugriffsstufe mit vollem Internetzugang wählen. Anfragen, die Chromium von sich aus an Google schickt (`www.google.com`, `redirector.gvt1.com`), dürfen gesperrt bleiben.
+3. Umgebungsvariable `OPENROUTER_API_KEY` mit dem Schlüssel anlegen. Eine `.env`-Datei gibt es in der Cloud nicht; das Skript liest die Variable direkt.
+
+Eine gesperrte Seite erkennt man an `inspect`: Der Titel ist nur der Hostname, und die Elementliste ist leer, weil Chromium seine Fehlerseite zeigt. Ein gesperrtes openrouter.ai zeigt sich im `run` als „Model connection failed“.
 
 Die Änderung gilt ab der nächsten neuen Session. Den laufenden Chrome sieht man in der Cloud nicht; `--screenshot` liefert ein Bild der Endseite.
 
