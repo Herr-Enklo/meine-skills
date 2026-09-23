@@ -97,8 +97,10 @@ auch. Einrichtung Schritt für Schritt: `plugins/jev-ultrafast/skills/jev/einric
 Getestet am 23.09.2026 in einer Web-Session mit Chromium 141: `status`, `chrome`,
 `inspect`, `stop` und ein kompletter `run` gegen nachgebaute Modelle
 (`plugins/jev-ultrafast/tests/e2e_offline.py`: tippen, Liste auswählen, zwei Klicks,
-Abschlussprüfung). Ein Lauf mit den echten Modellen steht aus, weil die Cloud-Umgebung
-openrouter.ai und api.typesafe.ai sperrt.
+Abschlussprüfung). Mit den echten Modellen lief Jev am selben Tag unter Windows mit
+Chrome und einem OpenRouter-Schlüssel: Der Wikipedia-Artikel zu Berlin war danach offen.
+In der Cloud-Umgebung steht das noch aus, weil sie openrouter.ai und api.typesafe.ai
+sperrt.
 
 ```
 python -m unittest discover -s plugins/jev-ultrafast/tests
