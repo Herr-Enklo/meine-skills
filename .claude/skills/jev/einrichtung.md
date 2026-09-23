@@ -76,7 +76,7 @@ Der Schlüssel gehört nicht in den Chat. Ist er doch dort gelandet, bei OpenRou
    /reload-plugins
    ```
 
-   Das `update` braucht es, wenn der Marketplace schon vor dem Jev-Plugin hinzugefügt wurde; seine lokale Kopie kennt Jev dann noch nicht. Fehlt der Marketplace ganz, vorher `/plugin marketplace add Herr-Enklo/meine-skills`.
+   Das `update` braucht es, wenn der Marketplace schon vor dem Jev-Plugin hinzugefügt wurde; seine lokale Kopie kennt Jev dann noch nicht. Fehlt der Marketplace ganz, vorher `/plugin marketplace add Herr-Enklo/meine-skills`. Ist das Plugin schon installiert und im Repo neuer, holen es `claude plugin marketplace update meine-skills` und `claude plugin update jev-ultrafast@meine-skills` im Terminal; danach `/reload-plugins`.
 
    Von Hand in PowerShell geht es auch. Im Ordner `.jev` liegen nur Schlüssel und Chrome-Profil; das Skript liegt nach der Plugin-Installation unter `.claude\plugins` oder im eigenen Klon von meine-skills. Finden lässt es sich so:
 

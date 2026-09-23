@@ -14,6 +14,20 @@ Auswahl an Agents, versioniert und auf jedem Rechner installierbar.
 
 Danach `/reload-plugins`, falls die Installation das meldet.
 
+### Aktualisieren
+
+Claude Code kopiert installierte Plugins in einen Cache und holt eine neue Fassung nur,
+wenn die `version` in der `plugin.json` des Plugins gestiegen ist. Wer hier ein Plugin
+ändert, zählt deshalb dort die Version hoch. Auf dem Rechner holt man die neue Fassung
+im Terminal, nicht in Claude Code:
+
+```
+claude plugin marketplace update meine-skills
+claude plugin update jev-ultrafast@meine-skills
+```
+
+Danach in einer laufenden Session `/reload-plugins` oder Claude Code neu starten.
+
 Die Agent-Plugins installierst du einzeln, je nachdem was du brauchst:
 
 ```

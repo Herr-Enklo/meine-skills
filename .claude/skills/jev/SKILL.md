@@ -27,7 +27,7 @@ uv lädt beim ersten Aufruf Python 3.12 und die gepinnte Jev-Version (Commit `12
 | `run --url URL --goal ZIEL ...` | Ziel von Jev ausführen lassen | kostenpflichtige API-Aufrufe |
 | `stop` | Automatisierungs-Chrome schließen | keine |
 
-Jev arbeitet in einem eigenen Chrome mit eigenem Profil unter `~/.jev/chrome-profile`, nie im Alltags-Chrome des Nutzers. `run` und `inspect` starten ihn bei Bedarf selbst. Auf Windows und macOS öffnet er sich sichtbar, der Nutzer kann zuschauen. Unter Linux ohne Bildschirm, etwa in einer Web-Session, läuft er headless.
+Jev arbeitet in einem eigenen Chrome mit eigenem Profil unter `~/.jev/chrome-profile`, nie im Alltags-Chrome des Nutzers. `run` und `inspect` starten ihn bei Bedarf selbst. Auf Windows und macOS öffnet er sich sichtbar, der Nutzer kann zuschauen. Unter Linux ohne Bildschirm, etwa in einer Web-Session, läuft er headless. Jev arbeitet im Tab, der in diesem Chrome gerade vorne ist; was dort offen war, wird überschrieben. Läufe deshalb nacheinander starten, nie zwei gleichzeitig. Während des Laufs bringt das Skript das Fenster auf Jevs feste Seitengröße von 1120×780, danach füllt die Seite wieder das Fenster.
 
 ## Ablauf
 
@@ -45,7 +45,7 @@ Jev arbeitet in einem eigenen Chrome mit eigenem Profil unter `~/.jev/chrome-pro
      --expect-text "General relativity"
    ```
 
-   Lange Ziele in eine UTF-8-Datei schreiben und `--goal-file` nehmen. Voreinstellung: höchstens 40 Runden und 180 Sekunden, änderbar mit `--max-steps` und `--timeout`. Mit `--keep-open` bleibt der Tab offen, damit der Nutzer das Ergebnis selbst ansehen kann. `--screenshot DATEI.png` speichert ein Bild der Endseite; in einer Web-Session, wo der Chrome unsichtbar läuft, schick es dem Nutzer.
+   Lange Ziele in eine UTF-8-Datei schreiben und `--goal-file` nehmen. Voreinstellung: höchstens 40 Runden und 180 Sekunden, änderbar mit `--max-steps` und `--timeout`. Mit `--keep-open` bleibt die Endseite im Tab stehen, damit der Nutzer das Ergebnis selbst ansehen kann; ohne wird der Tab danach geleert. `--screenshot DATEI.png` speichert ein Bild der Endseite; in einer Web-Session, wo der Chrome unsichtbar läuft, schick es dem Nutzer.
 
 6. Ergebnis lesen. Auf stderr steht jeder Schritt, auf stdout am Ende ein JSON-Objekt.
 

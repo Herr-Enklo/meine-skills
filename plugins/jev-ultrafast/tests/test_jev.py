@@ -7,6 +7,7 @@ import importlib.util
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 SCRIPT = Path(__file__).resolve().parents[1] / "skills" / "jev" / "scripts" / "jev.py"
 spec = importlib.util.spec_from_file_location("jev", SCRIPT)
@@ -96,6 +97,62 @@ class Outcome(unittest.TestCase):
 
     def test_daemon_name_is_valid_for_browser_harness(self):
         self.assertRegex(jev.DAEMON, r"\A[A-Za-z0-9_-]{1,64}\Z")
+
+
+class FakeCdp:
+    """Ersatz für browser_harness.helpers.cdp: Tabs mit Sichtbarkeit, Fenster mit Zustand."""
+
+    def __init__(self, tabs, window_state="normal"):
+        self.tabs = tabs  # (targetId, url, visibilityState)
+        self.window_state = window_state
+        self.calls = []
+
+    def __call__(self, method, session_id=None, **params):
+        self.calls.append((method, params))
+        if method == "Target.getTargets":
+            infos = [{"targetId": t, "type": "page", "url": u} for t, u, _ in self.tabs]
+            return {"targetInfos": infos + [{"targetId": "w", "type": "service_worker", "url": "https://x/sw.js"}]}
+        if method == "Target.attachToTarget":
+            return {"sessionId": "s-" + params["targetId"]}
+        if method == "Runtime.evaluate":
+            state = next(v for t, _, v in self.tabs if "s-" + t == session_id)
+            return {"result": {"value": state}}
+        if method == "Target.createTarget":
+            return {"targetId": "neu"}
+        if method == "Browser.getWindowForTarget":
+            return {"windowId": 1, "bounds": {"windowState": self.window_state}}
+        return {}
+
+    def methods(self, name):
+        return [params for method, params in self.calls if method == name]
+
+
+class TabAndWindow(unittest.TestCase):
+    def test_uses_visible_tab_and_leaves_probes_detached(self):
+        cdp = FakeCdp([("dev", "devtools://devtools/x", "visible"), ("daemon", "about:blank", "hidden"),
+                       ("vorne", "https://de.wikipedia.org/", "visible")])
+        self.assertEqual(jev.front_tab(cdp), "vorne")
+        self.assertEqual([p["targetId"] for p in cdp.methods("Target.attachToTarget")], ["daemon", "vorne"])
+        self.assertEqual(len(cdp.methods("Target.detachFromTarget")), 2)
+        self.assertEqual(cdp.methods("Target.createTarget"), [])
+
+    def test_opens_foreground_tab_when_none_is_visible(self):
+        cdp = FakeCdp([("daemon", "about:blank", "hidden")])
+        self.assertEqual(jev.front_tab(cdp), "neu")
+        self.assertEqual(cdp.methods("Target.createTarget"), [{"url": "about:blank"}])
+
+    def test_unmaximizes_and_fits_window_to_page(self):
+        cdp = FakeCdp([], window_state="maximized")
+        with patch.object(jev.time, "sleep"):
+            jev.fit_window(cdp, "t", lambda _: [16, 95])
+        self.assertEqual([p["bounds"] for p in cdp.methods("Browser.setWindowBounds")],
+                         [{"windowState": "normal"}, {"width": jev.VIEW_WIDTH + 16, "height": jev.VIEW_HEIGHT + 95}])
+
+    def test_leaves_minimized_window_and_implausible_frames_alone(self):
+        for state, frame in (("minimized", [16, 95]), ("normal", [694, -72])):
+            cdp = FakeCdp([], window_state=state)
+            jev.fit_window(cdp, "t", lambda _, frame=frame: frame)
+            self.assertEqual(cdp.methods("Browser.setWindowBounds"), [], state)
 
 
 if __name__ == "__main__":
