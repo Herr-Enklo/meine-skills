@@ -241,7 +241,7 @@ VIEW_WIDTH, VIEW_HEIGHT = 1120, 780
 
 
 def front_tab(cdp):
-    """Der Tab, den der Nutzer vor sich hat.
+    """Der Tab, den der Nutzer vor sich hat, und ob er neu angelegt wurde.
 
     Jev legt sonst je Lauf einen Hintergrund-Tab an, damit er im Alltags-Chrome keinen fremden Tab
     anfasst. Dieser Chrome gehört Jev allein; neue Tabs häufen sich nur und laufen am Nutzer vorbei.
@@ -255,7 +255,7 @@ def front_tab(cdp):
             state = cdp("Runtime.evaluate", session_id=session, expression="document.visibilityState",
                         returnByValue=True)
             if state.get("result", {}).get("value") == "visible":
-                return page["targetId"]
+                return page["targetId"], False
         except Exception:
             pass
         finally:
@@ -266,26 +266,38 @@ def front_tab(cdp):
                     pass
     # Kein Tab sichtbar, etwa bei minimiertem Fenster. Versteckte Tabs bleiben unberührt,
     # darunter der eigene Tab des Browser-Harness-Daemons.
-    return cdp("Target.createTarget", url="about:blank")["targetId"]
+    return cdp("Target.createTarget", url="about:blank")["targetId"], True
 
 
 def fit_window(cdp, target, evaluate):
-    """Fenster so groß wie Jevs Seite, sonst steht sie klein in einem grauen Rahmen."""
+    """Fenster so groß wie Jevs Seite, sonst steht sie klein in einem grauen Rahmen.
+
+    Gibt zurück, was passiert ist; das Ergebnis von `run` und `inspect` zeigt es unter `fenster`.
+    """
+    report = {}
     try:
         window = cdp("Browser.getWindowForTarget", targetId=target)
-        state = window["bounds"].get("windowState", "normal")
-        if state == "minimized":
-            return
-        if state != "normal":
-            cdp("Browser.setWindowBounds", windowId=window["windowId"], bounds={"windowState": "normal"})
-            time.sleep(0.3)
-        frame_width, frame_height = evaluate("[outerWidth - innerWidth, outerHeight - innerHeight]")
+        report["vorher"] = window["bounds"]
+        if window["bounds"].get("windowState") == "minimized":
+            return report
+        # Immer erst auf normal: Chrome ändert die Größe eines maximierten Fensters nicht,
+        # und nicht jedes System meldet den Zustand verlässlich.
+        cdp("Browser.setWindowBounds", windowId=window["windowId"], bounds={"windowState": "normal"})
+        deadline = time.monotonic() + 2
+        while cdp("Browser.getWindowForTarget", targetId=target)["bounds"].get("windowState") != "normal":
+            if time.monotonic() > deadline:
+                break
+            time.sleep(0.1)
+        time.sleep(0.2)  # bis die Seite die neue Fenstergröße kennt
+        frame_width, frame_height = report["rahmen"] = evaluate("[outerWidth - innerWidth, outerHeight - innerHeight]")
         # Unplausible Werte kommen von einer Seitengröße, die ein früherer Lauf am Tab hinterlassen hat.
         if 0 <= frame_width <= 200 and 0 <= frame_height <= 400:
             cdp("Browser.setWindowBounds", windowId=window["windowId"],
                 bounds={"width": VIEW_WIDTH + frame_width, "height": VIEW_HEIGHT + frame_height})
-    except Exception:
-        pass  # Nur Darstellung; Jev arbeitet auch ohne.
+            report["nachher"] = cdp("Browser.getWindowForTarget", targetId=target)["bounds"]
+    except Exception as exc:
+        report["fehler"] = f"{type(exc).__name__}: {exc}"  # Nur Darstellung; Jev arbeitet auch ohne.
+    return report
 
 
 @functools.cache
@@ -299,9 +311,9 @@ def tab_browser():
         def __init__(self, url):
             # Wie Browser.__init__ im gepinnten Commit, bis auf Tab und Fenster.
             ensure_daemon()
-            self.target = front_tab(cdp)
+            self.target, created = front_tab(cdp)
             self.session = cdp("Target.attachToTarget", targetId=self.target, flatten=True)["sessionId"]
-            fit_window(cdp, self.target, self.evaluate)
+            self.report = {"tab": "neu" if created else "vorhanden", **fit_window(cdp, self.target, self.evaluate)}
             self.call("Emulation.setDeviceMetricsOverride", width=VIEW_WIDTH, height=VIEW_HEIGHT,
                       deviceScaleFactor=1, mobile=False)
             self.call("Emulation.setFocusEmulationEnabled", enabled=True)
@@ -311,6 +323,10 @@ def tab_browser():
                 if self.evaluate("document.readyState") == "complete":
                     break
                 time.sleep(0.02)
+            try:
+                self.report["seite_im_lauf"] = self.evaluate("[innerWidth, innerHeight]")
+            except Exception:
+                pass
 
         def release(self):
             """Tab dem Nutzer überlassen: Die Seite füllt wieder das Fenster, Jevs Sitzung endet.
@@ -320,16 +336,24 @@ def tab_browser():
             """
             if not self.target:
                 return
+            errors = []
             for method, params in (("Emulation.clearDeviceMetricsOverride", {}),
                                    ("Emulation.setFocusEmulationEnabled", {"enabled": False})):
                 try:
                     self.call(method, **params)
-                except Exception:
-                    pass
+                except Exception as exc:
+                    errors.append(f"{method}: {exc}")
+            try:
+                time.sleep(0.2)
+                self.report["seite_danach"] = self.evaluate("[innerWidth, innerHeight]")
+            except Exception as exc:
+                errors.append(f"Seitengröße: {exc}")
             try:
                 cdp("Target.detachFromTarget", sessionId=self.session)
-            except Exception:
-                pass
+            except Exception as exc:
+                errors.append(f"Target.detachFromTarget: {exc}")
+            if errors:
+                self.report["fehler_danach"] = errors
             self.target = None
 
         def close(self):
@@ -449,6 +473,7 @@ def run_goal(url, goal, *, expect_url=None, expect_text=(), max_steps=40, timeou
             result["screenshot_error"] = str(exc)
     if error:
         result["error"] = error
+    result["fenster"] = agent.browser.report  # release und close ergänzen es noch
     if keep_open:
         agent.browser.release()
     else:
@@ -483,7 +508,7 @@ def cmd_inspect(args, settings):
     try:
         page = browser.observe(screenshot=False)
         result = {"url": page["url"], "title": page["title"], "elements": elements_table(page),
-                  "text": page["text"][:3000]}
+                  "text": page["text"][:3000], "fenster": browser.report}
         if args.screenshot:
             result["screenshot"] = save_screenshot(browser, args.screenshot)
         return result, 0

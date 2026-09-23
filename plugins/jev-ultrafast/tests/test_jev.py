@@ -121,6 +121,8 @@ class FakeCdp:
             return {"targetId": "neu"}
         if method == "Browser.getWindowForTarget":
             return {"windowId": 1, "bounds": {"windowState": self.window_state}}
+        if method == "Browser.setWindowBounds" and "windowState" in params["bounds"]:
+            self.window_state = params["bounds"]["windowState"]
         return {}
 
     def methods(self, name):
@@ -131,29 +133,50 @@ class TabAndWindow(unittest.TestCase):
     def test_uses_visible_tab_and_leaves_probes_detached(self):
         cdp = FakeCdp([("dev", "devtools://devtools/x", "visible"), ("daemon", "about:blank", "hidden"),
                        ("vorne", "https://de.wikipedia.org/", "visible")])
-        self.assertEqual(jev.front_tab(cdp), "vorne")
+        self.assertEqual(jev.front_tab(cdp), ("vorne", False))
         self.assertEqual([p["targetId"] for p in cdp.methods("Target.attachToTarget")], ["daemon", "vorne"])
         self.assertEqual(len(cdp.methods("Target.detachFromTarget")), 2)
         self.assertEqual(cdp.methods("Target.createTarget"), [])
 
     def test_opens_foreground_tab_when_none_is_visible(self):
         cdp = FakeCdp([("daemon", "about:blank", "hidden")])
-        self.assertEqual(jev.front_tab(cdp), "neu")
+        self.assertEqual(jev.front_tab(cdp), ("neu", True))
         self.assertEqual(cdp.methods("Target.createTarget"), [{"url": "about:blank"}])
 
     def test_unmaximizes_and_fits_window_to_page(self):
         cdp = FakeCdp([], window_state="maximized")
         with patch.object(jev.time, "sleep"):
-            jev.fit_window(cdp, "t", lambda _: [16, 95])
+            report = jev.fit_window(cdp, "t", lambda _: [16, 95])
         self.assertEqual([p["bounds"] for p in cdp.methods("Browser.setWindowBounds")],
                          [{"windowState": "normal"}, {"width": jev.VIEW_WIDTH + 16, "height": jev.VIEW_HEIGHT + 95}])
+        self.assertEqual(report["vorher"], {"windowState": "maximized"})
+        self.assertEqual(report["rahmen"], [16, 95])
+        self.assertNotIn("fehler", report)
 
-    def test_leaves_minimized_window_and_implausible_frames_alone(self):
-        for state, frame in (("minimized", [16, 95]), ("normal", [694, -72])):
-            cdp = FakeCdp([], window_state=state)
-            jev.fit_window(cdp, "t", lambda _, frame=frame: frame)
-            self.assertEqual(cdp.methods("Browser.setWindowBounds"), [], state)
+    def test_sets_normal_even_when_window_claims_to_be_normal(self):
+        cdp = FakeCdp([], window_state="normal")
+        with patch.object(jev.time, "sleep"):
+            jev.fit_window(cdp, "t", lambda _: [16, 95])
+        self.assertEqual(cdp.methods("Browser.setWindowBounds")[0]["bounds"], {"windowState": "normal"})
 
+    def test_leaves_minimized_window_alone(self):
+        cdp = FakeCdp([], window_state="minimized")
+        jev.fit_window(cdp, "t", lambda _: [16, 95])
+        self.assertEqual(cdp.methods("Browser.setWindowBounds"), [])
+
+    def test_keeps_size_when_frame_is_implausible(self):
+        cdp = FakeCdp([], window_state="normal")
+        with patch.object(jev.time, "sleep"):
+            report = jev.fit_window(cdp, "t", lambda _: [694, -72])
+        self.assertEqual([p["bounds"] for p in cdp.methods("Browser.setWindowBounds")], [{"windowState": "normal"}])
+        self.assertNotIn("nachher", report)
+
+    def test_reports_errors_instead_of_hiding_them(self):
+        def broken(method, session_id=None, **params):
+            raise RuntimeError("Browser window not found")
+
+        self.assertEqual(jev.fit_window(broken, "t", lambda _: [0, 0]),
+                         {"fehler": "RuntimeError: Browser window not found"})
 
 if __name__ == "__main__":
     unittest.main()
