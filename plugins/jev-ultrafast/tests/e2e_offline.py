@@ -3,7 +3,7 @@
 Startet eine Testseite und einen Ersatz für Jev und das Textmodell auf 127.0.0.1,
 dann ruft er `jev.py run` genau so auf, wie der Skill es tut. Geprüft wird der
 ganze Weg: eigener Chrome, Umleitung der Jev-Anfragen, Tippen, Klicken,
-Auswählen, Abschlussprüfung, Exit-Code und dass Jev im vorhandenen Tab arbeitet.
+Auswählen, Abschlussprüfung, Exit-Code und dass am Ende nur ein Tab offen ist.
 
     python plugins/jev-ultrafast/tests/e2e_offline.py
 
@@ -135,7 +135,6 @@ def main():
         uv = ["uv", "run", "--quiet", "--script", str(SCRIPT)]
         try:
             subprocess.run(uv + ["chrome"], env=env, capture_output=True, timeout=60, check=True)
-            first_tab = page_tabs(9344)[0]["id"]
             run = subprocess.run(
                 uv + ["run", "--url", base + "/", "--goal", GOAL, "--keep-open",
                       "--expect-url", base + "/buch", "--expect-text", "Der Zauberberg – Band 1"],
@@ -154,7 +153,7 @@ def main():
     assert [s["operation"] for s in result["steps"]] == ["TYPE_TEXT", "SELECT", "CLICK", "CLICK"]
     assert result["steps"][0]["text"] == "Der Zauberberg"
     assert log == expected, log
-    assert [t["id"] for t in tabs if t["url"] == base + "/buch"] == [first_tab], tabs
+    assert [t["url"] for t in tabs] == [base + "/buch"], tabs
     print("OK: kompletter Lauf ohne echte Modelle bestanden")
 
 

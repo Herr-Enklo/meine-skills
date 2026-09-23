@@ -129,6 +129,8 @@ def prepare_runtime(settings):
     os.environ["BU_NAME"] = DAEMON
     os.environ.setdefault("BH_TELEMETRY", "0")
     os.environ.setdefault("BH_UPDATE_CHECK", "0")
+    # Der Daemon setzt sonst ein Pferd vor den Titel seines Tabs, und der ist oft Jevs Arbeits-Tab.
+    os.environ.setdefault("BH_TAB_MARKER", "0")
     from jev_ultrafast import model
 
     target = settings.get("decisions_url")
@@ -236,16 +238,14 @@ def start_chrome(headless=None):
 
 # ---------------------------------------------------------------- Tab und Fenster
 
-# Jev setzt diese Seitengröße fest; mit ihr ist er gemessen (docs/performance.md im Jev-Repo).
+# Jev ist mit dieser Seitengröße gemessen (docs/performance.md im Jev-Repo). Headless bleibt es dabei.
+# Im sichtbaren Chrome füllt die Seite das maximierte Fenster; eine feste Größe stünde dort klein
+# in einem grauen Rahmen.
 VIEW_WIDTH, VIEW_HEIGHT = 1120, 780
 
 
-def front_tab(cdp):
-    """Der Tab, den der Nutzer vor sich hat, und ob er neu angelegt wurde.
-
-    Jev legt sonst je Lauf einen Hintergrund-Tab an, damit er im Alltags-Chrome keinen fremden Tab
-    anfasst. Dieser Chrome gehört Jev allein; neue Tabs häufen sich nur und laufen am Nutzer vorbei.
-    """
+def visible_tab(cdp):
+    """Der Tab, den der Nutzer vor sich hat, als (targetId, url), oder None."""
     pages = [t for t in cdp("Target.getTargets")["targetInfos"]
              if t["type"] == "page" and not t["url"].startswith(("devtools://", "chrome-extension://"))]
     for page in pages:
@@ -255,7 +255,7 @@ def front_tab(cdp):
             state = cdp("Runtime.evaluate", session_id=session, expression="document.visibilityState",
                         returnByValue=True)
             if state.get("result", {}).get("value") == "visible":
-                return page["targetId"], False
+                return page["targetId"], page["url"]
         except Exception:
             pass
         finally:
@@ -264,37 +264,50 @@ def front_tab(cdp):
                     cdp("Target.detachFromTarget", sessionId=session)
                 except Exception:
                     pass
-    # Kein Tab sichtbar, etwa bei minimiertem Fenster. Versteckte Tabs bleiben unberührt,
-    # darunter der eigene Tab des Browser-Harness-Daemons.
-    return cdp("Target.createTarget", url="about:blank")["targetId"], True
+    return None
 
 
-def fit_window(cdp, target, evaluate):
-    """Fenster so groß wie Jevs Seite, sonst steht sie klein in einem grauen Rahmen.
+def working_tab(cdp, daemon_tab):
+    """Jevs Tab für diesen Lauf und woher er stammt.
 
-    Gibt zurück, was passiert ist; das Ergebnis von `run` und `inspect` zeigt es unter `fenster`.
+    Jev legt sonst je Lauf einen Hintergrund-Tab an, damit er im Alltags-Chrome keinen fremden Tab
+    anfasst. Dieser Chrome gehört Jev allein, also arbeitet Jev im vorderen Tab. Ist der leer, etwa der
+    Starttab von Chrome, nimmt Jev den Tab, den der Browser-Harness-Daemon ohnehin für sich angelegt
+    hat, und schließt den leeren. So bleibt es bei einem Tab.
     """
+    front = visible_tab(cdp)
+    if front and (front[0] == daemon_tab or front[1] != "about:blank" or not daemon_tab):
+        return front[0], "vorne"
+    if not daemon_tab:
+        return cdp("Target.createTarget", url="about:blank")["targetId"], "neu"
+    cdp("Target.activateTarget", targetId=daemon_tab)
+    if front:
+        cdp("Target.closeTarget", targetId=front[0])
+    return daemon_tab, "daemon"
+
+
+def is_headless(cdp):
+    try:
+        return "Headless" in cdp("Browser.getVersion").get("userAgent", "")
+    except Exception:
+        return wants_headless()
+
+
+def maximize_window(cdp, target):
+    """Fenster maximieren. Gibt zurück, was passiert ist; run und inspect zeigen es unter "fenster"."""
     report = {}
     try:
         window = cdp("Browser.getWindowForTarget", targetId=target)
         report["vorher"] = window["bounds"]
-        if window["bounds"].get("windowState") == "minimized":
+        if window["bounds"].get("windowState") in ("maximized", "fullscreen"):
             return report
-        # Immer erst auf normal: Chrome ändert die Größe eines maximierten Fensters nicht,
-        # und nicht jedes System meldet den Zustand verlässlich.
-        cdp("Browser.setWindowBounds", windowId=window["windowId"], bounds={"windowState": "normal"})
+        cdp("Browser.setWindowBounds", windowId=window["windowId"], bounds={"windowState": "maximized"})
         deadline = time.monotonic() + 2
-        while cdp("Browser.getWindowForTarget", targetId=target)["bounds"].get("windowState") != "normal":
+        while cdp("Browser.getWindowForTarget", targetId=target)["bounds"].get("windowState") != "maximized":
             if time.monotonic() > deadline:
                 break
             time.sleep(0.1)
-        time.sleep(0.2)  # bis die Seite die neue Fenstergröße kennt
-        frame_width, frame_height = report["rahmen"] = evaluate("[outerWidth - innerWidth, outerHeight - innerHeight]")
-        # Unplausible Werte kommen von einer Seitengröße, die ein früherer Lauf am Tab hinterlassen hat.
-        if 0 <= frame_width <= 200 and 0 <= frame_height <= 400:
-            cdp("Browser.setWindowBounds", windowId=window["windowId"],
-                bounds={"width": VIEW_WIDTH + frame_width, "height": VIEW_HEIGHT + frame_height})
-            report["nachher"] = cdp("Browser.getWindowForTarget", targetId=target)["bounds"]
+        report["nachher"] = cdp("Browser.getWindowForTarget", targetId=target)["bounds"]
     except Exception as exc:
         report["fehler"] = f"{type(exc).__name__}: {exc}"  # Nur Darstellung; Jev arbeitet auch ohne.
     return report
@@ -302,20 +315,27 @@ def fit_window(cdp, target, evaluate):
 
 @functools.cache
 def tab_browser():
-    """Jevs Browser, aber im vorderen Tab. Erst nach prepare_runtime aufrufen."""
+    """Jevs Browser, aber in einem Tab, den der Nutzer sieht. Erst nach prepare_runtime aufrufen."""
     from browser_harness.admin import ensure_daemon
-    from browser_harness.helpers import cdp
+    from browser_harness.helpers import cdp, current_tab
     from jev_ultrafast.browser import Browser
 
     class TabBrowser(Browser):
         def __init__(self, url):
             # Wie Browser.__init__ im gepinnten Commit, bis auf Tab und Fenster.
             ensure_daemon()
-            self.target, created = front_tab(cdp)
+            try:
+                daemon_tab = current_tab()["targetId"]
+            except Exception:
+                daemon_tab = None
+            self.target, origin = working_tab(cdp, daemon_tab)
             self.session = cdp("Target.attachToTarget", targetId=self.target, flatten=True)["sessionId"]
-            self.report = {"tab": "neu" if created else "vorhanden", **fit_window(cdp, self.target, self.evaluate)}
-            self.call("Emulation.setDeviceMetricsOverride", width=VIEW_WIDTH, height=VIEW_HEIGHT,
-                      deviceScaleFactor=1, mobile=False)
+            self.report = {"tab": origin}
+            if is_headless(cdp):
+                self.call("Emulation.setDeviceMetricsOverride", width=VIEW_WIDTH, height=VIEW_HEIGHT,
+                          deviceScaleFactor=1, mobile=False)
+            else:
+                self.report.update(maximize_window(cdp, self.target))
             self.call("Emulation.setFocusEmulationEnabled", enabled=True)
             self.call("Page.navigate", url=url)
             deadline = time.monotonic() + 15
@@ -329,9 +349,9 @@ def tab_browser():
                 pass
 
         def release(self):
-            """Tab dem Nutzer überlassen: Die Seite füllt wieder das Fenster, Jevs Sitzung endet.
+            """Tab dem Nutzer überlassen: keine feste Seitengröße mehr, Jevs Sitzung endet.
 
-            Die Sitzung hängt am Daemon, nicht an diesem Prozess. Ohne Lösen bliebe die feste
+            Die Sitzung hängt am Daemon, nicht an diesem Prozess. Ohne Lösen bliebe eine feste
             Seitengröße am Tab, bis der Daemon endet.
             """
             if not self.target:
@@ -357,7 +377,7 @@ def tab_browser():
             self.target = None
 
         def close(self):
-            """Seite leeren statt Tab schließen: Mit dem letzten Tab ginge das Fenster zu."""
+            """Seite leeren statt Tab schließen: Der Tab ist womöglich der des Daemons oder der letzte."""
             if self.target:
                 try:
                     self.call("Page.navigate", url="about:blank")
