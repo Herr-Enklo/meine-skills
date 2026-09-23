@@ -23,11 +23,14 @@ Schlüssel kommen aus der Umgebung oder aus ~/.jev/.env und werden nie ausgegebe
 """
 
 import argparse
+import base64
 import functools
 import glob
+import hashlib
 import json
 import os
 import platform
+import re
 import shutil
 import subprocess
 import sys
@@ -191,6 +194,45 @@ def find_chrome():
     return None
 
 
+def der_items(data, start=0, end=None):
+    """DER-Elemente zwischen start und end als (Tag, Anfang, Inhaltsanfang, Ende)."""
+    end = len(data) if end is None else end
+    while start < end:
+        tag, length, head = data[start], data[start + 1], 2
+        if length & 0x80:
+            count = length & 0x7F
+            length, head = int.from_bytes(data[start + 2:start + 2 + count], "big"), 2 + count
+        yield tag, start, start + head, start + head + length
+        start += head + length
+
+
+def spki_sha256(der):
+    """SHA-256 über SubjectPublicKeyInfo eines Zertifikats, Base64, wie Chromium es erwartet."""
+    _, _, body, _ = next(der_items(der))
+    _, _, tbs, tbs_end = next(der_items(der, body))
+    fields = list(der_items(der, tbs, tbs_end))
+    if fields[0][0] == 0xA0:  # Version
+        fields = fields[1:]
+    _, spki_start, _, spki_end = fields[5]  # Seriennummer, Signatur, Aussteller, Gültigkeit, Inhaber, Schlüssel
+    return base64.b64encode(hashlib.sha256(der[spki_start:spki_end]).digest()).decode()
+
+
+def proxy_ca_pins():
+    """Fingerabdrücke der CA eines Proxys, der HTTPS aufbricht, etwa in der Cloud-Umgebung von Claude Code.
+
+    Der Proxy stellt dort für Chromium eigene Zertifikate aus. curl und Python vertrauen seiner CA
+    über SSL_CERT_FILE, Chromium nicht. Mit diesen Fingerabdrücken nimmt Chromium zusätzlich genau
+    die Zertifikate an, deren Kette eine dieser CAs enthält, und sonst keine.
+    """
+    pins = set()
+    for path in (os.environ.get("JEV_PROXY_CA"), Path.home() / ".ccr" / "agent-proxy-ca.crt"):
+        if path and Path(path).is_file():
+            text = Path(path).read_text(encoding="ascii", errors="ignore")
+            for block in re.findall(r"-----BEGIN CERTIFICATE-----(.+?)-----END CERTIFICATE-----", text, re.S):
+                pins.add(spki_sha256(base64.b64decode("".join(block.split()))))
+    return sorted(pins)
+
+
 def wants_headless():
     return platform.system() == "Linux" and not (os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY"))
 
@@ -218,6 +260,8 @@ def start_chrome(headless=None):
         args.append("--headless=new")
     if platform.system() == "Linux" and os.geteuid() == 0:
         args.append("--no-sandbox")  # Chrome verweigert sonst den Start als root, etwa im Cloud-Container.
+    if pins := proxy_ca_pins():
+        args.append("--ignore-certificate-errors-spki-list=" + ",".join(pins))
     args.append("about:blank")
     options = {"stdin": subprocess.DEVNULL, "stdout": subprocess.DEVNULL, "stderr": subprocess.DEVNULL}
     if platform.system() == "Windows":
@@ -514,7 +558,7 @@ def exit_code(result):
 
 def cmd_status(args, settings):
     return {**settings, "cdp_url": CDP_URL, "chrome": cdp_alive(), "chrome_binary": find_chrome(),
-            "profile": str(PROFILE), "python": platform.python_version()}, 0
+            "proxy_ca": len(proxy_ca_pins()), "profile": str(PROFILE), "python": platform.python_version()}, 0
 
 
 def cmd_chrome(args, settings):
