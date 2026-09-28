@@ -1,2 +1,4 @@
 node_modules/
 test-ergebnisse/
+# Legt Chrome beim Laden der entpackten Erweiterung an
+extension/_metadata/
