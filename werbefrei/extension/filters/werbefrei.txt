@@ -1,0 +1,121 @@
+[Adblock Plus 2.0]
+! Title: Werbefrei (eingebaut)
+! Description: Werbeserver und Werbeplätze, die auf deutschsprachigen Nachrichtenseiten vorkommen.
+!   Die Netzfilter werden beim Build in rules/werbefrei.json übersetzt und wirken sofort nach der
+!   Installation, auch ohne abonnierte Listen. Jede Domain ist mit EasyList abgeglichen; wo EasyList
+!   eine Domain nur mit Einschränkung sperrt, übernimmt diese Liste die Einschränkung.
+!
+! ------------------------------------------------------------------------------------------------
+! Werbeserver und Handelsplattformen für Werbeplätze
+! ------------------------------------------------------------------------------------------------
+||doubleclick.net^
+||googlesyndication.com^
+||googletagservices.com^
+||partner.googleadservices.com^$third-party
+||2mdn.net^$~media,third-party
+||imasdk.googleapis.com^
+||amazon-adsystem.com^
+||criteo.com^$third-party
+||criteo.net^$third-party
+||adnxs.com^
+||adnxs-simple.com^
+||rubiconproject.com^
+||pubmatic.com^
+||openx.net^
+||casalemedia.com^
+||indexww.com^
+||adform.net^
+||smartadserver.com^
+||teads.tv^
+||seedtag.com^$third-party
+||sharethrough.com^
+||3lift.com^
+||gumgum.com^$third-party
+||unrulymedia.com^
+||spotxchange.com^
+||360yield.com^
+||improvedigital.com^$third-party
+||bidswitch.net^
+||adsrvr.org^$third-party
+||media.net^$object,script,third-party,xmlhttprequest
+||lijit.com^$third-party
+||sovrn.com^$third-party
+||33across.com^$third-party
+||yieldmo.com^$third-party
+||sonobi.com^$third-party
+||contextweb.com^
+||onetag-sys.com^$third-party
+||adyoulike.com^$third-party
+||richaudience.com^$third-party
+||connectad.io^
+||vidoomy.com^$third-party
+||adelement.com^$third-party
+||adhese.com^$third-party
+||live.primis.tech^$third-party
+||innovid.com^$third-party
+||flashtalking.com^$third-party,domain=~toggo.de
+||smartclip.net^$third-party,domain=~toggo.de
+||adtech.de^$third-party
+||adtechus.com^$third-party
+!
+! Deutscher Markt: Ströer, United Internet, ProSiebenSat.1, RTL, Yieldlove und andere
+||yieldlab.net^
+||adscale.de^
+||stroeerdigitalmedia.de^$third-party
+||adition.com^$third-party
+||uimserv.net^
+||ad.71i.de^
+||adalliance.io^$third-party
+||yieldlove.com^$third-party
+||yieldlove-ad-serving.net^
+||yieldscale.com^
+||adup-tech.com^$third-party
+||ligatus.com^
+||nativendo.de^$third-party
+||adspirit.de^
+||ad4mat.de^$third-party
+!
+! Empfehlungs-Widgets mit bezahlten Beiträgen ("Das könnte Sie auch interessieren")
+||taboola.com^$third-party
+||taboolasyndication.com^$third-party
+||outbrain.com^$third-party
+||outbrainimg.com^$third-party
+||zemanta.com^$third-party
+||revcontent.com^
+||mgid.com^
+||dianomi.com^
+!
+! Messung und Zielgruppen-Abgleich für Werbeplätze
+||moatads.com^
+||adsafeprotected.com^
+||doubleverify.com^$third-party
+||id5-sync.com^
+||rlcdn.com^
+||agkn.com^
+||crwdcntrl.net^
+||eyeota.net^
+||static.ads-twitter.com^
+||ads.linkedin.com^
+!
+! Ausnahmen, die EasyList für deutsche Seiten führt (sonst funktionieren diese Seiten nicht richtig)
+@@||adform.net/adfserve/?bn=$script,domain=rewe.de
+@@||adspirit.de/adasync.min.js$domain=jetzt.de|sueddeutsche.de
+!
+! ------------------------------------------------------------------------------------------------
+! Werbeplätze, die überall gleich heißen
+! ------------------------------------------------------------------------------------------------
+##ins.adsbygoogle
+##.adsbygoogle
+##[id^="div-gpt-ad"]
+##[id^="google_ads_iframe"]
+##iframe[id^="google_ads_"]
+##[data-google-query-id]
+##amp-ad
+##amp-sticky-ad
+##amp-embed[type="taboola"]
+##amp-embed[type="outbrain"]
+##[id^="taboola-"]
+##.trc_related_container
+##.OUTBRAIN
+##[id^="outbrain_widget"]
+##.ob-widget

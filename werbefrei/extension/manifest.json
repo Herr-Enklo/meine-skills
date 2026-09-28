@@ -1,0 +1,72 @@
+{
+  "manifest_version": 3,
+  "name": "Werbefrei",
+  "version": "1.0.0",
+  "description": "Blendet Werbebanner rund um Artikel aus und blockiert Werbeserver. Mit EasyList, eigenen Regeln und Element-Auswahl.",
+  "minimum_chrome_version": "116",
+  "icons": {
+    "16": "icons/an-16.png",
+    "32": "icons/an-32.png",
+    "48": "icons/an-48.png",
+    "128": "icons/an-128.png"
+  },
+  "action": {
+    "default_title": "Werbefrei",
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "icons/an-16.png",
+      "32": "icons/an-32.png"
+    }
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "options_ui": {
+    "page": "options/options.html",
+    "open_in_tab": true
+  },
+  "permissions": [
+    "declarativeNetRequest",
+    "storage",
+    "unlimitedStorage",
+    "scripting",
+    "activeTab",
+    "contextMenus",
+    "alarms"
+  ],
+  "host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ],
+  "declarative_net_request": {
+    "rule_resources": [
+      {
+        "id": "werbefrei",
+        "enabled": true,
+        "path": "rules/werbefrei.json"
+      }
+    ]
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "http://*/*",
+        "https://*/*"
+      ],
+      "js": [
+        "content/content.js"
+      ],
+      "run_at": "document_start",
+      "all_frames": false
+    }
+  ],
+  "commands": {
+    "element-ausblenden": {
+      "suggested_key": {
+        "default": "Alt+Shift+E"
+      },
+      "description": "Element auf der Seite ausblenden"
+    }
+  }
+}

@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Werbefrei – Einstellungen</title>
+  <link rel="icon" href="../icons/an-32.png">
+  <link rel="stylesheet" href="../ui/theme.css">
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <header class="masthead">
+    <div class="wrap">
+      <img src="../icons/an-48.png" alt="" width="36" height="36">
+      <div>
+        <h1>Werbefrei</h1>
+        <div class="muted" id="version"></div>
+      </div>
+      <div class="pausedState" id="pausedState" hidden>
+        Pausiert <button class="btn small" id="resume">Fortsetzen</button>
+      </div>
+    </div>
+    <nav class="wrap tabs" aria-label="Bereiche">
+      <a href="#listen">Filterlisten</a>
+      <a href="#regeln">Eigene Regeln</a>
+      <a href="#ausnahmen">Ausnahmen</a>
+      <a href="#allgemein">Allgemein</a>
+      <a href="#sichern">Sichern</a>
+    </nav>
+  </header>
+
+  <main class="wrap">
+    <section id="listen">
+      <div class="sectionHead">
+        <div>
+          <h2>Filterlisten</h2>
+          <p class="muted">Listen mit Werbeservern und Werbeplätzen. Abonnierte Listen lädt Werbefrei von ihrer Adresse und hält sie automatisch aktuell.</p>
+        </div>
+        <button class="btn" id="updateAll">Jetzt aktualisieren</button>
+      </div>
+      <div class="cards" id="lists"></div>
+      <p class="ruleReport muted" id="ruleReport"></p>
+
+      <details class="addList">
+        <summary>Weitere Liste abonnieren</summary>
+        <form id="addListForm" class="inline">
+          <input type="url" id="listUrl" placeholder="https://…/liste.txt" required aria-label="Adresse der Filterliste">
+          <input type="text" id="listTitle" placeholder="Name (optional)" aria-label="Name der Liste">
+          <button class="btn primary" type="submit">Hinzufügen</button>
+        </form>
+        <p class="muted small">Unterstützt werden Listen im Adblock-Plus-Format (wie EasyList) und hosts-Dateien. Nur https.</p>
+        <p class="message" id="addListMessage" role="status"></p>
+      </details>
+    </section>
+
+    <section id="regeln">
+      <h2>Eigene Regeln</h2>
+      <p class="muted">Hier landen auch die Elemente, die du mit „Element ausblenden …“ ausgewählt hast. Eine Regel pro Zeile.</p>
+      <textarea id="userRules" spellcheck="false" rows="14" aria-label="Eigene Regeln"></textarea>
+      <div class="row">
+        <button class="btn primary" id="saveRules">Speichern</button>
+        <span class="message" id="rulesMessage" role="status"></span>
+      </div>
+      <ul class="errors" id="rulesErrors"></ul>
+      <details class="help">
+        <summary>So sehen Regeln aus</summary>
+        <table>
+          <tr><td class="mono">spiegel.de##.werbekasten</td><td>Auf spiegel.de alle Elemente mit der Klasse <span class="mono">werbekasten</span> ausblenden</td></tr>
+          <tr><td class="mono">##div[id^="werbung-"]</td><td>Auf allen Seiten ausblenden (beliebiger CSS-Selektor)</td></tr>
+          <tr><td class="mono">||werbeserver.example^</td><td>Alle Anfragen an diesen Server und seine Subdomains sperren</td></tr>
+          <tr><td class="mono">||cdn.example/ads/*$script</td><td>Nur Skripte unter diesem Pfad sperren</td></tr>
+          <tr><td class="mono">@@||example.com/player.js</td><td>Ausnahme: diese Datei nie sperren</td></tr>
+          <tr><td class="mono">zeit.de#@#.teaser</td><td>Ausnahme: diesen Elementfilter auf zeit.de nicht anwenden</td></tr>
+          <tr><td class="mono">! Notiz</td><td>Kommentar</td></tr>
+        </table>
+      </details>
+    </section>
+
+    <section id="ausnahmen">
+      <h2>Ausnahmen</h2>
+      <p class="muted">Auf diesen Seiten ist Werbefrei aus. Eine Seite schließt ihre Subdomains ein.</p>
+      <form id="allowForm" class="inline">
+        <input type="text" id="allowInput" placeholder="beispiel.de" aria-label="Seite hinzufügen" required>
+        <button class="btn" type="submit">Hinzufügen</button>
+      </form>
+      <ul class="allowlist" id="allowlist"></ul>
+      <p class="muted empty" id="allowEmpty">Noch keine Ausnahmen.</p>
+    </section>
+
+    <section id="allgemein">
+      <h2>Allgemein</h2>
+      <label class="option">
+        <span>
+          <span class="label">Werbeplätze selbst erkennen</span>
+          <span class="muted">Blendet Kästen aus, die als „Anzeige“ oder „Werbung“ gekennzeichnet sind, Werbecontainer, die nach dem Blockieren leer bleiben, und Rahmen gesperrter Werbeserver. Greift auch dort, wo keine Liste die Seite kennt.</span>
+        </span>
+        <span class="switch"><input type="checkbox" id="heuristics"><span></span></span>
+      </label>
+      <label class="option">
+        <span>
+          <span class="label">Zähler am Symbol</span>
+          <span class="muted">Zeigt am Symbol in der Leiste, wie viele Anfragen auf der Seite blockiert wurden.</span>
+        </span>
+        <span class="switch"><input type="checkbox" id="badge"><span></span></span>
+      </label>
+      <div class="option static">
+        <span>
+          <span class="label">Tastenkürzel</span>
+          <span class="muted"><kbd>Alt</kbd>+<kbd>Umschalt</kbd>+<kbd>E</kbd> startet die Element-Auswahl. Ändern lässt es sich unter <span class="mono">chrome://extensions/shortcuts</span> (Edge: <span class="mono">edge://extensions/shortcuts</span>).</span>
+        </span>
+      </div>
+      <div class="option static">
+        <span>
+          <span class="label">Überall pausieren</span>
+          <span class="muted">Schaltet Werbefrei auf allen Seiten ab, bis du es wieder einschaltest.</span>
+        </span>
+        <button class="btn" id="pauseToggle">Pausieren</button>
+      </div>
+    </section>
+
+    <section id="sichern">
+      <h2>Sichern und wiederherstellen</h2>
+      <p class="muted">Die Sicherung enthält Einstellungen, Ausnahmen, eigene Regeln und abonnierte Listen, aber nicht deren Inhalt.</p>
+      <div class="row">
+        <button class="btn" id="export">Sicherung speichern</button>
+        <label class="btn" for="importFile">Sicherung laden …</label>
+        <input type="file" id="importFile" accept="application/json,.json" hidden>
+        <span class="message" id="backupMessage" role="status"></span>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="options.js"></script>
+</body>
+</html>
