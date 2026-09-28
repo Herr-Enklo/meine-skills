@@ -151,8 +151,8 @@ EasyPrivacy, die man dafür einschalten sollte. Beantwortet werden nur Abo-Abfra
 Cookie-Hinweise blendet Werbefrei weiter aus, ohne zuzustimmen. Auf ausgenommenen Seiten und im
 Pausenmodus klickt Werbefrei nichts. Unterstützt sind Dialoge von Sourcepoint (der Knopf mit der
 Klasse `sp_choice_type_11`), consentmanager (`.cmpboxbtnyes`) und OneTrust
-(`#onetrust-accept-btn-handler`). Bei Sourcepoint gilt eine Änderung des Schalters ab dem nächsten
-Laden der Seite. Im Test verschwand die Abfrage auf spiegel.de, bild.de, welt.de, faz.net,
+(`#onetrust-accept-btn-handler`). Der Schalter wirkt sofort, auch auf eine Abfrage, die beim
+Einschalten schon offen ist. Im Test verschwand die Abfrage auf spiegel.de, bild.de, welt.de, faz.net,
 sueddeutsche.de, t-online.de, focus.de, n-tv.de, heise.de, golem.de, chip.de und tagesspiegel.de,
 und die Seite ließ sich scrollen. bild.de zeigt danach allerdings seine Sperre für Werbeblocker.
 
@@ -222,7 +222,7 @@ npm run e2e:echt   # echte Nachrichtenseiten ohne und mit Werbefrei, braucht Int
 ```
 
 `npm run e2e` braucht keinen Internetzugang: Die Testseite lädt Werbung von echten Werbeservern, und
-diese Anfragen blockiert die Erweiterung, bevor sie das Netz erreichen. Geprüft wird in 75 Punkten,
+diese Anfragen blockiert die Erweiterung, bevor sie das Netz erreichen. Geprüft wird in 77 Punkten,
 dass elf typische Werbeplätze verschwinden (Billboard mit „Anzeige“, zwei Werbeplätze im Text, einer
 davon mit Inline-Skript, leerer Skyscraper, klebende Leiste, Taboola, gesponserter Teaser,
 nachgeladener Werbeplatz, ein Element, das erst nachträglich die Klasse `adsbygoogle` bekommt, zwei
@@ -243,7 +243,8 @@ Seitendialog mit Abo-Angebot und einmal ohne. Außerdem, dass der Schalter in de
 wirkt. Mit eingeschaltetem „Abo-Abfragen automatisch beantworten“ wird geprüft, dass Sourcepoint- und
 consentmanager-Abfragen mit „Zustimmen“ beantwortet werden (auch die Knopf-Variante) und die Seite
 danach scrollt, dass ein gewöhnlicher Hinweis nur ausgeblendet und nicht beantwortet wird, dass ohne
-Abo-Angebot nichts geklickt wird und dass auf einer ausgenommenen Seite nichts geklickt wird. Bildschirmfotos landen in `test-ergebnisse/`.
+Abo-Angebot nichts geklickt wird und dass auf einer ausgenommenen Seite nichts geklickt wird. Dazu:
+Wird der Schalter eingeschaltet, während eine Abfrage offen ist, wird sie sofort beantwortet. Bildschirmfotos landen in `test-ergebnisse/`.
 
 `npm run e2e:echt` öffnet auf 14 Nachrichtenseiten einen aktuellen Artikel, einmal ohne und einmal mit
 Werbefrei, bestätigt die Einwilligung (ohne sie laden diese Seiten keine Werbung), scrollt durch den

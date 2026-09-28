@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Werbefrei",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "description": "Blendet Werbebanner rund um Artikel aus und blockiert Werbeserver. Mit EasyList, eigenen Regeln und Element-Auswahl.",
   "minimum_chrome_version": "116",
   "icons": {

@@ -576,7 +576,20 @@ const contentHandlers = {
     const pay = msg.art === 'bezahl' || (msg.art === 'knopf' && reply?.bezahl === true);
     if (!pay) return { ok: true };
     const page = await pageState({ url: sender.tab.url }, {});
-    return { ok: true, einwilligen: page.active === true && page.autoConsent === true };
+    return { ok: true, bezahl: true, einwilligen: page.active === true && page.autoConsent === true };
+  },
+
+  /**
+   * Die Seite meldet: "Abo-Abfragen automatisch beantworten" wurde eingeschaltet, während eine
+   * Sourcepoint-Abo-Abfrage offen ist. Alle Rahmen des Tabs bekommen die Aufforderung; klicken wird
+   * nur der Rahmen, der sich selbst als Abo-Abfrage erkannt hat.
+   */
+  async einwilligen(msg, sender) {
+    if (sender.frameId !== 0) return { ok: false };
+    const page = await pageState({ url: sender.tab.url }, {});
+    if (!page.active || !page.autoConsent) return { ok: false };
+    await chrome.tabs.sendMessage(sender.tab.id, { type: 'werbefrei:einwilligen' }).catch(() => {});
+    return { ok: true };
   },
 
   async checkHosts(msg) {

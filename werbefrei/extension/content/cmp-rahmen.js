@@ -19,6 +19,8 @@
   let stableRounds = 0;
   let sentNormal = false;
   let sentButtonOnly = false;
+  let isPay = false; // Dieser Rahmen gehört zu einer Abo-Abfrage.
+  let accepted = false;
 
   // Sourcepoints Knopf für "Zustimmen" / "Einwilligen und weiter" (Auswahltyp 11 = alles akzeptieren).
   const ACCEPT = 'button.sp_choice_type_11';
@@ -27,13 +29,28 @@
 
   /** Den Zustimmungsknopf klicken, sobald er da ist; einmal, höchstens fünf Sekunden lang suchen. */
   function accept(tries = 0) {
+    if (accepted) return;
     const button = document.querySelector(ACCEPT);
     if (button && !button.disabled) {
+      accepted = true;
       button.click();
       return;
     }
     if (tries < 20) setTimeout(() => accept(tries + 1), 250);
   }
+
+  function onVerdict(res) {
+    if (res?.bezahl === true) isPay = true;
+    if (res?.einwilligen === true) accept();
+  }
+
+  // Wird "Abo-Abfragen automatisch beantworten" eingeschaltet, während der Dialog schon offen ist,
+  // kommt die Aufforderung nachträglich. Geklickt wird nur in einem Rahmen, der als Abo-Abfrage gilt.
+  chrome.runtime.onMessage.addListener((msg, sender) => {
+    if (sender.id !== chrome.runtime.id || msg?.type !== 'werbefrei:einwilligen') return false;
+    if (isPay) accept();
+    return false;
+  });
 
   /**
    * Text des Dialogs, ohne den Quelltext von Skripten und Styles und ohne ausdrücklich versteckte
@@ -60,9 +77,8 @@
     if (PAY.test(text)) {
       // Abo-Angebot gefunden, auch wenn vorher schon "normal" gemeldet wurde: sofort melden. Die
       // Antwort sagt, ob "Einwilligen" geklickt werden soll.
-      send('bezahl').then((res) => {
-        if (res?.einwilligen === true) accept();
-      });
+      isPay = true;
+      send('bezahl').then(onVerdict);
       return;
     }
     const hasButton = document.querySelector('button, [role="button"]') !== null;
@@ -76,9 +92,7 @@
     // Abo-Abfrage ist, entscheidet das Inhaltsskript der Seite; ausgeblendet wird so ein Rahmen nie.
     if (!sentNormal && !sentButtonOnly && document.querySelector(ACCEPT) && text.length < 40 && stableRounds >= 2) {
       sentButtonOnly = true;
-      send('knopf').then((res) => {
-        if (res?.einwilligen === true) accept();
-      });
+      send('knopf').then(onVerdict);
     }
     if (Date.now() - started < GIVE_UP) setTimeout(check, INTERVAL);
   }

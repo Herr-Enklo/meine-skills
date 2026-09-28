@@ -765,7 +765,10 @@
     state.heuristics = res.heuristics;
     const cookiesBefore = state.cookies;
     state.cookies = res.cookies === true;
+    const consentBefore = state.autoConsent;
     state.autoConsent = res.autoConsent === true;
+    // Gerade eingeschaltet, und eine Sourcepoint-Abo-Abfrage ist schon offen: jetzt beantworten.
+    if (!consentBefore && state.autoConsent && state.spVerdict === 'bezahl') send({ type: 'einwilligen' });
     if (cookiesBefore && !state.cookies) releaseCookies();
     setGate(false);
     observer.observe(document, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'id'] });
@@ -775,6 +778,7 @@
 
   function deactivate() {
     state.active = false;
+    state.autoConsent = false; // beim Fortsetzen wie neu eingeschaltet behandeln
     observer.disconnect();
     clearTimeout(state.flushTimer);
     clearTimeout(state.scanTimer);
