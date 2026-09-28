@@ -92,6 +92,8 @@
       <!-- Empfehlungs-Widget -->
       <div id="taboola-below-article-thumbnails" style="min-height:400px;background:#f3f3f3"></div>
       <div class="custom-box" id="eigenes-element">Ein Kasten, den der Nutzer per Auswahl ausblendet.</div>
+      <div class="custom-box" id="live-regel">Ein Kasten für eine Regel, die bei offener Seite dazukommt.</div>
+      <div class="platzhalter" id="spaeter-werbung" style="height:90px;background:#eef">Wird später per Skript zu einem AdSense-Platz.</div>
     </main>
 
     <aside>
@@ -121,6 +123,8 @@
   </footer>
 
   <script>
+    // Ein vorhandenes Element bekommt nachträglich die Klasse eines Werbeplatzes.
+    setTimeout(() => { document.getElementById('spaeter-werbung').className = 'adsbygoogle'; }, 1000);
     // Nachgeladener Werbeplatz, wie ihn Werbeskripte nach dem Laden einfügen.
     setTimeout(() => {
       const slot = document.createElement('div');

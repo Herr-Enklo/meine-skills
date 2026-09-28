@@ -35,6 +35,10 @@
     sentKeys: new Set(),
     keyedSelectors: [],
     pending: [],
+    pendingAttr: new Set(), // Elemente, deren Klasse oder id sich geändert hat
+    gate: null, // Attribut am <html>-Element, das eingefügtes CSS abschaltet
+    generation: null, // Stand der Regeln, mit dem das Stylesheet eingefügt wurde
+    cssInserted: false,
     flushTimer: 0,
     scanTimer: 0,
     lastScan: 0,
@@ -75,8 +79,11 @@
   function flush() {
     state.flushTimer = 0;
     const roots = state.pending;
+    const changed = state.pendingAttr;
     state.pending = [];
+    state.pendingAttr = new Set();
     if (!state.active) return;
+    let adHint = false;
     if (state.generic) {
       const keys = [];
       for (const root of roots) {
@@ -85,24 +92,36 @@
         const all = root.querySelectorAll('[id],[class]');
         for (let i = 0; i < all.length; i++) collectKeys(all[i], keys);
       }
+      // Nachträglich geänderte Klasse oder id: nur das Element selbst, nicht sein Inhalt.
+      for (const el of changed) if (el.isConnected) collectKeys(el, keys);
       if (keys.length) {
-        send({ type: 'generic', keys }).then((res) => {
+        send({ type: 'generic', keys, gate: state.gate }).then((res) => {
           if (res?.selectors?.length) state.keyedSelectors.push(...res.selectors);
         });
       }
     }
-    if (state.heuristics) scheduleScan(false);
+    for (const el of changed) if (el.isConnected && hasAdHint(el)) adHint = true;
+    if (state.heuristics && (roots.length || adHint)) scheduleScan(false);
+  }
+
+  function scheduleFlush() {
+    if (!state.flushTimer) state.flushTimer = setTimeout(flush, state.active ? 60 : 0);
   }
 
   function queue(node) {
     state.pending.push(node);
-    if (!state.flushTimer) state.flushTimer = setTimeout(flush, state.active ? 60 : 0);
+    scheduleFlush();
   }
 
   // Beobachtet wird erst nach der Antwort des Service Workers; bis dahin Hinzugekommenes erfasst
   // der erste Durchlauf über das ganze Dokument.
   const observer = new MutationObserver((records) => {
     for (const r of records) {
+      if (r.type === 'attributes') {
+        state.pendingAttr.add(r.target);
+        scheduleFlush();
+        continue;
+      }
       for (const n of r.addedNodes) if (n.nodeType === 1) queue(n);
     }
   });
@@ -486,7 +505,12 @@
   }
 
   chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-    if (sender.id !== chrome.runtime.id || msg?.type !== 'werbefrei:zaehlen') return false;
+    if (sender.id !== chrome.runtime.id) return false;
+    if (msg?.type === 'werbefrei:status') {
+      onStatus();
+      return false;
+    }
+    if (msg?.type !== 'werbefrei:zaehlen') return false;
     sendResponse({
       active: state.active,
       hidden: state.active ? countHidden(Array.isArray(msg.selectors) ? msg.selectors : []) : 0,
@@ -499,23 +523,101 @@
   // Start
   // -------------------------------------------------------------------------------------------
 
-  send({ type: 'init' }).then((res) => {
-    if (!res?.active) return;
+  /** Das eingefügte CSS über das Attribut am <html>-Element ab- oder wieder einschalten. */
+  function setGate(off) {
+    if (!state.gate) return;
+    if (off) document.documentElement.setAttribute(state.gate, '');
+    else document.documentElement.removeAttribute(state.gate);
+  }
+
+  function scheduleInitialScans() {
+    const later = () => {
+      scheduleScan(true);
+      setTimeout(() => scheduleScan(true), 1500);
+      setTimeout(() => scheduleScan(true), 4000);
+      setTimeout(() => scheduleScan(true), 9000);
+    };
+    if (document.readyState === 'complete') later();
+    else window.addEventListener('load', later, { once: true });
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => scheduleScan(true), { once: true });
+  }
+
+  function activate(res) {
+    const wasRunning = state.active && state.heuristics;
     state.active = true;
     state.generic = res.generic;
     state.heuristics = res.heuristics;
-    observer.observe(document, { childList: true, subtree: true });
+    setGate(false);
+    observer.observe(document, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'id'] });
     queue(document.documentElement);
-    if (state.heuristics) {
-      const later = () => {
-        scheduleScan(true);
-        setTimeout(() => scheduleScan(true), 1500);
-        setTimeout(() => scheduleScan(true), 4000);
-        setTimeout(() => scheduleScan(true), 9000);
-      };
-      if (document.readyState === 'complete') later();
-      else window.addEventListener('load', later, { once: true });
-      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => scheduleScan(true), { once: true });
+    if (state.heuristics && !wasRunning) scheduleInitialScans();
+  }
+
+  function deactivate() {
+    state.active = false;
+    observer.disconnect();
+    clearTimeout(state.flushTimer);
+    clearTimeout(state.scanTimer);
+    state.flushTimer = 0;
+    state.scanTimer = 0;
+    state.pending = [];
+    state.pendingAttr = new Set();
+    setGate(true);
+  }
+
+  function setGateName(gate) {
+    if (!gate) return;
+    state.gate = gate;
+    globalThis.__werbefreiTor = gate; // für die Element-Auswahl (gleiche isolierte Welt)
+  }
+
+  let initRunning = null;
+
+  /**
+   * Stylesheet anfordern (der Service Worker fügt es ein) und loslegen. Läuft nie doppelt, und
+   * das einmal vergebene Attribut wird wiederverwendet, damit alles eingefügte CSS daran hängt.
+   */
+  function init() {
+    if (!initRunning) {
+      initRunning = (async () => {
+        const res = await send({ type: 'init', gate: state.gate });
+        if (!res) return;
+        setGateName(res.gate);
+        state.generation = res.generation;
+        if (!res.active) {
+          if (state.active) deactivate();
+          return;
+        }
+        state.cssInserted = true;
+        activate(res);
+      })().finally(() => {
+        initRunning = null;
+      });
     }
-  });
+    return initRunning;
+  }
+
+  /** Pause, Ausnahme oder Regeln haben sich geändert: ohne Neuladen umschalten. */
+  async function onStatus() {
+    if (initRunning) await initRunning;
+    const res = await send({ type: 'status', gate: state.gate });
+    if (!res) return;
+    setGateName(res.gate);
+    if (!res.active) {
+      if (state.active) deactivate();
+      return;
+    }
+    if (!state.cssInserted || res.generation !== state.generation) {
+      // Seite wurde während einer Pause geöffnet oder die Regeln sind neu: Stylesheet neu
+      // anfordern und alle Klassen und ids erneut melden. Weggefallene Regeln wirken bis zum
+      // nächsten Laden weiter; hinzugekommene sofort.
+      state.sentKeys.clear();
+      state.keyedSelectors = [];
+      await init();
+      return;
+    }
+    activate(res);
+  }
+
+  init();
 })();

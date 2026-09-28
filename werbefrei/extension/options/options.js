@@ -104,7 +104,8 @@ function renderLists() {
   const report = state.ruleReport;
   if (report) {
     let text = `Aktive Netzregeln aus Listen und eigenen Regeln: ${number.format(report.active)} von ${number.format(report.limit)} möglichen.`;
-    if (report.dropped) text += ` ${number.format(report.dropped)} Regeln passten nicht mehr hinein.`;
+    if (report.userDropped) text += ` ${number.format(report.userDropped)} eigene Netzregeln passten nicht mehr hinein.`;
+    if (report.dropped) text += ` ${number.format(report.dropped)} Regeln aus Listen passten nicht mehr hinein.`;
     if (report.invalid) text += ` ${number.format(report.invalid)} Regeln hat der Browser abgelehnt.`;
     $('ruleReport').textContent = text;
   }
@@ -165,8 +166,12 @@ $('saveRules').addEventListener('click', async () => {
   rulesDirty = false;
   const errors = res?.errors || [];
   const s = res?.stats;
-  const summary = s ? `${number.format(s.network)} Netzregeln, ${number.format(s.cosmetic)} Elementregeln gespeichert.` : 'Gespeichert.';
-  setMessage('rulesMessage', errors.length ? `${summary} ${errors.length} Zeilen übersprungen:` : summary, errors.length ? 'bad' : 'ok');
+  let summary = s ? `${number.format(s.network)} Netzregeln, ${number.format(s.cosmetic)} Elementregeln gespeichert.` : 'Gespeichert.';
+  if (res?.report?.userDropped) {
+    summary += ` ${number.format(res.report.userDropped)} Netzregeln passen nicht mehr in die Grenze des Browsers (${number.format(res.report.limit)}) und sind nicht aktiv.`;
+  }
+  const bad = errors.length || res?.report?.userDropped;
+  setMessage('rulesMessage', errors.length ? `${summary} ${errors.length} Zeilen übersprungen:` : summary, bad ? 'bad' : 'ok');
   $('rulesErrors').replaceChildren(
     ...errors.map((e) => el('li', {}, el('strong', { text: `Zeile ${e.line}: ` }), el('span', { class: 'mono', text: e.text }), ` – ${reasonText(e.reason)}`)),
   );

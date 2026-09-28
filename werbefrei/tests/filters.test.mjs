@@ -13,6 +13,7 @@ import {
   hostSuffixes,
   toAsciiDomain,
   withIds,
+  planDynamicRules,
   PRIORITY,
 } from '../extension/lib/filters.js';
 
@@ -250,6 +251,45 @@ test('"||host^|" sperrt nur die Startadresse, nicht die ganze Domain', () => {
 
 test('cssForSelectors schreibt eine Regel pro Selektor', () => {
   assert.equal(cssForSelectors(['.a', '#b']), '.a{display:none!important}\n#b{display:none!important}');
+});
+
+test('cssForSelectors mit Schalter-Attribut lässt sich über <html> abschalten', () => {
+  assert.equal(
+    cssForSelectors(['div > .ad'], 'data-xyz'),
+    ':is(div > .ad):not(:root[data-xyz] *){display:none!important}',
+  );
+  assert.equal(
+    cssForSelectors(['.box::before'], 'data-xyz'),
+    ':is(.box):not(:root[data-xyz] *)::before{display:none!important}',
+  );
+});
+
+test('planDynamicRules hält die Obergrenze auch bei vielen eigenen Regeln ein', () => {
+  const rule = { priority: 1, action: { type: 'block' }, condition: { urlFilter: '/x' } };
+  const control = [{ id: 1, ...rule }, { id: 3, ...rule }];
+  const plan = planDynamicRules({
+    control,
+    user: Array(5001).fill(rule),
+    lists: Array(300).fill(rule),
+    limit: 5000,
+    userStart: 100,
+    userMax: 9899,
+    listStart: 10000,
+  });
+  assert.equal(plan.rules.length, 5000);
+  assert.equal(plan.userDropped, 3);
+  assert.equal(plan.listDropped, 300);
+  assert.equal(plan.rules[2].id, 100);
+  assert.equal(plan.rules.at(-1).id, 100 + 4997);
+
+  const roomy = planDynamicRules({ control, user: Array(10).fill(rule), lists: Array(20).fill(rule), limit: 30000, userStart: 100, userMax: 9899, listStart: 10000 });
+  assert.equal(roomy.rules.length, 32);
+  assert.equal(roomy.userDropped + roomy.listDropped, 0);
+  assert.equal(roomy.rules.at(-1).id, 10019);
+
+  const capped = planDynamicRules({ control: [], user: Array(12000).fill(rule), lists: [], limit: 30000, userStart: 100, userMax: 9899, listStart: 10000 });
+  assert.equal(capped.userDropped, 12000 - 9800);
+  assert.ok(capped.rules.every((r) => r.id < 10000));
 });
 
 test('hostSuffixes und withIds', () => {

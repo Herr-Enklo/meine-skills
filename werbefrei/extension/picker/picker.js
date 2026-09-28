@@ -348,7 +348,7 @@
     saveButton.disabled = true;
     let res = null;
     try {
-      res = await chrome.runtime.sendMessage({ type: 'pickerSave', selector });
+      res = await chrome.runtime.sendMessage({ type: 'pickerSave', selector, gate: globalThis.__werbefreiTor });
     } catch {
       res = null;
     }
@@ -358,10 +358,7 @@
       saveButton.disabled = false;
       return;
     }
-    // Sofort sichtbar machen; das Nutzer-Stylesheet des Service Workers greift parallel.
-    try {
-      document.querySelectorAll(selector).forEach((el) => el.style.setProperty('display', 'none', 'important'));
-    } catch { /* bereits geprüft */ }
+    // Das Stylesheet hat der Service Worker schon eingefügt, bevor er geantwortet hat.
     $('.done').textContent = `Ausgeblendet. Die Regel gilt ab jetzt auf ${location.hostname.replace(/^www\d?\./, '')}.`;
     show('saved');
     mark.style.display = 'none';
