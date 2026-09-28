@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <title>Cookie-Banner (gewöhnlich)</title>
+  <style>
+    body { margin: 0; font: 16px/1.5 sans-serif; }
+    main { height: 3000px; padding: 24px; }
+    #onetrust-banner-sdk { position: fixed; left: 0; right: 0; bottom: 0; background: #fff; padding: 24px; box-shadow: 0 -2px 8px #0003; z-index: 10; }
+    .onetrust-pc-dark-filter { position: fixed; inset: 0; background: #0008; z-index: 9; }
+  </style>
+</head>
+<body>
+  <main><h1 id="titel">Seite mit Cookie-Banner</h1><p>Inhalt der Seite.</p></main>
+  <script>
+    // Wie ein Einwilligungsanbieter: Banner nachladen und das Scrollen sperren.
+    setTimeout(() => {
+      const sdk = document.createElement('div');
+      sdk.id = 'onetrust-consent-sdk';
+      sdk.innerHTML = '<div class="onetrust-pc-dark-filter"></div><div id="onetrust-banner-sdk"><p>Wir und unsere Partner verwenden Cookies, um die Seite zu verbessern.</p><button>Alle akzeptieren</button> <button>Einstellungen</button></div>'
+        // Versteckte Einstellungsebene mit Anbieterangaben: zählt nicht als Abo-Angebot.
+        + '<div id="onetrust-pc-sdk" style="display:none"><p>Anbieter: Beispiel Subscription Analytics, Vertragswert 0,00 €</p></div>';
+      document.body.appendChild(sdk);
+      document.body.style.overflow = 'hidden';
+    }, 500);
+  </script>
+</body>
+</html>

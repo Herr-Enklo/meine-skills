@@ -212,7 +212,7 @@ $('allowForm').addEventListener('submit', async (e) => {
 
 // --- Allgemein -----------------------------------------------------------------------------------
 
-for (const key of ['heuristics', 'badge']) {
+for (const key of ['heuristics', 'cookieBanners', 'badge']) {
   $(key).addEventListener('change', async (e) => {
     await send({ type: 'setOption', key, value: e.target.checked });
     await load();
@@ -265,6 +265,7 @@ async function load({ keepRules = true } = {}) {
   $('pausedState').hidden = !state.settings.paused;
   $('pauseToggle').textContent = state.settings.paused ? 'Fortsetzen' : 'Pausieren';
   $('heuristics').checked = state.settings.heuristics;
+  $('cookieBanners').checked = state.settings.cookieBanners;
   $('badge').checked = state.settings.badge;
   if (!keepRules || !rulesDirty) $('userRules').value = state.userRules;
   renderLists();

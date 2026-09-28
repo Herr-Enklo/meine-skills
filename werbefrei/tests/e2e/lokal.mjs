@@ -23,9 +23,31 @@ const server = createServer((req, res) => {
     res.end('ok');
     return;
   }
+  if (host === 'consent.test') {
+    // Nachbildung eines Sourcepoint-Dialogs in einem Rahmen von fremder Domain.
+    const art = new URL(req.url, 'http://consent.test').searchParams.get('art');
+    const text = art === 'pur'
+      ? 'Mit Werbung und Tracking nutzen: Zustimmen. Oder ohne Werbung mit dem PUR-Abo für 2,99 € / Monat: Jetzt abonnieren.'
+      : 'Wir und unsere Partner verwenden Cookies und ähnliche Technologien, um unser Angebot zu verbessern. Zustimmen. Einstellungen.';
+    res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+    // Wie bei Sourcepoint: Erst steht nur Skripttext im Dokument, der Dialog mit Knöpfen kommt später.
+    res.end(`<!doctype html><meta charset="utf-8"><body style="font:15px sans-serif;padding:16px">
+      <script>window.preRenderData = { url: '/' };</script>
+      <div id="dialog"></div>
+      <script>setTimeout(() => { document.getElementById('dialog').innerHTML = '<p>${text}</p><button>Zustimmen</button> <button>Einstellungen</button>'; }, 700);</script>
+      ${art === 'spaet' ? `<script>setTimeout(() => { document.getElementById('dialog').insertAdjacentHTML('beforeend', '<p>Oder ohne Werbung mit dem PUR-Abo für 2,99 € / Monat.</p>'); }, 3500);</script>` : ''}
+    </body>`);
+    return;
+  }
   if (host === 'video.test') {
     res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
     res.end('<body style="margin:0;background:#123;color:#fff;font:20px sans-serif;display:grid;place-items:center;height:100vh">Videoplayer</body>');
+    return;
+  }
+  const cookiePage = /^\/(cookie-banner|cookie-pur|cookie-sp)\.html/.exec(req.url);
+  if (cookiePage) {
+    res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+    res.end(readFileSync(`${fixtures}${cookiePage[1]}.html`));
     return;
   }
   if (req.url.startsWith('/artikel')) {
@@ -191,6 +213,62 @@ try {
   await sendFrom(options, { type: 'saveUserRules', text: `${before}news.test###live-regel\n` });
   await page.waitForTimeout(1000);
   check('neue eigene Regel greift in der offenen Seite ohne Neuladen', !(await visible('#live-regel')));
+
+  console.log('\nCookie-Hinweise');
+  const cookieTab = await context.newPage();
+  const shown = (sel) => cookieTab.locator(sel).first().evaluate((el) => el.checkVisibility()).catch(() => false);
+  const scrolls = async () => {
+    await cookieTab.evaluate(() => window.scrollTo(0, 0));
+    await cookieTab.mouse.move(400, 300);
+    await cookieTab.mouse.wheel(0, 700);
+    await cookieTab.waitForTimeout(400);
+    return cookieTab.evaluate(() => window.scrollY > 100);
+  };
+  await cookieTab.goto(`http://news.test:${port}/cookie-banner.html`, { waitUntil: 'load' });
+  await cookieTab.waitForTimeout(2500);
+  check('gewöhnlicher Cookie-Banner ausgeblendet', !(await shown('#onetrust-banner-sdk')) && !(await shown('.onetrust-pc-dark-filter')));
+  check('Scroll-Sperre des Banners aufgehoben', await scrolls());
+  check('Seiteninhalt bleibt sichtbar', await shown('#titel'));
+
+  await sendFrom(options, { type: 'setOption', key: 'cookieBanners', value: false });
+  await cookieTab.waitForTimeout(800);
+  check('Einstellung aus: Banner ohne Neuladen wieder da', await shown('#onetrust-banner-sdk'));
+  await sendFrom(options, { type: 'setOption', key: 'cookieBanners', value: true });
+  await cookieTab.waitForTimeout(800);
+  check('Einstellung wieder an: Banner wieder ausgeblendet', !(await shown('#onetrust-banner-sdk')));
+
+  await cookieTab.goto(`http://news.test:${port}/cookie-pur.html`, { waitUntil: 'load' });
+  await cookieTab.waitForTimeout(2500);
+  check('Dialog mit Abo-Angebot bleibt stehen', await shown('#cmpbox'));
+  check('dessen Scroll-Sperre bleibt', !(await scrolls()));
+
+  await cookieTab.goto(`http://news.test:${port}/cookie-pur.html?art=spaet`, { waitUntil: 'load' });
+  await cookieTab.waitForTimeout(1200);
+  const purFirstHidden = !(await shown('#cmpbox'));
+  await cookieTab.waitForTimeout(1500);
+  check('Abo-Angebot kommt später: Banner erst ausgeblendet, dann wieder da', purFirstHidden && (await shown('#cmpbox')));
+  check('dann bleibt auch hier die Scroll-Sperre', !(await scrolls()));
+
+  await cookieTab.goto(`http://news.test:${port}/cookie-pur.html?art=versteckt`, { waitUntil: 'load' });
+  await cookieTab.waitForTimeout(2500);
+  check('versteckt eingefügter Abo-Dialog bleibt stehen, sobald er erscheint', await shown('#cmpbox'));
+
+  await cookieTab.goto(`http://news.test:${port}/cookie-sp.html?art=normal`, { waitUntil: 'load' });
+  await cookieTab.waitForTimeout(3000);
+  check('Sourcepoint-Rahmen mit gewöhnlichem Cookie-Dialog ausgeblendet', !(await shown('#sp_message_container_1234')));
+  check('Sourcepoint-Scroll-Sperre aufgehoben', await scrolls());
+
+  await cookieTab.goto(`http://news.test:${port}/cookie-sp.html?art=pur`, { waitUntil: 'load' });
+  await cookieTab.waitForTimeout(3000);
+  check('Sourcepoint-Rahmen mit Pur-Abo-Angebot bleibt stehen', await shown('#sp_message_container_1234'));
+
+  await cookieTab.goto(`http://news.test:${port}/cookie-sp.html?art=spaet`, { waitUntil: 'load' });
+  await cookieTab.waitForTimeout(2800);
+  const firstHidden = !(await shown('#sp_message_container_1234'));
+  await cookieTab.waitForTimeout(2500);
+  check('Abo-Angebot kommt später: Dialog erst ausgeblendet, dann wieder da', firstHidden && (await shown('#sp_message_container_1234')));
+  check('dann bleibt auch die Scroll-Sperre', !(await scrolls()));
+  await cookieTab.close();
 
   console.log('\nEinstellungsseite');
   await options.reload();

@@ -27,7 +27,15 @@ import {
 const DNR = chrome.declarativeNetRequest;
 const EXTENSION_ORIGIN = chrome.runtime.getURL('');
 const HIDE_ATTR = 'data-werbefrei-verborgen';
-const heuristicCss = (gate) => `[${HIDE_ATTR}]:not(:root[${gate}] *){display:none!important}`;
+const SCROLL_ATTR = 'data-werbefrei-scroll';
+const heuristicCss = (gate) =>
+  [
+    `[${HIDE_ATTR}]:not(:root[${gate}] *){display:none!important}`,
+    // Scroll-Sperre eines ausgeblendeten Cookie-Hinweises aufheben (nur wenn das Inhaltsskript
+    // das Attribut setzt, und nie während Pause oder Ausnahme).
+    `:root[${SCROLL_ATTR}]:not([${gate}]),:root[${SCROLL_ATTR}]:not([${gate}])>body{overflow:auto!important;overflow-y:auto!important}`,
+    `:root[${SCROLL_ATTR}="fixed"]:not([${gate}])>body{position:relative!important;top:auto!important}`,
+  ].join('\n');
 const UPDATE_ALARM = 'listen-aktualisieren';
 const MENU_ID = 'element-ausblenden';
 const USER_RULES_MAX = 500000;
@@ -515,7 +523,14 @@ async function pageState(sender, msg) {
   const cosmetic = await cosmeticFor(host);
   if (cosmetic.disabled) return { ...base, active: false, reason: 'liste' };
   // $generichide in einer Liste schaltet nur deren allgemeine Selektoren ab, nicht die eigene Erkennung.
-  return { ...base, active: true, generic: !cosmetic.generichide, heuristics: settings.heuristics, cosmetic };
+  return {
+    ...base,
+    active: true,
+    generic: !cosmetic.generichide,
+    heuristics: settings.heuristics,
+    cookies: settings.cookieBanners,
+    cosmetic,
+  };
 }
 
 const contentHandlers = {
@@ -544,6 +559,13 @@ const contentHandlers = {
     const selectors = selectorsForKeys(await getIndex(), keys, cosmetic.exceptions);
     await insertCss(sender, cssForSelectors(selectors, gate));
     return { selectors };
+  },
+
+  /** Meldung aus einem Sourcepoint-Rahmen: gewöhnlicher Cookie-Dialog oder Abo-Abfrage. */
+  async cmpRahmen(msg, sender) {
+    if (!sender.frameId || !['normal', 'bezahl'].includes(msg.art)) return { ok: false };
+    await chrome.tabs.sendMessage(sender.tab.id, { type: 'werbefrei:cmp', art: msg.art }, { frameId: 0 }).catch(() => {});
+    return { ok: true };
   },
 
   async checkHosts(msg) {
@@ -756,7 +778,7 @@ const pageHandlers = {
   },
 
   async setOption({ key, value }) {
-    if (!['heuristics', 'badge'].includes(key)) return { ok: false };
+    if (!['heuristics', 'badge', 'cookieBanners'].includes(key)) return { ok: false };
     await serial(async () => {
       await saveSettings({ [key]: Boolean(value) });
       await applyActionState();
@@ -786,6 +808,7 @@ const pageHandlers = {
       settings: {
         allowlist: settings.allowlist,
         heuristics: settings.heuristics,
+        cookieBanners: settings.cookieBanners,
         badge: settings.badge,
         lists: settings.lists,
         customLists: settings.customLists,
@@ -810,6 +833,7 @@ const pageHandlers = {
       await saveSettings({
         allowlist: cleanHostList(s.allowlist),
         heuristics: s.heuristics !== false,
+        cookieBanners: s.cookieBanners !== false,
         badge: s.badge !== false,
         lists,
         customLists,
