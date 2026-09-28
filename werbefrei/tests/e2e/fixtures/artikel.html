@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <title>Testartikel – Nachrichten</title>
+  <style>
+    body { margin: 0; font: 17px/1.6 Georgia, serif; color: #222; background: #fff; }
+    header.site { background: #b00; color: #fff; padding: 12px 24px; font: 700 22px/1 sans-serif; }
+    header.site nav a { color: #fff; margin-right: 14px; font-size: 14px; font-weight: 400; }
+    .layout { display: flex; gap: 32px; max-width: 1300px; margin: 0 auto; padding: 0 24px; }
+    main { flex: 1; min-width: 0; }
+    aside { width: 300px; flex: none; }
+    .ad-billboard { width: 970px; max-width: 100%; min-height: 250px; margin: 16px auto; background: #f3f3f3; }
+    .ad-label { font: 11px/1 sans-serif; color: #888; text-transform: uppercase; display: block; padding: 4px; }
+    .skyscraper-slot { width: 300px; min-height: 600px; background: #f3f3f3; margin-top: 24px; }
+    .inline-slot { margin: 24px 0; min-height: 280px; background: #f3f3f3; text-align: center; }
+    .teasers { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .teasers li { border: 1px solid #ddd; padding: 12px; font: 14px/1.4 sans-serif; }
+    .kicker { display: block; color: #b00; font-size: 12px; font-weight: 700; }
+    .sticky-ad { position: fixed; left: 0; right: 0; bottom: 0; height: 90px; background: #eee; }
+    .video-embed iframe { width: 100%; height: 300px; border: 0; }
+    .ad-hoc-note { background: #ffe; padding: 8px; font: 14px sans-serif; }
+    #consent-dialog { border: 1px solid #ccc; padding: 12px; font: 14px sans-serif; margin: 24px 0; }
+    #consent-dialog li { display: flex; justify-content: space-between; }
+    footer.site { background: #333; color: #ccc; padding: 24px; font: 14px sans-serif; margin-top: 40px; }
+    footer.site a { color: #fff; margin-right: 12px; }
+    .custom-box { height: 120px; background: #fde; }
+  </style>
+  <script async src="https://securepubads.g.doubleclick.net/tag/js/gpt.js"></script>
+  <script async src="https://c.amazon-adsystem.com/aax2/apstag.js"></script>
+</head>
+<body>
+  <header class="site">
+    Testnachrichten
+    <nav><a href="/politik">Politik</a><a href="/wirtschaft">Wirtschaft</a><a href="/werben">Werbung</a></nav>
+  </header>
+
+  <!-- Billboard über dem Artikel, Kennzeichnung + leerer GPT-Platz -->
+  <div class="ad-billboard" id="wp-billboard">
+    <span class="ad-label">Anzeige</span>
+    <div id="div-gpt-ad-1690000000000-0"></div>
+  </div>
+
+  <div class="layout">
+    <main>
+      <article id="artikel">
+        <header>
+          <span class="kicker" id="kicker-werbung">Werbung</span>
+          <h1>Warum Werbung im Netz so nervt</h1>
+          <p class="teaser-text">Ein Testartikel mit allem, was um einen Artikel herum stört.</p>
+        </header>
+        <div itemprop="articleBody">
+          <p id="absatz-1">Erster Absatz. Die Branche für Werbung setzt auf immer größere Formate, die den Lesefluss unterbrechen. Leserinnen und Leser reagieren darauf mit Werbeblockern.</p>
+          <p id="absatz-2">Zweiter Absatz. Viele Verlage finanzieren sich über Anzeigen, und das Wort Anzeige steht hier mitten im Text, ohne dass etwas verschwinden darf.</p>
+
+          <!-- Werbeplatz zwischen den Absätzen: Kennzeichnung + Rahmen vom gesperrten Werbeserver -->
+          <div class="inline-slot" id="wp-inline">
+            <p>Anzeige</p>
+            <iframe src="https://ad.doubleclick.net/ddm/adi/N1234.test/B5678;sz=300x250" width="300" height="250" scrolling="no"></iframe>
+          </div>
+
+          <p id="absatz-3">Dritter Absatz. Nach dem Werbeplatz geht der Artikel weiter.</p>
+          <div class="ad-hoc-note" id="adhoc">Hinweis der Redaktion: Dieser Kasten heißt ad-hoc-note, ist aber keine Werbung.</div>
+          <div class="video-embed" id="video"><iframe src="http://video.test/player.html" title="Video"></iframe></div>
+          <!-- Werbeplatz mit Inline-Skript: der Skripttext zählt nicht als Inhalt -->
+          <div class="inline-slot" id="wp-skript">
+            <span class="ad-label">Anzeige</span>
+            <script>window.werbeDaten = { slot: "artikel-mitte", groessen: [[300, 250], [728, 90]], bemerkung: "Dieser Skripttext ist lang genug, um als Artikeltext durchzugehen, ist aber keiner." };</script>
+            <div id="slot-artikel-mitte"></div>
+          </div>
+          <div role="button" tabindex="0" id="knopf-anzeigen" style="height:34px;border:1px solid #ccc;display:flex;align-items:center;padding:0 8px;font:14px sans-serif"><span>Anzeigen</span></div>
+          <section class="billboard" id="lazy-billboard" style="min-height:200px"><img loading="lazy" src="http://video.test/titelbild.jpg" width="600" height="200" alt="Titelbild"></section>
+          <p id="absatz-4">Vierter Absatz. Ende des Artikels.</p>
+        </div>
+      </article>
+
+      <h2>Mehr zum Thema</h2>
+      <ul class="teasers" id="teaser-liste">
+        <li id="teaser-1"><span class="kicker">Politik</span><a href="/a1">Echter Artikel über die Bundestagswahl und ihre Folgen</a></li>
+        <li id="teaser-anzeige"><span class="kicker">Anzeige</span><a href="http://advertiser.test/kreditkarte">Diese Kreditkarte kostet nichts – so geht es</a></li>
+        <li id="teaser-3"><span class="kicker">Wirtschaft</span><a href="/a3">Echter Artikel über den Arbeitsmarkt</a></li>
+      </ul>
+
+      <div id="consent-dialog">
+        <strong>Datenschutz-Einstellungen</strong>
+        <ul>
+          <li><span>Werbung</span><input type="checkbox" checked></li>
+          <li><span>Statistik</span><input type="checkbox"></li>
+        </ul>
+      </div>
+
+      <!-- Empfehlungs-Widget -->
+      <div id="taboola-below-article-thumbnails" style="min-height:400px;background:#f3f3f3"></div>
+      <div class="custom-box" id="eigenes-element">Ein Kasten, den der Nutzer per Auswahl ausblendet.</div>
+    </main>
+
+    <aside>
+      <div class="skyscraper-slot" id="wp-sky"></div>
+      <div class="sidebar-box" id="sidebar-meistgelesen"><h3>Meistgelesen</h3><ol><li>Ein Artikel</li><li>Noch einer</li></ol></div>
+      <!-- Ersatzanzeige: Bild im Werbeformat über die eigene Domain, Container mit Zufallsnamen -->
+      <div class="relative" id="ersatz-rahmen">
+        <span style="font:11px sans-serif;color:#888">ANZEIGE</span>
+        <div class="HsiYvFGl"><div class="pszFwpCl"><a href="/r?x=1"><img src="http://video.test/image/ersatz.png#1790586515696" width="300" height="600" style="display:block" alt=""></a></div></div>
+      </div>
+      <!-- Ersatzanzeige in Spaltenbreite statt Standardformat -->
+      <div id="ersatz-breit" class="pGrueFrqhV"><div id="Jwnvejeidp"><img src="http://video.test/bilder/offer-ugly-ultra-zebra.jpg" width="640" height="200" style="display:block;max-width:100%"></div></div>
+      <!-- Foto mit Beschreibung in Container mit Zufallsnamen: bleibt -->
+      <div class="kPzQrTvXs" id="foto-alt"><img src="http://video.test/portraet.jpg" width="300" height="360" style="display:block" alt="Porträt der Ministerin"></div>
+      <!-- Echte Fotos in Werbeformat-Größe: müssen bleiben -->
+      <figure class="bild" id="foto-normal"><img src="http://video.test/foto.jpg" width="300" height="250" style="display:block" alt="Foto"></figure>
+      <figure class="mgGNsqFxBL" id="foto-zufall"><img src="http://video.test/foto2.jpg" width="300" height="250" style="display:block" alt="Foto"><figcaption>Bildunterschrift mit genug Text, damit es eindeutig Inhalt ist.</figcaption></figure>
+    </aside>
+  </div>
+
+  <div class="sticky-ad" id="wp-sticky">
+    <iframe src="https://googleads.g.doubleclick.net/pagead/ads?client=ca-pub-0000" width="728" height="90"></iframe>
+  </div>
+
+  <footer class="site" id="fusszeile">
+    <a href="/impressum">Impressum</a><a href="/werben">Werbung</a><span>Mediadaten</span>
+  </footer>
+
+  <script>
+    // Nachgeladener Werbeplatz, wie ihn Werbeskripte nach dem Laden einfügen.
+    setTimeout(() => {
+      const slot = document.createElement('div');
+      slot.id = 'wp-nachgeladen';
+      slot.className = 'adSlot adSlot--mrec';
+      slot.style.cssText = 'width:300px;height:250px;background:#f3f3f3;margin:16px 0';
+      document.querySelector('aside').appendChild(slot);
+    }, 800);
+  </script>
+</body>
+</html>

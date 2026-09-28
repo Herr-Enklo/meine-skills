@@ -1,0 +1,187 @@
+[
+  {
+    "id": 1,
+    "priority": 1,
+    "action": {
+      "type": "block"
+    },
+    "condition": {
+      "requestDomains": [
+        "360yield.com",
+        "3lift.com",
+        "ad.71i.de",
+        "adform.net",
+        "adnxs-simple.com",
+        "adnxs.com",
+        "ads.linkedin.com",
+        "adsafeprotected.com",
+        "adscale.de",
+        "adspirit.de",
+        "agkn.com",
+        "amazon-adsystem.com",
+        "bidswitch.net",
+        "casalemedia.com",
+        "connectad.io",
+        "contextweb.com",
+        "crwdcntrl.net",
+        "dianomi.com",
+        "doubleclick.net",
+        "eyeota.net",
+        "googlesyndication.com",
+        "googletagservices.com",
+        "id5-sync.com",
+        "imasdk.googleapis.com",
+        "indexww.com",
+        "ligatus.com",
+        "mgid.com",
+        "moatads.com",
+        "openx.net",
+        "pubmatic.com",
+        "revcontent.com",
+        "rlcdn.com",
+        "rubiconproject.com",
+        "sharethrough.com",
+        "smartadserver.com",
+        "spotxchange.com",
+        "static.ads-twitter.com",
+        "teads.tv",
+        "uimserv.net",
+        "unrulymedia.com",
+        "yieldlab.net",
+        "yieldlove-ad-serving.net",
+        "yieldscale.com"
+      ]
+    }
+  },
+  {
+    "id": 2,
+    "priority": 1,
+    "action": {
+      "type": "block"
+    },
+    "condition": {
+      "domainType": "thirdParty",
+      "requestDomains": [
+        "33across.com",
+        "ad4mat.de",
+        "adalliance.io",
+        "adelement.com",
+        "adhese.com",
+        "adition.com",
+        "adsrvr.org",
+        "adtech.de",
+        "adtechus.com",
+        "adup-tech.com",
+        "adyoulike.com",
+        "criteo.com",
+        "criteo.net",
+        "doubleverify.com",
+        "gumgum.com",
+        "improvedigital.com",
+        "innovid.com",
+        "lijit.com",
+        "live.primis.tech",
+        "nativendo.de",
+        "onetag-sys.com",
+        "outbrain.com",
+        "outbrainimg.com",
+        "partner.googleadservices.com",
+        "richaudience.com",
+        "seedtag.com",
+        "sonobi.com",
+        "sovrn.com",
+        "stroeerdigitalmedia.de",
+        "taboola.com",
+        "taboolasyndication.com",
+        "vidoomy.com",
+        "yieldlove.com",
+        "yieldmo.com",
+        "zemanta.com"
+      ]
+    }
+  },
+  {
+    "id": 3,
+    "priority": 1,
+    "action": {
+      "type": "block"
+    },
+    "condition": {
+      "excludedResourceTypes": [
+        "main_frame",
+        "media"
+      ],
+      "domainType": "thirdParty",
+      "requestDomains": [
+        "2mdn.net"
+      ]
+    }
+  },
+  {
+    "id": 4,
+    "priority": 1,
+    "action": {
+      "type": "block"
+    },
+    "condition": {
+      "resourceTypes": [
+        "object",
+        "script",
+        "xmlhttprequest"
+      ],
+      "domainType": "thirdParty",
+      "requestDomains": [
+        "media.net"
+      ]
+    }
+  },
+  {
+    "id": 5,
+    "priority": 1,
+    "action": {
+      "type": "block"
+    },
+    "condition": {
+      "domainType": "thirdParty",
+      "excludedInitiatorDomains": [
+        "toggo.de"
+      ],
+      "requestDomains": [
+        "flashtalking.com",
+        "smartclip.net"
+      ]
+    }
+  },
+  {
+    "id": 6,
+    "priority": 2,
+    "action": {
+      "type": "allow"
+    },
+    "condition": {
+      "resourceTypes": [
+        "script"
+      ],
+      "initiatorDomains": [
+        "rewe.de"
+      ],
+      "urlFilter": "||adform.net/adfserve/?bn=",
+      "isUrlFilterCaseSensitive": false
+    }
+  },
+  {
+    "id": 7,
+    "priority": 2,
+    "action": {
+      "type": "allow"
+    },
+    "condition": {
+      "initiatorDomains": [
+        "jetzt.de",
+        "sueddeutsche.de"
+      ],
+      "urlFilter": "||adspirit.de/adasync.min.js",
+      "isUrlFilterCaseSensitive": false
+    }
+  }
+]

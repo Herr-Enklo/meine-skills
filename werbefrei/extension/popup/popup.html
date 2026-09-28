@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <title>Werbefrei</title>
+  <link rel="stylesheet" href="../ui/theme.css">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header class="top">
+    <img src="../icons/an-32.png" alt="" width="24" height="24" class="logo" id="logo">
+    <div class="who">
+      <div class="name">Werbefrei</div>
+      <div class="site" id="site">…</div>
+    </div>
+    <a class="btn quiet icon" id="settings" href="#" title="Einstellungen" aria-label="Einstellungen">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg>
+    </a>
+  </header>
+
+  <div class="notice paused" id="pausedNotice" hidden>
+    <strong>Werbefrei ist pausiert.</strong> Auf keiner Seite wird etwas blockiert.
+    <button class="btn primary small" id="resume">Fortsetzen</button>
+  </div>
+
+  <main id="main" hidden>
+    <label class="siteToggle">
+      <span>
+        <span class="label" id="toggleLabel">Auf dieser Seite aktiv</span>
+        <span class="hint" id="toggleHint">Ausschalten, wenn die Seite nicht richtig funktioniert.</span>
+      </span>
+      <span class="switch"><input type="checkbox" id="siteEnabled"><span></span></span>
+    </label>
+
+    <div class="stats" id="stats">
+      <div class="stat">
+        <div class="value" id="blocked">–</div>
+        <div class="caption">Anfragen blockiert</div>
+      </div>
+      <div class="stat">
+        <div class="value" id="hidden">–</div>
+        <div class="caption">Werbeplätze ausgeblendet</div>
+      </div>
+    </div>
+
+    <button class="btn primary wide" id="picker">Element ausblenden …</button>
+    <div class="shortcut muted">Zeigen und klicken. Tastenkürzel: <kbd>Alt</kbd>+<kbd>Umschalt</kbd>+<kbd>E</kbd></div>
+  </main>
+
+  <div class="notice" id="unsupported" hidden>
+    Auf dieser Seite kann Werbefrei nicht arbeiten. Browser-Seiten und der Web Store sind für Erweiterungen gesperrt.
+  </div>
+
+  <footer class="bottom">
+    <button class="btn quiet" id="pause">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
+      Überall pausieren
+    </button>
+  </footer>
+
+  <script type="module" src="popup.js"></script>
+</body>
+</html>
