@@ -159,3 +159,6 @@ tagesspiegel.de###outbrain-container
 sueddeutsche.de##img[src*="format=gif"][style*="position: fixed"]
 sueddeutsche.de##div.stk:has(> img[src*="format=gif"])
 sueddeutsche.de##[data-hydration-component-name="VoucherWidget"]
+! Ippen-Seiten (merkur.de, tz.de, fr.de, fnp.de, hna.de und weitere): Rahmen des ShowHeroes-Videoplayers,
+! der ohne den blockierten Player leer bleibt
+##.wv_story_el_showHeroes

@@ -75,6 +75,7 @@ try {
     ['#wp-nachgeladen', 'nachgeladener leerer Werbeplatz'],
     ['#wp-skript', 'Werbeplatz mit Inline-Skript und Kennzeichnung'],
     ['#ersatz-rahmen', 'Ersatzanzeige (Bild im Werbeformat, Zufallsnamen) mit Kennzeichnung'],
+    ['#ersatz-breit', 'Ersatzanzeige in Spaltenbreite (640×200)'],
   ]) {
     check(what, !(await visible(sel)));
   }
@@ -98,6 +99,7 @@ try {
     ['#lazy-billboard', 'Kasten mit Klasse billboard und verzögert ladendem Bild'],
     ['#foto-normal', 'Foto im Format 300×250'],
     ['#foto-zufall', 'Foto im Format 300×250 mit Bildunterschrift in Container mit Zufallsnamen'],
+    ['#foto-alt', 'Foto mit Beschreibung (alt) in Container mit Zufallsnamen'],
   ]) {
     check(what, await visible(sel));
   }

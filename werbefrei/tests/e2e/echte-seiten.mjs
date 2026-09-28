@@ -104,10 +104,12 @@ function measure(page, adHosts) {
     // (gleiche Merkmale wie in content.js, hier nur gezählt).
     const sizes = [[300, 250], [336, 280], [728, 90], [970, 90], [970, 250], [160, 600], [120, 600], [300, 600], [300, 1050], [320, 50], [320, 100], [468, 60], [250, 250], [800, 250], [994, 250], [1000, 250]];
     const random = (n) => /^[A-Za-z]{7,16}$/.test(n || '') && n.replace(/[^A-Z]/g, '').length >= 2 && n.replace(/[^aeiouAEIOU]/g, '').length / n.length < 0.3;
+    const adSize = (w, h) => sizes.some(([aw, ah]) => Math.abs(w - aw) <= 3 && Math.abs(h - ah) <= 3) || (w >= 250 && h >= 90) || (w >= 120 && h >= 400);
     const ersatz = [...document.querySelectorAll('img, iframe, canvas')].filter((m) => {
       if (!m.checkVisibility()) return false;
+      if (m.tagName === 'IMG' && (m.alt.trim() || m.closest('figure, picture'))) return false;
       const r = m.getBoundingClientRect();
-      if (!sizes.some(([w, h]) => Math.abs(r.width - w) <= 3 && Math.abs(r.height - h) <= 3)) return false;
+      if (!adSize(r.width, r.height)) return false;
       for (let n = m.parentElement, d = 0; n && d < 4; n = n.parentElement, d++) {
         if (random(n.id) || [...n.classList].some(random)) return true;
       }

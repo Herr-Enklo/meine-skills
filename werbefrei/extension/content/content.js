@@ -352,8 +352,9 @@
   // -------------------------------------------------------------------------------------------
   // Ersatzanzeigen: Manche Seiten erkennen den Werbeblocker und blenden dann Werbung als Bild über
   // die eigene Domain ein, in Containern mit Namen, die bei jedem Laden neu ausgewürfelt werden
-  // (etwa "pszFwpCl"). Erkennungsmerkmal ist die Kombination aus Bild in einem Standard-Werbeformat
-  // und solchen Zufallsnamen in den umschließenden Containern.
+  // (etwa "pszFwpCl"). Erkennungsmerkmal ist die Kombination aus einem Bild in Anzeigengröße ohne
+  // Alternativtext und solchen Zufallsnamen in den umschließenden Containern. Die Größe folgt nicht
+  // immer den Standardformaten, manche Seiten passen die Bilder der Spaltenbreite an.
   // -------------------------------------------------------------------------------------------
 
   const AD_SIZES = [
@@ -362,7 +363,8 @@
   ];
 
   function isAdSize(w, h) {
-    return AD_SIZES.some(([aw, ah]) => Math.abs(w - aw) <= 3 && Math.abs(h - ah) <= 3);
+    if (AD_SIZES.some(([aw, ah]) => Math.abs(w - aw) <= 3 && Math.abs(h - ah) <= 3)) return true;
+    return (w >= 250 && h >= 90) || (w >= 120 && h >= 400);
   }
 
   /** Klingt ein Klassen- oder id-Name ausgewürfelt? Nur Buchstaben, gemischte Schreibung, kaum Vokale. */
@@ -384,6 +386,8 @@
   function scanReplacementAds() {
     for (const m of document.querySelectorAll(`img:not([${ATTR}]), iframe:not([${ATTR}]), canvas:not([${ATTR}])`)) {
       if (m.closest(`[${ATTR}]`)) continue;
+      // Bilder mit Beschreibung oder in figure/picture sind Inhalt der Seite.
+      if (m.tagName === 'IMG' && (m.alt.trim() || m.closest('figure, picture'))) continue;
       const r = m.getBoundingClientRect();
       if (!isAdSize(r.width, r.height)) continue;
       // Von innen nach außen: der äußerste Container mit Zufallsnamen, höchstens vier Ebenen.
