@@ -285,7 +285,18 @@ try {
   check('Abo-Angebot kommt später: Dialog erst ausgeblendet, dann wieder da', firstHidden && (await shown('#sp_message_container_1234')));
   check('dann bleibt auch die Scroll-Sperre', !(await scrolls()));
 
-  // Abo-Abfragen automatisch beantworten (Einstellung, standardmäßig aus)
+  // Abo-Abfragen automatisch beantworten (Einstellung, standardmäßig aus). Zuerst: Der Schalter wird
+  // eingeschaltet, während die Abfrage schon offen ist.
+  for (const [art, name] of [['pur', 'die Sourcepoint-Abo-Abfrage'], ['knopf', 'der Knopf-Rahmen im Abo-Dialog der Seite']]) {
+    await cookieTab.goto(`http://news.test:${port}/cookie-sp.html?art=${art}`, { waitUntil: 'load' });
+    await cookieTab.waitForTimeout(3000);
+    const openBefore = (await shown('#sp_message_container_1234')) && !(await agreed());
+    await sendFrom(options, { type: 'setOption', key: 'autoConsent', value: true });
+    await cookieTab.waitForTimeout(1500);
+    check(`Schalter eingeschaltet, während ${name} offen ist: sofort beantwortet`, openBefore && (await agreed()) && !(await shown('#sp_message_container_1234')));
+    await sendFrom(options, { type: 'setOption', key: 'autoConsent', value: false });
+  }
+
   await sendFrom(options, { type: 'setOption', key: 'autoConsent', value: true });
   await cookieTab.goto(`http://news.test:${port}/cookie-sp.html?art=pur`, { waitUntil: 'load' });
   await cookieTab.waitForTimeout(3000);
