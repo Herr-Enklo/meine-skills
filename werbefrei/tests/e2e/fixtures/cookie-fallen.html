@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <title>Fallen für die Cookie-Erkennung</title>
+  <style>
+    body { margin: 0; font: 16px/1.5 sans-serif; }
+    main { height: 3000px; padding: 24px; }
+    .fest { position: fixed; background: #fff; border: 1px solid #999; padding: 12px; z-index: 20; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1 id="titel">Seite mit Fallen</h1>
+    <p>Alles hier muss sichtbar bleiben: Keiner dieser Kästen ist ein Cookie-Hinweis.</p>
+    <!-- Eingebettetes Video mit Zustimmung für externe Inhalte: nicht fest positioniert -->
+    <div id="falle-video" style="width: 480px; padding: 16px; background: #eee">
+      <p>Externer Inhalt: Mit einem Klick auf „Zustimmen“ werden Daten an YouTube übermittelt.
+      Mehr dazu in unserer Datenschutzerklärung.</p>
+      <button>Zustimmen</button>
+    </div>
+  </main>
+
+  <!-- Anmeldung mit Hinweis auf die Datenschutzerklärung und Eingabefeldern -->
+  <div id="falle-login" class="fest" role="dialog" aria-modal="true" style="left: 40px; top: 40px; width: 360px">
+    <h2>Anmelden</h2>
+    <p>Mit der Anmeldung akzeptieren Sie unsere Nutzungsbedingungen und die Datenschutzerklärung.</p>
+    <input type="email" placeholder="E-Mail"> <input type="password" placeholder="Passwort">
+    <button>Akzeptieren und anmelden</button>
+  </div>
+
+  <!-- Newsletter-Kasten mit Einwilligung und Eingabefeld -->
+  <div id="falle-newsletter" class="fest newsletter-consent" style="right: 40px; top: 40px; width: 320px">
+    <p>Unser Newsletter: Ich willige ein, dass meine E-Mail-Adresse gemäß Datenschutzerklärung verarbeitet wird.</p>
+    <input type="email" placeholder="E-Mail"> <button>Zustimmen und eintragen</button>
+  </div>
+
+  <!-- Feste Fußleiste mit Links, ohne Entscheidungsknopf -->
+  <div id="falle-fuss" class="fest privacy-footer" style="left: 0; right: 0; bottom: 0">
+    <a href="#">Impressum</a> · <a href="#">Datenschutz</a> · <a href="#">Cookie-Einstellungen</a> · Wir nutzen Cookies nur mit Ihrer Einwilligung.
+  </div>
+
+  <!-- Chat-Fenster -->
+  <div id="falle-chat" class="fest" style="right: 40px; bottom: 80px; width: 280px">
+    <p>Hallo! Fragen zum Datenschutz oder zu Ihrer Bestellung? Wir helfen gern.</p>
+    <button>Chat starten</button>
+  </div>
+
+  <!-- Kleiner Knopf zum Wiederaufrufen der Cookie-Einstellungen -->
+  <button id="falle-knopf" class="fest cookie-settings-button" style="left: 40px; bottom: 80px">Cookie-Einstellungen</button>
+</body>
+</html>

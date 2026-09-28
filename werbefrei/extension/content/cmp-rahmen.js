@@ -3,14 +3,20 @@
 // der die Wahl "mit Werbung zustimmen oder Abo abschließen" stellt (Pur-Abo, contentpass), bleibt
 // stehen: Ihn auszublenden hieße, die Bezahlschranke zu umgehen. Hat man in den Einstellungen
 // "Abo-Abfragen automatisch beantworten" eingeschaltet, klickt dieses Skript dort "Einwilligen".
+//
+// In anderen Rahmen sucht es nur nach Abo-Abfragen, die eine Seite in einen eigenen Rahmen legt
+// (gmx.net), und beantwortet sie auf Wunsch; ausgeblendet wird dort nichts.
 
 (() => {
   'use strict';
   if (window === window.top) return;
   // Sourcepoint lädt jeden Dialog als eigene Seite mit message_id in der Adresse.
-  if (!/[?&]message_id=\d+/.test(location.search)) return;
+  const isSourcepoint = /[?&]message_id=\d+/.test(location.search);
 
-  const PAY = /\bpur\b|pur-abo|abonn|\babo\b|contentpass|werbefrei|ohne werbung|subscribe|subscription|€/i;
+  const PAY = /\bpur\b|pur-abo|abonn|\babo\b|contentpass|freechoice|werbefrei|ohne werbung|subscribe|subscription|€/i;
+  const CONSENT = /cookie|datenschutz|privacy|einwillig|consent|tracking|personenbezogen/i;
+  // Wie ACCEPT_TEXT in content.js (beide Listen gleich halten).
+  const ACCEPT_TEXT = /^(alle[ns]?\s+)?(cookies\s+)?(akzeptieren|zustimmen|annehmen|erlauben)(\s+(und|&)\s+(weiter|schließen|fortfahren))?$|^einwilligen(\s+und\s+weiter)?$|^(ich\s+bin\s+)?einverstanden$|^(accept|agree|allow)(\s+all)?(\s+cookies)?$/i;
   const SKIP = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEMPLATE']);
   const INTERVAL = 300;
   const GIVE_UP = 15000; // danach keine Meldung mehr: Der Dialog bleibt dann sichtbar.
@@ -25,18 +31,38 @@
   // Sourcepoints Knopf für "Zustimmen" / "Einwilligen und weiter" (Auswahltyp 11 = alles akzeptieren).
   const ACCEPT = 'button.sp_choice_type_11';
 
-  const send = (art) => chrome.runtime.sendMessage({ type: 'cmpRahmen', art }).catch(() => null);
+  // frei: kein Sourcepoint-Rahmen; die Seite muss dann nichts über den Dialog erfahren.
+  const send = (art, frei = false) => chrome.runtime.sendMessage({ type: 'cmpRahmen', art, frei }).catch(() => null);
 
-  /** Den Zustimmungsknopf klicken, sobald er da ist; einmal, höchstens fünf Sekunden lang suchen. */
+  function acceptButton() {
+    if (isSourcepoint) return document.querySelector(ACCEPT);
+    return [...document.querySelectorAll('button, [role="button"], a, input[type="button"], input[type="submit"]')].find(
+      (b) => ACCEPT_TEXT.test((b.innerText || b.value || '').replace(/\s+/g, ' ').trim()) && b.checkVisibility(),
+    );
+  }
+
+  /**
+   * Den Zustimmungsknopf klicken, sobald er da ist (höchstens fünf Sekunden lang suchen). Bleibt er
+   * danach sichtbar, nachklicken: Manche Dialoge hängen ihre Handler erst nach dem Anzeigen an.
+   */
   function accept(tries = 0) {
     if (accepted) return;
-    const button = document.querySelector(ACCEPT);
+    const button = acceptButton();
     if (button && !button.disabled) {
       accepted = true;
-      button.click();
+      clickUntilGone(button);
       return;
     }
     if (tries < 20) setTimeout(() => accept(tries + 1), 250);
+  }
+
+  function clickUntilGone(button, attempt = 0) {
+    if (!button.isConnected) return;
+    button.click();
+    if (attempt >= 3) return;
+    setTimeout(() => {
+      if (button.isConnected && button.checkVisibility()) clickUntilGone(button, attempt + 1);
+    }, 1500 * (attempt + 1));
   }
 
   function onVerdict(res) {
@@ -97,5 +123,25 @@
     if (Date.now() - started < GIVE_UP) setTimeout(check, INTERVAL);
   }
 
-  check();
+  /**
+   * Andere Rahmen: Abo-Abfrage mit Einwilligungstext, Abo-Angebot und eindeutigem Zustimmungsknopf,
+   * in einem Rahmen von mindestens 300 × 200 Pixeln. Werbe-Rahmen fallen fast immer schon am
+   * günstigen Vorfilter über textContent heraus.
+   */
+  let otherTries = 0;
+  function checkOther() {
+    const raw = document.body?.textContent || '';
+    if (innerWidth >= 300 && innerHeight >= 200 && CONSENT.test(raw) && PAY.test(raw)) {
+      const text = visibleText();
+      if (CONSENT.test(text) && PAY.test(text) && acceptButton()) {
+        isPay = true;
+        send('bezahl', true).then(onVerdict);
+        return;
+      }
+    }
+    if (++otherTries < 20) setTimeout(checkOther, 750);
+  }
+
+  if (isSourcepoint) check();
+  else checkOther();
 })();

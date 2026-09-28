@@ -23,6 +23,18 @@ const server = createServer((req, res) => {
     res.end('ok');
     return;
   }
+  if (host === 'consent.test' && req.url.startsWith('/rahmen-abo')) {
+    // Abo-Abfrage in einem eigenen Rahmen ohne Sourcepoint (wie gmx.net)
+    res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+    res.end(`<!doctype html><meta charset="utf-8"><body style="font:15px sans-serif;padding:16px">
+      <h2>Postfach ohne Werbung abonnieren – oder mit Werbung und Tracking weiter wie gewohnt</h2>
+      <p>Mit Premium ab 3,99 €/Monat ohne Werbetracking.</p> <button>Zum Abo ohne Fremdwerbung</button>
+      <p>Mit Ihrer Zustimmung verarbeiten wir und unsere Partner Daten mit Cookies (Datenschutz).</p>
+      <button id="ja">Akzeptieren und weiter</button>
+      <script>document.getElementById('ja').addEventListener('click', () => parent.postMessage('zugestimmt', '*'));</script>
+    </body>`);
+    return;
+  }
   if (host === 'consent.test') {
     // Nachbildung eines Sourcepoint-Dialogs in einem Rahmen von fremder Domain.
     const art = new URL(req.url, 'http://consent.test').searchParams.get('art');
@@ -55,7 +67,7 @@ const server = createServer((req, res) => {
     res.end('<body style="margin:0;background:#123;color:#fff;font:20px sans-serif;display:grid;place-items:center;height:100vh">Videoplayer</body>');
     return;
   }
-  const cookiePage = /^\/(cookie-banner|cookie-pur|cookie-sp|cookie-opencmp)\.html/.exec(req.url);
+  const cookiePage = /^\/(cookie-banner|cookie-pur|cookie-sp|cookie-opencmp|cookie-eigen|cookie-fallen|cookie-rahmen)\.html/.exec(req.url);
   if (cookiePage) {
     res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
     res.end(readFileSync(`${fixtures}${cookiePage[1]}.html`));
@@ -290,6 +302,46 @@ try {
   await cookieTab.waitForTimeout(2500);
   check('gewöhnlicher OpenCMP-Hinweis ausgeblendet', !(await openCmpShown()) && !(await agreed()) && (await shown('#titel')));
 
+  // Selbst gebaute Dialoge ohne bekannten Anbieter (allgemeine Erkennung)
+  await cookieTab.goto(`http://news.test:${port}/cookie-eigen.html?art=zdf`, { waitUntil: 'load' });
+  await cookieTab.waitForTimeout(2500);
+  check('selbst gebauter Dialog wie auf zdf.de ausgeblendet', !(await shown('[role="dialog"]')) && !(await agreed()));
+  check('und mit „Ablehnen“ beantwortet (Seite hebt ihre Sperren selbst auf)', await cookieTab.evaluate(() => window.__abgelehnt === true));
+  check('dessen Hintergrundebene ebenfalls', !(await shown('.kx81')));
+  check('Seite danach scrollbar', await scrolls());
+  await cookieTab.evaluate(() => window.scrollTo(0, 0));
+  await cookieTab.click('#klickmich', { timeout: 3000 }).catch(() => {});
+  check('Seite danach klickbar (pointer-events)', (await cookieTab.textContent('#zaehler')) === '1');
+  await cookieTab.goto(`http://news.test:${port}/cookie-eigen.html?art=schatten`, { waitUntil: 'load' });
+  await cookieTab.waitForTimeout(2500);
+  check('Dialog im Shadow DOM eines Elements im Seiteninhalt (wie alternate.de) ausgeblendet und abgelehnt',
+    !(await shown('#cmp-xy-shadow')) && (await cookieTab.evaluate(() => window.__abgelehnt === true)) && (await shown('#titel')));
+  await cookieTab.goto(`http://news.test:${port}/cookie-eigen.html?art=uc`, { waitUntil: 'load' });
+  await cookieTab.waitForTimeout(4000);
+  check('Usercentrics-Dialog, der erst per CSS-Animation sichtbar wird (wie dm.de), ausgeblendet', !(await shown('#usercentrics-root')));
+  await cookieTab.goto(`http://news.test:${port}/cookie-eigen.html?art=leiste`, { waitUntil: 'load' });
+  await cookieTab.waitForTimeout(2500);
+  check('schlichte Cookie-Leiste mit „OK“ ausgeblendet', !(await shown('.v3pl')));
+  await cookieTab.goto(`http://news.test:${port}/cookie-eigen.html?art=abo`, { waitUntil: 'load' });
+  await cookieTab.waitForTimeout(2500);
+  check('selbst gebaute Abo-Abfrage bleibt stehen, ohne Einwilligung', (await shown('[role="dialog"]')) && !(await agreed()));
+  check('deren Scroll-Sperre bleibt', !(await scrolls()));
+  await cookieTab.goto(`http://news.test:${port}/cookie-rahmen.html`, { waitUntil: 'load' });
+  await cookieTab.waitForTimeout(3000);
+  check('Abo-Abfrage in fremdem Rahmen (wie gmx.net) bleibt stehen, ohne Einwilligung', (await shown('#abfrage')) && !(await agreed()));
+  await cookieTab.goto(`http://news.test:${port}/cookie-fallen.html`, { waitUntil: 'load' });
+  await cookieTab.waitForTimeout(3000);
+  for (const [id, name] of [
+    ['falle-login', 'Anmeldefenster mit Datenschutz-Hinweis'],
+    ['falle-newsletter', 'Newsletter-Kasten mit Einwilligung'],
+    ['falle-fuss', 'feste Fußleiste mit Cookie-Einstellungen'],
+    ['falle-chat', 'Chat-Fenster'],
+    ['falle-knopf', 'Knopf „Cookie-Einstellungen“'],
+    ['falle-video', 'Zustimmung für ein eingebettetes Video'],
+  ]) {
+    check(`Falle bleibt sichtbar: ${name}`, await shown(`#${id}`));
+  }
+
   await cookieTab.goto(`http://news.test:${port}/cookie-sp.html?art=spaet`, { waitUntil: 'load' });
   await cookieTab.waitForTimeout(2800);
   const firstHidden = !(await shown('#sp_message_container_1234'));
@@ -320,6 +372,15 @@ try {
   await cookieTab.goto(`http://news.test:${port}/cookie-opencmp.html?art=abo`, { waitUntil: 'load' });
   await cookieTab.waitForTimeout(2500);
   check('Schalter an: OpenCMP-Abo-Abfrage beantwortet', (await agreed()) && !(await openCmpShown()));
+  await cookieTab.goto(`http://news.test:${port}/cookie-rahmen.html`, { waitUntil: 'load' });
+  await cookieTab.waitForTimeout(3500);
+  check('Schalter an: Abo-Abfrage in fremdem Rahmen beantwortet', (await agreed()) && !(await shown('#abfrage')));
+  await cookieTab.goto(`http://news.test:${port}/cookie-eigen.html?art=abo`, { waitUntil: 'load' });
+  await cookieTab.waitForTimeout(2500);
+  check('Schalter an: selbst gebaute Abo-Abfrage über Knopftext beantwortet', (await agreed()) && !(await shown('[role="dialog"]')));
+  await cookieTab.goto(`http://news.test:${port}/cookie-eigen.html?art=zdf`, { waitUntil: 'load' });
+  await cookieTab.waitForTimeout(2500);
+  check('Schalter an: gewöhnlicher selbst gebauter Dialog nicht zugestimmt, nur abgelehnt', !(await agreed()) && !(await shown('[role="dialog"]')));
   await cookieTab.goto(`http://news.test:${port}/cookie-sp.html?art=knopf`, { waitUntil: 'load' });
   await cookieTab.waitForTimeout(3000);
   check('Schalter an: Knopf-Rahmen im Abo-Dialog der Seite beantwortet', (await agreed()) && !(await shown('#sp_message_container_1234')));
