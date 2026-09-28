@@ -9,7 +9,7 @@
 
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { launch, waitForSetup } from './browser.mjs';
+import { launch, waitForLists } from './browser.mjs';
 import { acceptConsent } from './einwilligung.mjs';
 
 const out = fileURLToPath(new URL('../../test-ergebnisse/', import.meta.url));
@@ -128,7 +128,8 @@ async function visit(context, site, adHosts, label, articleUrl) {
     let url = articleUrl;
     let consent = null;
     if (!url) {
-      await page.goto(start, { waitUntil: 'domcontentloaded', timeout: 45000 });
+      const response = await page.goto(start, { waitUntil: 'domcontentloaded', timeout: 45000 });
+      if (response && response.status() >= 400) throw new Error(`Startseite antwortet mit ${response.status()}`);
       consent = await acceptConsent(page);
       await page.waitForTimeout(2500);
       await page.waitForLoadState('domcontentloaded').catch(() => {});
@@ -160,7 +161,7 @@ async function visit(context, site, adHosts, label, articleUrl) {
 async function compare(site, adHosts) {
   const name = new URL(site.start).hostname.replace(/^www\./, '');
   const withExt = await launch();
-  await waitForSetup(withExt.worker, { timeout: 120000 });
+  await waitForLists(withExt.worker);
   const b = await visit(withExt.context, site, adHosts, 'mit');
   await withExt.context.close();
   const plain = await launch({ withExtension: false });
@@ -173,12 +174,7 @@ async function compare(site, adHosts) {
 
 // Werbe-Domains aus den Listen der Erweiterung holen (einmal installieren, Listen laden).
 const setup = await launch();
-await waitForSetup(setup.worker, { timeout: 120000 });
-for (let i = 0; i < 60; i++) {
-  const { listMeta = {} } = await setup.worker.evaluate(() => chrome.storage.local.get('listMeta'));
-  if (listMeta.easylist?.updated && listMeta['easylist-germany']?.updated) break;
-  await new Promise((r) => setTimeout(r, 1000));
-}
+await waitForLists(setup.worker);
 const { blockHosts = [], ruleReport } = await setup.worker.evaluate(() => chrome.storage.local.get(['blockHosts', 'ruleReport']));
 await setup.context.close();
 const adHosts = new Set(blockHosts);

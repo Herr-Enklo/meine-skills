@@ -71,3 +71,26 @@ export async function extensionPage(context, extensionId, path = 'options/option
 export function sendFrom(page, msg) {
   return page.evaluate((m) => chrome.runtime.sendMessage(m), msg);
 }
+
+/**
+ * Wartet, bis alle eingeschalteten abonnierten Listen geladen (oder mit Fehler abgebrochen) sind
+ * und der Service Worker die Regeln danach neu zusammengestellt hat.
+ */
+export async function waitForLists(worker, { timeout = 120000 } = {}) {
+  await waitForSetup(worker, { timeout });
+  const start = Date.now();
+  while (Date.now() - start < timeout) {
+    const done = await worker
+      .evaluate(async () => {
+        const { settings, listMeta = {}, ruleReport } = await chrome.storage.local.get(['settings', 'listMeta', 'ruleReport']);
+        const ids = Object.entries(settings?.lists || {}).filter(([id, on]) => on && id !== 'werbefrei').map(([id]) => id);
+        if (!ids.every((id) => listMeta[id]?.updated || listMeta[id]?.error)) return false;
+        const last = Math.max(0, ...ids.map((id) => listMeta[id]?.updated || 0));
+        return Boolean(ruleReport && ruleReport.at >= last);
+      })
+      .catch(() => false);
+    if (done) return;
+    await new Promise((r) => setTimeout(r, 500));
+  }
+  throw new Error('Filterlisten nicht rechtzeitig geladen');
+}

@@ -154,3 +154,8 @@ merkur.de##div.Skyscraper
 t-online.de##div.js-commercial-stream-item
 ! tagesspiegel.de: Outbrain-Kasten unter dem Artikel
 tagesspiegel.de###outbrain-container
+! sueddeutsche.de: Werbung, die die Seite selbst als Bild mit festem Platz am Rand ausliefert
+! (zufällige ids, eigene Domain), und die Gutschein-Leiste unter dem Artikel
+sueddeutsche.de##img[src*="format=gif"][style*="position: fixed"]
+sueddeutsche.de##div.stk:has(> img[src*="format=gif"])
+sueddeutsche.de##[data-hydration-component-name="VoucherWidget"]

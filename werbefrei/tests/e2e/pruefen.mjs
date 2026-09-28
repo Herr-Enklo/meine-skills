@@ -3,7 +3,7 @@
 //   node tests/e2e/pruefen.mjs https://www.beispiel.de/artikel.html
 // Die Einwilligung wird bestätigt, damit die Seite Werbung lädt.
 
-import { launch, waitForSetup } from './browser.mjs';
+import { launch, waitForLists } from './browser.mjs';
 import { acceptConsent } from './einwilligung.mjs';
 
 const url = process.argv[2];
@@ -14,12 +14,7 @@ if (!url) {
 
 const { context, worker } = await launch();
 try {
-  await waitForSetup(worker, { timeout: 120000 });
-  for (let i = 0; i < 60; i++) {
-    const { listMeta = {} } = await worker.evaluate(() => chrome.storage.local.get('listMeta'));
-    if (listMeta.easylist?.updated && listMeta['easylist-germany']?.updated) break;
-    await new Promise((r) => setTimeout(r, 1000));
-  }
+  await waitForLists(worker);
   const page = await context.newPage();
   await page.goto(url, { waitUntil: 'domcontentloaded' });
   const consent = await acceptConsent(page);
