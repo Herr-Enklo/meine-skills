@@ -21,8 +21,9 @@
   const AD_TOKENS = new Set([
     'ad', 'ads', 'adv', 'advert', 'adverts', 'advertising', 'advertisement', 'advertisements', 'adslot', 'adslots',
     'adunit', 'adbox', 'adcontainer', 'adwrapper', 'adspace', 'adplace', 'adplacement', 'adzone', 'adtag', 'adframe',
-    'anzeige', 'anzeigen', 'werbung', 'werbeflaeche', 'werbemittel', 'billboard', 'skyscraper', 'superbanner',
-    'leaderboard', 'mrec', 'medrec', 'dfp', 'gpt', 'taboola', 'outbrain', 'teads', 'outstream', 'sponsoredcontent',
+    // "anzeigen" fehlt absichtlich: Im Deutschen ist es auch das Verb ("Kommentare anzeigen").
+    'anzeige', 'werbung', 'werbeflaeche', 'werbemittel', 'billboard', 'skyscraper', 'superbanner',
+    'leaderboard', 'mrec', 'medrec', 'dfp', 'taboola', 'outbrain', 'teads', 'outstream', 'sponsoredcontent',
   ]);
   const SKIP_TEXT_PARENTS = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEXTAREA', 'OPTION', 'TITLE', 'TEMPLATE']);
   const MEDIA = 'img, picture, video, canvas, svg, object, embed, iframe, input, select, textarea, button';
@@ -40,6 +41,7 @@
     scans: 0,
     firstEmpty: new WeakMap(), // Element -> Zeitpunkt, an dem es zum ersten Mal leer war
     labelsSeen: new WeakSet(),
+    revived: new WeakSet(), // leere Kästen, die sich doch noch gefüllt haben: nie wieder ausblenden
     hostVerdict: new Map(), // Hostname -> true (gesperrt) | false | 'offen'
     reasons: { kennzeichnung: 0, leer: 0, rahmen: 0 },
   };
@@ -146,8 +148,22 @@
     return false;
   }
 
+  /**
+   * Text eines Elements ohne Skripte und Styles (Werbeplätze enthalten oft Inline-Skripte) und
+   * unabhängig davon, ob er gerade sichtbar ist. Liest höchstens etwa `limit` Zeichen.
+   */
+  function textOf(el, limit = 600) {
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, {
+      acceptNode: (n) => (SKIP_TEXT_PARENTS.has(n.parentElement?.tagName) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT),
+    });
+    let text = '';
+    for (let n = walker.nextNode(); n && text.length <= limit; n = walker.nextNode()) text += ` ${n.data}`;
+    return text;
+  }
+
+  /** Länge des Textes ohne Kennzeichnungen wie "Anzeige" und ohne Leer- und Satzzeichen. */
   function otherTextLength(el) {
-    const text = el.textContent || '';
+    const text = textOf(el);
     if (text.length > 400) return text.length;
     return text.replace(LABEL_STRIP_RE, '').replace(/[\s\-–—|:·•*()]+/g, '').length;
   }
@@ -161,9 +177,12 @@
   }
 
   /** Eine Kennzeichnung ("Anzeige") gefunden: den Kasten drumherum ausblenden. */
+  const INTERACTIVE = 'a[href], button, summary, label, [role="button"], [role="menuitem"], [role="tab"], [onclick], [tabindex]:not([tabindex="-1"])';
+
   // Hier steht "Werbung" als Menüpunkt, Link oder Einwilligungszweck, nicht als Kennzeichnung.
   const NOT_A_LABEL =
-    'a, button, nav, footer, form, select, label, h1, dialog, [role="navigation"], [role="menu"], [role="menubar"], ' +
+    'a, button, nav, footer, form, select, label, h1, dialog, summary, [role="button"], [onclick], [tabindex]:not([tabindex="-1"]), ' +
+    '[role="navigation"], [role="menu"], [role="menubar"], ' +
     '[role="tablist"], [role="dialog"], [aria-modal="true"], [id*="consent" i], [class*="consent" i], ' +
     '[id*="cookie" i], [class*="cookie" i], [id*="privacy" i], [id*="onetrust" i], [id*="cmp" i], [class*="cmp-" i]';
 
@@ -184,7 +203,9 @@
     }
 
     if (box !== label) {
-      if (looksLikeAdBlock(box) || box.getBoundingClientRect().height >= 30) hide(box, 'kennzeichnung');
+      // Werbe-Indiz im Kasten, oder ein großer leerer Kasten, in dem nur noch die Kennzeichnung steht.
+      const blank = box.getBoundingClientRect().height >= 60 && !box.querySelector('a[href], button, input, [role="button"]');
+      if (looksLikeAdBlock(box) || blank) hide(box, 'kennzeichnung');
       return;
     }
 
@@ -269,30 +290,68 @@
   }
 
   /** Ist der Werbecontainer leer, also ohne Text und ohne sichtbare Bilder oder Inhalte? */
+  /** Bild mit echter Quelle (auch wenn es verzögert lädt und noch 0×0 groß ist)? */
+  function hasRealSource(m) {
+    const source = m.querySelector('source');
+    const src = m.currentSrc || m.getAttribute('src') || m.getAttribute('data-src') || m.getAttribute('srcset') ||
+      source?.getAttribute('src') || source?.getAttribute('srcset') || '';
+    if (!src || src.startsWith('data:image/gif') || src === 'about:blank') return false;
+    const host = hostOf(src.split(/\s/)[0]);
+    return !(host && state.hostVerdict.get(host) === true);
+  }
+
+  function hasContent(el) {
+    if (otherTextLength(el) > 0) return true;
+    for (const m of el.querySelectorAll(MEDIA)) {
+      if (m.hasAttribute(ATTR) || m.parentElement?.closest(`[${ATTR}]:not([${ATTR}="leer"])`)) continue;
+      if (m.tagName === 'IFRAME') {
+        if (frameIsAdLike(m)) continue;
+        return true;
+      }
+      if (m.tagName === 'IMG' || m.tagName === 'VIDEO' || m.tagName === 'PICTURE') {
+        if (m.tagName === 'PICTURE' || hasRealSource(m)) {
+          const w = Number(m.getAttribute('width')), h = Number(m.getAttribute('height'));
+          if (w && h && w * h <= 4) continue; // Zählpixel
+          return true;
+        }
+        continue;
+      }
+      const mr = m.getBoundingClientRect();
+      if (mr.width * mr.height >= 16) return true;
+    }
+    return false;
+  }
+
+  /** Ist der Werbecontainer leer, also ohne Text und ohne Bilder oder andere Inhalte? */
   function isEmptyAdBox(el) {
     const r = el.getBoundingClientRect();
     // Nur Kästen, die sichtbar Platz belegen. Eine einzelne Zeile wie eine Dachzeile "Werbung"
-    // ist kein Werbeplatz, auch wenn ihre Klasse danach klingt.
-    if (r.width < 30 || r.height < 30) return false;
-    const text = (el.innerText || '').replace(LABEL_STRIP_RE, '').replace(/[\s\-–—|:·•*()]+/g, '');
-    if (text.length) return false;
+    // ist kein Werbeplatz, auch wenn ihre Klasse danach klingt. Und nichts, das größer ist als
+    // jedes Werbeformat: Das ist ein Seitenbereich, dessen Klasse zufällig passt.
+    if (r.width < 30 || r.height < 30 || r.width > 1500 || r.height > 1300) return false;
+    if (hasContent(el)) return false;
     const style = getComputedStyle(el);
     if (style.backgroundImage && style.backgroundImage !== 'none' && !style.backgroundImage.startsWith('linear-gradient')) return false;
-    const media = el.querySelectorAll(MEDIA);
-    for (const m of media) {
-      if (m.closest(`[${ATTR}]`)) continue;
-      const mr = m.getBoundingClientRect();
-      if (mr.width * mr.height < 16) continue;
-      if (m.tagName === 'IFRAME' && frameIsAdLike(m)) continue;
-      return false;
-    }
     return true;
+  }
+
+  /** Ein als leer ausgeblendeter Kasten hat sich doch gefüllt: wieder zeigen. */
+  function reviveFilled() {
+    for (const el of document.querySelectorAll(`[${ATTR}="leer"]`)) {
+      if (hasContent(el)) {
+        el.removeAttribute(ATTR);
+        state.reasons.leer--;
+        state.revived.add(el);
+      }
+    }
   }
 
   function scanEmptySlots(now) {
     const candidates = document.querySelectorAll(`[id]:not([${ATTR}]),[class]:not([${ATTR}]),[data-ad-slot]:not([${ATTR}])`);
     for (const el of candidates) {
-      if (!hasAdHint(el)) continue;
+      if (el === document.body || el === document.documentElement || el.tagName === 'MAIN') continue;
+      if (state.revived.has(el) || !hasAdHint(el)) continue;
+      if (el.closest(INTERACTIVE)) continue; // Knöpfe, Links, Menüs sind nie ein leerer Werbeplatz
       if (el.parentElement?.closest(`[${ATTR}]`) || el.closest('h1, h2, h3, h4, h5, h6')) continue;
       if (!isEmptyAdBox(el)) {
         state.firstEmpty.delete(el);
@@ -314,6 +373,7 @@
     state.scans++;
     try {
       await collapseBlockedFrames();
+      reviveFilled();
       scanLabels();
       scanEmptySlots(Date.now());
     } catch (e) {

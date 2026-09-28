@@ -4,14 +4,13 @@
 // Die Einwilligung wird bestätigt, damit die Seite Werbung lädt.
 
 import { launch, waitForSetup } from './browser.mjs';
+import { acceptConsent } from './einwilligung.mjs';
 
 const url = process.argv[2];
 if (!url) {
   console.error('Aufruf: node tests/e2e/pruefen.mjs <Adresse>');
   process.exit(2);
 }
-
-const CONSENT = /^(alle akzeptieren|akzeptieren|akzeptieren und weiter|zustimmen|alle zustimmen|einwilligen|einwilligen und weiter|einverstanden|mit werbung weiterlesen)$/i;
 
 const { context, worker } = await launch();
 try {
@@ -23,21 +22,8 @@ try {
   }
   const page = await context.newPage();
   await page.goto(url, { waitUntil: 'domcontentloaded' });
-  outer: for (let attempt = 0; attempt < 10; attempt++) {
-    for (const frame of page.frames()) {
-      const buttons = frame.locator('button, [role="button"]');
-      const n = Math.min(await buttons.count().catch(() => 0), 60);
-      for (let i = 0; i < n; i++) {
-        const text = ((await buttons.nth(i).innerText({ timeout: 300 }).catch(() => '')) || '').replace(/\s+/g, ' ').replace(/[\s›»>]+$/, '').trim();
-        if (CONSENT.test(text) && (await buttons.nth(i).isVisible().catch(() => false))) {
-          await buttons.nth(i).click().catch(() => {});
-          console.log(`Einwilligung: "${text}"`);
-          break outer;
-        }
-      }
-    }
-    await page.waitForTimeout(700);
-  }
+  const consent = await acceptConsent(page);
+  console.log(consent ? `Einwilligung: "${consent}"` : 'Kein Einwilligungsdialog gefunden');
   await page.waitForTimeout(4000);
   for (let i = 0; i < 12; i++) {
     await page.mouse.wheel(0, 700);

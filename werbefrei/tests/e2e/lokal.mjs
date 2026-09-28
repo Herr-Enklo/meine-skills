@@ -73,6 +73,7 @@ try {
     ['#taboola-below-article-thumbnails', 'Taboola-Widget unter dem Artikel'],
     ['#teaser-anzeige', 'gesponserter Beitrag in der Teaserliste'],
     ['#wp-nachgeladen', 'nachgeladener leerer Werbeplatz'],
+    ['#wp-skript', 'Werbeplatz mit Inline-Skript und Kennzeichnung'],
   ]) {
     check(what, !(await visible(sel)));
   }
@@ -92,6 +93,8 @@ try {
     ['#sidebar-meistgelesen', 'Kasten "Meistgelesen"'],
     ['header.site nav a[href="/werben"]', 'Menülink "Werbung"'],
     ['#fusszeile a[href="/werben"]', 'Fußzeilenlink "Werbung"'],
+    ['#knopf-anzeigen', 'Knopf "Anzeigen"'],
+    ['#lazy-billboard', 'Kasten mit Klasse billboard und verzögert ladendem Bild'],
   ]) {
     check(what, await visible(sel));
   }
@@ -123,7 +126,7 @@ try {
   await popup.setViewportSize({ width: 320, height: 420 });
   await popup.waitForFunction(() => document.getElementById('hidden').textContent !== '–', null, { timeout: 5000 }).catch(() => {});
   const hiddenCount = Number((await popup.locator('#hidden').textContent()).replace(/\D/g, ''));
-  check('Popup zählt ausgeblendete Werbeplätze', hiddenCount >= 7, `${hiddenCount}`);
+  check('Popup zählt ausgeblendete Werbeplätze', hiddenCount >= 8, `${hiddenCount}`);
   await popup.screenshot({ path: `${shots}popup.png` });
 
   console.log('\nAusnahme für die Seite');

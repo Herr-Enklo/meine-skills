@@ -10,80 +10,52 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { launch, waitForSetup } from './browser.mjs';
+import { acceptConsent } from './einwilligung.mjs';
 
 const out = fileURLToPath(new URL('../../test-ergebnisse/', import.meta.url));
 mkdirSync(out, { recursive: true });
 
+// Startseite und Muster für Artikeladressen. stern.de fehlt: Die Seite liefert Artikel an
+// Chromium ohne Fenster nicht aus ("Access Denied").
 const SITES = [
-  'https://www.spiegel.de/',
-  'https://www.zeit.de/index',
-  'https://www.bild.de/',
-  'https://www.welt.de/',
-  'https://www.faz.net/aktuell/',
-  'https://www.sueddeutsche.de/',
-  'https://www.t-online.de/',
-  'https://www.focus.de/',
-  'https://www.n-tv.de/',
-  'https://www.stern.de/',
-  'https://www.heise.de/',
-  'https://www.golem.de/',
-  'https://www.chip.de/',
-  'https://www.merkur.de/',
-  'https://www.tagesspiegel.de/',
+  { start: 'https://www.spiegel.de/', artikel: /-a-[0-9a-f]{8}-[0-9a-f-]+$/ },
+  { start: 'https://www.zeit.de/index', artikel: /\/\d{4}-\d{2}\/[a-z0-9-]{15,}$/ },
+  { start: 'https://www.bild.de/', artikel: /\/[a-z0-9-]{20,}-[0-9a-f]{24}$/ },
+  { start: 'https://www.welt.de/', artikel: /\/article[0-9a-f]{10,}\/[a-z0-9-]+\.html$/ },
+  { start: 'https://www.faz.net/aktuell/', artikel: /-\d{9}\.html$/ },
+  { start: 'https://www.sueddeutsche.de/', artikel: /-li\.\d{6,}$/ },
+  { start: 'https://www.t-online.de/', artikel: /\/id_\d{6,}\/[a-z0-9-]{15,}\.html$/ },
+  { start: 'https://www.focus.de/', artikel: /_id_\d{5,}\.html$/ },
+  { start: 'https://www.n-tv.de/', artikel: /-id\d{6,}\.html$/ },
+  { start: 'https://www.heise.de/', artikel: /\/news\/[A-Za-z0-9-]{15,}-\d{6,}\.html$/ },
+  { start: 'https://www.golem.de/', artikel: /\/news\/[a-z0-9-]{15,}-\d{4}-\d+\.html$/ },
+  { start: 'https://www.chip.de/', artikel: /\/(news|artikel)\/[A-Za-z0-9-]{15,}_\d{6,}\.html$/ },
+  { start: 'https://www.merkur.de/', artikel: /-\d{8,}\.html$/ },
+  { start: 'https://www.tagesspiegel.de/', artikel: /\/[a-z0-9-]{20,}-\d{6,}\.html$/ },
 ];
 
 const only = process.argv.slice(2);
-const sites = only.length ? SITES.filter((u) => only.some((o) => u.includes(o))) : SITES;
+const sites = only.length ? SITES.filter((site) => only.some((o) => new URL(site.start).hostname.replace(/^www\./, '') === o)) : SITES;
 const PARALLEL = Number(process.env.PARALLEL || 3);
-
-const CONSENT = /^(alle akzeptieren|alles akzeptieren|akzeptieren|akzeptieren und weiter|akzeptieren & weiter|akzeptieren und schließen|zustimmen|alle zustimmen|zustimmen und weiter|einwilligen|einwilligen und weiter|alle einwilligen|einverstanden|mit werbung weiterlesen|mit werbung lesen|accept all|agree|i agree|ok)$/i;
-
-async function acceptConsent(page) {
-  for (let attempt = 0; attempt < 12; attempt++) {
-    for (const frame of page.frames()) {
-      try {
-        const buttons = frame.locator('button, [role="button"], a.message-button, a[class*="button"]');
-        const count = Math.min(await buttons.count(), 60);
-        for (let i = 0; i < count; i++) {
-          const b = buttons.nth(i);
-          const raw = (await b.innerText({ timeout: 300 }).catch(() => '')) || (await b.getAttribute('title').catch(() => '')) || '';
-          const text = raw.replace(/\s+/g, ' ').replace(/[\s›»>→]+$/, '').trim();
-          if (CONSENT.test(text) && (await b.isVisible().catch(() => false))) {
-            await b.click({ timeout: 2000 });
-            return text;
-          }
-        }
-      } catch {
-        // Rahmen weg oder noch nicht fertig
-      }
-    }
-    await page.waitForTimeout(700);
-  }
-  return null;
-}
 
 function sameSite(a, b) {
   const base = (h) => h.split('.').slice(-2).join('.');
   return base(a) === base(b);
 }
 
-async function pickArticle(page, start) {
-  const host = new URL(start).hostname;
+async function pickArticle(page, site) {
+  const host = new URL(site.start).hostname;
   const links = await page.$$eval('a[href]', (as) => as.map((a) => a.href));
-  const candidates = links.filter((href) => {
+  const seen = new Set();
+  for (const href of links) {
     let u;
-    try { u = new URL(href); } catch { return false; }
-    if (!sameSite(u.hostname, host) || u.hash) return false;
-    const p = u.pathname;
-    if (/\/(video|videos|plus|abo|podcast|podcasts|thema|themen|autor|autoren|newsletter|service|shop|spiele|live|tv|audio|bilder|fotos|galerie|quiz)\//i.test(p)) return false;
-    if (/(ticker|liveblog|newsblog|gutschein|deals|rabatt)/i.test(p)) return false;
-    // Artikel haben einen sprechenden Pfad mit mehreren Bindestrichen ("/politik/wahl-in-...-123.html").
-    const slug = p.split('/').filter(Boolean).sort((a, b) => b.split('-').length - a.split('-').length)[0] || '';
-    return p.length > 40 && slug.split('-').length >= 4;
-  });
-  // Bevorzugt Links, die nach Artikel mit id aussehen.
-  candidates.sort((a, b) => Number(/(\.html?$|\d{5,}|-a-[0-9a-f-]{8,})/.test(new URL(b).pathname)) - Number(/(\.html?$|\d{5,}|-a-[0-9a-f-]{8,})/.test(new URL(a).pathname)));
-  return candidates[0] || null;
+    try { u = new URL(href); } catch { continue; }
+    if (!sameSite(u.hostname, host) || seen.has(u.pathname)) continue;
+    seen.add(u.pathname);
+    if (/\/(video|videos|plus|abo|podcast|podcasts|live|liveblog|newsticker|ticker|spiele|quiz|bilder|fotos|galerie)\//i.test(u.pathname)) continue;
+    if (site.artikel.test(u.pathname)) return `${u.origin}${u.pathname}`;
+  }
+  return null;
 }
 
 async function scrollThrough(page) {
@@ -135,12 +107,14 @@ function measure(page, adHosts) {
       labels: labels.length,
       articleChars: (main.innerText || '').length,
       h1: h1 && h1.checkVisibility() ? h1.innerText.trim().slice(0, 90) : null,
+      sperre: /blocker|adblock/i.test(h1?.innerText || ''),
       hiddenByWerbefrei: document.querySelectorAll('[data-werbefrei-verborgen]').length,
     };
   }, adHosts);
 }
 
-async function visit(context, start, adHosts, label, articleUrl) {
+async function visit(context, site, adHosts, label, articleUrl) {
+  const { start } = site;
   const page = await context.newPage();
   const requests = { ad: 0, blocked: 0 };
   page.on('request', (r) => {
@@ -158,11 +132,11 @@ async function visit(context, start, adHosts, label, articleUrl) {
       consent = await acceptConsent(page);
       await page.waitForTimeout(2500);
       await page.waitForLoadState('domcontentloaded').catch(() => {});
-      url = await pickArticle(page, start);
+      url = await pickArticle(page, site);
       if (!url) throw new Error('kein Artikel auf der Startseite gefunden');
     }
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 45000 });
-    consent = (await acceptConsent(page)) || consent;
+    consent = (await acceptConsent(page, { timeout: consent ? 4000 : 14000 })) || consent;
     await page.waitForLoadState('load', { timeout: 20000 }).catch(() => {});
     await page.waitForTimeout(3000);
     await scrollThrough(page);
@@ -183,18 +157,18 @@ async function visit(context, start, adHosts, label, articleUrl) {
   }
 }
 
-async function compare(start, adHosts) {
-  const name = new URL(start).hostname.replace(/^www\./, '');
+async function compare(site, adHosts) {
+  const name = new URL(site.start).hostname.replace(/^www\./, '');
   const withExt = await launch();
   await waitForSetup(withExt.worker, { timeout: 120000 });
-  const b = await visit(withExt.context, start, adHosts, 'mit');
+  const b = await visit(withExt.context, site, adHosts, 'mit');
   await withExt.context.close();
   const plain = await launch({ withExtension: false });
-  const a = await visit(plain.context, start, adHosts, 'ohne', b.url);
+  const a = await visit(plain.context, site, adHosts, 'ohne', b.url);
   await plain.context.close();
   console.log(`${name.padEnd(18)} ohne: ${a.error || `${a.adFrames} Werberahmen, ${a.adSlots} Werbeplätze, ${a.requests.ad} Werbeanfragen`}`);
   console.log(`${''.padEnd(18)} mit:  ${b.error || `${b.adFrames} Werberahmen, ${b.adSlots} Werbeplätze, ${b.requests.blocked} Anfragen blockiert, ${b.hiddenByWerbefrei} per Heuristik ausgeblendet`}`);
-  return { name, start, ohne: a, mit: b };
+  return { name, start: site.start, ohne: a, mit: b };
 }
 
 // Werbe-Domains aus den Listen der Erweiterung holen (einmal installieren, Listen laden).
@@ -218,7 +192,8 @@ for (let i = 0; i < sites.length; i += PARALLEL) {
 const rows = results.map(({ name, ohne: a, mit: b }) => {
   const f = (r, key) => (r.error ? '–' : r[key]);
   const broken = !a.error && !b.error && a.articleChars > 500 && b.articleChars < a.articleChars * 0.7;
-  return `| ${name} | ${f(a, 'adFrames')} / ${f(b, 'adFrames')} | ${f(a, 'adSlots')} / ${f(b, 'adSlots')} | ${f(a, 'labels')} / ${f(b, 'labels')} | ${a.error ? '–' : a.requests.ad} | ${b.error ? '–' : b.requests.blocked} | ${b.error ? '–' : b.hiddenByWerbefrei} | ${f(a, 'articleChars')} / ${f(b, 'articleChars')}${broken ? ' ⚠' : ''} | ${b.error || a.error || ''} |`;
+  const note = b.sperre ? 'Seite sperrt sich bei Werbeblockern' : b.error || a.error || (broken ? 'Artikeltext kürzer, prüfen' : '');
+  return `| ${name} | ${f(a, 'adFrames')} / ${f(b, 'adFrames')} | ${f(a, 'adSlots')} / ${f(b, 'adSlots')} | ${f(a, 'labels')} / ${f(b, 'labels')} | ${a.error ? '–' : a.requests.ad} | ${b.error ? '–' : b.requests.blocked} | ${b.error ? '–' : b.hiddenByWerbefrei} | ${f(a, 'articleChars')} / ${f(b, 'articleChars')} | ${note} |`;
 });
 
 const md = `# Werbefrei auf echten Nachrichtenseiten

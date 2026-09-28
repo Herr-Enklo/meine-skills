@@ -50,7 +50,7 @@ test('Domainfilter mit Optionen landen in getrennten Gruppen', () => {
 
 test('Pfadmuster werden zu urlFilter', () => {
   const [rule] = rulesOf('/banner/ads/*.gif$image');
-  assert.deepEqual(rule.condition, { resourceTypes: ['image'], urlFilter: '/banner/ads/*.gif' });
+  assert.deepEqual(rule.condition, { resourceTypes: ['image'], urlFilter: '/banner/ads/*.gif', isUrlFilterCaseSensitive: false });
   const [anchored] = rulesOf('||example.com/werbung/');
   assert.equal(anchored.condition.urlFilter, '||example.com/werbung/');
 });
@@ -169,6 +169,8 @@ test('isSafeSelector prüft Klammern, Anführungszeichen und Kommentare', () => 
   assert.ok(!isSafeSelector('div]'));
   assert.ok(!isSafeSelector('div /* x */'));
   assert.ok(!isSafeSelector('.a\\'));
+  assert.ok(!isSafeSelector('[title="a\rb"]'));
+  assert.ok(!isSafeSelector('[title="a\fb"]'));
   assert.ok(!isSafeSelector(''));
 });
 
@@ -232,9 +234,18 @@ test('Index verträgt mehrere Listen und doppelte Einträge', () => {
   assert.deepEqual(cosmeticForHost(index, 'spiegel.de').selectors, ['.x']);
 });
 
-test('reine Werbedomains werden für das Einklappen gesperrter Rahmen gesammelt', () => {
-  const { hosts } = compileList('||ads.example^\n||tracker.example^$script\n||third.example^$third-party\n@@||ok.example^');
-  assert.deepEqual(hosts, ['ads.example', 'third.example']);
+test('nur bedingungslos gesperrte Domains werden für das Einklappen gesammelt', () => {
+  const { hosts, allowHosts } = compileList(
+    '||ads.example^\n||tracker.example^$script\n||third.example^$third-party\n@@||ok.example^\n@@||player.ads.example/embed$subdocument',
+  );
+  assert.deepEqual(hosts, ['ads.example']);
+  assert.deepEqual(allowHosts, ['ok.example', 'player.ads.example']);
+});
+
+test('"||host^|" sperrt nur die Startadresse, nicht die ganze Domain', () => {
+  const [rule] = rulesOf('||example.com^|');
+  assert.equal(rule.condition.urlFilter, '||example.com^|');
+  assert.equal(rule.condition.requestDomains, undefined);
 });
 
 test('cssForSelectors schreibt eine Regel pro Selektor', () => {

@@ -165,7 +165,8 @@
       "initiatorDomains": [
         "rewe.de"
       ],
-      "urlFilter": "||adform.net/adfserve/?bn="
+      "urlFilter": "||adform.net/adfserve/?bn=",
+      "isUrlFilterCaseSensitive": false
     }
   },
   {
@@ -179,7 +180,8 @@
         "jetzt.de",
         "sueddeutsche.de"
       ],
-      "urlFilter": "||adspirit.de/adasync.min.js"
+      "urlFilter": "||adspirit.de/adasync.min.js",
+      "isUrlFilterCaseSensitive": false
     }
   }
 ]

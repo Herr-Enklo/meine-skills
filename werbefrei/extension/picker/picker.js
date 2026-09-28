@@ -155,7 +155,8 @@
       parts.unshift(`${cur.localName}:nth-of-type(${nthOfType(cur)})`);
       cur = cur.parentElement;
     }
-    parts.unshift('body');
+    // Nur wenn der Pfad wirklich bis body reicht, ist "body >" richtig.
+    if (cur === document.body) parts.unshift('body');
     return parts.join(' > ');
   }
 
@@ -276,6 +277,7 @@
   catcher.addEventListener('click', (e) => {
     e.preventDefault();
     e.stopPropagation();
+    if (!e.isTrusted) return;
     const el = locked ? elementAt(e.clientX, e.clientY) : hovered || elementAt(e.clientX, e.clientY);
     if (el) {
       previewBox.checked = false;
@@ -291,6 +293,8 @@
   }, { passive: true });
 
   function onKey(e) {
+    // Von der Seite erzeugte Tastendrücke zählen nicht, sonst könnte sie selbst "speichern".
+    if (!e.isTrusted) return;
     if (e.key === 'Escape') {
       e.preventDefault();
       e.stopPropagation();
@@ -366,25 +370,29 @@
     setTimeout(close, 1800);
   }
 
+  const self = { close };
+
   function close() {
     window.removeEventListener('keydown', onKey, true);
     window.removeEventListener('scroll', onScroll, true);
     window.removeEventListener('resize', onScroll, true);
     document.getElementById(PREVIEW_ID)?.remove();
     host.remove();
-    delete globalThis.__werbefreiAuswahl;
+    if (globalThis.__werbefreiAuswahl === self) delete globalThis.__werbefreiAuswahl;
   }
 
   window.addEventListener('keydown', onKey, true);
   window.addEventListener('scroll', onScroll, true);
   window.addEventListener('resize', onScroll, true);
   document.documentElement.appendChild(host);
-  globalThis.__werbefreiAuswahl = { close };
+  globalThis.__werbefreiAuswahl = self;
 
   // Aus dem Kontextmenü gestartet: das rechts angeklickte Element gleich vorschlagen.
   const target = globalThis.__werbefreiZiel;
-  if (target && Date.now() - target.zeit < 15000 && target.element?.isConnected) {
-    globalThis.__werbefreiZiel = null;
+  const fromMenu = globalThis.__werbefreiVonKontextmenue === true;
+  globalThis.__werbefreiVonKontextmenue = false;
+  globalThis.__werbefreiZiel = null;
+  if (fromMenu && target && Date.now() - target.zeit < 60000 && target.element?.isConnected) {
     const el = target.element.nodeType === 1 ? target.element : target.element.parentElement;
     if (el) lock(el);
   }

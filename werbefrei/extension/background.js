@@ -30,6 +30,7 @@ const HIDE_ATTR = 'data-werbefrei-verborgen';
 const HEURISTIC_CSS = `[${HIDE_ATTR}]{display:none!important}`;
 const UPDATE_ALARM = 'listen-aktualisieren';
 const MENU_ID = 'element-ausblenden';
+const USER_RULES_MAX = 500000;
 
 // Bereiche der dynamischen Regel-ids
 const RULE_ID = { pause: 1, allowlist: 2, userStart: 100, userMax: 9899, listStart: 10000 };
@@ -46,7 +47,7 @@ const ICONS = {
 
 let settingsCache = null;
 let indexCache = null;
-let hostsCache = null;
+let hostsCache = null; // {blocked: Set, allowed: Set}
 const hostMemo = new Map(); // Hostname -> Ergebnis von cosmeticForHost
 
 let queue = Promise.resolve();
@@ -96,10 +97,10 @@ async function getIndex() {
   return indexCache;
 }
 
-async function getBlockedHosts() {
+async function getHostSets() {
   if (!hostsCache) {
-    const { blockHosts } = await chrome.storage.local.get('blockHosts');
-    hostsCache = new Set(blockHosts || []);
+    const { blockHosts, allowHosts } = await chrome.storage.local.get(['blockHosts', 'allowHosts']);
+    hostsCache = { blocked: new Set(blockHosts || []), allowed: new Set(allowHosts || []) };
   }
   return hostsCache;
 }
@@ -175,14 +176,33 @@ async function compileBundled() {
   );
 }
 
+/** Liest die Antwort höchstens bis MAX_LIST_BYTES, statt eine beliebig große Datei zu laden. */
+async function readLimited(response) {
+  const length = Number(response.headers.get('content-length') || 0);
+  if (length > MAX_LIST_BYTES) throw new Error('Liste ist zu groß');
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let received = 0;
+  let text = '';
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    received += value.byteLength;
+    if (received > MAX_LIST_BYTES) {
+      await reader.cancel();
+      throw new Error('Liste ist zu groß');
+    }
+    text += decoder.decode(value, { stream: true });
+  }
+  return text + decoder.decode();
+}
+
 async function downloadList(list) {
   try {
     const response = await fetch(list.url, { cache: 'no-cache', credentials: 'omit', redirect: 'follow' });
+    if (!response.url.startsWith('https://')) throw new Error('Weiterleitung auf eine unverschlüsselte Adresse');
     if (!response.ok) throw new Error(`Server antwortet mit ${response.status}`);
-    const length = Number(response.headers.get('content-length') || 0);
-    if (length > MAX_LIST_BYTES) throw new Error('Liste ist zu groß');
-    const text = await response.text();
-    if (text.length > MAX_LIST_BYTES) throw new Error('Liste ist zu groß');
+    const text = await readLimited(response);
     if (/^\s*</.test(text) || !/^(\[Adblock|!|\|\||##|[\w.-]+##|0\.0\.0\.0|127\.0\.0\.1)/m.test(text)) {
       throw new Error('Die Adresse liefert keine Filterliste');
     }
@@ -221,9 +241,11 @@ async function updateLists({ force = false, only = null } = {}) {
     return Date.now() - meta.updated > hours * 3600 * 1000;
   });
   if (!due.length) return 0;
-  const results = await Promise.all(due.map(downloadList));
-  if (results.some(Boolean)) await rebuild();
-  return results.filter(Boolean).length;
+  // Nacheinander: storeCompiled liest und schreibt listMeta, parallel gingen Einträge verloren.
+  let ok = 0;
+  for (const list of due) if (await downloadList(list)) ok++;
+  if (ok) await rebuild();
+  return ok;
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -297,8 +319,11 @@ async function syncStaticRulesets(settings) {
   }
 }
 
-/** Alles neu zusammenstellen: Elementfilter-Index, Werbe-Domains, dynamische Netzregeln. */
-async function rebuild() {
+/**
+ * Alles neu zusammenstellen: Elementfilter-Index, Werbe-Domains, dynamische Netzregeln.
+ * network: false lässt die Netzregeln unverändert (reicht, wenn nur Elementfilter dazukamen).
+ */
+async function rebuild({ network = true } = {}) {
   const settings = await getSettings();
   const ids = allLists(settings)
     .filter((l) => isEnabled(settings, l.id))
@@ -309,7 +334,19 @@ async function rebuild() {
   const compiled = ids.map((id) => stored[`list:${id}`]).filter(Boolean);
   const index = buildCosmeticIndex([...compiled.map((c) => c.cosmetic), user.cosmetic]);
   const hosts = new Set();
-  for (const c of [...compiled, user]) for (const h of c.hosts) hosts.add(h);
+  const allowHosts = new Set();
+  for (const c of [...compiled, user]) {
+    for (const h of c.hosts) hosts.add(h);
+    for (const h of c.allowHosts || []) allowHosts.add(h);
+  }
+  const cosmeticState = { cosmeticIndex: index, blockHosts: [...hosts], allowHosts: [...allowHosts] };
+  if (!network) {
+    await chrome.storage.local.set(cosmeticState);
+    indexCache = prepareIndex(index);
+    hostsCache = { blocked: hosts, allowed: allowHosts };
+    hostMemo.clear();
+    return null;
+  }
 
   // Netzregeln: erst die eigenen, dann die Listen. Ist Chromes Grenze erreicht, fallen Regeln
   // vom Ende der Listen weg; wie viele, steht im Bericht auf der Einstellungsseite.
@@ -339,9 +376,9 @@ async function rebuild() {
     invalid: result.invalid.length,
     invalidSample: result.invalid.slice(0, 5),
   };
-  await chrome.storage.local.set({ cosmeticIndex: index, blockHosts: [...hosts], ruleReport: report });
+  await chrome.storage.local.set({ ...cosmeticState, ruleReport: report });
   indexCache = prepareIndex(index);
-  hostsCache = hosts;
+  hostsCache = { blocked: hosts, allowed: allowHosts };
   hostMemo.clear();
   return report;
 }
@@ -368,14 +405,37 @@ async function setupContextMenu() {
   });
 }
 
-async function startPicker(tabId) {
+const PICKER_TTL = 30 * 60 * 1000;
+
+/**
+ * Startet die Element-Auswahl. Nur eine so gestartete Auswahl darf eine Regel speichern (einmal),
+ * damit eine Seite nicht von sich aus Regeln anlegen kann.
+ */
+async function startPicker(tabId, { fromContextMenu = false } = {}) {
+  await chrome.storage.session.set({ [`auswahl:${tabId}`]: Date.now() + PICKER_TTL });
+  await chrome.scripting.executeScript({
+    target: { tabId, frameIds: [0] },
+    func: (flag) => { globalThis.__werbefreiVonKontextmenue = flag; },
+    args: [fromContextMenu],
+  });
   await chrome.scripting.executeScript({ target: { tabId, frameIds: [0] }, files: ['picker/picker.js'] });
 }
 
-async function insertCss(tabId, frameId, css) {
+async function takePickerSession(tabId) {
+  const key = `auswahl:${tabId}`;
+  const { [key]: until } = await chrome.storage.session.get(key);
+  await chrome.storage.session.remove(key);
+  return typeof until === 'number' && until > Date.now();
+}
+
+/** Stylesheet in genau das Dokument einfügen, das die Nachricht geschickt hat. */
+async function insertCss(sender, css) {
   if (!css) return;
+  const target = sender.documentId
+    ? { tabId: sender.tab.id, documentIds: [sender.documentId] }
+    : { tabId: sender.tab.id, frameIds: [sender.frameId ?? 0] };
   try {
-    await chrome.scripting.insertCSS({ target: { tabId, frameIds: [frameId] }, css, origin: 'USER' });
+    await chrome.scripting.insertCSS({ target, css, origin: 'USER' });
   } catch {
     // Tab geschlossen oder weiternavigiert: nichts zu tun.
   }
@@ -400,7 +460,7 @@ const contentHandlers = {
     }
     const cosmetic = await cosmeticFor(host);
     if (cosmetic.disabled) return { active: false, reason: 'liste' };
-    await insertCss(sender.tab.id, sender.frameId, `${cssForSelectors(cosmetic.selectors)}\n${HEURISTIC_CSS}`);
+    await insertCss(sender, `${cssForSelectors(cosmetic.selectors)}\n${HEURISTIC_CSS}`);
     return { active: true, generic: !cosmetic.generichide, heuristics: settings.heuristics && !cosmetic.generichide };
   },
 
@@ -411,37 +471,46 @@ const contentHandlers = {
     const cosmetic = await cosmeticFor(host);
     if (cosmetic.disabled || cosmetic.generichide) return { selectors: [] };
     const selectors = selectorsForKeys(await getIndex(), keys, cosmetic.exceptions);
-    await insertCss(sender.tab.id, sender.frameId, cssForSelectors(selectors));
+    await insertCss(sender, cssForSelectors(selectors));
     return { selectors };
   },
 
   async checkHosts(msg) {
     if (!Array.isArray(msg.hosts)) return { blocked: [] };
-    const blockedHosts = await getBlockedHosts();
+    const sets = await getHostSets();
     const blocked = msg.hosts
       .slice(0, 500)
       .filter((h) => typeof h === 'string' && h.length < 256)
-      .filter((h) => hostSuffixes(h).some((d) => blockedHosts.has(d)));
+      .filter((h) => {
+        const suffixes = hostSuffixes(h);
+        return suffixes.some((d) => sets.blocked.has(d)) && !suffixes.some((d) => sets.allowed.has(d));
+      });
     return { blocked };
   },
 
   async pickerSave(msg, sender) {
     const host = pageHost(sender.url);
     const selector = typeof msg.selector === 'string' ? msg.selector.trim() : '';
-    if (!host || !selector || selector.length > 1000 || selector.includes('\n') || !isSafeSelector(selector)) {
+    if (!host || !selector || selector.length > 1000 || !isSafeSelector(selector)) {
       return { ok: false, error: 'Dieser Selektor kann nicht gespeichert werden.' };
     }
+    if (!(await takePickerSession(sender.tab.id))) {
+      return { ok: false, error: 'Die Auswahl ist abgelaufen. Bitte neu starten.' };
+    }
     const line = `${siteOf(host)}##${selector}`;
-    await serial(async () => {
+    const result = await serial(async () => {
       const { userRules = '' } = await chrome.storage.local.get('userRules');
-      const lines = userRules.split(/\r?\n/);
-      if (!lines.includes(line)) {
-        const text = `${userRules.replace(/\s+$/, '')}${userRules.trim() ? '\n' : ''}${line}\n`;
-        await chrome.storage.local.set({ userRules: text });
-        await rebuild();
+      if (userRules.split(/\r?\n/).includes(line)) return { ok: true };
+      if (userRules.length + line.length > USER_RULES_MAX) {
+        return { ok: false, error: 'Die eigenen Regeln sind voll. Bitte in den Einstellungen aufräumen.' };
       }
+      const text = `${userRules.replace(/\s+$/, '')}${userRules.trim() ? '\n' : ''}${line}\n`;
+      await chrome.storage.local.set({ userRules: text });
+      await rebuild({ network: false });
+      return { ok: true };
     });
-    await insertCss(sender.tab.id, sender.frameId, cssForSelectors([selector]));
+    if (!result.ok) return result;
+    await insertCss(sender, cssForSelectors([selector]));
     return { ok: true, rule: line };
   },
 };
@@ -594,7 +663,7 @@ const pageHandlers = {
   },
 
   async saveUserRules({ text }) {
-    const value = String(text ?? '').slice(0, 500000);
+    const value = String(text ?? '').slice(0, USER_RULES_MAX);
     const check = compileList(value, { maxLineErrors: 100 });
     return serial(async () => {
       await chrome.storage.local.set({ userRules: value });
@@ -660,7 +729,7 @@ const pageHandlers = {
         lists,
         customLists,
       });
-      await chrome.storage.local.set({ userRules: typeof data.userRules === 'string' ? data.userRules.slice(0, 500000) : '' });
+      await chrome.storage.local.set({ userRules: typeof data.userRules === 'string' ? data.userRules.slice(0, USER_RULES_MAX) : '' });
       await updateLists();
       await rebuild();
       await applyActionState();
@@ -711,7 +780,7 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 });
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
-  if (info.menuItemId === MENU_ID && tab?.id !== undefined) startPicker(tab.id).catch(() => {});
+  if (info.menuItemId === MENU_ID && tab?.id !== undefined) startPicker(tab.id, { fromContextMenu: true }).catch(() => {});
 });
 
 chrome.commands.onCommand.addListener((command, tab) => {

@@ -48,7 +48,7 @@ const UNSUPPORTED_OPTIONS = new Set([
 const PROCEDURAL = /:(?:-abp-[\w-]+|has-text|contains|xpath|upward|remove|remove-attr|remove-class|style|matches-css(?:-before|-after)?|matches-attr|matches-path|matches-prop|matches-media|min-text-length|watch-attr|others|if|if-not|nth-ancestor|shadow|spath)\b/i;
 
 const DOMAIN_RE = /^[a-z0-9_](?:[a-z0-9_-]*[a-z0-9_])?(?:\.[a-z0-9_](?:[a-z0-9_-]*[a-z0-9_])?)*$/;
-const PURE_HOST_RE = /^\|\|([a-z0-9_](?:[a-z0-9_-]*[a-z0-9_])?(?:\.[a-z0-9_](?:[a-z0-9_-]*[a-z0-9_])?)+)\^\|?$/;
+const PURE_HOST_RE = /^\|\|([a-z0-9_](?:[a-z0-9_-]*[a-z0-9_])?(?:\.[a-z0-9_](?:[a-z0-9_-]*[a-z0-9_])?)+)\^$/;
 const OPTIONS_RE = /^~?[a-z0-9_-]+(?:=[^,]*)?(?:,~?[a-z0-9_-]+(?:=[^,]*)?)*$/i;
 const SIMPLE_KEY_RE = /^[.#][A-Za-z_-][\w-]*$/;
 
@@ -87,7 +87,8 @@ export function hostSuffixes(hostname) {
 export function isSafeSelector(selector) {
   const s = selector.trim();
   if (!s || s.length > 2000) return false;
-  if (/[{}]/.test(s) || s.includes('/*') || s.startsWith('@') || s.startsWith('+js(') || s.startsWith('^')) return false;
+  // Zeilenumbrüche beenden in CSS einen String und würden die folgende Regel mitreißen.
+  if (/[{}\r\n\f]/.test(s) || s.includes('/*') || s.startsWith('@') || s.startsWith('+js(') || s.startsWith('^')) return false;
   if (PROCEDURAL.test(s)) return false;
   const stack = [];
   let quote = null;
@@ -100,7 +101,6 @@ export function isSafeSelector(selector) {
     }
     if (quote) {
       if (c === quote) quote = null;
-      else if (c === '\n') return false;
       continue;
     }
     if (c === '"' || c === "'") quote = c;
@@ -341,8 +341,9 @@ function actionFor(f) {
 
 /**
  * Eine ganze Filterliste übersetzen.
- * @returns {{network: object[], hosts: string[], cosmetic: object, stats: object}}
+ * @returns {{network: object[], hosts: string[], allowHosts: string[], cosmetic: object, stats: object}}
  *   network: Chrome-Regeln ohne id; hosts: reine Werbe-Domains (für das Einklappen gesperrter Rahmen);
+ *   allowHosts: Domains, für die es Ausnahmen gibt;
  *   cosmetic: Elementfilter in kompakter Form, siehe buildCosmeticIndex.
  */
 export function compileList(text, { maxLineErrors = 50 } = {}) {
@@ -350,6 +351,7 @@ export function compileList(text, { maxLineErrors = 50 } = {}) {
   const groups = new Map(); // gleiche Bedingung -> Domains
   const rules = [];
   const hosts = new Set();
+  const allowHosts = new Set(); // Domains mit Ausnahmeregeln: deren Rahmen nie einklappen
   const cosmetic = { generic: [], genericExcept: [], specific: [], exceptions: [], elemhide: [], generichide: [] };
 
   const lines = String(text).split(/\r?\n/);
@@ -384,6 +386,10 @@ export function compileList(text, { maxLineErrors = 50 } = {}) {
       const h = hostFromPattern(r.pattern);
       if (h) cosmetic.elemhide.push(h);
     }
+    if (r.exception) {
+      const h = /^\|\|([a-z0-9_.-]+)/.exec(r.pattern.toLowerCase())?.[1];
+      if (h && h.includes('.')) allowHosts.add(h.replace(/\.$/, ''));
+    }
     const { rule: action, priority } = actionFor(r);
     const condition = baseCondition(r);
     if (action.type === 'allowAllRequests') {
@@ -396,19 +402,21 @@ export function compileList(text, { maxLineErrors = 50 } = {}) {
       stats.reasons.broad = (stats.reasons.broad || 0) + 1;
       return;
     }
-    if (r.matchCase) condition.isUrlFilterCaseSensitive = true;
 
     if (r.host && !r.matchCase) {
       const key = JSON.stringify([action.type, priority, condition]);
       let group = groups.get(key);
       if (!group) groups.set(key, (group = { action, priority, condition, domains: new Set() }));
       group.domains.add(r.host);
-      if (action.type === 'block' && !condition.initiatorDomains && !condition.resourceTypes && !condition.excludedResourceTypes) {
-        hosts.add(r.host);
-      }
+      // Nur Sperren ohne jede Bedingung: Dann ist sicher, dass Chrome einen Rahmen von dort blockiert.
+      if (action.type === 'block' && Object.keys(condition).length === 0) hosts.add(r.host);
       return;
     }
-    if (r.urlFilter) condition.urlFilter = r.urlFilter;
+    if (r.urlFilter) {
+      condition.urlFilter = r.urlFilter;
+      // Ausdrücklich setzen: Vor Chrome 118 galt Groß-/Kleinschreibung standardmäßig.
+      condition.isUrlFilterCaseSensitive = r.matchCase;
+    }
     rules.push({ priority, action, condition });
   });
 
@@ -421,7 +429,7 @@ export function compileList(text, { maxLineErrors = 50 } = {}) {
   // Stabile Reihenfolge: gruppierte Domainregeln zuerst, damit sie bei knappen Grenzen erhalten bleiben.
   rules.sort((a, b) => Number(!a.condition.requestDomains) - Number(!b.condition.requestDomains));
 
-  return { network: rules, hosts: [...hosts].sort(), cosmetic, stats };
+  return { network: rules, hosts: [...hosts].sort(), allowHosts: [...allowHosts].sort(), cosmetic, stats };
 }
 
 /** Vergibt ids ab startId. */

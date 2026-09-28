@@ -119,3 +119,38 @@
 ##.OUTBRAIN
 ##[id^="outbrain_widget"]
 ##.ob-widget
+!
+! ------------------------------------------------------------------------------------------------
+! Einzelne Seiten: Werbeplätze, die EasyList und EasyList Germany nicht (ganz) erfassen.
+! Geprüft am 28.09.2026 auf je einem Artikel mit bestätigter Einwilligung; jeder Treffer war
+! ohne Artikeltext. Bewusst nicht aufgenommen: welt.de "Mehr zum Thema" (redaktionelle Empfehlungen).
+! ------------------------------------------------------------------------------------------------
+! spiegel.de: Billboard und Werbeplätze im Artikel (iq digital), leere Rahmen im Empfehlungsbereich,
+! "ANZEIGE"-Kästen der Partnerportale
+spiegel.de##.iqdcontainer
+spiegel.de##div[data-advertisement]
+spiegel.de##div.min-h-282:has(> div[data-advertisement])
+spiegel.de##div[data-target-id^="smartfeed-sponsored-box"]
+spiegel.de###iqd_leftAd
+spiegel.de###iqd_rightAd
+! zeit.de: Werbeplatz zwischen den Kommentaren
+zeit.de##div.comment__ad
+! bild.de: "Anzeige"-Linklisten und Partnerlinks im Menü
+bild.de##div.mtl--ad-mark
+bild.de##ul.submenu-list--ad
+! focus.de: leere Werbeplätze, Werbekarussell, Partner-Knopf im Artikel
+focus.de##[data-island="AdSlot"]
+focus.de##div.Ad-Carousel
+focus.de##div.Article-CTAButton[data-element-tracking-creative="layout-commercial"]
+! chip.de: "ANZEIGE"-Zeilen in Vergleichstabellen, Werbekarussell
+chip.de##tr.Table-Widget-Row--Ad
+chip.de##div.Ad-Carousel
+! n-tv.de: Rahmen für Superbanner und Skyscraper
+n-tv.de##[class*="Ada_superbanner"]
+n-tv.de##[class*="Ada_skyscraper"]
+! merkur.de: Skyscraper-Rahmen
+merkur.de##div.Skyscraper
+! t-online.de: leere Werbeplätze im Artikelstrom
+t-online.de##div.js-commercial-stream-item
+! tagesspiegel.de: Outbrain-Kasten unter dem Artikel
+tagesspiegel.de###outbrain-container

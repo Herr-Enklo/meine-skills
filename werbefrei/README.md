@@ -90,7 +90,8 @@ dem Laden und bei Änderungen:
   einen Werberahmen enthalten, und gekennzeichnete Beiträge in Teaserlisten.
 - Werbecontainer (Klasse oder id wie `ad-slot`, `adSlot`, `skyscraper`, `billboard`), die leer
   zurückbleiben, weil ihr Inhalt blockiert wurde. Sie werden erst ausgeblendet, wenn sie über zwei
-  Durchläufe im Abstand von mindestens 1,2 Sekunden leer bleiben.
+  Durchläufe im Abstand von mindestens 1,2 Sekunden leer bleiben. Füllt sich so ein Kasten später
+  doch noch mit Text oder Bildern, wird er wieder gezeigt.
 - Rahmen und Bilder von gesperrten Werbeservern. Ohne das bliebe an ihrer Stelle die Fehlerseite des
   Browsers stehen.
 
@@ -106,8 +107,10 @@ vorgesehen, und „Auf dieser Seite aus“ stellt alles wieder her.
 ## Grenzen
 
 - Werbefrei umgeht keine Bezahlschranken und keine Abfragen der Art „Mit Werbung lesen oder Abo
-  abschließen“. Die Einwilligungsabfrage bleibt, wie sie ist. Seiten, die einen Werbeblocker erkennen
-  und einen Hinweis zeigen, nimmt man bei Bedarf über den Schalter im Popup aus.
+  abschließen“. Die Einwilligungsabfrage bleibt, wie sie ist.
+- Manche Seiten sperren sich, sobald sie einen Werbeblocker erkennen. bild.de zeigt dann nur
+  „Aufgrund Ihres Blockers zeigen wir BILD.de nicht an.“ Werbefrei versucht nicht, solche Sperren
+  zu umgehen. Wer die Seite lesen will, schaltet Werbefrei dort über den Schalter im Popup aus.
 - Chrome-Erweiterungen mit Manifest V3 können keine Skripte in Seiten umschreiben. Filter, die das
   voraussetzen (Pop-up-Sperren, `$redirect`, `$csp`, Scriptlets, erweiterte Selektoren wie
   `:has-text()`), übersetzt Werbefrei nicht; die Einstellungsseite zeigt pro Liste, wie viele Zeilen
@@ -147,18 +150,24 @@ npm run e2e:echt   # echte Nachrichtenseiten ohne und mit Werbefrei, braucht Int
 ```
 
 `npm run e2e` braucht keinen Internetzugang: Die Testseite lädt Werbung von echten Werbeservern, und
-diese Anfragen blockiert die Erweiterung, bevor sie das Netz erreichen. Geprüft wird, dass sieben
-typische Werbeplätze verschwinden (Billboard mit „Anzeige“, Werbeplatz im Text, leerer Skyscraper,
-klebende Leiste, Taboola, gesponserter Teaser, nachgeladener Werbeplatz) und dass dreizehn Fallen
-sichtbar bleiben: Überschrift, Absätze mit den Wörtern „Werbung“ und „Anzeige“, eine Dachzeile
-„Werbung“, ein Kasten mit der Klasse `ad-hoc-note`, ein eingebettetes Video, echte Teaser, der
-Einwilligungszweck „Werbung“, Menü- und Fußzeilenlinks „Werbung“. Außerdem die Element-Auswahl, das
-Popup und das Ausnehmen einer Seite. Bildschirmfotos landen in `test-ergebnisse/`.
+diese Anfragen blockiert die Erweiterung, bevor sie das Netz erreichen. Geprüft wird in 33 Punkten,
+dass acht typische Werbeplätze verschwinden (Billboard mit „Anzeige“, zwei Werbeplätze im Text, einer
+davon mit Inline-Skript, leerer Skyscraper, klebende Leiste, Taboola, gesponserter Teaser,
+nachgeladener Werbeplatz) und dass fünfzehn Fallen sichtbar bleiben: Überschrift, Absätze mit den
+Wörtern „Werbung“ und „Anzeige“, eine Dachzeile „Werbung“, ein Kasten mit der Klasse `ad-hoc-note`,
+ein Kasten mit der Klasse `billboard` und einem verzögert ladenden Bild, ein Knopf „Anzeigen“, ein
+eingebettetes Video, echte Teaser, der Einwilligungszweck „Werbung“, Menü- und Fußzeilenlinks
+„Werbung“. Dazu kommen die Element-Auswahl, das Popup und das Ausnehmen einer Seite.
+Bildschirmfotos landen in `test-ergebnisse/`.
 
-`npm run e2e:echt` öffnet auf 15 Nachrichtenseiten einen aktuellen Artikel, einmal ohne und einmal mit
+`npm run e2e:echt` öffnet auf 14 Nachrichtenseiten einen aktuellen Artikel, einmal ohne und einmal mit
 Werbefrei, bestätigt die Einwilligung (ohne sie laden diese Seiten keine Werbung), scrollt durch den
 Artikel und zählt sichtbare Werberahmen, Werbeplätze und Kennzeichnungen. Ergebnis:
-`test-ergebnisse/echte-seiten.md` und Bildschirmfotos pro Seite.
+`test-ergebnisse/echte-seiten.md` und ein Vergleichsbild pro Seite. Einzelne Seiten:
+`node tests/e2e/echte-seiten.mjs spiegel.de zeit.de`.
+
+`node tests/e2e/pruefen.mjs <Adresse>` listet für eine Seite jedes Element, das die eigene Erkennung
+ausgeblendet hat, mit Grund. Damit lässt sich ein Fehlalarm schnell eingrenzen.
 
 ## Aufbau
 
