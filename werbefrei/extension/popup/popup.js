@@ -25,12 +25,12 @@ $('siteEnabled').addEventListener('change', async (e) => {
 });
 
 $('pause').addEventListener('click', async () => {
-  await send({ type: 'setPaused', paused: true });
+  await send({ type: 'setPaused', paused: true, tabId: tab.id });
   await render();
 });
 
 $('resume').addEventListener('click', async () => {
-  await send({ type: 'setPaused', paused: false });
+  await send({ type: 'setPaused', paused: false, tabId: tab.id });
   await render();
 });
 

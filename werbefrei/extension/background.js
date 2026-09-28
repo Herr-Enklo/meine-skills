@@ -9,10 +9,10 @@ import {
   cosmeticForHost,
   selectorsForKeys,
   cssForSelectors,
+  planDynamicRules,
   hostSuffixes,
   isSafeSelector,
   toAsciiDomain,
-  withIds,
   PRIORITY,
 } from './lib/filters.js';
 import {
@@ -27,13 +27,14 @@ import {
 const DNR = chrome.declarativeNetRequest;
 const EXTENSION_ORIGIN = chrome.runtime.getURL('');
 const HIDE_ATTR = 'data-werbefrei-verborgen';
-const HEURISTIC_CSS = `[${HIDE_ATTR}]{display:none!important}`;
+const heuristicCss = (gate) => `[${HIDE_ATTR}]:not(:root[${gate}] *){display:none!important}`;
 const UPDATE_ALARM = 'listen-aktualisieren';
 const MENU_ID = 'element-ausblenden';
 const USER_RULES_MAX = 500000;
 
-// Bereiche der dynamischen Regel-ids
-const RULE_ID = { pause: 1, allowlist: 2, userStart: 100, userMax: 9899, listStart: 10000 };
+// Bereiche der dynamischen Regel-ids. Pause und Ausnahmen brauchen je zwei Regeln:
+// allowAllRequests wirkt erst ab dem nächsten Laden eines Frames, allow sofort auf jede neue Anfrage.
+const RULE_ID = { pause: 1, allowlist: 2, pauseNow: 3, allowlistNow: 4, userStart: 100, userMax: 9899, listStart: 10000 };
 
 const ICONS = {
   an: { 16: 'icons/an-16.png', 32: 'icons/an-32.png' },
@@ -87,6 +88,28 @@ function allLists(settings) {
 
 function isEnabled(settings, id) {
   return settings.lists[id] === true;
+}
+
+const GATE_RE = /^data-[a-z]{12}$/;
+
+/**
+ * Name des Attributs, mit dem das Inhaltsskript eingefügtes CSS abschaltet (Pause, Ausnahme).
+ * Neu ausgewürfelt für jedes geladene Dokument: Steht es während einer Pause im DOM, nützt es
+ * der Seite beim nächsten Laden nichts.
+ */
+function newGate() {
+  const letters = crypto.getRandomValues(new Uint8Array(12));
+  return `data-${[...letters].map((b) => String.fromCharCode(97 + (b % 26))).join('')}`;
+}
+
+/** Das vom Inhaltsskript mitgeschickte Attribut, wenn es gültig ist (sonst null). */
+function gateFrom(msg) {
+  return typeof msg?.gate === 'string' && GATE_RE.test(msg.gate) ? msg.gate : null;
+}
+
+async function getGeneration() {
+  const { rulesGeneration = 0 } = await chrome.storage.local.get('rulesGeneration');
+  return rulesGeneration;
 }
 
 async function getIndex() {
@@ -255,20 +278,32 @@ async function updateLists({ force = false, only = null } = {}) {
 function controlRules(settings) {
   const rules = [];
   if (settings.paused) {
-    rules.push({
-      id: RULE_ID.pause,
-      priority: PRIORITY.pause,
-      action: { type: 'allowAllRequests' },
-      condition: { resourceTypes: ['main_frame', 'sub_frame'] },
-    });
+    rules.push(
+      {
+        id: RULE_ID.pause,
+        priority: PRIORITY.pause,
+        action: { type: 'allowAllRequests' },
+        condition: { resourceTypes: ['main_frame', 'sub_frame'] },
+      },
+      // Gilt sofort auch in schon geladenen Seiten (leere Bedingung: jede Anfrage außer main_frame).
+      { id: RULE_ID.pauseNow, priority: PRIORITY.pause, action: { type: 'allow' }, condition: {} },
+    );
   }
   if (settings.allowlist.length) {
-    rules.push({
-      id: RULE_ID.allowlist,
-      priority: PRIORITY.allowlist,
-      action: { type: 'allowAllRequests' },
-      condition: { requestDomains: [...settings.allowlist], resourceTypes: ['main_frame'] },
-    });
+    rules.push(
+      {
+        id: RULE_ID.allowlist,
+        priority: PRIORITY.allowlist,
+        action: { type: 'allowAllRequests' },
+        condition: { requestDomains: [...settings.allowlist], resourceTypes: ['main_frame'] },
+      },
+      {
+        id: RULE_ID.allowlistNow,
+        priority: PRIORITY.allowlist,
+        action: { type: 'allow' },
+        condition: { initiatorDomains: [...settings.allowlist] },
+      },
+    );
   }
   return rules;
 }
@@ -341,7 +376,7 @@ async function rebuild({ network = true } = {}) {
   }
   const cosmeticState = { cosmeticIndex: index, blockHosts: [...hosts], allowHosts: [...allowHosts] };
   if (!network) {
-    await chrome.storage.local.set(cosmeticState);
+    await chrome.storage.local.set({ ...cosmeticState, rulesGeneration: (await getGeneration()) + 1 });
     indexCache = prepareIndex(index);
     hostsCache = { blocked: hosts, allowed: allowHosts };
     hostMemo.clear();
@@ -349,34 +384,36 @@ async function rebuild({ network = true } = {}) {
   }
 
   // Netzregeln: erst die eigenen, dann die Listen. Ist Chromes Grenze erreicht, fallen Regeln
-  // vom Ende der Listen weg; wie viele, steht im Bericht auf der Einstellungsseite.
-  const limit = dynamicRuleLimit() - 2;
-  const userRules = withIds(user.network.slice(0, RULE_ID.userMax - RULE_ID.userStart), RULE_ID.userStart);
+  // vom Ende weg; wie viele, steht im Bericht auf der Einstellungsseite.
   let listRules = [];
   for (const id of ids) {
     const c = stored[`list:${id}`];
     if (c?.network?.length) listRules = listRules.concat(c.network);
   }
-  const room = Math.max(0, limit - userRules.length);
-  const dropped = Math.max(0, listRules.length - room);
-  listRules = withIds(listRules.slice(0, room), RULE_ID.listStart);
+  const plan = planDynamicRules({
+    control: controlRules(settings),
+    user: user.network,
+    lists: listRules,
+    limit: dynamicRuleLimit(),
+    userStart: RULE_ID.userStart,
+    userMax: RULE_ID.userMax,
+    listStart: RULE_ID.listStart,
+  });
 
   const existing = await DNR.getDynamicRules();
-  const result = await replaceDynamicRules(
-    existing.map((r) => r.id),
-    [...controlRules(settings), ...userRules, ...listRules],
-  );
+  const result = await replaceDynamicRules(existing.map((r) => r.id), plan.rules);
   await syncStaticRulesets(settings);
 
   const report = {
     at: Date.now(),
     limit: dynamicRuleLimit(),
     active: result.added,
-    dropped,
+    dropped: plan.listDropped,
+    userDropped: plan.userDropped,
     invalid: result.invalid.length,
     invalidSample: result.invalid.slice(0, 5),
   };
-  await chrome.storage.local.set({ ...cosmeticState, ruleReport: report });
+  await chrome.storage.local.set({ ...cosmeticState, ruleReport: report, rulesGeneration: (await getGeneration()) + 1 });
   indexCache = prepareIndex(index);
   hostsCache = { blocked: hosts, allowed: allowHosts };
   hostMemo.clear();
@@ -393,6 +430,25 @@ async function applyActionState() {
   await chrome.action.setBadgeBackgroundColor({ color: '#0f6e5a' });
   if (chrome.action.setBadgeTextColor) await chrome.action.setBadgeTextColor({ color: '#ffffff' });
   await DNR.setExtensionActionOptions({ displayActionCountAsBadgeText: settings.badge && !settings.paused });
+}
+
+/**
+ * Teilt allen offenen Seiten mit, dass sich der Zustand geändert hat (Pause, Ausnahmen, Regeln).
+ * Das Inhaltsskript fragt daraufhin nach und schaltet sich ohne Neuladen um.
+ */
+async function notifyTabs() {
+  const settings = await getSettings();
+  const tabs = await chrome.tabs.query({ url: ['http://*/*', 'https://*/*'] });
+  await Promise.all(
+    tabs.map(async (tab) => {
+      const host = pageHost(tab.url || '');
+      if (host) {
+        const off = settings.paused || isAllowlisted(settings, host);
+        await chrome.action.setIcon({ tabId: tab.id, path: off ? ICONS.aus : ICONS.an }).catch(() => {});
+      }
+      await chrome.tabs.sendMessage(tab.id, { type: 'werbefrei:status' }, { frameId: 0 }).catch(() => {});
+    }),
+  );
 }
 
 async function setupContextMenu() {
@@ -448,21 +504,33 @@ async function insertCss(sender, css) {
 
 const KEY_RE = /^[.#][A-Za-z_-][\w-]{0,200}$/;
 
+/** Soll Werbefrei auf der Seite des Absenders arbeiten, und wie? */
+async function pageState(sender, msg) {
+  const host = pageHost(sender.url);
+  const base = { gate: gateFrom(msg) || newGate(), generation: await getGeneration() };
+  if (!host) return { ...base, active: false };
+  const settings = await getSettings();
+  if (settings.paused) return { ...base, active: false, reason: 'pausiert' };
+  if (isAllowlisted(settings, host)) return { ...base, active: false, reason: 'freigegeben' };
+  const cosmetic = await cosmeticFor(host);
+  if (cosmetic.disabled) return { ...base, active: false, reason: 'liste' };
+  // $generichide in einer Liste schaltet nur deren allgemeine Selektoren ab, nicht die eigene Erkennung.
+  return { ...base, active: true, generic: !cosmetic.generichide, heuristics: settings.heuristics, cosmetic };
+}
+
 const contentHandlers = {
+  /** Beim Laden der Seite und nach Regeländerungen: Stylesheet einfügen, Zustand melden. */
   async init(msg, sender) {
-    const host = pageHost(sender.url);
-    if (!host) return { active: false };
-    const settings = await getSettings();
-    if (settings.paused) return { active: false, reason: 'pausiert' };
-    if (isAllowlisted(settings, host)) {
-      chrome.action.setIcon({ tabId: sender.tab.id, path: ICONS.aus }).catch(() => {});
-      return { active: false, reason: 'freigegeben' };
-    }
-    const cosmetic = await cosmeticFor(host);
-    if (cosmetic.disabled) return { active: false, reason: 'liste' };
-    await insertCss(sender, `${cssForSelectors(cosmetic.selectors)}\n${HEURISTIC_CSS}`);
-    // $generichide in einer Liste schaltet nur deren allgemeine Selektoren ab, nicht die eigene Erkennung.
-    return { active: true, generic: !cosmetic.generichide, heuristics: settings.heuristics };
+    const { cosmetic, ...state } = await pageState(sender, msg);
+    if (state.reason === 'freigegeben') chrome.action.setIcon({ tabId: sender.tab.id, path: ICONS.aus }).catch(() => {});
+    if (state.active) await insertCss(sender, `${cssForSelectors(cosmetic.selectors, state.gate)}\n${heuristicCss(state.gate)}`);
+    return state;
+  },
+
+  /** Nach einer Zustandsänderung (Pause, Ausnahme): nur den Zustand melden, nichts einfügen. */
+  async status(msg, sender) {
+    const { cosmetic, ...state } = await pageState(sender, msg);
+    return state;
   },
 
   async generic(msg, sender) {
@@ -471,8 +539,10 @@ const contentHandlers = {
     const keys = msg.keys.slice(0, 20000).filter((k) => typeof k === 'string' && KEY_RE.test(k));
     const cosmetic = await cosmeticFor(host);
     if (cosmetic.disabled || cosmetic.generichide) return { selectors: [] };
+    const gate = gateFrom(msg);
+    if (!gate) return { selectors: [] };
     const selectors = selectorsForKeys(await getIndex(), keys, cosmetic.exceptions);
-    await insertCss(sender, cssForSelectors(selectors));
+    await insertCss(sender, cssForSelectors(selectors, gate));
     return { selectors };
   },
 
@@ -511,7 +581,10 @@ const contentHandlers = {
       return { ok: true };
     });
     if (!result.ok) return result;
-    await insertCss(sender, cssForSelectors([selector]));
+    // Ohne gültiges Attribut (Seite noch nicht eingerichtet) übernimmt das die Benachrichtigung unten.
+    const gate = gateFrom(msg);
+    if (gate) await insertCss(sender, cssForSelectors([selector], gate));
+    notifyTabs().catch(() => {});
     return { ok: true, rule: line };
   },
 };
@@ -577,16 +650,20 @@ const pageHandlers = {
       await syncControlRules();
     });
     hostMemo.clear();
+    // Der aktuelle Tab lädt neu, damit blockierte Inhalte nachkommen; andere Tabs schalten live um.
     await chrome.tabs.reload(tabId);
+    await notifyTabs();
     return { ok: true };
   },
 
-  async setPaused({ paused }) {
+  async setPaused({ paused, tabId }) {
     await serial(async () => {
       await saveSettings({ paused: Boolean(paused) });
       await syncControlRules();
       await applyActionState();
     });
+    if (typeof tabId === 'number') await chrome.tabs.reload(tabId).catch(() => {});
+    await notifyTabs();
     return { ok: true };
   },
 
@@ -618,12 +695,14 @@ const pageHandlers = {
         if (!data) await downloadList(list);
       }
       await rebuild();
+      notifyTabs().catch(() => {});
       return { ok: true };
     });
   },
 
   async updateLists({ id }) {
     const count = await serial(() => updateLists({ force: true, only: id || null }));
+    if (count) notifyTabs().catch(() => {});
     return { ok: true, count };
   },
 
@@ -643,6 +722,7 @@ const pageHandlers = {
       await saveSettings({ customLists: [...settings.customLists, list], lists: { ...settings.lists, [id]: true } });
       const ok = await downloadList(list);
       await rebuild();
+      notifyTabs().catch(() => {});
       const { listMeta = {} } = await chrome.storage.local.get('listMeta');
       return ok ? { ok: true } : { ok: true, warning: listMeta[id]?.error };
     });
@@ -659,6 +739,7 @@ const pageHandlers = {
       await chrome.storage.local.set({ listMeta });
       await chrome.storage.local.remove(`list:${id}`);
       await rebuild();
+      notifyTabs().catch(() => {});
       return { ok: true };
     });
   },
@@ -669,6 +750,7 @@ const pageHandlers = {
     return serial(async () => {
       await chrome.storage.local.set({ userRules: value });
       const report = await rebuild();
+      notifyTabs().catch(() => {});
       return { ok: true, stats: check.stats, errors: check.stats.errors, report };
     });
   },
@@ -680,6 +762,7 @@ const pageHandlers = {
       await applyActionState();
     });
     hostMemo.clear();
+    await notifyTabs();
     return { ok: true };
   },
 
@@ -689,6 +772,7 @@ const pageHandlers = {
       await saveSettings({ allowlist });
       await syncControlRules();
     });
+    await notifyTabs();
     return { ok: true, allowlist };
   },
 
@@ -734,6 +818,7 @@ const pageHandlers = {
       await updateLists();
       await rebuild();
       await applyActionState();
+      notifyTabs().catch(() => {});
       return { ok: true };
     });
   },

@@ -17,6 +17,12 @@ mkdirSync(shots, { recursive: true });
 
 const server = createServer((req, res) => {
   const host = (req.headers.host || '').split(':')[0];
+  if (host === 'werbung.test') {
+    // Steht als eigene Netzregel auf der Sperrliste; antwortet, wenn Werbefrei es durchlässt.
+    res.writeHead(200, { 'content-type': 'text/plain', 'access-control-allow-origin': '*' });
+    res.end('ok');
+    return;
+  }
   if (host === 'video.test') {
     res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
     res.end('<body style="margin:0;background:#123;color:#fff;font:20px sans-serif;display:grid;place-items:center;height:100vh">Videoplayer</body>');
@@ -48,7 +54,7 @@ try {
   await waitForSetup(worker);
   const options = await extensionPage(context, extensionId);
   for (const id of ['easylist-germany', 'easylist']) await sendFrom(options, { type: 'setListEnabled', id, enabled: false });
-  await sendFrom(options, { type: 'saveUserRules', text: '' });
+  await sendFrom(options, { type: 'saveUserRules', text: '||werbung.test^\n' });
 
   const page = await context.newPage();
   const blocked = [];
@@ -74,6 +80,7 @@ try {
     ['#teaser-anzeige', 'gesponserter Beitrag in der Teaserliste'],
     ['#wp-nachgeladen', 'nachgeladener leerer Werbeplatz'],
     ['#wp-skript', 'Werbeplatz mit Inline-Skript und Kennzeichnung'],
+    ['#spaeter-werbung', 'Element, das nachträglich die Klasse adsbygoogle bekommt'],
     ['#ersatz-rahmen', 'Ersatzanzeige (Bild im Werbeformat, Zufallsnamen) mit Kennzeichnung'],
     ['#ersatz-breit', 'Ersatzanzeige in Spaltenbreite (640×200)'],
   ]) {
@@ -144,6 +151,46 @@ try {
   await page.waitForLoadState('load');
   await page.waitForTimeout(2500);
   check('nach dem Wiedereinschalten wieder ausgeblendet', !(await visible('#wp-billboard')));
+
+  console.log('\nPause, Ausnahmen und neue Regeln ohne Neuladen');
+  const werbung = (p) => p.evaluate((port) => fetch(`http://werbung.test:${port}/x`).then((r) => String(r.status), () => 'blockiert'), port);
+  check('eigene Netzregel sperrt werbung.test', (await werbung(page)) === 'blockiert');
+
+  await sendFrom(options, { type: 'setPaused', paused: true });
+  await page.waitForTimeout(700);
+  check('Pause: offene Seite lädt wieder von gesperrten Servern', (await werbung(page)) === '200');
+  check('Pause: ausgeblendeter Werbeplatz der offenen Seite ist wieder da', await visible('#wp-billboard'));
+  check('Pause: per Liste ausgeblendetes Taboola-Widget ist wieder da', await visible('#taboola-below-article-thumbnails'));
+
+  const page2 = await context.newPage();
+  await page2.goto(ARTICLE, { waitUntil: 'load' });
+  await page2.waitForTimeout(1500);
+  const visible2 = (sel) => page2.locator(sel).first().evaluate((el) => el.checkVisibility());
+  check('Pause: neu geöffnete Seite bleibt unverändert', (await visible2('#wp-billboard')) && (await visible2('#taboola-below-article-thumbnails')));
+
+  await sendFrom(options, { type: 'setPaused', paused: false });
+  await page.waitForTimeout(700);
+  check('Fortsetzen: offene Seite sperrt wieder', (await werbung(page)) === 'blockiert');
+  check('Fortsetzen: Werbeplatz der offenen Seite wieder ausgeblendet', !(await visible('#wp-billboard')));
+  await page2.waitForTimeout(3500);
+  check('Fortsetzen: während der Pause geöffnete Seite wird nachträglich eingerichtet', !(await visible2('#taboola-below-article-thumbnails')) && !(await visible2('#wp-billboard')));
+
+  await sendFrom(options, { type: 'setAllowlist', hosts: ['news.test'] });
+  await page.waitForTimeout(700);
+  check('Ausnahme aus den Einstellungen: offene Seite lädt sofort wieder', (await werbung(page)) === '200');
+  check('Ausnahme aus den Einstellungen: Werbeplatz sofort wieder da', await visible('#wp-billboard'));
+  const gateName = (p) => p.evaluate(() => [...document.documentElement.attributes].map((a) => a.name).find((n) => /^data-[a-z]{12}$/.test(n)) || null);
+  const [gateA, gateB] = [await gateName(page), await gateName(page2)];
+  check('Schalter-Attribut ist pro geladener Seite ein anderes', Boolean(gateA && gateB && gateA !== gateB), `${gateA} / ${gateB}`);
+  await page2.close();
+  await sendFrom(options, { type: 'setAllowlist', hosts: [] });
+  await page.waitForTimeout(700);
+  check('Ausnahme entfernt: offene Seite sperrt und blendet wieder aus', (await werbung(page)) === 'blockiert' && !(await visible('#wp-billboard')));
+
+  const { userRules: before } = await worker.evaluate(() => chrome.storage.local.get('userRules'));
+  await sendFrom(options, { type: 'saveUserRules', text: `${before}news.test###live-regel\n` });
+  await page.waitForTimeout(1000);
+  check('neue eigene Regel greift in der offenen Seite ohne Neuladen', !(await visible('#live-regel')));
 
   console.log('\nEinstellungsseite');
   await options.reload();

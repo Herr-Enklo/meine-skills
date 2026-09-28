@@ -31,6 +31,11 @@ blockiert und wie viele Werbeplätze ausgeblendet wurden. „Überall pausieren�
 komplett ab, bis man es wieder fortsetzt. Auf ausgenommenen Seiten und im Pausenmodus ist das Symbol
 grau.
 
+Pause, Ausnahmen und neue Regeln wirken sofort in allen offenen Tabs, nicht erst nach dem Neuladen:
+Gesperrte Server sind dort ab der nächsten Anfrage erreichbar oder wieder gesperrt, und Ausgeblendetes
+erscheint oder verschwindet. Nur der Tab, in dem man das Popup benutzt, lädt neu, damit schon
+blockierte Inhalte nachkommen. Eine gelöschte Regel wirkt in offenen Tabs bis zum nächsten Laden weiter.
+
 **Element ausblenden**: Für Werbung, die keine Liste erwischt. Start über das Popup, per Rechtsklick
 „Element ausblenden …“ oder mit <kbd>Alt</kbd>+<kbd>Umschalt</kbd>+<kbd>E</kbd>. Auf die Werbung zeigen
 und klicken; mit <kbd>↑</kbd> und <kbd>↓</kbd> (oder „Größer“/„Kleiner“) den Rahmen anpassen, bis die
@@ -109,7 +114,15 @@ Fenster ist. Das Wort „Werbung“ in Links, Menüs, Formularen, der Hauptüber
 gilt nicht als Kennzeichnung. Die Erkennung lässt sich in den Einstellungen abschalten.
 
 Ausgeblendet wird immer per CSS, gelöscht wird nichts. Skripte der Seite laufen dadurch weiter wie
-vorgesehen, und „Auf dieser Seite aus“ stellt alles wieder her.
+vorgesehen, und „Auf dieser Seite aus“ stellt alles wieder her. Jede eingefügte CSS-Regel hängt an
+einem Attribut am `<html>`-Element, dessen Name für jede geladene Seite neu ausgewürfelt wird. Setzt
+das Inhaltsskript es (Pause, Ausnahme), greift keine Regel mehr; die Seite selbst kennt den Namen
+nicht und kann das nicht nachahmen.
+
+Chrome erlaubt eine feste Zahl dynamischer Netzregeln (ab Version 121 30.000, davor 5.000). Werbefrei
+hält diese Grenze auch bei sehr vielen eigenen Regeln ein, sonst würde Chrome den ganzen Regelsatz
+ablehnen. Eigene Regeln haben Vorrang vor den Listen; was nicht mehr hineinpasst, nennt die
+Einstellungsseite.
 
 ## Grenzen
 
@@ -157,15 +170,19 @@ npm run e2e:echt   # echte Nachrichtenseiten ohne und mit Werbefrei, braucht Int
 ```
 
 `npm run e2e` braucht keinen Internetzugang: Die Testseite lädt Werbung von echten Werbeservern, und
-diese Anfragen blockiert die Erweiterung, bevor sie das Netz erreichen. Geprüft wird in 38 Punkten,
-dass zehn typische Werbeplätze verschwinden (Billboard mit „Anzeige“, zwei Werbeplätze im Text, einer
+diese Anfragen blockiert die Erweiterung, bevor sie das Netz erreichen. Geprüft wird in 52 Punkten,
+dass elf typische Werbeplätze verschwinden (Billboard mit „Anzeige“, zwei Werbeplätze im Text, einer
 davon mit Inline-Skript, leerer Skyscraper, klebende Leiste, Taboola, gesponserter Teaser,
-nachgeladener Werbeplatz, zwei Ersatzanzeigen mit Zufallsnamen) und dass achtzehn Fallen sichtbar
+nachgeladener Werbeplatz, ein Element, das erst nachträglich die Klasse `adsbygoogle` bekommt, zwei
+Ersatzanzeigen mit Zufallsnamen) und dass achtzehn Fallen sichtbar
 bleiben: Überschrift, Absätze mit den Wörtern „Werbung“ und „Anzeige“, eine Dachzeile „Werbung“, ein
 Kasten mit der Klasse `ad-hoc-note`, ein Kasten mit der Klasse `billboard` und einem verzögert
 ladenden Bild, ein Knopf „Anzeigen“, drei Fotos in Anzeigengröße (zwei davon in Containern mit
 zufällig klingendem Namen), ein eingebettetes Video, echte Teaser, der Einwilligungszweck „Werbung“,
-Menü- und Fußzeilenlinks „Werbung“. Dazu kommen die Element-Auswahl, das Popup und das Ausnehmen einer Seite.
+Menü- und Fußzeilenlinks „Werbung“. Dazu kommen die Element-Auswahl, das Popup und das Ausnehmen einer
+Seite. Ein eigener Block prüft, dass Pause, Fortsetzen, Ausnahmen und neue Regeln in offenen Tabs ohne
+Neuladen wirken, sowohl für Netzanfragen als auch für Ausgeblendetes, und dass eine während der Pause
+geöffnete Seite beim Fortsetzen nachträglich eingerichtet wird.
 Bildschirmfotos landen in `test-ergebnisse/`.
 
 `npm run e2e:echt` öffnet auf 14 Nachrichtenseiten einen aktuellen Artikel, einmal ohne und einmal mit

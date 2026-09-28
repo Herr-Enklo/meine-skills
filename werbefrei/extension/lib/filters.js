@@ -548,7 +548,35 @@ export function selectorsForKeys(prepared, keys, exceptions) {
 /**
  * CSS zum Ausblenden. Eine Regel pro Selektor: Versteht der Browser einen Selektor nicht,
  * verwirft er nur diese eine Regel und nicht alle anderen.
+ *
+ * gate: Name eines Attributs. Trägt das <html>-Element es, greift keine dieser Regeln mehr. So
+ * lässt sich eingefügtes CSS in offenen Tabs abschalten (Pause, Ausnahme), ohne es zu entfernen.
  */
-export function cssForSelectors(selectors) {
-  return selectors.map((s) => `${s}{display:none!important}`).join('\n');
+export function cssForSelectors(selectors, gate = null) {
+  if (!gate) return selectors.map((s) => `${s}{display:none!important}`).join('\n');
+  return selectors
+    .map((s) => {
+      // Ein Pseudo-Element am Ende (::before) darf nicht in :is() stehen, es gehört ans Ende.
+      const m = /^(.+?)(::?(?:before|after|marker|placeholder|backdrop))$/i.exec(s);
+      const [base, pseudo] = m ? [m[1], m[2]] : [s, ''];
+      return `:is(${base}):not(:root[${gate}] *)${pseudo}{display:none!important}`;
+    })
+    .join('\n');
+}
+
+/**
+ * Stellt die dynamischen Regeln so zusammen, dass Chromes Obergrenze eingehalten wird. Chrome
+ * tauscht dynamische Regeln nur ganz oder gar nicht aus; eine Regel zu viel, und keine neue wird
+ * aktiv. Vorrang haben die Steuerregeln (Pause, Ausnahmen), dann eigene Regeln, dann Listen.
+ * @returns {{rules: object[], userDropped: number, listDropped: number}}
+ */
+export function planDynamicRules({ control, user, lists, limit, userStart, userMax, listStart }) {
+  const room = Math.max(0, limit - control.length);
+  const userCount = Math.min(user.length, userMax - userStart + 1, room);
+  const listCount = Math.min(lists.length, room - userCount);
+  return {
+    rules: [...control, ...withIds(user.slice(0, userCount), userStart), ...withIds(lists.slice(0, listCount), listStart)],
+    userDropped: user.length - userCount,
+    listDropped: lists.length - listCount,
+  };
 }
