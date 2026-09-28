@@ -179,7 +179,7 @@ function detectDialog(isTop) {
     }
     const text = (box.innerText || '').replace(/\s+/g, ' ').trim();
     const wholeText = (whole.innerText || '').replace(/\s+/g, ' ');
-    return { pay: PAY.test(wholeText), button: label, text: text.slice(0, 140) };
+    return { pay: PAY.test(wholeText), button: label, text: text.slice(0, 140), len: wholeText.length };
   }
   return null;
 }
@@ -202,7 +202,11 @@ async function findDialog(page) {
   let dialog = null;
   for (const frame of page.frames()) {
     const isTop = frame === page.mainFrame();
-    const found = await frame.evaluate(detectDialog, isTop).catch(() => null);
+    // Lädt die Seite gerade neu (heise.de nach der Einwilligung), kann evaluate hängen: nach 8 s aufgeben.
+    const found = await Promise.race([
+      frame.evaluate(detectDialog, isTop).catch(() => null),
+      new Promise((r) => setTimeout(() => r(null), 8000)),
+    ]);
     if (!found) continue;
     if (!isTop) {
       const el = await frame.frameElement().catch(() => null);
@@ -228,18 +232,42 @@ async function findDialog(page) {
  * Dialog zählt nur, wenn er 2,5 Sekunden später noch da ist; so wird ein Banner, der kurz sichtbar ist,
  * bevor Werbefrei ihn ausblendet oder beantwortet, nicht als Fehler gewertet.
  */
-async function inspect(page) {
+async function inspect(page, mode) {
   const deadline = Date.now() + 14000;
   let dialog = null;
-  for (;;) {
-    dialog = await findDialog(page);
-    if (dialog) {
-      await page.waitForTimeout(2500);
-      dialog = await findDialog(page);
-      if (dialog) break;
+  if (mode === 'einwilligen') {
+    // Mit Schalter zählt der Zustand am Ende: Bis die Abfrage beantwortet ist, vergehen einige
+    // Sekunden (Rahmen laden, nachklicken, Weiterleitung wie bei gmx.net). Zweimal hintereinander
+    // weg, nachdem sie da war, gilt als beantwortet.
+    let seen = false;
+    let gone = 0;
+    for (;;) {
+      const d = await findDialog(page);
+      if (d) {
+        dialog = d;
+        seen = true;
+        gone = 0;
+      } else if (seen && ++gone >= 2) {
+        dialog = null;
+        break;
+      }
+      if (Date.now() > deadline) {
+        if (!d) dialog = null;
+        break;
+      }
+      await page.waitForTimeout(2000);
     }
-    if (Date.now() > deadline) break;
-    await page.waitForTimeout(2000);
+  } else {
+    for (;;) {
+      dialog = await findDialog(page);
+      if (dialog) {
+        await page.waitForTimeout(2500);
+        dialog = await findDialog(page);
+        if (dialog) break;
+      }
+      if (Date.now() > deadline) break;
+      await page.waitForTimeout(2000);
+    }
   }
   const page2 = await page.evaluate(() => ({
     textLen: (document.body?.innerText || '').length,
@@ -262,9 +290,12 @@ async function inspect(page) {
     })(),
     clickable: getComputedStyle(document.body).pointerEvents !== 'none' && getComputedStyle(document.documentElement).pointerEvents !== 'none',
     tall: document.documentElement.scrollHeight > innerHeight + 300 || (document.body?.scrollHeight || 0) > innerHeight + 300,
-    blocked: /captcha|access denied|zugriff verweigert|request blocked|ihre anfrage wurde blockiert|are you a robot|bist du ein mensch|sind sie ein roboter/i.test(document.body?.innerText.slice(0, 3000) || ''),
+    // Sperr- und Fehlerseiten für Testbrowser (auch zufällig, etwa die Bot-Prüfung von amazon.de)
+    blocked: /captcha|access denied|zugriff verweigert|request blocked|ihre anfrage wurde blockiert|are you a robot|bist du ein mensch|sind sie ein roboter|klicke auf die schaltfläche unten, um mit dem einkauf fortzufahren|upstream request failed|website ist derzeit nicht erreichbar/i.test(document.body?.innerText.slice(0, 3000) || ''),
     // Sperrseite für Werbeblocker (bild.de leitet auf /adblockwall.html um)
-    adblockWall: /adblockwall/i.test(location.href) || /aufgrund ihres (werbe)?blockers|deaktivieren sie ihren (werbe|ad)blocker|werbeblocker erkannt|adblocker erkannt/i.test(document.body?.innerText.slice(0, 4000) || ''),
+    adblockWall:
+      /adblockwall/i.test(location.href) ||
+      /aufgrund ihres (werbe)?blockers|deaktivieren sie ihren (werbe|ad)blocker|werbeblocker erkannt|adblocker erkannt|(verwendest|nutzt) du einen (werbe|ad)blocker|(verwenden|nutzen) sie einen (werbe|ad)blocker/i.test(document.body?.innerText.slice(0, 6000) || ''),
     title: document.title.slice(0, 60),
   }));
   // Ein Tab im Hintergrund reagiert nicht aufs Mausrad: nach vorn holen, und die parallelen Tabs
@@ -319,13 +350,13 @@ async function measure(page, site, mode, name) {
     await page.waitForTimeout(6000);
     let r;
     try {
-      r = await inspect(page);
+      r = await inspect(page, mode);
     } catch (e) {
       // Weiterleitung nach der Einwilligung (golem.de): neue Seite abwarten und noch einmal messen.
       if (!/context was destroyed|navigat/i.test(e.message)) throw e;
       await page.waitForLoadState('domcontentloaded').catch(() => {});
       await page.waitForTimeout(3000);
-      r = await inspect(page);
+      r = await inspect(page, mode);
     }
     await page.evaluate(() => { window.scrollTo(0, 0); if (document.body) document.body.scrollTop = 0; }).catch(() => {});
     await page.screenshot({ path: `${shots}${name}-${mode}.png`, timeout: 15000 }).catch(() => {});
@@ -423,10 +454,12 @@ function judge(site) {
   const c = einw[site.url] || { error: 'nicht besucht' };
   const notes = [];
   if (a.error || b.error) return { status: 'Fehler', ok: null, notes: [a.error || b.error] };
-  if (a.blocked || b.blocked || a.status >= 400) return { status: 'gesperrt', ok: null, notes: [`HTTP ${a.status}`, a.title] };
+  if (a.blocked || b.blocked || a.status >= 400 || b.status >= 500) return { status: 'gesperrt', ok: null, notes: [`HTTP ${a.status}/${b.status}`, a.title] };
   // Mit Werbeblocker sperrt die Seite sich selbst (bild.de); das umgeht Werbefrei absichtlich nicht.
   if (b.adblockWall && !a.adblockWall) return { status: 'Werbeblocker-Sperre der Seite', ok: null, notes: b.dialog ? [`Dialog bleibt: ${b.dialog.pay ? 'Abo-Abfrage' : 'Hinweis'}`] : [] };
-  if (a.textMain !== undefined && b.textMain !== undefined && b.textMain < a.textMain * 0.5 && a.textMain - b.textMain > 1000) {
+  // Der Text eines ausgeblendeten Dialogs, der nicht fest positioniert ist, zählt ohne Werbefrei mit.
+  const dialogLen = a.dialog?.len || 0;
+  if (a.textMain !== undefined && b.textMain !== undefined && b.textMain < a.textMain * 0.5 && a.textMain - b.textMain > 1000 + dialogLen) {
     notes.push(`weniger Inhalt (${b.textMain} statt ${a.textMain} Zeichen)`);
   }
   // Mit Werbefrei ein anderer Dialog als ohne (etwa eine Anfrage für Push-Nachrichten): kein Fehler
@@ -451,6 +484,7 @@ function judge(site) {
   if (!b.dialog) return { status: 'Abo-Abfrage verschwunden', ok: false, notes };
   if (c.error) return { status: 'Abo-Abfrage bleibt; Schalter: Fehler', ok: false, notes: [...notes, c.error] };
   if (c.dialog) return { status: 'Abo-Abfrage NICHT BEANTWORTET', ok: false, notes: [...notes, `Knopf "${c.dialog.button}" (${c.dialog.where})`] };
+  if (c.adblockWall && !a.adblockWall) return { status: 'Abo-Abfrage bleibt; nach der Einwilligung Werbeblocker-Sperre der Seite', ok: null, notes };
   if (c.tall && c.scrolled < 100) return { status: 'beantwortet, aber Scrollen gesperrt', ok: false, notes };
   return { status: 'Abo-Abfrage bleibt, Schalter beantwortet', ok: !serious(), notes };
 }

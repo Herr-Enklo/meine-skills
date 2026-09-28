@@ -16,7 +16,7 @@
   const PAY = /\bpur\b|pur-abo|abonn|\babo\b|contentpass|freechoice|werbefrei|ohne werbung|subscribe|subscription|€/i;
   const CONSENT = /cookie|datenschutz|privacy|einwillig|consent|tracking|personenbezogen/i;
   // Wie ACCEPT_TEXT in content.js (beide Listen gleich halten).
-  const ACCEPT_TEXT = /^(alle[ns]?\s+)?(cookies\s+)?(akzeptieren|zustimmen|annehmen|erlauben)(\s+(und|&)\s+(weiter|schließen|fortfahren))?$|^einwilligen(\s+und\s+weiter)?$|^(ich\s+bin\s+)?einverstanden$|^(accept|agree|allow)(\s+all)?(\s+cookies)?$/i;
+  const ACCEPT_TEXT = /^(alle[ns]?\s+)?(cookies\s+)?(akzeptieren|zustimmen|annehmen|erlauben)(\s+(und|&)\s+(weiter|schließen|fortfahren))?$|^einwilligen(\s+(und|&)\s+weiter)?$|^(ich\s+bin\s+)?einverstanden$|^(accept|agree|allow)(\s+all)?(\s+cookies)?$/i;
   const SKIP = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEMPLATE']);
   const INTERVAL = 300;
   const GIVE_UP = 15000; // danach keine Meldung mehr: Der Dialog bleibt dann sichtbar.
@@ -139,7 +139,8 @@
         return;
       }
     }
-    if (++otherTries < 20) setTimeout(checkOther, 750);
+    // 30 Sekunden: Unter Last kommt der Dialog in manchen Rahmen spät (gmx.net, web.de).
+    if (++otherTries < 40) setTimeout(checkOther, 750);
   }
 
   if (isSourcepoint) check();

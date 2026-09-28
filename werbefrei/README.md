@@ -249,6 +249,7 @@ npm install        # Playwright für die Browsertests
 npm test           # Parser, Regelwerk und Manifest, ohne Browser
 npm run e2e        # nachgebaute Artikelseite in Chromium mit geladener Erweiterung
 npm run e2e:echt   # echte Nachrichtenseiten ohne und mit Werbefrei, braucht Internet
+npm run e2e:cookies  # Cookie-Hinweise auf rund 120 echten Seiten, braucht Internet, etwa eine Stunde
 ```
 
 `npm run e2e` braucht keinen Internetzugang: Die Testseite lädt Werbung von echten Werbeservern, und
@@ -302,6 +303,32 @@ lässt. Ohne Adressen nimmt es eine feste Auswahl, von den Anbietern selbst bis 
 mit Pur-Abo. `--einwilligen` schaltet „Abo-Abfragen automatisch beantworten“ ein. `--de` meldet
 OpenCMP einen Besucher aus Deutschland; merkur.de zeigt seinen Dialog sonst nur Besuchern aus der EU. Bildschirmfotos:
 `test-ergebnisse/cookie-<seite>.png`.
+
+`npm run e2e:cookies` (`tests/e2e/cookie-umfrage.mjs`) prüft Cookie-Hinweise auf rund 120 deutschen
+Seiten aus Nachrichten, Technik, Rundfunk, Sport, Magazinen, Handel, Diensten, Banken und Reise sowie
+auf den Seiten der Anbieter selbst, in drei Durchgängen: ohne Werbefrei, mit Werbefrei und mit
+eingeschaltetem „Abo-Abfragen automatisch beantworten“. Die Dialogerkennung im Test ist unabhängig
+von der Erweiterung. Sie sucht bis zu 20 Sekunden lang einen sichtbaren Knopf mit Entscheidungstext
+in einem Kasten mit Einwilligungstext, der fest über der Seite liegt oder in einem eigenen Rahmen
+steckt. So fallen auch Dialoge auf, die Werbefrei nicht kennt. Geprüft wird, ob gewöhnliche Hinweise
+verschwinden und die Seite danach scrollt und klickbar ist, ob Abo-Abfragen stehen bleiben und mit
+dem Schalter beantwortet werden und ob Seiteninhalt verloren geht. Ergebnis:
+`test-ergebnisse/cookie-umfrage.md` mit Fehlerliste, dazu Bildschirmfotos pro Seite und Durchgang.
+`--weiter` setzt einen abgebrochenen Lauf fort, `--ohne-von=…` übernimmt den langsamen Durchgang ohne
+Werbefrei aus einem früheren Lauf, `--probleme-von=…` prüft nur dessen Problemfälle erneut, und
+`--gruppe=rundfunk,handel` beschränkt die Auswahl. Der Testbrowser meldet sich als gewöhnlicher
+Chrome mit Zeitzone Berlin.
+
+Letzter Lauf mit Version 1.4.0: 63 Seiten in Ordnung, 6 mit Befund, 50 ohne Aussage. Ohne Aussage
+heißt, die Seite sperrt den Testbrowser (18), zeigt dem Testserver keinen Dialog (24, oft nur für
+Besucher aus der EU), sperrt sich selbst bei Werbeblockern (3) oder lief in eine Zeitüberschreitung
+(5). Keiner der sechs Befunde ließ sich bei der Nachprüfung als Fehler von Werbefrei bestätigen:
+zufällige Fehlerseiten (zalando.de, hornbach.de), ein Neuladen der Seite während der Messung
+(heise.de), eine Abo-Abfrage, die der Test ohne Werbefrei nur halb erfasst hatte (mopo.de), und
+Unterschiede beim gezählten Seitentext, obwohl die Seite vollständig aussah (otto.de, stepstone.de).
+Ein früher Lauf mit dem Stand vor der allgemeinen Erkennung meldete 30 Probleme, darunter zdf.de,
+alternate.de, thomann.de, bahn.de, sparkasse.de, telekom.de und wetter.com; der Test selbst wurde danach
+noch genauer, der Vergleich ist also nur grob.
 
 ## Aufbau
 

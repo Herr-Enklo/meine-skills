@@ -528,7 +528,7 @@
   const CONSENT_TEXT = /cookie|datenschutz|privacy|einwillig|consent|tracking|personenbezogen|nutzungsbasiert/i;
   const DECISION_TEXT = /akzeptier|zustimm|einverstanden|annehm|erlaube|einwillig|ablehn|accept|agree|allow|reject|verstanden|^ok$|^okay$|nur notwendige|nur erforderliche|nur essenzielle|auswahl speichern|einstellungen speichern/i;
   // Der Knopf, den "Abo-Abfragen automatisch beantworten" in einem selbst gebauten Dialog klickt.
-  const ACCEPT_TEXT = /^(alle[ns]?\s+)?(cookies\s+)?(akzeptieren|zustimmen|annehmen|erlauben)(\s+(und|&)\s+(weiter|schließen|fortfahren))?$|^einwilligen(\s+und\s+weiter)?$|^(ich\s+bin\s+)?einverstanden$|^(accept|agree|allow)(\s+all)?(\s+cookies)?$/i;
+  const ACCEPT_TEXT = /^(alle[ns]?\s+)?(cookies\s+)?(akzeptieren|zustimmen|annehmen|erlauben)(\s+(und|&)\s+(weiter|schließen|fortfahren))?$|^einwilligen(\s+(und|&)\s+weiter)?$|^(ich\s+bin\s+)?einverstanden$|^(accept|agree|allow)(\s+all)?(\s+cookies)?$/i;
   // Eindeutige Ablehnen-Knöpfe. Ein selbst gebauter Dialog wird nicht nur ausgeblendet, sondern auch
   // abgelehnt: Manche Seiten sperren das Scrollen per Skript (react-remove-scroll auf zdf.de fängt
   // das Mausrad ab), und das hebt erst der Dialog selbst wieder auf.

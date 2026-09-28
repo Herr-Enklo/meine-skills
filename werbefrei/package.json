@@ -9,7 +9,8 @@
     "icons": "node tools/icons.mjs",
     "test": "node tools/build.mjs --check && node --test tests/*.test.mjs",
     "e2e": "node tests/e2e/lokal.mjs",
-    "e2e:echt": "node tests/e2e/echte-seiten.mjs"
+    "e2e:echt": "node tests/e2e/echte-seiten.mjs",
+    "e2e:cookies": "node tests/e2e/cookie-umfrage.mjs"
   },
   "devDependencies": {
     "playwright": "1.56.1"
