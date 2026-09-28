@@ -203,6 +203,8 @@
       box = parent;
     }
 
+    // Einzelne Tabellenzellen nie ausblenden, das verschiebt die Spalten der ganzen Tabelle.
+    if (box.tagName === 'TD' || box.tagName === 'TH') return;
     if (box !== label) {
       // Werbe-Indiz im Kasten, oder ein großer leerer Kasten, in dem nur noch die Kennzeichnung steht.
       const blank = box.getBoundingClientRect().height >= 60 && !box.querySelector('a[href], button, input, [role="button"]');
@@ -401,6 +403,7 @@
     const candidates = document.querySelectorAll(`[id]:not([${ATTR}]),[class]:not([${ATTR}]),[data-ad-slot]:not([${ATTR}])`);
     for (const el of candidates) {
       if (el === document.body || el === document.documentElement || el.tagName === 'MAIN') continue;
+      if (el.tagName === 'TD' || el.tagName === 'TH') continue; // Zellen verschieben sonst die Tabelle
       if (state.revived.has(el) || !hasAdHint(el)) continue;
       if (el.closest(INTERACTIVE)) continue; // Knöpfe, Links, Menüs sind nie ein leerer Werbeplatz
       if (el.parentElement?.closest(`[${ATTR}]`) || el.closest('h1, h2, h3, h4, h5, h6')) continue;
