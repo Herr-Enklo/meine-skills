@@ -505,6 +505,7 @@
     '#shopify-pc__banner', // Shopify
     '#klaro', // Klaro
     '.c24-cookie-consent-wrapper', // check24
+    '.cmp-root-container', // OpenCMP (merkur.de); der Dialog steckt in einem Shadow DOM
   ].join(',');
   const SOURCEPOINT = 'div[id^="sp_message_container_"]';
   // Knöpfe "Alle akzeptieren" der Anbieter, deren Dialog im Seitendokument liegt. Sourcepoint
@@ -512,6 +513,7 @@
   const ACCEPT_BUTTONS = [
     '.cmpboxbtnyes', // consentmanager
     '#onetrust-accept-btn-handler', // OneTrust
+    '.cmp-button-accept-all', // OpenCMP
   ].join(',');
   const PAY_TEXT = /\bpur\b|pur-abo|abonn|\babo\b|contentpass|werbefrei|ohne werbung|subscribe|subscription|€/i;
   const SCROLL_ATTR = 'data-werbefrei-scroll';
@@ -563,6 +565,9 @@
         budget.left -= n.data.length;
       }
     };
+    // Den Shadow DOM des Banners selbst eigens lesen: Der TreeWalker ruft seinen Filter für das
+    // Startelement nicht auf. OpenCMP und consentmanager legen ihren Dialog genau dorthin.
+    if (el.shadowRoot) walk(el.shadowRoot);
     walk(el);
     return text;
   }
@@ -598,19 +603,43 @@
     button.click();
   }
 
+  // Änderungen im Shadow DOM sieht der MutationObserver der Seite nicht. OpenCMP (merkur.de) fügt
+  // sein Element zuerst fast leer ein und rendert den Dialog erst danach hinein; deshalb werden
+  // Shadow Roots gefundener Banner eigens beobachtet.
+  const watchedShadows = new WeakSet();
+  let shadowRescan = 0;
+  function watchShadow(el) {
+    const root = el.shadowRoot;
+    if (!root || watchedShadows.has(root)) return;
+    watchedShadows.add(root);
+    new MutationObserver(() => {
+      if (shadowRescan) return;
+      shadowRescan = setTimeout(() => {
+        shadowRescan = 0;
+        if (state.active) scanCookieBanners([document.documentElement]);
+      }, 150);
+    }).observe(root, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['class', 'style', 'hidden'] });
+  }
+
   /** Einen gefundenen Banner behandeln: ausblenden, außer er bietet ein Abo an. */
   function handleBanner(el) {
     if (el.hasAttribute(ATTR) || el.parentElement?.closest(`[${ATTR}]`)) return;
+    watchShadow(el);
     if (el.matches(SOURCEPOINT)) {
       // Den Text liest das Skript im Sourcepoint-Rahmen; ohne seine Meldung bleibt der Dialog stehen.
       // Die Einwilligung bei einer Abo-Abfrage klickt es ebenfalls dort.
       if (state.cookies && state.spVerdict === 'normal') hide(el, 'cookie');
       return;
     }
-    if (PAY_TEXT.test(bannerText(el))) {
+    const text = bannerText(el);
+    if (PAY_TEXT.test(text)) {
       acceptPayDialog(el);
       return;
     }
+    // Dialog im Shadow DOM noch ohne Text: abwarten, bis er gerendert ist (watchShadow meldet sich).
+    // Hintergrundebenen ohne Shadow DOM (.cmpboxBG, .cky-overlay) haben nie Text und werden gleich
+    // ausgeblendet.
+    if (el.shadowRoot && text.trim().length < 20) return;
     if (state.cookies) hide(el, 'cookie');
   }
 
@@ -640,9 +669,11 @@
       root.removeAttribute(SCROLL_ATTR);
       return;
     }
-    // Steht noch ein sichtbarer Abo-Dialog, bleibt die Sperre.
+    // Steht noch ein sichtbarer Abo-Dialog, bleibt die Sperre. Bei OpenCMP hat das Element selbst
+    // keine Höhe, der Dialog liegt fest positioniert in seinem Shadow DOM.
+    const hasBox = (el) => el.getBoundingClientRect().height > 0;
     const visibleDialog = [...document.querySelectorAll(`${COOKIE_BANNERS},${SOURCEPOINT}`)].some(
-      (el) => !el.closest(`[${ATTR}]`) && el.getBoundingClientRect().height > 0,
+      (el) => !el.closest(`[${ATTR}]`) && (hasBox(el) || [...(el.shadowRoot?.querySelectorAll('*') || [])].slice(0, 50).some(hasBox)),
     );
     if (visibleDialog) {
       root.removeAttribute(SCROLL_ATTR);

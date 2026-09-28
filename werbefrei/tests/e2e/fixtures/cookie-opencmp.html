@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <title>OpenCMP-Dialog</title>
+  <style>
+    body { margin: 0; font: 16px/1.5 sans-serif; }
+    main { height: 3000px; padding: 24px; }
+  </style>
+</head>
+<body>
+  <main><h1 id="titel">Seite mit OpenCMP-Dialog</h1><p>Inhalt der Seite.</p></main>
+  <script>
+    // Wie OpenCMP (merkur.de): Am Ende von body ein Element ohne Höhe, der Dialog liegt fest
+    // positioniert in dessen offenem Shadow DOM. Wie im Original steht dort zuerst nur CSS; der
+    // Dialog selbst wird 600 ms später hineingerendert. ?art=abo zeigt die Wahl "kostenfrei mit Werbung
+    // oder Freechoice abonnieren", ?art=normal einen gewöhnlichen Hinweis. Der Zustimmungsknopf ist
+    // ein div mit role="button", wie im Original.
+    const art = new URLSearchParams(location.search).get('art') || 'abo';
+    setTimeout(() => {
+      const host = document.createElement('div');
+      host.className = 'cmp-root-container';
+      document.body.appendChild(host);
+      const root = host.attachShadow({ mode: 'open' });
+      root.innerHTML = '<style>.cmp_overlay { position: fixed; inset: 0; }</style>';
+      setTimeout(() => render(root, host), 600);
+    }, 400);
+
+    function render(root, host) {
+      const offer = art === 'abo'
+        ? '<section><h3>...oder Freechoice abonnieren</h3><div class="cmp_button" role="button">JETZT ABONNIEREN</div></section>'
+        : '';
+      root.innerHTML = `<style>
+          .cmp_overlay { position: fixed; inset: 0; background: #0008; display: grid; place-items: center; z-index: 10; }
+          .cmp_dialog { background: #fff; padding: 24px; max-width: 560px; }
+          .cmp_settings { display: none; }
+        </style>
+        <div class="cmp_overlay"><div class="cmp_dialog">
+          <h2>Ihr Zugriff auf news.test</h2>
+          <section><h3>Kostenfrei weiterlesen!</h3><p>Nutzen Sie dieses Angebot wie gewohnt mit Werbung und Tracking.</p>
+            <div class="cmp_button cmp-button-accept-all" role="button" aria-label="Accept all settings and proceed">ALLES AKZEPTIEREN</div></section>
+          ${offer}
+          <div class="cmp_settings">Privacy Center: Anbieter mit Subscription-Diensten</div>
+        </div></div>`;
+      root.querySelector('.cmp-button-accept-all').addEventListener('click', () => {
+        window.__zugestimmt = true;
+        host.remove();
+      });
+    }
+  </script>
+</body>
+</html>

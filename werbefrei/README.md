@@ -128,8 +128,8 @@ Einstellungsseite.
 ## Cookie-Hinweise
 
 Werbefrei blendet die Einwilligungsbanner verbreiteter Anbieter aus: OneTrust, Cookiebot,
-Usercentrics, Didomi, consentmanager, Borlabs, Complianz, CookieYes, Quantcast, TrustArc, Sourcepoint
-und einige weitere, dazu den eigenen Hinweis von check24. Es klickt dabei nichts an und speichert
+Usercentrics, Didomi, consentmanager, Borlabs, Complianz, CookieYes, Quantcast, TrustArc, Sourcepoint,
+OpenCMP und einige weitere, dazu den eigenen Hinweis von check24. Es klickt dabei nichts an und speichert
 keine Auswahl. Die Seite verhält sich so, als hätte man den Hinweis nicht beantwortet, und das gilt
 bei diesen Anbietern nicht als Einwilligung. Sperrt die Seite das Scrollen, solange der Hinweis offen
 ist, gibt Werbefrei es wieder frei.
@@ -150,11 +150,15 @@ der Seite. Die Werbeserver sperrt Werbefrei trotzdem; gegen Tracker hilft zusät
 EasyPrivacy, die man dafür einschalten sollte. Beantwortet werden nur Abo-Abfragen, gewöhnliche
 Cookie-Hinweise blendet Werbefrei weiter aus, ohne zuzustimmen. Auf ausgenommenen Seiten und im
 Pausenmodus klickt Werbefrei nichts. Unterstützt sind Dialoge von Sourcepoint (der Knopf mit der
-Klasse `sp_choice_type_11`), consentmanager (`.cmpboxbtnyes`) und OneTrust
-(`#onetrust-accept-btn-handler`). Der Schalter wirkt sofort, auch auf eine Abfrage, die beim
+Klasse `sp_choice_type_11`), consentmanager (`.cmpboxbtnyes`), OneTrust
+(`#onetrust-accept-btn-handler`) und OpenCMP (`.cmp-button-accept-all`, etwa auf merkur.de). Der Schalter wirkt sofort, auch auf eine Abfrage, die beim
 Einschalten schon offen ist. Im Test verschwand die Abfrage auf spiegel.de, bild.de, welt.de, faz.net,
-sueddeutsche.de, t-online.de, focus.de, n-tv.de, heise.de, golem.de, chip.de und tagesspiegel.de,
-und die Seite ließ sich scrollen. bild.de zeigt danach allerdings seine Sperre für Werbeblocker.
+sueddeutsche.de, t-online.de, focus.de, n-tv.de, heise.de, golem.de, chip.de, tagesspiegel.de und
+merkur.de, und die Seite ließ sich scrollen. bild.de zeigt danach allerdings seine Sperre für Werbeblocker.
+
+OpenCMP (merkur.de) und consentmanager legen ihren Dialog in ein Shadow DOM. Werbefrei liest dessen
+Text mit und beobachtet ihn, denn OpenCMP fügt das Element zuerst fast leer ein und rendert den Dialog
+erst danach hinein. Solange noch kein Text da ist, bleibt das Element unangetastet.
 
 Sourcepoint lädt seinen Dialog in einen Rahmen von einer fremden Domain, in den das Inhaltsskript
 der Seite nicht hineinsehen kann. In solchen Rahmen (erkennbar an `message_id=` in der Adresse)
@@ -175,8 +179,8 @@ Einstellungen → Allgemein abschalten.
 - Werbefrei umgeht keine Bezahlschranken und keine Abfragen der Art „Mit Werbung lesen oder Abo
   abschließen“. Diese Abfragen bleiben stehen, auch wenn Cookie-Hinweise ausgeblendet werden. Auf
   Wunsch beantwortet Werbefrei sie mit „Einwilligen“, siehe „Cookie-Hinweise“.
-- Manche Seiten mit eigener Abfrage (etwa merkur.de) kennt Werbefrei nicht; dort
-  bleibt die Abfrage auch mit eingeschaltetem Schalter stehen.
+- Abfragen, die eine Seite selbst gebaut hat, kennt Werbefrei nicht; dort bleibt die Abfrage auch
+  mit eingeschaltetem Schalter stehen.
 - Ist ein Cookie-Hinweis ausgeblendet, hat man nichts erlaubt. Inhalte, die eine Einwilligung
   voraussetzen, etwa eingebettete Videos oder Karten, zeigen dann oft nur einen Platzhalter. Wer sie
   braucht, schaltet „Cookie-Hinweise ausblenden“ kurz ab und trifft seine Wahl im Hinweis.
@@ -222,7 +226,7 @@ npm run e2e:echt   # echte Nachrichtenseiten ohne und mit Werbefrei, braucht Int
 ```
 
 `npm run e2e` braucht keinen Internetzugang: Die Testseite lädt Werbung von echten Werbeservern, und
-diese Anfragen blockiert die Erweiterung, bevor sie das Netz erreichen. Geprüft wird in 77 Punkten,
+diese Anfragen blockiert die Erweiterung, bevor sie das Netz erreichen. Geprüft wird in 80 Punkten,
 dass elf typische Werbeplätze verschwinden (Billboard mit „Anzeige“, zwei Werbeplätze im Text, einer
 davon mit Inline-Skript, leerer Skyscraper, klebende Leiste, Taboola, gesponserter Teaser,
 nachgeladener Werbeplatz, ein Element, das erst nachträglich die Klasse `adsbygoogle` bekommt, zwei
@@ -239,9 +243,11 @@ einen nachgebauten OneTrust-Banner mit Scrollsperre und versteckter Anbieterlist
 consentmanager-Dialog mit Pur-Abo (auch mit spät nachgeladenem Angebot und versteckt eingefügt) und
 Sourcepoint-Rahmen: einen gewöhnlichen, einen mit Abo-Angebot, einen, in dem das Angebot erst nach
 dreieinhalb Sekunden erscheint, und zwei, die wie auf golem.de nur den Knopf liefern, einmal in einem
-Seitendialog mit Abo-Angebot und einmal ohne. Außerdem, dass der Schalter in den Einstellungen ohne Neuladen
+Seitendialog mit Abo-Angebot und einmal ohne. Dazu kommt ein nachgebauter OpenCMP-Dialog wie auf
+merkur.de, der erst nach dem Einfügen in sein Shadow DOM gerendert wird, einmal mit Abo-Angebot und
+einmal als gewöhnlicher Hinweis. Außerdem, dass der Schalter in den Einstellungen ohne Neuladen
 wirkt. Mit eingeschaltetem „Abo-Abfragen automatisch beantworten“ wird geprüft, dass Sourcepoint- und
-consentmanager-Abfragen mit „Zustimmen“ beantwortet werden (auch die Knopf-Variante) und die Seite
+consentmanager- und OpenCMP-Abfragen mit „Zustimmen“ beantwortet werden (auch die Knopf-Variante) und die Seite
 danach scrollt, dass ein gewöhnlicher Hinweis nur ausgeblendet und nicht beantwortet wird, dass ohne
 Abo-Angebot nichts geklickt wird und dass auf einer ausgenommenen Seite nichts geklickt wird. Dazu:
 Wird der Schalter eingeschaltet, während eine Abfrage offen ist, wird sie sofort beantwortet. Bildschirmfotos landen in `test-ergebnisse/`.
@@ -256,10 +262,11 @@ Artikel und zählt sichtbare Werberahmen, Werbeplätze, Ersatzanzeigen und Kennz
 ausgeblendet hat, mit Grund (`kennzeichnung`, `leer`, `rahmen`, `ersatz`). Damit lässt sich ein
 Fehlalarm schnell eingrenzen. Mit `FOTO=pfad/name` davor entstehen zusätzlich zwei Bildschirmfotos.
 
-`node tests/e2e/cookie-seiten.mjs [--einwilligen] [Adresse …]` öffnet Seiten mit Werbefrei und meldet
+`node tests/e2e/cookie-seiten.mjs [--einwilligen] [--de] [Adresse …]` öffnet Seiten mit Werbefrei und meldet
 für jede, ob ein bekannter Cookie-Hinweis ausgeblendet oder sichtbar ist und ob sich die Seite scrollen
 lässt. Ohne Adressen nimmt es eine feste Auswahl, von den Anbietern selbst bis zu Nachrichtenseiten
-mit Pur-Abo. `--einwilligen` schaltet „Abo-Abfragen automatisch beantworten“ ein. Bildschirmfotos:
+mit Pur-Abo. `--einwilligen` schaltet „Abo-Abfragen automatisch beantworten“ ein. `--de` meldet
+OpenCMP einen Besucher aus Deutschland; merkur.de zeigt seinen Dialog sonst nur Besuchern aus der EU. Bildschirmfotos:
 `test-ergebnisse/cookie-<seite>.png`.
 
 ## Aufbau

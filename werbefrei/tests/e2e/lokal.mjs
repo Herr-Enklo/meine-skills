@@ -55,7 +55,7 @@ const server = createServer((req, res) => {
     res.end('<body style="margin:0;background:#123;color:#fff;font:20px sans-serif;display:grid;place-items:center;height:100vh">Videoplayer</body>');
     return;
   }
-  const cookiePage = /^\/(cookie-banner|cookie-pur|cookie-sp)\.html/.exec(req.url);
+  const cookiePage = /^\/(cookie-banner|cookie-pur|cookie-sp|cookie-opencmp)\.html/.exec(req.url);
   if (cookiePage) {
     res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
     res.end(readFileSync(`${fixtures}${cookiePage[1]}.html`));
@@ -278,6 +278,18 @@ try {
   await cookieTab.waitForTimeout(3000);
   check('Knopf-Rahmen im Abo-Dialog der Seite (wie golem.de) bleibt stehen, ohne Einwilligung', (await shown('#sp_message_container_1234')) && !(await agreed()));
 
+  // OpenCMP (merkur.de): Dialog im Shadow DOM eines Elements ohne Höhe
+  const openCmpShown = () => cookieTab.evaluate(() => {
+    const host = document.querySelector('.cmp-root-container');
+    return Boolean(host && host.checkVisibility() && host.shadowRoot.querySelector('.cmp_overlay').checkVisibility());
+  });
+  await cookieTab.goto(`http://news.test:${port}/cookie-opencmp.html?art=abo`, { waitUntil: 'load' });
+  await cookieTab.waitForTimeout(2500);
+  check('OpenCMP-Abo-Abfrage (wie merkur.de) bleibt stehen, ohne Einwilligung', (await openCmpShown()) && !(await agreed()));
+  await cookieTab.goto(`http://news.test:${port}/cookie-opencmp.html?art=normal`, { waitUntil: 'load' });
+  await cookieTab.waitForTimeout(2500);
+  check('gewöhnlicher OpenCMP-Hinweis ausgeblendet', !(await openCmpShown()) && !(await agreed()) && (await shown('#titel')));
+
   await cookieTab.goto(`http://news.test:${port}/cookie-sp.html?art=spaet`, { waitUntil: 'load' });
   await cookieTab.waitForTimeout(2800);
   const firstHidden = !(await shown('#sp_message_container_1234'));
@@ -305,6 +317,9 @@ try {
   await cookieTab.goto(`http://news.test:${port}/cookie-pur.html`, { waitUntil: 'load' });
   await cookieTab.waitForTimeout(2500);
   check('Schalter an: consentmanager-Abo-Abfrage beantwortet', (await agreed()) && !(await shown('#cmpbox')));
+  await cookieTab.goto(`http://news.test:${port}/cookie-opencmp.html?art=abo`, { waitUntil: 'load' });
+  await cookieTab.waitForTimeout(2500);
+  check('Schalter an: OpenCMP-Abo-Abfrage beantwortet', (await agreed()) && !(await openCmpShown()));
   await cookieTab.goto(`http://news.test:${port}/cookie-sp.html?art=knopf`, { waitUntil: 'load' });
   await cookieTab.waitForTimeout(3000);
   check('Schalter an: Knopf-Rahmen im Abo-Dialog der Seite beantwortet', (await agreed()) && !(await shown('#sp_message_container_1234')));
