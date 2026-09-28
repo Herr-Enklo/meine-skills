@@ -45,7 +45,13 @@ function sameSite(a, b) {
 
 async function pickArticle(page, site) {
   const host = new URL(site.start).hostname;
-  const links = await page.$$eval('a[href]', (as) => as.map((a) => a.href));
+  // Manche Seiten laden nach der Einwilligung neu; dann einmal abwarten und erneut lesen.
+  const readLinks = () => page.$$eval('a[href]', (as) => as.map((a) => a.href));
+  const links = await readLinks().catch(async () => {
+    await page.waitForLoadState('domcontentloaded').catch(() => {});
+    await page.waitForTimeout(2000);
+    return readLinks();
+  });
   const seen = new Set();
   for (const href of links) {
     let u;
