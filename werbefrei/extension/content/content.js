@@ -47,7 +47,9 @@
     labelsSeen: new WeakSet(),
     revived: new WeakSet(), // leere Kästen, die sich doch noch gefüllt haben: nie wieder ausblenden
     hostVerdict: new Map(), // Hostname -> true (gesperrt) | false | 'offen'
-    reasons: { kennzeichnung: 0, leer: 0, rahmen: 0, ersatz: 0 },
+    reasons: { kennzeichnung: 0, leer: 0, rahmen: 0, ersatz: 0, cookie: 0 },
+    cookies: false, // Cookie-Hinweise ausblenden
+    spVerdict: null, // Meldung aus dem Sourcepoint-Rahmen: 'normal' | 'bezahl'
   };
 
   const send = (msg) => chrome.runtime.sendMessage(msg).catch(() => null);
@@ -101,6 +103,7 @@
       }
     }
     for (const el of changed) if (el.isConnected && hasAdHint(el)) adHint = true;
+    if (state.cookies && (roots.length || changed.size)) scanCookieBanners([...roots, ...changed]);
     if (state.heuristics && (roots.length || adHint)) scheduleScan(false);
   }
 
@@ -445,10 +448,12 @@
 
   async function scan() {
     state.scanTimer = 0;
-    if (!state.active || !state.heuristics || !document.body) return;
+    if (!state.active || !document.body) return;
     state.lastScan = Date.now();
     state.scans++;
     try {
+      if (state.cookies) scanCookieBanners([]);
+      if (!state.heuristics) return;
       await collapseBlockedFrames();
       reviveFilled();
       scanReplacementAds();
@@ -460,7 +465,7 @@
   }
 
   function scheduleScan(soon) {
-    if (state.scanTimer || !state.heuristics) return;
+    if (state.scanTimer || !(state.heuristics || state.cookies)) return;
     // Viele Änderungen hintereinander: höchstens alle 1,5 s ein Durchlauf, später seltener.
     const gap = state.scans > 20 ? 5000 : 1500;
     const wait = soon ? 0 : Math.max(0, state.lastScan + gap - Date.now());
@@ -468,6 +473,151 @@
       if ('requestIdleCallback' in window) requestIdleCallback(() => scan(), { timeout: 1000 });
       else scan();
     }, wait);
+  }
+
+  // -------------------------------------------------------------------------------------------
+  // Cookie-Hinweise. Ausgeblendet werden gewöhnliche Einwilligungsbanner der verbreiteten
+  // Anbieter; Werbefrei stimmt dabei nichts zu, die Seite verhält sich wie ohne Auswahl. Ein Dialog,
+  // der statt der Zustimmung ein Abo anbietet (Pur-Abo, contentpass), bleibt stehen.
+  // -------------------------------------------------------------------------------------------
+
+  const COOKIE_BANNERS = [
+    '#onetrust-consent-sdk', '#onetrust-banner-sdk', // OneTrust
+    '#CybotCookiebotDialog', '#CybotCookiebotDialogBodyUnderlay', // Cookiebot
+    '#usercentrics-root', '#usercentrics-cmp-ui', // Usercentrics
+    '#didomi-host', // Didomi
+    '#cmpwrapper', '#cmpbox', '#cmpbox2', '.cmpboxBG', // consentmanager
+    '#BorlabsCookieBox', '#BorlabsCookieBoxWrap', // Borlabs Cookie
+    '#cmplz-cookiebanner-container', // Complianz
+    '.cky-consent-container', '.cky-overlay', '.cky-modal', // CookieYes
+    '#cookie-law-info-bar', '.cli-modal-backdrop', // CookieLawInfo
+    '#cookie-notice', // Cookie Notice
+    '.qc-cmp2-container', // Quantcast Choice
+    '#truste-consent-track', '.truste_overlay', '.truste_box_overlay', // TrustArc
+    '.osano-cm-window', // Osano
+    '#iubenda-cs-banner', // iubenda
+    '.fc-consent-root', // Google Funding Choices
+    '#cookiescript_injected', // Cookie Script
+    '#tarteaucitronRoot', // tarteaucitron
+    '#axeptio_overlay', // Axeptio
+    '#shopify-pc__banner', // Shopify
+    '#klaro', // Klaro
+    '.c24-cookie-consent-wrapper', // check24
+  ].join(',');
+  const SOURCEPOINT = 'div[id^="sp_message_container_"]';
+  const PAY_TEXT = /\bpur\b|pur-abo|abonn|\babo\b|contentpass|werbefrei|ohne werbung|subscribe|subscription|€/i;
+  const SCROLL_ATTR = 'data-werbefrei-scroll';
+
+  /**
+   * Text eines Banners, auch aus offenen Shadow-DOM-Bereichen. Versteckte Ebenen im Banner
+   * (Einstellungen, Anbieterlisten) zählen nicht: Dort steht oft "subscription" oder ein Preis eines
+   * Drittanbieters, ohne dass der Dialog ein Abo anbietet. Ob der Banner selbst gerade zu sehen ist,
+   * spielt keine Rolle: Er kann noch versteckt eingefügt oder schon von Werbefrei ausgeblendet sein,
+   * und ein Abo-Angebot muss trotzdem erkannt werden.
+   */
+  function bannerText(el, budget = { left: 6000 }) {
+    let text = '';
+    const shown = new Map(); // Element → innerhalb des Banners nicht per display/content-visibility versteckt
+    const shownInBanner = (node) => {
+      const chain = [];
+      let result = true;
+      for (let cur = node; cur && cur !== el; cur = cur.parentElement || cur.getRootNode().host) {
+        if (shown.has(cur)) {
+          result = shown.get(cur);
+          break;
+        }
+        chain.push(cur);
+        const cs = getComputedStyle(cur);
+        if (cs.display === 'none' || (cur !== node && cs.contentVisibility === 'hidden')) {
+          result = false;
+          break;
+        }
+      }
+      // Die Kette reicht nur bis zum versteckten Element; alles darin ist ebenfalls versteckt.
+      chain.forEach((c) => shown.set(c, result));
+      return result;
+    };
+    const walk = (root) => {
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT, {
+        acceptNode(node) {
+          if (node.nodeType === 1) {
+            // Versteckte Ebenen samt Inhalt überspringen (Anbieterlisten können lang sein).
+            if (SKIP_TEXT_PARENTS.has(node.tagName) || !shownInBanner(node)) return NodeFilter.FILTER_REJECT;
+            if (node.shadowRoot) walk(node.shadowRoot);
+            return NodeFilter.FILTER_SKIP;
+          }
+          const parent = node.parentElement || node.parentNode?.host;
+          return parent && getComputedStyle(parent).visibility === 'visible' ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP;
+        },
+      });
+      for (let n = walker.nextNode(); n && budget.left > 0; n = walker.nextNode()) {
+        text += ` ${n.data}`;
+        budget.left -= n.data.length;
+      }
+    };
+    walk(el);
+    return text;
+  }
+
+  /** Einen gefundenen Banner behandeln: ausblenden, außer er bietet ein Abo an. */
+  function handleBanner(el) {
+    if (el.hasAttribute(ATTR) || el.parentElement?.closest(`[${ATTR}]`)) return;
+    if (el.matches(SOURCEPOINT)) {
+      // Den Text liest das Skript im Sourcepoint-Rahmen; ohne seine Meldung bleibt der Dialog stehen.
+      if (state.spVerdict === 'normal') hide(el, 'cookie');
+      return;
+    }
+    if (PAY_TEXT.test(bannerText(el))) return;
+    hide(el, 'cookie');
+  }
+
+  function scanCookieBanners(roots) {
+    if (!state.cookies) return;
+    const sel = `${COOKIE_BANNERS},${SOURCEPOINT}`;
+    for (const root of roots) {
+      if (root.nodeType !== 1 || !root.isConnected) continue;
+      if (root.matches(sel)) handleBanner(root);
+      root.querySelectorAll(sel).forEach(handleBanner);
+    }
+    // Hat ein ausgeblendeter Banner inzwischen ein Abo-Angebot geladen, wieder zeigen.
+    for (const el of document.querySelectorAll(`[${ATTR}="cookie"]`)) {
+      if (!el.matches(SOURCEPOINT) && PAY_TEXT.test(bannerText(el))) {
+        el.removeAttribute(ATTR);
+        state.reasons.cookie--;
+      }
+    }
+    unlockScroll();
+  }
+
+  /** Die Scroll-Sperre aufheben, die ein ausgeblendeter Cookie-Hinweis gesetzt hat. */
+  function unlockScroll() {
+    const root = document.documentElement;
+    if (!state.cookies || !document.querySelector(`[${ATTR}="cookie"]`) || !document.body) {
+      root.removeAttribute(SCROLL_ATTR);
+      return;
+    }
+    // Steht noch ein sichtbarer Abo-Dialog, bleibt die Sperre.
+    const visibleDialog = [...document.querySelectorAll(`${COOKIE_BANNERS},${SOURCEPOINT}`)].some(
+      (el) => !el.closest(`[${ATTR}]`) && el.getBoundingClientRect().height > 0,
+    );
+    if (visibleDialog) {
+      root.removeAttribute(SCROLL_ATTR);
+      return;
+    }
+    if (root.hasAttribute(SCROLL_ATTR)) return;
+    const html = getComputedStyle(root);
+    const body = getComputedStyle(document.body);
+    const locked = [html.overflow, html.overflowY, body.overflow, body.overflowY].some((v) => v === 'hidden' || v === 'clip');
+    if (body.position === 'fixed') root.setAttribute(SCROLL_ATTR, 'fixed');
+    else if (locked) root.setAttribute(SCROLL_ATTR, 'overflow');
+  }
+
+  function releaseCookies() {
+    for (const el of document.querySelectorAll(`[${ATTR}="cookie"]`)) {
+      el.removeAttribute(ATTR);
+      state.reasons.cookie--;
+    }
+    document.documentElement.removeAttribute(SCROLL_ATTR);
   }
 
   // -------------------------------------------------------------------------------------------
@@ -490,7 +640,7 @@
     };
     addAll(selectors || []);
     addAll(state.keyedSelectors);
-    document.querySelectorAll(`[${ATTR}]`).forEach((el) => matched.add(el));
+    document.querySelectorAll(`[${ATTR}]:not([${ATTR}="cookie"])`).forEach((el) => matched.add(el));
     let outer = 0;
     for (const el of matched) {
       let p = el.parentElement;
@@ -508,6 +658,19 @@
     if (sender.id !== chrome.runtime.id) return false;
     if (msg?.type === 'werbefrei:status') {
       onStatus();
+      return false;
+    }
+    if (msg?.type === 'werbefrei:cmp') {
+      // Einmal als Abo-Abfrage erkannt, bleibt es dabei, auch wenn weitere Rahmen "normal" melden.
+      if (state.spVerdict !== 'bezahl') state.spVerdict = msg.art === 'bezahl' ? 'bezahl' : 'normal';
+      if (state.spVerdict === 'bezahl') {
+        // War der Dialog schon ausgeblendet (Abo-Teil kam erst später), wieder zeigen.
+        for (const el of document.querySelectorAll(`${SOURCEPOINT}[${ATTR}="cookie"]`)) {
+          el.removeAttribute(ATTR);
+          state.reasons.cookie--;
+        }
+      }
+      if (state.active) scanCookieBanners([document.documentElement]);
       return false;
     }
     if (msg?.type !== 'werbefrei:zaehlen') return false;
@@ -543,14 +706,17 @@
   }
 
   function activate(res) {
-    const wasRunning = state.active && state.heuristics;
+    const wasRunning = state.active && (state.heuristics || state.cookies);
     state.active = true;
     state.generic = res.generic;
     state.heuristics = res.heuristics;
+    const cookiesBefore = state.cookies;
+    state.cookies = res.cookies === true;
+    if (cookiesBefore && !state.cookies) releaseCookies();
     setGate(false);
     observer.observe(document, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'id'] });
     queue(document.documentElement);
-    if (state.heuristics && !wasRunning) scheduleInitialScans();
+    if ((state.heuristics || state.cookies) && !wasRunning) scheduleInitialScans();
   }
 
   function deactivate() {

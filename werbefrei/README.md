@@ -4,7 +4,7 @@ Browser-Erweiterung für Chrome und Edge, die Werbung rund um Artikel ausblendet
 dem Artikel, Skyscraper in der Seitenleiste, Werbeplätze zwischen den Absätzen, klebende Leisten am
 unteren Rand und Empfehlungs-Widgets wie Taboola und Outbrain unter dem Artikel. Werbeserver werden
 blockiert, bevor eine Anfrage das Netz verlässt, und die Lücken, die blockierte Werbung hinterlässt,
-klappt Werbefrei zu.
+klappt Werbefrei zu. Gewöhnliche Cookie-Hinweise blendet es ebenfalls aus, ohne etwas zuzustimmen.
 
 Die Erweiterung nutzt Manifest V3 und läuft in Chrome und Edge ab Version 116. Die Oberfläche ist
 deutsch.
@@ -51,7 +51,7 @@ sie auch wieder löscht.
 - Eigene Regeln im EasyList-Format. Beim Speichern meldet Werbefrei Zeilen, die es nicht versteht,
   mit Zeilennummer und Grund.
 - Ausnahmen: Seiten, auf denen Werbefrei aus ist.
-- Werbeplatz-Erkennung und Zähler am Symbol ein- und ausschalten.
+- Werbeplatz-Erkennung, Cookie-Hinweise und Zähler am Symbol ein- und ausschalten.
 - Sicherung als JSON-Datei speichern und wiederherstellen, etwa für einen zweiten Rechner.
 
 ### Eigene Regeln
@@ -124,10 +124,39 @@ hält diese Grenze auch bei sehr vielen eigenen Regeln ein, sonst würde Chrome 
 ablehnen. Eigene Regeln haben Vorrang vor den Listen; was nicht mehr hineinpasst, nennt die
 Einstellungsseite.
 
+## Cookie-Hinweise
+
+Werbefrei blendet die Einwilligungsbanner verbreiteter Anbieter aus: OneTrust, Cookiebot,
+Usercentrics, Didomi, consentmanager, Borlabs, Complianz, CookieYes, Quantcast, TrustArc, Sourcepoint
+und einige weitere, dazu den eigenen Hinweis von check24. Es klickt dabei nichts an und speichert
+keine Auswahl. Die Seite verhält sich so, als hätte man den Hinweis nicht beantwortet, und das gilt
+bei diesen Anbietern nicht als Einwilligung. Sperrt die Seite das Scrollen, solange der Hinweis offen
+ist, gibt Werbefrei es wieder frei.
+
+Stehen bleiben Dialoge, die statt der Zustimmung ein Abo anbieten, also „Mit Werbung lesen oder
+Pur-Abo abschließen“ und contentpass. Werbefrei erkennt sie am sichtbaren Text (Pur, Abo,
+contentpass, ein Preis in Euro). Erscheint das Angebot erst, nachdem der Dialog schon ausgeblendet
+war, wird er wieder gezeigt, und die Scrollsperre bleibt dann ebenfalls. Solche Dialoge auszublenden
+hieße, die Bezahlschranke zu umgehen. Das betrifft die meisten großen Nachrichtenseiten: Auf
+spiegel.de, bild.de, welt.de, faz.net, sueddeutsche.de, t-online.de, focus.de, n-tv.de, heise.de,
+golem.de, chip.de und tagesspiegel.de blieb der Dialog im Test stehen.
+
+Sourcepoint lädt seinen Dialog in einen Rahmen von einer fremden Domain, in den das Inhaltsskript
+der Seite nicht hineinsehen kann. In solchen Rahmen (erkennbar an `message_id=` in der Adresse)
+läuft deshalb ein kleines Skript, `content/cmp-rahmen.js`, das nur den Text des Dialogs liest und
+meldet, ob es ein gewöhnlicher Hinweis oder ein Abo-Angebot ist. Bis diese Meldung kommt, bleibt der
+Dialog sichtbar; kommt sie nicht, bleibt er ganz stehen.
+
+Eigene Lösungen einzelner Seiten erkennt Werbefrei nicht. Sie lassen sich mit „Element ausblenden …“
+entfernen. Die Funktion ist eingeschaltet und lässt sich unter Einstellungen → Allgemein abschalten.
+
 ## Grenzen
 
 - Werbefrei umgeht keine Bezahlschranken und keine Abfragen der Art „Mit Werbung lesen oder Abo
-  abschließen“. Die Einwilligungsabfrage bleibt, wie sie ist.
+  abschließen“. Diese Abfragen bleiben stehen, auch wenn Cookie-Hinweise ausgeblendet werden.
+- Ist ein Cookie-Hinweis ausgeblendet, hat man nichts erlaubt. Inhalte, die eine Einwilligung
+  voraussetzen, etwa eingebettete Videos oder Karten, zeigen dann oft nur einen Platzhalter. Wer sie
+  braucht, schaltet „Cookie-Hinweise ausblenden“ kurz ab und trifft seine Wahl im Hinweis.
 - Manche Seiten sperren sich, sobald sie einen Werbeblocker erkennen. bild.de zeigt dann nur
   „Aufgrund Ihres Blockers zeigen wir BILD.de nicht an.“ Werbefrei versucht nicht, solche Sperren
   zu umgehen. Wer die Seite lesen will, schaltet Werbefrei dort über den Schalter im Popup aus.
@@ -150,7 +179,7 @@ Die Berechtigungen und wofür sie gebraucht werden:
 | Berechtigung | Wofür |
 |---|---|
 | `declarativeNetRequest` | Anfragen an Werbeserver blockieren |
-| Zugriff auf alle http- und https-Seiten | Werbeplätze ausblenden, Filterlisten laden |
+| Zugriff auf alle http- und https-Seiten | Werbeplätze und Cookie-Hinweise ausblenden, Filterlisten laden |
 | `scripting` | Stylesheet einfügen, Element-Auswahl starten |
 | `storage`, `unlimitedStorage` | Einstellungen und übersetzte Listen speichern (einige MB) |
 | `activeTab` | Zahl der blockierten Anfragen im Popup |
@@ -170,7 +199,7 @@ npm run e2e:echt   # echte Nachrichtenseiten ohne und mit Werbefrei, braucht Int
 ```
 
 `npm run e2e` braucht keinen Internetzugang: Die Testseite lädt Werbung von echten Werbeservern, und
-diese Anfragen blockiert die Erweiterung, bevor sie das Netz erreichen. Geprüft wird in 52 Punkten,
+diese Anfragen blockiert die Erweiterung, bevor sie das Netz erreichen. Geprüft wird in 67 Punkten,
 dass elf typische Werbeplätze verschwinden (Billboard mit „Anzeige“, zwei Werbeplätze im Text, einer
 davon mit Inline-Skript, leerer Skyscraper, klebende Leiste, Taboola, gesponserter Teaser,
 nachgeladener Werbeplatz, ein Element, das erst nachträglich die Klasse `adsbygoogle` bekommt, zwei
@@ -182,8 +211,12 @@ zufällig klingendem Namen), ein eingebettetes Video, echte Teaser, der Einwilli
 Menü- und Fußzeilenlinks „Werbung“. Dazu kommen die Element-Auswahl, das Popup und das Ausnehmen einer
 Seite. Ein eigener Block prüft, dass Pause, Fortsetzen, Ausnahmen und neue Regeln in offenen Tabs ohne
 Neuladen wirken, sowohl für Netzanfragen als auch für Ausgeblendetes, und dass eine während der Pause
-geöffnete Seite beim Fortsetzen nachträglich eingerichtet wird.
-Bildschirmfotos landen in `test-ergebnisse/`.
+geöffnete Seite beim Fortsetzen nachträglich eingerichtet wird. Der Block „Cookie-Hinweise“ prüft
+einen nachgebauten OneTrust-Banner mit Scrollsperre und versteckter Anbieterliste, einen
+consentmanager-Dialog mit Pur-Abo (auch mit spät nachgeladenem Angebot und versteckt eingefügt) und
+drei Sourcepoint-Rahmen: einen gewöhnlichen, einen mit Abo-Angebot und einen, in dem das Angebot erst
+nach dreieinhalb Sekunden erscheint. Außerdem, dass der Schalter in den Einstellungen ohne Neuladen
+wirkt. Bildschirmfotos landen in `test-ergebnisse/`.
 
 `npm run e2e:echt` öffnet auf 14 Nachrichtenseiten einen aktuellen Artikel, einmal ohne und einmal mit
 Werbefrei, bestätigt die Einwilligung (ohne sie laden diese Seiten keine Werbung), scrollt durch den
@@ -195,6 +228,11 @@ Artikel und zählt sichtbare Werberahmen, Werbeplätze, Ersatzanzeigen und Kennz
 ausgeblendet hat, mit Grund (`kennzeichnung`, `leer`, `rahmen`, `ersatz`). Damit lässt sich ein
 Fehlalarm schnell eingrenzen. Mit `FOTO=pfad/name` davor entstehen zusätzlich zwei Bildschirmfotos.
 
+`node tests/e2e/cookie-seiten.mjs [Adresse …]` öffnet Seiten mit Werbefrei und meldet für jede, ob ein
+bekannter Cookie-Hinweis ausgeblendet oder sichtbar ist und ob sich die Seite scrollen lässt. Ohne
+Adressen nimmt es eine feste Auswahl, von den Anbietern selbst bis zu Nachrichtenseiten mit Pur-Abo.
+Bildschirmfotos: `test-ergebnisse/cookie-<seite>.png`.
+
 ## Aufbau
 
 | Datei | Inhalt |
@@ -203,7 +241,8 @@ Fehlalarm schnell eingrenzen. Mit `FOTO=pfad/name` davor entstehen zusätzlich z
 | `extension/background.js` | Service Worker: Regeln, Listen, Stylesheets, Nachrichten |
 | `extension/lib/filters.js` | Übersetzer für Filterlisten (Adblock-Plus-Format → Chrome-Regeln und CSS) |
 | `extension/lib/catalog.js` | Bekannte Listen und Grundeinstellungen |
-| `extension/content/content.js` | Inhaltsskript: Klassen melden, Werbeplätze erkennen, zählen |
+| `extension/content/content.js` | Inhaltsskript: Klassen melden, Werbeplätze und Cookie-Hinweise erkennen, zählen |
+| `extension/content/cmp-rahmen.js` | Läuft in Sourcepoint-Rahmen und meldet, ob der Dialog ein Abo anbietet |
 | `extension/picker/picker.js` | Element-Auswahl |
 | `extension/popup/`, `extension/options/`, `extension/ui/` | Popup, Einstellungen, gemeinsames Stylesheet |
 | `extension/filters/werbefrei.txt` | Eingebaute Liste (Quelle) |

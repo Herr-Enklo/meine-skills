@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <title>Einwilligung oder Abo</title>
+  <style>
+    body { margin: 0; font: 16px/1.5 sans-serif; overflow: hidden; }
+    main { height: 3000px; padding: 24px; }
+    #cmpwrapper { position: fixed; inset: 0; background: #000a; display: grid; place-items: center; z-index: 10; }
+    #cmpbox { background: #fff; padding: 24px; max-width: 520px; }
+  </style>
+</head>
+<body>
+  <main><h1>Seite mit Einwilligung oder Abo</h1><p>Inhalt der Seite.</p></main>
+  <div id="cmpwrapper"><div id="cmpbox">
+    <p>Mit Werbung und Tracking lesen: <button>Zustimmen</button></p>
+    <p id="abo">Oder ohne Werbung mit dem PUR-Abo für 2,99 € im Monat: <button>Jetzt abonnieren</button></p>
+  </div></div>
+  <script>
+    // ?art=spaet: Der Dialog zeigt erst nur die Zustimmung, das Abo-Angebot kommt nach 1,5 Sekunden.
+    // ?art=versteckt: Der Dialog wird versteckt eingefügt und erst nach einer Sekunde gezeigt.
+    const art = new URLSearchParams(location.search).get('art');
+    if (art === 'spaet') {
+      const abo = document.getElementById('abo');
+      abo.remove();
+      setTimeout(() => document.getElementById('cmpbox').appendChild(abo), 1500);
+    }
+    if (art === 'versteckt') {
+      const wrapper = document.getElementById('cmpwrapper');
+      wrapper.style.display = 'none';
+      setTimeout(() => { wrapper.style.display = ''; }, 1000);
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="de" class="sp-message-open">
+<head>
+  <meta charset="utf-8">
+  <title>Sourcepoint-Dialog</title>
+  <style>
+    html.sp-message-open { overflow: hidden; }
+    body { margin: 0; font: 16px/1.5 sans-serif; }
+    main { height: 3000px; padding: 24px; }
+    div[id^="sp_message_container_"] { position: fixed; inset: 0; background: #000a; display: grid; place-items: center; z-index: 10; }
+    div[id^="sp_message_container_"] iframe { width: 560px; height: 320px; border: 0; background: #fff; }
+  </style>
+</head>
+<body>
+  <main><h1>Seite mit Sourcepoint-Dialog</h1><p>Inhalt der Seite.</p></main>
+  <div id="sp_message_container_1234"><iframe id="sp_message_iframe_1234" title="Consent Message"></iframe></div>
+  <script>
+    // Der Dialog kommt als Seite von einer fremden Domain; ?art=normal|pur wählt den Text.
+    const art = new URLSearchParams(location.search).get('art') || 'normal';
+    document.getElementById('sp_message_iframe_1234').src = `http://consent.test:${location.port}/index.html?message_id=1234&art=${art}`;
+  </script>
+</body>
+</html>
