@@ -94,6 +94,12 @@ dem Laden und bei Änderungen:
   doch noch mit Text oder Bildern, wird er wieder gezeigt.
 - Rahmen und Bilder von gesperrten Werbeservern. Ohne das bliebe an ihrer Stelle die Fehlerseite des
   Browsers stehen.
+- Ersatzanzeigen. Einige Seiten (beobachtet auf spiegel.de und sueddeutsche.de) merken, dass ein
+  Werbeblocker läuft, und blenden dann Anzeigen als Bild über die eigene Domain ein. Die umgebenden
+  Container tragen Namen, die bei jedem Laden neu ausgewürfelt werden (etwa `pszFwpCl`), damit keine
+  feste Regel sie trifft. Werbefrei erkennt sie an der Kombination aus einem Bild in einem
+  Standard-Werbeformat (300×600, 970×250, 728×90 und weitere) und solchen Zufallsnamen und blendet den
+  äußersten dieser Container aus. Ein Kasten mit mehr als ein paar Wörtern Text gilt dabei als Inhalt.
 
 Für diese Erkennung gelten feste Schutzregeln. Sie blendet nie etwas aus, das eine Hauptüberschrift
 (`h1`), den Artikeltext (`itemprop="articleBody"`), `main`, ein Eingabefeld oder das gerade fokussierte
@@ -150,24 +156,26 @@ npm run e2e:echt   # echte Nachrichtenseiten ohne und mit Werbefrei, braucht Int
 ```
 
 `npm run e2e` braucht keinen Internetzugang: Die Testseite lädt Werbung von echten Werbeservern, und
-diese Anfragen blockiert die Erweiterung, bevor sie das Netz erreichen. Geprüft wird in 33 Punkten,
-dass acht typische Werbeplätze verschwinden (Billboard mit „Anzeige“, zwei Werbeplätze im Text, einer
+diese Anfragen blockiert die Erweiterung, bevor sie das Netz erreichen. Geprüft wird in 36 Punkten,
+dass neun typische Werbeplätze verschwinden (Billboard mit „Anzeige“, zwei Werbeplätze im Text, einer
 davon mit Inline-Skript, leerer Skyscraper, klebende Leiste, Taboola, gesponserter Teaser,
-nachgeladener Werbeplatz) und dass fünfzehn Fallen sichtbar bleiben: Überschrift, Absätze mit den
-Wörtern „Werbung“ und „Anzeige“, eine Dachzeile „Werbung“, ein Kasten mit der Klasse `ad-hoc-note`,
-ein Kasten mit der Klasse `billboard` und einem verzögert ladenden Bild, ein Knopf „Anzeigen“, ein
-eingebettetes Video, echte Teaser, der Einwilligungszweck „Werbung“, Menü- und Fußzeilenlinks
-„Werbung“. Dazu kommen die Element-Auswahl, das Popup und das Ausnehmen einer Seite.
+nachgeladener Werbeplatz, Ersatzanzeige mit Zufallsnamen) und dass siebzehn Fallen sichtbar bleiben:
+Überschrift, Absätze mit den Wörtern „Werbung“ und „Anzeige“, eine Dachzeile „Werbung“, ein Kasten mit
+der Klasse `ad-hoc-note`, ein Kasten mit der Klasse `billboard` und einem verzögert ladenden Bild, ein
+Knopf „Anzeigen“, zwei Fotos im Format 300×250 (eines in einem Container mit zufällig klingendem
+Namen), ein eingebettetes Video, echte Teaser, der Einwilligungszweck „Werbung“, Menü- und
+Fußzeilenlinks „Werbung“. Dazu kommen die Element-Auswahl, das Popup und das Ausnehmen einer Seite.
 Bildschirmfotos landen in `test-ergebnisse/`.
 
 `npm run e2e:echt` öffnet auf 14 Nachrichtenseiten einen aktuellen Artikel, einmal ohne und einmal mit
 Werbefrei, bestätigt die Einwilligung (ohne sie laden diese Seiten keine Werbung), scrollt durch den
-Artikel und zählt sichtbare Werberahmen, Werbeplätze und Kennzeichnungen. Ergebnis:
+Artikel und zählt sichtbare Werberahmen, Werbeplätze, Ersatzanzeigen und Kennzeichnungen. Ergebnis:
 `test-ergebnisse/echte-seiten.md` und ein Vergleichsbild pro Seite. Einzelne Seiten:
 `node tests/e2e/echte-seiten.mjs spiegel.de zeit.de`.
 
 `node tests/e2e/pruefen.mjs <Adresse>` listet für eine Seite jedes Element, das die eigene Erkennung
-ausgeblendet hat, mit Grund. Damit lässt sich ein Fehlalarm schnell eingrenzen.
+ausgeblendet hat, mit Grund (`kennzeichnung`, `leer`, `rahmen`, `ersatz`). Damit lässt sich ein
+Fehlalarm schnell eingrenzen. Mit `FOTO=pfad/name` davor entstehen zusätzlich zwei Bildschirmfotos.
 
 ## Aufbau
 
