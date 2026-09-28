@@ -49,6 +49,8 @@
     hostVerdict: new Map(), // Hostname -> true (gesperrt) | false | 'offen'
     reasons: { kennzeichnung: 0, leer: 0, rahmen: 0, ersatz: 0, cookie: 0 },
     cookies: false, // Cookie-Hinweise ausblenden
+    autoConsent: false, // Abo-Abfragen mit "Einwilligen" beantworten
+    consentClicked: new WeakSet(), // Zustimmungsknöpfe, die schon einmal geklickt wurden
     spVerdict: null, // Meldung aus dem Sourcepoint-Rahmen: 'normal' | 'bezahl'
   };
 
@@ -103,7 +105,7 @@
       }
     }
     for (const el of changed) if (el.isConnected && hasAdHint(el)) adHint = true;
-    if (state.cookies && (roots.length || changed.size)) scanCookieBanners([...roots, ...changed]);
+    if (cmpActive() && (roots.length || changed.size)) scanCookieBanners([...roots, ...changed]);
     if (state.heuristics && (roots.length || adHint)) scheduleScan(false);
   }
 
@@ -452,7 +454,7 @@
     state.lastScan = Date.now();
     state.scans++;
     try {
-      if (state.cookies) scanCookieBanners([]);
+      if (cmpActive()) scanCookieBanners([]);
       if (!state.heuristics) return;
       await collapseBlockedFrames();
       reviveFilled();
@@ -465,7 +467,7 @@
   }
 
   function scheduleScan(soon) {
-    if (state.scanTimer || !(state.heuristics || state.cookies)) return;
+    if (state.scanTimer || !(state.heuristics || cmpActive())) return;
     // Viele Änderungen hintereinander: höchstens alle 1,5 s ein Durchlauf, später seltener.
     const gap = state.scans > 20 ? 5000 : 1500;
     const wait = soon ? 0 : Math.max(0, state.lastScan + gap - Date.now());
@@ -505,6 +507,12 @@
     '.c24-cookie-consent-wrapper', // check24
   ].join(',');
   const SOURCEPOINT = 'div[id^="sp_message_container_"]';
+  // Knöpfe "Alle akzeptieren" der Anbieter, deren Dialog im Seitendokument liegt. Sourcepoint
+  // übernimmt das Skript im Rahmen (cmp-rahmen.js).
+  const ACCEPT_BUTTONS = [
+    '.cmpboxbtnyes', // consentmanager
+    '#onetrust-accept-btn-handler', // OneTrust
+  ].join(',');
   const PAY_TEXT = /\bpur\b|pur-abo|abonn|\babo\b|contentpass|werbefrei|ohne werbung|subscribe|subscription|€/i;
   const SCROLL_ATTR = 'data-werbefrei-scroll';
 
@@ -559,20 +567,55 @@
     return text;
   }
 
+  /**
+   * Steht um einen Sourcepoint-Rahmen herum ein Abo-Angebot? Manche Seiten (golem.de) bauen den
+   * Dialog selbst und holen nur den Zustimmungsknopf aus dem Rahmen. Gesucht wird nur in Kästen mit
+   * höchstens 4000 Zeichen Text: Größer ist schon die ganze Seite, und dort steht "Abo" oft im Menü.
+   */
+  function payAround(container) {
+    for (let cur = container.parentElement; cur && cur !== document.body; cur = cur.parentElement) {
+      const text = bannerText(cur, { left: 4000 });
+      if (text.length >= 4000) return false;
+      if (PAY_TEXT.test(text)) return true;
+    }
+    return false;
+  }
+
+  /** Cookie-Hinweise ausblenden oder Abo-Abfragen beantworten: Ist eins davon eingeschaltet? */
+  function cmpActive() {
+    return state.cookies || state.autoConsent;
+  }
+
+  /**
+   * Eine Abo-Abfrage mit "Einwilligen" beantworten, wenn das eingeschaltet ist. Jeder Knopf wird
+   * höchstens einmal geklickt; schließt sich der Dialog danach nicht, bleibt er stehen.
+   */
+  function acceptPayDialog(el) {
+    if (!state.autoConsent) return;
+    const button = el.querySelector(ACCEPT_BUTTONS) || el.shadowRoot?.querySelector(ACCEPT_BUTTONS);
+    if (!button || state.consentClicked.has(button)) return;
+    state.consentClicked.add(button);
+    button.click();
+  }
+
   /** Einen gefundenen Banner behandeln: ausblenden, außer er bietet ein Abo an. */
   function handleBanner(el) {
     if (el.hasAttribute(ATTR) || el.parentElement?.closest(`[${ATTR}]`)) return;
     if (el.matches(SOURCEPOINT)) {
       // Den Text liest das Skript im Sourcepoint-Rahmen; ohne seine Meldung bleibt der Dialog stehen.
-      if (state.spVerdict === 'normal') hide(el, 'cookie');
+      // Die Einwilligung bei einer Abo-Abfrage klickt es ebenfalls dort.
+      if (state.cookies && state.spVerdict === 'normal') hide(el, 'cookie');
       return;
     }
-    if (PAY_TEXT.test(bannerText(el))) return;
-    hide(el, 'cookie');
+    if (PAY_TEXT.test(bannerText(el))) {
+      acceptPayDialog(el);
+      return;
+    }
+    if (state.cookies) hide(el, 'cookie');
   }
 
   function scanCookieBanners(roots) {
-    if (!state.cookies) return;
+    if (!cmpActive()) return;
     const sel = `${COOKIE_BANNERS},${SOURCEPOINT}`;
     for (const root of roots) {
       if (root.nodeType !== 1 || !root.isConnected) continue;
@@ -584,6 +627,7 @@
       if (!el.matches(SOURCEPOINT) && PAY_TEXT.test(bannerText(el))) {
         el.removeAttribute(ATTR);
         state.reasons.cookie--;
+        acceptPayDialog(el);
       }
     }
     unlockScroll();
@@ -661,8 +705,17 @@
       return false;
     }
     if (msg?.type === 'werbefrei:cmp') {
+      let art = msg.art;
+      if (art === 'knopf') {
+        // Nur ein Knopf im Rahmen: Abo-Abfrage, wenn der Dialog der Seite drumherum ein Abo anbietet.
+        // Sonst bleibt alles, wie es ist; ein unklarer Dialog wird weder ausgeblendet noch beantwortet.
+        const pay = state.active && [...document.querySelectorAll(SOURCEPOINT)].some(payAround);
+        sendResponse({ bezahl: pay });
+        if (!pay) return false;
+        art = 'bezahl';
+      }
       // Einmal als Abo-Abfrage erkannt, bleibt es dabei, auch wenn weitere Rahmen "normal" melden.
-      if (state.spVerdict !== 'bezahl') state.spVerdict = msg.art === 'bezahl' ? 'bezahl' : 'normal';
+      if (state.spVerdict !== 'bezahl') state.spVerdict = art === 'bezahl' ? 'bezahl' : 'normal';
       if (state.spVerdict === 'bezahl') {
         // War der Dialog schon ausgeblendet (Abo-Teil kam erst später), wieder zeigen.
         for (const el of document.querySelectorAll(`${SOURCEPOINT}[${ATTR}="cookie"]`)) {
@@ -706,17 +759,18 @@
   }
 
   function activate(res) {
-    const wasRunning = state.active && (state.heuristics || state.cookies);
+    const wasRunning = state.active && (state.heuristics || cmpActive());
     state.active = true;
     state.generic = res.generic;
     state.heuristics = res.heuristics;
     const cookiesBefore = state.cookies;
     state.cookies = res.cookies === true;
+    state.autoConsent = res.autoConsent === true;
     if (cookiesBefore && !state.cookies) releaseCookies();
     setGate(false);
     observer.observe(document, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'id'] });
     queue(document.documentElement);
-    if ((state.heuristics || state.cookies) && !wasRunning) scheduleInitialScans();
+    if ((state.heuristics || cmpActive()) && !wasRunning) scheduleInitialScans();
   }
 
   function deactivate() {

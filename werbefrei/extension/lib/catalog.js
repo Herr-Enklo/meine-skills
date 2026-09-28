@@ -42,6 +42,7 @@ export const DEFAULT_SETTINGS = {
   allowlist: [], // Hostnamen ohne "www."
   heuristics: true, // Werbeplätze an Kennzeichnung und leeren Rahmen erkennen
   cookieBanners: true, // gewöhnliche Cookie-Hinweise ausblenden (keine Abo-Abfragen)
+  autoConsent: false, // Abo-Abfragen ("mit Werbung lesen oder Pur-Abo") mit "Einwilligen" beantworten
   badge: true, // Zahl blockierter Anfragen am Symbol
   lists: Object.fromEntries(LISTS.map((l) => [l.id, l.enabledByDefault])),
   customLists: [], // {id, title, url}

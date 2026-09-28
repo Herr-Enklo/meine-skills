@@ -529,6 +529,7 @@ async function pageState(sender, msg) {
     generic: !cosmetic.generichide,
     heuristics: settings.heuristics,
     cookies: settings.cookieBanners,
+    autoConsent: settings.autoConsent,
     cosmetic,
   };
 }
@@ -561,11 +562,21 @@ const contentHandlers = {
     return { selectors };
   },
 
-  /** Meldung aus einem Sourcepoint-Rahmen: gewöhnlicher Cookie-Dialog oder Abo-Abfrage. */
+  /**
+   * Meldung aus einem Sourcepoint-Rahmen: gewöhnlicher Cookie-Dialog oder Abo-Abfrage. Bei einer
+   * Abo-Abfrage sagt die Antwort, ob der Rahmen "Einwilligen" klicken soll: nur mit eingeschalteter
+   * Einstellung und wenn Werbefrei auf der Seite aktiv ist (keine Pause, keine Ausnahme).
+   */
   async cmpRahmen(msg, sender) {
-    if (!sender.frameId || !['normal', 'bezahl'].includes(msg.art)) return { ok: false };
-    await chrome.tabs.sendMessage(sender.tab.id, { type: 'werbefrei:cmp', art: msg.art }, { frameId: 0 }).catch(() => {});
-    return { ok: true };
+    if (!sender.frameId || !sender.tab || !['normal', 'bezahl', 'knopf'].includes(msg.art)) return { ok: false };
+    const reply = await chrome.tabs
+      .sendMessage(sender.tab.id, { type: 'werbefrei:cmp', art: msg.art }, { frameId: 0 })
+      .catch(() => null);
+    // "knopf": Im Rahmen steht nur der Zustimmungsknopf; die Seite sagt, ob ihr Dialog ein Abo anbietet.
+    const pay = msg.art === 'bezahl' || (msg.art === 'knopf' && reply?.bezahl === true);
+    if (!pay) return { ok: true };
+    const page = await pageState({ url: sender.tab.url }, {});
+    return { ok: true, einwilligen: page.active === true && page.autoConsent === true };
   },
 
   async checkHosts(msg) {
@@ -778,7 +789,7 @@ const pageHandlers = {
   },
 
   async setOption({ key, value }) {
-    if (!['heuristics', 'badge', 'cookieBanners'].includes(key)) return { ok: false };
+    if (!['heuristics', 'badge', 'cookieBanners', 'autoConsent'].includes(key)) return { ok: false };
     await serial(async () => {
       await saveSettings({ [key]: Boolean(value) });
       await applyActionState();
@@ -809,6 +820,7 @@ const pageHandlers = {
         allowlist: settings.allowlist,
         heuristics: settings.heuristics,
         cookieBanners: settings.cookieBanners,
+        autoConsent: settings.autoConsent,
         badge: settings.badge,
         lists: settings.lists,
         customLists: settings.customLists,
@@ -834,6 +846,7 @@ const pageHandlers = {
         allowlist: cleanHostList(s.allowlist),
         heuristics: s.heuristics !== false,
         cookieBanners: s.cookieBanners !== false,
+        autoConsent: s.autoConsent === true,
         badge: s.badge !== false,
         lists,
         customLists,

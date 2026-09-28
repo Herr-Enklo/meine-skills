@@ -51,7 +51,8 @@ sie auch wieder löscht.
 - Eigene Regeln im EasyList-Format. Beim Speichern meldet Werbefrei Zeilen, die es nicht versteht,
   mit Zeilennummer und Grund.
 - Ausnahmen: Seiten, auf denen Werbefrei aus ist.
-- Werbeplatz-Erkennung, Cookie-Hinweise und Zähler am Symbol ein- und ausschalten.
+- Werbeplatz-Erkennung, Cookie-Hinweise und Zähler am Symbol ein- und ausschalten, Abo-Abfragen
+  automatisch beantworten lassen (siehe unten, standardmäßig aus).
 - Sicherung als JSON-Datei speichern und wiederherstellen, etwa für einen zweiten Rechner.
 
 ### Eigene Regeln
@@ -141,19 +142,41 @@ hieße, die Bezahlschranke zu umgehen. Das betrifft die meisten großen Nachrich
 spiegel.de, bild.de, welt.de, faz.net, sueddeutsche.de, t-online.de, focus.de, n-tv.de, heise.de,
 golem.de, chip.de und tagesspiegel.de blieb der Dialog im Test stehen.
 
+Wer solche Abfragen nicht auf jeder Seite selbst beantworten will, schaltet in den Einstellungen
+„Abo-Abfragen automatisch beantworten“ ein (standardmäßig aus). Werbefrei klickt dann im Dialog auf „Einwilligen“
+beziehungsweise „Zustimmen“. Die Seite speichert die Wahl, auf spiegel.de, heise.de und t-online.de
+kam der Dialog beim nächsten Besuch nicht wieder. Das ist eine echte Einwilligung in das Tracking
+der Seite. Die Werbeserver sperrt Werbefrei trotzdem; gegen Tracker hilft zusätzlich die Liste
+EasyPrivacy, die man dafür einschalten sollte. Beantwortet werden nur Abo-Abfragen, gewöhnliche
+Cookie-Hinweise blendet Werbefrei weiter aus, ohne zuzustimmen. Auf ausgenommenen Seiten und im
+Pausenmodus klickt Werbefrei nichts. Unterstützt sind Dialoge von Sourcepoint (der Knopf mit der
+Klasse `sp_choice_type_11`), consentmanager (`.cmpboxbtnyes`) und OneTrust
+(`#onetrust-accept-btn-handler`). Bei Sourcepoint gilt eine Änderung des Schalters ab dem nächsten
+Laden der Seite. Im Test verschwand die Abfrage auf spiegel.de, bild.de, welt.de, faz.net,
+sueddeutsche.de, t-online.de, focus.de, n-tv.de, heise.de, golem.de, chip.de und tagesspiegel.de,
+und die Seite ließ sich scrollen. bild.de zeigt danach allerdings seine Sperre für Werbeblocker.
+
 Sourcepoint lädt seinen Dialog in einen Rahmen von einer fremden Domain, in den das Inhaltsskript
 der Seite nicht hineinsehen kann. In solchen Rahmen (erkennbar an `message_id=` in der Adresse)
 läuft deshalb ein kleines Skript, `content/cmp-rahmen.js`, das nur den Text des Dialogs liest und
 meldet, ob es ein gewöhnlicher Hinweis oder ein Abo-Angebot ist. Bis diese Meldung kommt, bleibt der
-Dialog sichtbar; kommt sie nicht, bleibt er ganz stehen.
+Dialog sichtbar; kommt sie nicht, bleibt er ganz stehen. Manche Seiten bauen den Dialog selbst und
+holen aus dem Rahmen nur den Zustimmungsknopf (golem.de). Dann prüft das Inhaltsskript den Kasten
+der Seite um den Rahmen herum, aber nur Kästen mit höchstens 4.000 Zeichen Text, damit ein „Abo“ im
+Menü der Seite nicht zählt. Steht dort ein Abo-Angebot, gilt der Dialog als Abo-Abfrage; sonst bleibt
+er unverändert stehen.
 
-Eigene Lösungen einzelner Seiten erkennt Werbefrei nicht. Sie lassen sich mit „Element ausblenden …“
-entfernen. Die Funktion ist eingeschaltet und lässt sich unter Einstellungen → Allgemein abschalten.
+Gewöhnliche Cookie-Hinweise, die eine Seite selbst gebaut hat, erkennt Werbefrei nicht. Sie lassen
+sich mit „Element ausblenden …“ entfernen. Das Ausblenden ist eingeschaltet und lässt sich unter
+Einstellungen → Allgemein abschalten.
 
 ## Grenzen
 
 - Werbefrei umgeht keine Bezahlschranken und keine Abfragen der Art „Mit Werbung lesen oder Abo
-  abschließen“. Diese Abfragen bleiben stehen, auch wenn Cookie-Hinweise ausgeblendet werden.
+  abschließen“. Diese Abfragen bleiben stehen, auch wenn Cookie-Hinweise ausgeblendet werden. Auf
+  Wunsch beantwortet Werbefrei sie mit „Einwilligen“, siehe „Cookie-Hinweise“.
+- Manche Seiten mit eigener Abfrage (etwa merkur.de) kennt Werbefrei nicht; dort
+  bleibt die Abfrage auch mit eingeschaltetem Schalter stehen.
 - Ist ein Cookie-Hinweis ausgeblendet, hat man nichts erlaubt. Inhalte, die eine Einwilligung
   voraussetzen, etwa eingebettete Videos oder Karten, zeigen dann oft nur einen Platzhalter. Wer sie
   braucht, schaltet „Cookie-Hinweise ausblenden“ kurz ab und trifft seine Wahl im Hinweis.
@@ -199,7 +222,7 @@ npm run e2e:echt   # echte Nachrichtenseiten ohne und mit Werbefrei, braucht Int
 ```
 
 `npm run e2e` braucht keinen Internetzugang: Die Testseite lädt Werbung von echten Werbeservern, und
-diese Anfragen blockiert die Erweiterung, bevor sie das Netz erreichen. Geprüft wird in 67 Punkten,
+diese Anfragen blockiert die Erweiterung, bevor sie das Netz erreichen. Geprüft wird in 75 Punkten,
 dass elf typische Werbeplätze verschwinden (Billboard mit „Anzeige“, zwei Werbeplätze im Text, einer
 davon mit Inline-Skript, leerer Skyscraper, klebende Leiste, Taboola, gesponserter Teaser,
 nachgeladener Werbeplatz, ein Element, das erst nachträglich die Klasse `adsbygoogle` bekommt, zwei
@@ -214,9 +237,13 @@ Neuladen wirken, sowohl für Netzanfragen als auch für Ausgeblendetes, und dass
 geöffnete Seite beim Fortsetzen nachträglich eingerichtet wird. Der Block „Cookie-Hinweise“ prüft
 einen nachgebauten OneTrust-Banner mit Scrollsperre und versteckter Anbieterliste, einen
 consentmanager-Dialog mit Pur-Abo (auch mit spät nachgeladenem Angebot und versteckt eingefügt) und
-drei Sourcepoint-Rahmen: einen gewöhnlichen, einen mit Abo-Angebot und einen, in dem das Angebot erst
-nach dreieinhalb Sekunden erscheint. Außerdem, dass der Schalter in den Einstellungen ohne Neuladen
-wirkt. Bildschirmfotos landen in `test-ergebnisse/`.
+Sourcepoint-Rahmen: einen gewöhnlichen, einen mit Abo-Angebot, einen, in dem das Angebot erst nach
+dreieinhalb Sekunden erscheint, und zwei, die wie auf golem.de nur den Knopf liefern, einmal in einem
+Seitendialog mit Abo-Angebot und einmal ohne. Außerdem, dass der Schalter in den Einstellungen ohne Neuladen
+wirkt. Mit eingeschaltetem „Abo-Abfragen automatisch beantworten“ wird geprüft, dass Sourcepoint- und
+consentmanager-Abfragen mit „Zustimmen“ beantwortet werden (auch die Knopf-Variante) und die Seite
+danach scrollt, dass ein gewöhnlicher Hinweis nur ausgeblendet und nicht beantwortet wird, dass ohne
+Abo-Angebot nichts geklickt wird und dass auf einer ausgenommenen Seite nichts geklickt wird. Bildschirmfotos landen in `test-ergebnisse/`.
 
 `npm run e2e:echt` öffnet auf 14 Nachrichtenseiten einen aktuellen Artikel, einmal ohne und einmal mit
 Werbefrei, bestätigt die Einwilligung (ohne sie laden diese Seiten keine Werbung), scrollt durch den
@@ -228,10 +255,11 @@ Artikel und zählt sichtbare Werberahmen, Werbeplätze, Ersatzanzeigen und Kennz
 ausgeblendet hat, mit Grund (`kennzeichnung`, `leer`, `rahmen`, `ersatz`). Damit lässt sich ein
 Fehlalarm schnell eingrenzen. Mit `FOTO=pfad/name` davor entstehen zusätzlich zwei Bildschirmfotos.
 
-`node tests/e2e/cookie-seiten.mjs [Adresse …]` öffnet Seiten mit Werbefrei und meldet für jede, ob ein
-bekannter Cookie-Hinweis ausgeblendet oder sichtbar ist und ob sich die Seite scrollen lässt. Ohne
-Adressen nimmt es eine feste Auswahl, von den Anbietern selbst bis zu Nachrichtenseiten mit Pur-Abo.
-Bildschirmfotos: `test-ergebnisse/cookie-<seite>.png`.
+`node tests/e2e/cookie-seiten.mjs [--einwilligen] [Adresse …]` öffnet Seiten mit Werbefrei und meldet
+für jede, ob ein bekannter Cookie-Hinweis ausgeblendet oder sichtbar ist und ob sich die Seite scrollen
+lässt. Ohne Adressen nimmt es eine feste Auswahl, von den Anbietern selbst bis zu Nachrichtenseiten
+mit Pur-Abo. `--einwilligen` schaltet „Abo-Abfragen automatisch beantworten“ ein. Bildschirmfotos:
+`test-ergebnisse/cookie-<seite>.png`.
 
 ## Aufbau
 
@@ -242,7 +270,7 @@ Bildschirmfotos: `test-ergebnisse/cookie-<seite>.png`.
 | `extension/lib/filters.js` | Übersetzer für Filterlisten (Adblock-Plus-Format → Chrome-Regeln und CSS) |
 | `extension/lib/catalog.js` | Bekannte Listen und Grundeinstellungen |
 | `extension/content/content.js` | Inhaltsskript: Klassen melden, Werbeplätze und Cookie-Hinweise erkennen, zählen |
-| `extension/content/cmp-rahmen.js` | Läuft in Sourcepoint-Rahmen und meldet, ob der Dialog ein Abo anbietet |
+| `extension/content/cmp-rahmen.js` | Läuft in Sourcepoint-Rahmen, meldet, ob der Dialog ein Abo anbietet, und klickt auf Wunsch „Einwilligen“ |
 | `extension/picker/picker.js` | Element-Auswahl |
 | `extension/popup/`, `extension/options/`, `extension/ui/` | Popup, Einstellungen, gemeinsames Stylesheet |
 | `extension/filters/werbefrei.txt` | Eingebaute Liste (Quelle) |
