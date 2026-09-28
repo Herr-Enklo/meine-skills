@@ -33,6 +33,15 @@ try {
       src: el.getAttribute('src')?.slice(0, 90),
     })),
   );
+  // Optional Bildschirmfotos: FOTO=pfad/name schreibt name-oben.png und name-mitte.png.
+  if (process.env.FOTO) {
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.waitForTimeout(800);
+    await page.screenshot({ path: `${process.env.FOTO}-oben.png` });
+    await page.evaluate(() => window.scrollTo(0, 1400));
+    await page.waitForTimeout(1500);
+    await page.screenshot({ path: `${process.env.FOTO}-mitte.png` });
+  }
   console.log(`\n${hidden.length} Elemente per Erkennung ausgeblendet:`);
   for (const h of hidden) console.log(`- [${h.grund}] ${h.element}${h.text ? `  "${h.text}"` : ''}${h.src ? `  ${h.src}` : ''}`);
 } finally {

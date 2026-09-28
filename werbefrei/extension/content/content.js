@@ -43,7 +43,7 @@
     labelsSeen: new WeakSet(),
     revived: new WeakSet(), // leere Kästen, die sich doch noch gefüllt haben: nie wieder ausblenden
     hostVerdict: new Map(), // Hostname -> true (gesperrt) | false | 'offen'
-    reasons: { kennzeichnung: 0, leer: 0, rahmen: 0 },
+    reasons: { kennzeichnung: 0, leer: 0, rahmen: 0, ersatz: 0 },
   };
 
   const send = (msg) => chrome.runtime.sendMessage(msg).catch(() => null);
@@ -170,6 +170,7 @@
 
   function looksLikeAdBlock(el) {
     if (hasAdHint(el)) return true;
+    if (el.querySelector(`[${ATTR}]`)) return true; // enthält schon einen ausgeblendeten Werbeplatz
     if (el.querySelector('iframe, ins, object, embed, [id^="div-gpt-ad"], [id^="google_ads"], [data-ad-slot], [data-google-query-id]')) return true;
     const hinted = el.querySelectorAll('[id],[class]');
     for (let i = 0; i < hinted.length && i < 50; i++) if (hasAdHint(hinted[i])) return true;
@@ -346,6 +347,56 @@
     }
   }
 
+  // -------------------------------------------------------------------------------------------
+  // Ersatzanzeigen: Manche Seiten erkennen den Werbeblocker und blenden dann Werbung als Bild über
+  // die eigene Domain ein, in Containern mit Namen, die bei jedem Laden neu ausgewürfelt werden
+  // (etwa "pszFwpCl"). Erkennungsmerkmal ist die Kombination aus Bild in einem Standard-Werbeformat
+  // und solchen Zufallsnamen in den umschließenden Containern.
+  // -------------------------------------------------------------------------------------------
+
+  const AD_SIZES = [
+    [300, 250], [336, 280], [728, 90], [970, 90], [970, 250], [160, 600], [120, 600], [300, 600],
+    [300, 1050], [320, 50], [320, 100], [468, 60], [250, 250], [800, 250], [994, 250], [1000, 250],
+  ];
+
+  function isAdSize(w, h) {
+    return AD_SIZES.some(([aw, ah]) => Math.abs(w - aw) <= 3 && Math.abs(h - ah) <= 3);
+  }
+
+  /** Klingt ein Klassen- oder id-Name ausgewürfelt? Nur Buchstaben, gemischte Schreibung, kaum Vokale. */
+  function looksRandom(name) {
+    if (!name || !/^[A-Za-z]{7,16}$/.test(name)) return false;
+    const upper = name.replace(/[^A-Z]/g, '').length;
+    if (upper < 2) return false;
+    const vowels = name.replace(/[^aeiouAEIOU]/g, '').length;
+    return vowels / name.length < 0.3;
+  }
+
+  function hasRandomName(el) {
+    if (looksRandom(el.id)) return true;
+    const list = el.classList;
+    for (let i = 0; i < list.length; i++) if (looksRandom(list[i])) return true;
+    return false;
+  }
+
+  function scanReplacementAds() {
+    for (const m of document.querySelectorAll(`img:not([${ATTR}]), iframe:not([${ATTR}]), canvas:not([${ATTR}])`)) {
+      if (m.closest(`[${ATTR}]`)) continue;
+      const r = m.getBoundingClientRect();
+      if (!isAdSize(r.width, r.height)) continue;
+      // Von innen nach außen: der äußerste Container mit Zufallsnamen, höchstens vier Ebenen.
+      let target = null;
+      let node = m.parentElement;
+      for (let depth = 0; node && depth < 4 && node !== document.body; depth++, node = node.parentElement) {
+        if (hasRandomName(node)) target = node;
+        else if (target) break;
+      }
+      if (!target || isProtected(target)) continue;
+      if (otherTextLength(target) > 40) continue; // echter Inhalt mit Text, keine Bildanzeige
+      hide(target, 'ersatz');
+    }
+  }
+
   function scanEmptySlots(now) {
     const candidates = document.querySelectorAll(`[id]:not([${ATTR}]),[class]:not([${ATTR}]),[data-ad-slot]:not([${ATTR}])`);
     for (const el of candidates) {
@@ -374,6 +425,7 @@
     try {
       await collapseBlockedFrames();
       reviveFilled();
+      scanReplacementAds();
       scanLabels();
       scanEmptySlots(Date.now());
     } catch (e) {

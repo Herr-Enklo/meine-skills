@@ -461,7 +461,8 @@ const contentHandlers = {
     const cosmetic = await cosmeticFor(host);
     if (cosmetic.disabled) return { active: false, reason: 'liste' };
     await insertCss(sender, `${cssForSelectors(cosmetic.selectors)}\n${HEURISTIC_CSS}`);
-    return { active: true, generic: !cosmetic.generichide, heuristics: settings.heuristics && !cosmetic.generichide };
+    // $generichide in einer Liste schaltet nur deren allgemeine Selektoren ab, nicht die eigene Erkennung.
+    return { active: true, generic: !cosmetic.generichide, heuristics: settings.heuristics };
   },
 
   async generic(msg, sender) {

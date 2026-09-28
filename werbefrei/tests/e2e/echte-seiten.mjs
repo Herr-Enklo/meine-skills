@@ -94,6 +94,19 @@ function measure(page, adHosts) {
       const t = (el.textContent || '').trim();
       return /^(anzeige|werbung|advertisement|sponsored|gesponsert)$/i.test(t) && el.checkVisibility();
     });
+    // Ersatzanzeigen: Bild oder Rahmen im Werbeformat in Containern mit ausgewürfelten Namen
+    // (gleiche Merkmale wie in content.js, hier nur gezählt).
+    const sizes = [[300, 250], [336, 280], [728, 90], [970, 90], [970, 250], [160, 600], [120, 600], [300, 600], [300, 1050], [320, 50], [320, 100], [468, 60], [250, 250], [800, 250], [994, 250], [1000, 250]];
+    const random = (n) => /^[A-Za-z]{7,16}$/.test(n || '') && n.replace(/[^A-Z]/g, '').length >= 2 && n.replace(/[^aeiouAEIOU]/g, '').length / n.length < 0.3;
+    const ersatz = [...document.querySelectorAll('img, iframe, canvas')].filter((m) => {
+      if (!m.checkVisibility()) return false;
+      const r = m.getBoundingClientRect();
+      if (!sizes.some(([w, h]) => Math.abs(r.width - w) <= 3 && Math.abs(r.height - h) <= 3)) return false;
+      for (let n = m.parentElement, d = 0; n && d < 4; n = n.parentElement, d++) {
+        if (random(n.id) || [...n.classList].some(random)) return true;
+      }
+      return false;
+    });
     const main = document.querySelector('article [itemprop="articleBody"], [itemprop="articleBody"], article, main') || document.body;
     const h1 = document.querySelector('h1');
     const area = adFrames.reduce((sum, f) => {
@@ -104,6 +117,7 @@ function measure(page, adHosts) {
       adFrames: adFrames.length,
       adFrameArea: Math.round(area),
       adSlots: slots.length,
+      ersatz: ersatz.length,
       labels: labels.length,
       articleChars: (main.innerText || '').length,
       h1: h1 && h1.checkVisibility() ? h1.innerText.trim().slice(0, 90) : null,
@@ -158,17 +172,21 @@ async function visit(context, site, adHosts, label, articleUrl) {
   }
 }
 
+function withTimeout(promise, ms) {
+  return Promise.race([promise, new Promise((resolve) => setTimeout(() => resolve({ error: `Zeitlimit von ${ms / 1000} s überschritten` }), ms))]);
+}
+
 async function compare(site, adHosts) {
   const name = new URL(site.start).hostname.replace(/^www\./, '');
   const withExt = await launch();
   await waitForLists(withExt.worker);
-  const b = await visit(withExt.context, site, adHosts, 'mit');
+  const b = await withTimeout(visit(withExt.context, site, adHosts, 'mit'), 200000);
   await withExt.context.close();
   const plain = await launch({ withExtension: false });
-  const a = await visit(plain.context, site, adHosts, 'ohne', b.url);
+  const a = await withTimeout(visit(plain.context, site, adHosts, 'ohne', b.url), 200000);
   await plain.context.close();
-  console.log(`${name.padEnd(18)} ohne: ${a.error || `${a.adFrames} Werberahmen, ${a.adSlots} Werbeplätze, ${a.requests.ad} Werbeanfragen`}`);
-  console.log(`${''.padEnd(18)} mit:  ${b.error || `${b.adFrames} Werberahmen, ${b.adSlots} Werbeplätze, ${b.requests.blocked} Anfragen blockiert, ${b.hiddenByWerbefrei} per Heuristik ausgeblendet`}`);
+  console.log(`${name.padEnd(18)} ohne: ${a.error || `${a.adFrames} Werberahmen, ${a.adSlots} Werbeplätze, ${a.ersatz} Ersatzanzeigen, ${a.requests.ad} Werbeanfragen`}`);
+  console.log(`${''.padEnd(18)} mit:  ${b.error || `${b.adFrames} Werberahmen, ${b.adSlots} Werbeplätze, ${b.ersatz} Ersatzanzeigen, ${b.requests.blocked} Anfragen blockiert, ${b.hiddenByWerbefrei} per Erkennung ausgeblendet`}`);
   return { name, start: site.start, ohne: a, mit: b };
 }
 
@@ -189,18 +207,19 @@ const rows = results.map(({ name, ohne: a, mit: b }) => {
   const f = (r, key) => (r.error ? '–' : r[key]);
   const broken = !a.error && !b.error && a.articleChars > 500 && b.articleChars < a.articleChars * 0.7;
   const note = b.sperre ? 'Seite sperrt sich bei Werbeblockern' : b.error || a.error || (broken ? 'Artikeltext kürzer, prüfen' : '');
-  return `| ${name} | ${f(a, 'adFrames')} / ${f(b, 'adFrames')} | ${f(a, 'adSlots')} / ${f(b, 'adSlots')} | ${f(a, 'labels')} / ${f(b, 'labels')} | ${a.error ? '–' : a.requests.ad} | ${b.error ? '–' : b.requests.blocked} | ${b.error ? '–' : b.hiddenByWerbefrei} | ${f(a, 'articleChars')} / ${f(b, 'articleChars')} | ${note} |`;
+  return `| ${name} | ${f(a, 'adFrames')} / ${f(b, 'adFrames')} | ${f(a, 'adSlots')} / ${f(b, 'adSlots')} | ${f(a, 'ersatz')} / ${f(b, 'ersatz')} | ${f(a, 'labels')} / ${f(b, 'labels')} | ${a.error ? '–' : a.requests.ad} | ${b.error ? '–' : b.requests.blocked} | ${b.error ? '–' : b.hiddenByWerbefrei} | ${f(a, 'articleChars')} / ${f(b, 'articleChars')} | ${note} |`;
 });
 
 const md = `# Werbefrei auf echten Nachrichtenseiten
 
 Stand: ${new Date().toLocaleString('de-DE')}. Chromium ${process.env.CHROMIUM_VERSION || ''}, Fenster 1366×900, Einwilligung jeweils bestätigt.
 Werte "ohne / mit" Werbefrei. Werberahmen: sichtbare iframes von Werbeservern. Werbeplätze: sichtbare Standard-Werbecontainer
-(Google Publisher Tag, AdSense, Taboola, Outbrain). Kennzeichnungen: sichtbare Elemente mit dem Text "Anzeige"/"Werbung".
+(Google Publisher Tag, AdSense, Taboola, Outbrain). Ersatzanzeigen: Bilder im Werbeformat, die eine Seite nach dem Erkennen
+eines Werbeblockers über die eigene Domain einblendet. Kennzeichnungen: sichtbare Elemente mit dem Text "Anzeige"/"Werbung".
 Textlänge: Zeichen im Artikel, zur Kontrolle, dass der Artikel selbst vollständig bleibt.
 
-| Seite | Werberahmen | Werbeplätze | Kennzeichnungen | Werbeanfragen ohne | blockiert mit | Heuristik | Textlänge | Hinweis |
-|---|---|---|---|---|---|---|---|---|
+| Seite | Werberahmen | Werbeplätze | Ersatzanzeigen | Kennzeichnungen | Werbeanfragen ohne | blockiert mit | eigene Erkennung | Textlänge | Hinweis |
+|---|---|---|---|---|---|---|---|---|---|
 ${rows.join('\n')}
 
 Artikel:

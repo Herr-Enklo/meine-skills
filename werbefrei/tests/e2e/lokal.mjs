@@ -74,6 +74,7 @@ try {
     ['#teaser-anzeige', 'gesponserter Beitrag in der Teaserliste'],
     ['#wp-nachgeladen', 'nachgeladener leerer Werbeplatz'],
     ['#wp-skript', 'Werbeplatz mit Inline-Skript und Kennzeichnung'],
+    ['#ersatz-rahmen', 'Ersatzanzeige (Bild im Werbeformat, Zufallsnamen) mit Kennzeichnung'],
   ]) {
     check(what, !(await visible(sel)));
   }
@@ -95,6 +96,8 @@ try {
     ['#fusszeile a[href="/werben"]', 'Fußzeilenlink "Werbung"'],
     ['#knopf-anzeigen', 'Knopf "Anzeigen"'],
     ['#lazy-billboard', 'Kasten mit Klasse billboard und verzögert ladendem Bild'],
+    ['#foto-normal', 'Foto im Format 300×250'],
+    ['#foto-zufall', 'Foto im Format 300×250 mit Bildunterschrift in Container mit Zufallsnamen'],
   ]) {
     check(what, await visible(sel));
   }
@@ -126,7 +129,7 @@ try {
   await popup.setViewportSize({ width: 320, height: 420 });
   await popup.waitForFunction(() => document.getElementById('hidden').textContent !== '–', null, { timeout: 5000 }).catch(() => {});
   const hiddenCount = Number((await popup.locator('#hidden').textContent()).replace(/\D/g, ''));
-  check('Popup zählt ausgeblendete Werbeplätze', hiddenCount >= 8, `${hiddenCount}`);
+  check('Popup zählt ausgeblendete Werbeplätze', hiddenCount >= 9, `${hiddenCount}`);
   await popup.screenshot({ path: `${shots}popup.png` });
 
   console.log('\nAusnahme für die Seite');
