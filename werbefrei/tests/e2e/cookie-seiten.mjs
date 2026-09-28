@@ -1,18 +1,22 @@
 // Cookie-Hinweise auf echten Seiten: Wird ein gewöhnlicher Einwilligungsbanner ausgeblendet, lässt
 // sich die Seite danach scrollen, und bleiben Abfragen mit Abo-Angebot (Pur, contentpass) stehen?
-//   node tests/e2e/cookie-seiten.mjs [adresse …]
+//   node tests/e2e/cookie-seiten.mjs [--einwilligen] [adresse …]
+// Mit --einwilligen ist "Abo-Abfragen automatisch beantworten" eingeschaltet.
 // Ergebnis: Tabelle in der Konsole und Bildschirmfotos test-ergebnisse/cookie-<seite>.png.
 // Seiten und Anbieter ändern sich; die Ausgabe ist eine Momentaufnahme.
 
 import { mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { launch, waitForLists } from './browser.mjs';
+import { launch, waitForLists, extensionPage, sendFrom } from './browser.mjs';
 
 const out = fileURLToPath(new URL('../../test-ergebnisse/', import.meta.url));
 mkdirSync(out, { recursive: true });
 
-const SITES = process.argv.slice(2).length
-  ? process.argv.slice(2)
+const args = process.argv.slice(2);
+const consent = args.includes('--einwilligen');
+const urls = args.filter((a) => !a.startsWith('--'));
+const SITES = urls.length
+  ? urls
   : [
       'https://usercentrics.com/de/',
       'https://www.didomi.io/',
@@ -35,8 +39,14 @@ const CMP = [
   '.fc-consent-root', '#cookiescript_injected', '#tarteaucitronRoot', '.c24-cookie-consent-wrapper', 'div[id^="sp_message_container_"]',
 ].join(',');
 
-const { context, worker } = await launch();
+const { context, worker, extensionId } = await launch();
 await waitForLists(worker);
+if (consent) {
+  const options = await extensionPage(context, extensionId);
+  await sendFrom(options, { type: 'setOption', key: 'autoConsent', value: true });
+  await options.close();
+  console.log('Abo-Abfragen werden automatisch beantwortet.\n');
+}
 const rows = [];
 for (const url of SITES) {
   const name = new URL(url).hostname.replace(/^www\./, '');
@@ -59,7 +69,7 @@ for (const url of SITES) {
     const scrollY = await page.evaluate(() => Math.round(Math.max(window.scrollY, document.body?.scrollTop || 0)));
     await page.evaluate(() => { window.scrollTo(0, 0); if (document.body) document.body.scrollTop = 0; });
     await page.screenshot({ path: `${out}cookie-${name}.png` });
-    const banner = info.map((i) => `${i.el} ${i.hidden ? 'ausgeblendet' : i.visible ? 'SICHTBAR' : 'unsichtbar'}`).join(', ') || 'kein bekannter Anbieter gefunden';
+    const banner = info.map((i) => `${i.el} ${i.hidden ? 'ausgeblendet' : i.visible ? 'SICHTBAR' : 'unsichtbar'}`).join(', ') || 'kein Dialog (mehr) da';
     rows.push({ name, banner, scrollY });
     console.log(`${name.padEnd(20)} ${banner}; gescrollt: ${scrollY}px`);
   } catch (e) {

@@ -15,9 +15,27 @@
   <main><h1>Seite mit Sourcepoint-Dialog</h1><p>Inhalt der Seite.</p></main>
   <div id="sp_message_container_1234"><iframe id="sp_message_iframe_1234" title="Consent Message"></iframe></div>
   <script>
-    // Der Dialog kommt als Seite von einer fremden Domain; ?art=normal|pur wählt den Text.
+    // Der Dialog kommt als Seite von einer fremden Domain; ?art=normal|pur|spaet wählt den Text.
+    // ?art=knopf: Wie bei golem.de baut die Seite den Dialog selbst (mit Abo-Angebot), der Rahmen
+    // liefert nur den Zustimmungsknopf. ?art=knopf-ohne-abo: derselbe Aufbau ohne Abo-Angebot.
     const art = new URLSearchParams(location.search).get('art') || 'normal';
+    if (art.startsWith('knopf')) {
+      const box = document.createElement('div');
+      box.id = 'auswahl';
+      box.innerHTML = art === 'knopf'
+        ? '<h2>Willkommen!</h2><p>Mit Werbung und Tracking lesen:</p><p>… oder das Pur-Abo ab 3 Euro im Monat bestellen.</p>'
+        : '<h2>Willkommen!</h2><p>Wir verwenden Cookies, um die Seite zu verbessern.</p>';
+      document.body.appendChild(box);
+      box.appendChild(document.getElementById('sp_message_container_1234'));
+    }
     document.getElementById('sp_message_iframe_1234').src = `http://consent.test:${location.port}/index.html?message_id=1234&art=${art}`;
+    // Nach "Zustimmen" im Rahmen schließt Sourcepoint den Dialog und gibt das Scrollen frei.
+    window.addEventListener('message', (e) => {
+      if (e.data !== 'zugestimmt') return;
+      window.__zugestimmt = true;
+      document.getElementById('sp_message_container_1234').remove();
+      document.documentElement.classList.remove('sp-message-open');
+    });
   </script>
 </body>
 </html>

@@ -30,11 +30,22 @@ const server = createServer((req, res) => {
       ? 'Mit Werbung und Tracking nutzen: Zustimmen. Oder ohne Werbung mit dem PUR-Abo für 2,99 € / Monat: Jetzt abonnieren.'
       : 'Wir und unsere Partner verwenden Cookies und ähnliche Technologien, um unser Angebot zu verbessern. Zustimmen. Einstellungen.';
     res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+    if (art?.startsWith('knopf')) {
+      // Wie bei golem.de: Im Rahmen steht nur der Zustimmungsknopf, der Dialog gehört zur Seite.
+      res.end(`<!doctype html><meta charset="utf-8"><body style="margin:0">
+        <button class="sp_choice_type_11">Zustimmen und weiter</button>
+        <script>document.querySelector('button').addEventListener('click', () => parent.postMessage('zugestimmt', '*'));</script>
+      </body>`);
+      return;
+    }
     // Wie bei Sourcepoint: Erst steht nur Skripttext im Dokument, der Dialog mit Knöpfen kommt später.
     res.end(`<!doctype html><meta charset="utf-8"><body style="font:15px sans-serif;padding:16px">
       <script>window.preRenderData = { url: '/' };</script>
       <div id="dialog"></div>
-      <script>setTimeout(() => { document.getElementById('dialog').innerHTML = '<p>${text}</p><button>Zustimmen</button> <button>Einstellungen</button>'; }, 700);</script>
+      <script>setTimeout(() => {
+        document.getElementById('dialog').innerHTML = '<p>${text}</p><button class="sp_choice_type_11">Zustimmen</button> <button>Einstellungen</button>';
+        document.querySelector('.sp_choice_type_11').addEventListener('click', () => parent.postMessage('zugestimmt', '*'));
+      }, 700);</script>
       ${art === 'spaet' ? `<script>setTimeout(() => { document.getElementById('dialog').insertAdjacentHTML('beforeend', '<p>Oder ohne Werbung mit dem PUR-Abo für 2,99 € / Monat.</p>'); }, 3500);</script>` : ''}
     </body>`);
     return;
@@ -217,6 +228,7 @@ try {
   console.log('\nCookie-Hinweise');
   const cookieTab = await context.newPage();
   const shown = (sel) => cookieTab.locator(sel).first().evaluate((el) => el.checkVisibility()).catch(() => false);
+  const agreed = () => cookieTab.evaluate(() => window.__zugestimmt === true);
   const scrolls = async () => {
     await cookieTab.evaluate(() => window.scrollTo(0, 0));
     await cookieTab.mouse.move(400, 300);
@@ -239,7 +251,7 @@ try {
 
   await cookieTab.goto(`http://news.test:${port}/cookie-pur.html`, { waitUntil: 'load' });
   await cookieTab.waitForTimeout(2500);
-  check('Dialog mit Abo-Angebot bleibt stehen', await shown('#cmpbox'));
+  check('Dialog mit Abo-Angebot bleibt stehen, ohne Einwilligung', (await shown('#cmpbox')) && !(await agreed()));
   check('dessen Scroll-Sperre bleibt', !(await scrolls()));
 
   await cookieTab.goto(`http://news.test:${port}/cookie-pur.html?art=spaet`, { waitUntil: 'load' });
@@ -260,7 +272,11 @@ try {
 
   await cookieTab.goto(`http://news.test:${port}/cookie-sp.html?art=pur`, { waitUntil: 'load' });
   await cookieTab.waitForTimeout(3000);
-  check('Sourcepoint-Rahmen mit Pur-Abo-Angebot bleibt stehen', await shown('#sp_message_container_1234'));
+  check('Sourcepoint-Rahmen mit Pur-Abo-Angebot bleibt stehen, ohne Einwilligung', (await shown('#sp_message_container_1234')) && !(await agreed()));
+
+  await cookieTab.goto(`http://news.test:${port}/cookie-sp.html?art=knopf`, { waitUntil: 'load' });
+  await cookieTab.waitForTimeout(3000);
+  check('Knopf-Rahmen im Abo-Dialog der Seite (wie golem.de) bleibt stehen, ohne Einwilligung', (await shown('#sp_message_container_1234')) && !(await agreed()));
 
   await cookieTab.goto(`http://news.test:${port}/cookie-sp.html?art=spaet`, { waitUntil: 'load' });
   await cookieTab.waitForTimeout(2800);
@@ -268,6 +284,31 @@ try {
   await cookieTab.waitForTimeout(2500);
   check('Abo-Angebot kommt später: Dialog erst ausgeblendet, dann wieder da', firstHidden && (await shown('#sp_message_container_1234')));
   check('dann bleibt auch die Scroll-Sperre', !(await scrolls()));
+
+  // Abo-Abfragen automatisch beantworten (Einstellung, standardmäßig aus)
+  await sendFrom(options, { type: 'setOption', key: 'autoConsent', value: true });
+  await cookieTab.goto(`http://news.test:${port}/cookie-sp.html?art=pur`, { waitUntil: 'load' });
+  await cookieTab.waitForTimeout(3000);
+  check('Schalter an: Sourcepoint-Abo-Abfrage mit „Einwilligen“ beantwortet', (await agreed()) && !(await shown('#sp_message_container_1234')));
+  check('danach lässt sich die Seite scrollen', await scrolls());
+  await cookieTab.goto(`http://news.test:${port}/cookie-pur.html`, { waitUntil: 'load' });
+  await cookieTab.waitForTimeout(2500);
+  check('Schalter an: consentmanager-Abo-Abfrage beantwortet', (await agreed()) && !(await shown('#cmpbox')));
+  await cookieTab.goto(`http://news.test:${port}/cookie-sp.html?art=knopf`, { waitUntil: 'load' });
+  await cookieTab.waitForTimeout(3000);
+  check('Schalter an: Knopf-Rahmen im Abo-Dialog der Seite beantwortet', (await agreed()) && !(await shown('#sp_message_container_1234')));
+  await cookieTab.goto(`http://news.test:${port}/cookie-sp.html?art=knopf-ohne-abo`, { waitUntil: 'load' });
+  await cookieTab.waitForTimeout(3000);
+  check('Knopf-Rahmen ohne Abo-Angebot: nichts geklickt, nichts ausgeblendet', !(await agreed()) && (await shown('#sp_message_container_1234')));
+  await cookieTab.goto(`http://news.test:${port}/cookie-sp.html?art=normal`, { waitUntil: 'load' });
+  await cookieTab.waitForTimeout(3000);
+  check('gewöhnlicher Dialog wird nur ausgeblendet, nicht beantwortet', !(await agreed()) && !(await shown('#sp_message_container_1234')));
+  await sendFrom(options, { type: 'setAllowlist', hosts: ['news.test'] });
+  await cookieTab.goto(`http://news.test:${port}/cookie-sp.html?art=pur`, { waitUntil: 'load' });
+  await cookieTab.waitForTimeout(3000);
+  check('auf ausgenommener Seite keine Einwilligung', !(await agreed()) && (await shown('#sp_message_container_1234')));
+  await sendFrom(options, { type: 'setAllowlist', hosts: [] });
+  await sendFrom(options, { type: 'setOption', key: 'autoConsent', value: false });
   await cookieTab.close();
 
   console.log('\nEinstellungsseite');

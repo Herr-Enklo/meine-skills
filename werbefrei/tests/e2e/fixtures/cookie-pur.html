@@ -13,13 +13,19 @@
 <body>
   <main><h1>Seite mit Einwilligung oder Abo</h1><p>Inhalt der Seite.</p></main>
   <div id="cmpwrapper"><div id="cmpbox">
-    <p>Mit Werbung und Tracking lesen: <button>Zustimmen</button></p>
+    <p>Mit Werbung und Tracking lesen: <button class="cmpboxbtn cmpboxbtnyes">Zustimmen</button></p>
     <p id="abo">Oder ohne Werbung mit dem PUR-Abo für 2,99 € im Monat: <button>Jetzt abonnieren</button></p>
   </div></div>
   <script>
     // ?art=spaet: Der Dialog zeigt erst nur die Zustimmung, das Abo-Angebot kommt nach 1,5 Sekunden.
     // ?art=versteckt: Der Dialog wird versteckt eingefügt und erst nach einer Sekunde gezeigt.
     const art = new URLSearchParams(location.search).get('art');
+    // "Zustimmen" schließt den Dialog und gibt das Scrollen frei, wie bei consentmanager.
+    document.querySelector('.cmpboxbtnyes').addEventListener('click', () => {
+      window.__zugestimmt = true;
+      document.getElementById('cmpwrapper').remove();
+      document.body.style.overflow = 'auto';
+    });
     if (art === 'spaet') {
       const abo = document.getElementById('abo');
       abo.remove();
