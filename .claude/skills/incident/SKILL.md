@@ -65,8 +65,8 @@ Systeme, die du nicht selbst erreichst (Arbeitsrechner, Server im Firmennetz), b
 ### 2. Mittel feststellen und Bekanntes prüfen
 
 - Feststellen, was in dieser Session erreichbar ist: lokale Shell auf dem betroffenen Rechner oder Cloud-Container, welche MCP-Werkzeuge geladen sind (Home Assistant, GitHub, Gmail, Kalender), ob Websuche geht, ob das Agent-Tool da ist. `werkzeuge.md` ordnet Quellen und Agents den Bereichen zu.
-- Gedächtnis durchsuchen: Journal und bekannte Fehler aus `~/.claude/agent-memory/incident-manager/` (siehe `vorlagen.md`, Abschnitt Journal). Gab es das Symptom schon, zuerst die damals bestätigte Lösung prüfen. Fehlt der Ordner, das in einem Halbsatz erwähnen.
-- Bekannte Störungen außerhalb, wenn sie in Frage kommen: bei Cloud-Diensten, Software eines Herstellers und konkreten Fehlercodes Statusseite, Release Notes und bekannte Fehler per Websuche, mit Quelle. Bei rein lokalen Ursachen (leere Batterie, voller Datenträger) entfällt das.
+- Gedächtnis durchsuchen: Journal und bekannte Fehler aus `~/.claude/agent-memory/incident-manager/` (siehe `vorlagen.md`, Abschnitt Journal). Gab es das Symptom schon, zuerst die damals bestätigte Lösung prüfen. Fehlt der Ordner, gibt es noch keine Vorgeschichte. Das gehört nicht in die Antwort, der Ordner entsteht beim ersten Abschluss.
+- Bekannte Störungen außerhalb, wenn sie in Frage kommen: bei Cloud-Diensten, Software eines Herstellers und konkreten Fehlercodes Statusseite, Release Notes und bekannte Fehler per Websuche, mit Quelle. Unter Windows gehören nach einem Patchday und bei Anmelde- oder Vertrauensstellungsfehlern die bekannten Probleme des laufenden Monats in Windows Release Health dazu. Bei rein lokalen Ursachen (leere Batterie, voller Datenträger) entfällt das.
 
 ### 3. Diagnose
 
