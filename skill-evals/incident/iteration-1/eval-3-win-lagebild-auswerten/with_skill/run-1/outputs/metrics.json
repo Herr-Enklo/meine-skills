@@ -1,0 +1,16 @@
+{
+  "tool_calls": {
+    "Bash": 10,
+    "ToolSearch": 1,
+    "WebSearch": 5,
+    "Skill": 1,
+    "Write": 1,
+    "SubagentHandback": 1
+  },
+  "total_tool_calls": 19,
+  "files_created": [
+    "antwort.md"
+  ],
+  "output_chars": 16147,
+  "transcript_chars": 16132
+}

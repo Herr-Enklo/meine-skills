@@ -1,0 +1,138 @@
+{
+  "expectations": [
+    {
+      "text": "Die Antwort beginnt mit einer Statuszeile im Format `INC-JJJJMMTT-HHMM | P<1-4> | <Bereich> | <Status> | <Titel>`",
+      "passed": true,
+      "evidence": "Erste Zeile von antwort.md: `INC-20260928-1420 | P4 | Windows-Software | wartet auf Nutzer | TimeTrack auf PC-117 läuft nur als Administrator`. ID passt zu 28.09.2026 14:20, P4 im Bereich 1-4, Bereich und Status sind gültige Werte laut vorlagen.md, Titel vorhanden. Fünf Felder mit ' | ' getrennt. Die Zeile steht in Backticks, genau wie im Beispiel der Skill-Vorlage."
+    },
+    {
+      "text": "Lokale Administratorrechte werden als Lösung abgelehnt oder ausdrücklich nur als Test bezeichnet, mit Begründung",
+      "passed": true,
+      "evidence": "\"Kurz: Nein, gib ihm keine lokalen Adminrechte.\" Drei Gründe: UAC (\"Es würde nicht einmal helfen ... er müsste es jeden Tag über 'Als Administrator ausführen' starten\"), Risiko (\"Schadsoftware ... bekommt nach einem Klick auf 'Ja' den ganzen Rechner\"), Ursache bleibt (\"Der nächste neue Kollege hätte dasselbe Problem\"). Dazu: \"'Als Administrator ausführen' ... ist ein Test, keine Lösung.\""
+    },
+    {
+      "text": "Als Ursache werden fehlende Schreibrechte des Benutzers auf C:\\ProgramData\\TimeTrack oder config.ini benannt",
+      "passed": true,
+      "evidence": "\"Die Meldung sagt schon ziemlich genau, was los ist: Sein Konto darf `C:\\ProgramData\\TimeTrack\\config.ini` auf PC-117 nicht beschreiben.\" Hypothese 1 führt das auf die Besitzverhältnisse zurück (\"kann der Neue sie nur lesen\")."
+    },
+    {
+      "text": "Es gibt einen lesenden Prüfbefehl für die Berechtigungen (etwa icacls oder Get-Acl auf Ordner oder Datei), bevor etwas geändert wird",
+      "passed": true,
+      "evidence": "PowerShell-Block unter \"Was ich von dir brauche\" mit `icacls $ordner`, `icacls $ini`, `(Get-Acl $ordner).Owner`, `(Get-Acl $ini).Owner`, dazu whoami /groups, VirtualStore und UAC-Registrywerte. Soll als der Kollege in normaler PowerShell auf PC-117 und einem alten Rechner laufen. Die Änderung kommt erst unter \"Danach\". Kleine Einschränkung: Der Block ist als \"Liest nur\" beschriftet, öffnet config.ini aber für den Schreibtest mit ReadWrite, ohne etwas zu schreiben (steht so im Kommentar), und speichert die Ausgabe per Tee-Object in %TEMP%."
+    },
+    {
+      "text": "Die Rechteänderung wird gezielt vorgeschlagen (Ordner oder Datei, Benutzer oder Gruppe) und als Änderung mit Freigabe oder Eingriffsstufe gekennzeichnet",
+      "passed": true,
+      "evidence": "\"Bestätigt sich 1 oder 2, bekommt er (oder die Gruppe, die auf den alten Rechnern berechtigt ist) Änderungsrecht auf `config.ini`. Auf den ganzen Ordner nur, wenn dort keine Programmdateien liegen ...\" Als Änderung gekennzeichnet: \"Vorher werden die bestehenden Rechte mit `icacls ... /save` gesichert, zurück geht es mit `icacls ... /restore`. Das ist eine dauerhafte Änderung am Rechner, deshalb bekommst du den genauen Befehl, sobald die Ausgabe zeigt, wer das Recht braucht.\" Erwartete Wirkung und Prüfung stehen auch da. Die Worte 'Stufe 2' oder 'Freigabe' fallen nicht; bewertet wurde die ausdrückliche Einordnung als dauerhafte Änderung mit Sicherung, Rückweg und Sperre bis zum Befund."
+    },
+    {
+      "text": "Der Unterschied zu den alten Kollegen (Gruppenmitgliedschaft, frühere Rechtevergabe, Installation oder Paket setzt Rechte) wird als Hypothese genannt",
+      "passed": true,
+      "evidence": "Abschnitt \"Hypothesen (alle ungeprüft)\": (1) config.ini wurde auf PC-117 vom Installer, vom Admin-Konto oder vom Vorbesitzer angelegt, \"Die alten Kollegen haben sie auf ihren Rechnern vermutlich beim ersten Start selbst angelegt\"; (2) \"Auf den alten Rechnern hat jemand Schreibrechte gesetzt, etwa ein älteres Paket, ein früherer Handgriff oder eine AD-Gruppe\"; (3) VirtualStore oder Admin ohne UAC. Deckt Gruppenmitgliedschaft, frühere Rechtevergabe und Paket ab und markiert alles als Hypothese."
+    },
+    {
+      "text": "Die Antwort stellt höchstens drei Rückfragen",
+      "passed": true,
+      "evidence": "\"Dazu zwei Fragen:\" 1. \"Tippst du bei 'Als Administrator ausführen' deine eigenen Admin-Anmeldedaten ein? Wenn ja: Unter welchem Namen stehen seine heutigen Buchungen in TimeTrack?\" 2. \"Arbeitet außer ihm noch jemand an PC-117 (Vertretung, Schicht)?\" Das sind zwei nummerierte Rückfragen. Auch wenn man die bedingte Nachfrage in Frage 1 einzeln zählt, sind es drei Fragesätze, also noch im Rahmen. Die Bitte, die Befehlsausgabe zu schicken, ist eine Arbeitsanweisung und keine Frage."
+    }
+  ],
+  "summary": {
+    "passed": 7,
+    "failed": 0,
+    "total": 7,
+    "pass_rate": 1.0
+  },
+  "execution_metrics": {
+    "tool_calls": {
+      "Bash": 7,
+      "ToolSearch": 2,
+      "WebSearch": 5,
+      "WebFetch": 2,
+      "Write": 1,
+      "SubagentHandback": 1
+    },
+    "total_tool_calls": 18,
+    "files_created": [
+      "antwort.md"
+    ],
+    "output_chars": 8391,
+    "transcript_chars": 5276
+  },
+  "claims": [
+    {
+      "claim": "Mit UAC arbeitet auch ein lokaler Admin ohne Erhöhung mit eingeschränkten Rechten, Adminrechte würden das Problem also nicht beseitigen",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Stimmt, ohne Erhöhung erhalten Prozesse das gefilterte Token. Das beobachtete 'Zugriff verweigert' schließt außerdem Virtualisierung für diesen Prozess aus."
+    },
+    {
+      "claim": "In C:\\ProgramData dürfen Benutzer Dateien anlegen, Vollzugriff hat nur der Ersteller (CREATOR OWNER), andere Benutzer dürfen nur lesen",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Entspricht der Standard-ACL (Users RX + WD/AD auf Container, CREATOR OWNER F). Ungenau ist nur 'Vollzugriff hat nur, wer die Datei angelegt hat': SYSTEM und Administratoren haben ebenfalls F. Gemeint sind erkennbar normale Benutzer."
+    },
+    {
+      "claim": "Gibt der Admin bei 'Als Administrator ausführen' eigene Anmeldedaten ein, läuft TimeTrack unter dem Admin-Konto, und Buchungen könnten beim falschen Benutzer landen",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Stimmt: Bei der UAC-Anmeldeabfrage für Standardbenutzer läuft der Prozess unter dem eingegebenen Konto. Guter Hinweis, den die Baseline nicht gibt."
+    },
+    {
+      "claim": "32-Bit-Programme ohne Manifest werden in %LOCALAPPDATA%\\VirtualStore umgeleitet, Programme mit Manifest nicht; EnableLUA und EnableVirtualization unter HKLM\\...\\Policies\\System",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Pfad und Registrywerte stimmen."
+    },
+    {
+      "claim": "Der Prüfblock 'liest nur'",
+      "type": "quality",
+      "verified": false,
+      "evidence": "Nur fast. Der Schreibtest öffnet config.ini mit ReadWrite, ohne Inhalt zu ändern, und Tee-Object legt %TEMP%\\timetrack-rechte.txt an. Beides wird offen genannt und ist harmlos, die Beschriftung 'Liest nur' ist trotzdem etwas zu weit."
+    },
+    {
+      "claim": "Sicherung und Rücknahme der Rechte mit icacls /save und /restore",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Syntax gibt es so. /restore wird auf den übergeordneten Ordner angewendet; das ist hier mit '...' ausgespart und soll mit dem späteren genauen Befehl kommen."
+    },
+    {
+      "claim": "P4: ein Nutzer, Workaround vorhanden; Monatsende ist Mittwoch, 30.09.",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Laut prioritaet.md ergibt geringe Auswirkung mit mittlerer Dringlichkeit P4. Da der 28.09.2026 ein Montag ist, fällt der 30.09. auf einen Mittwoch."
+    },
+    {
+      "claim": "Gedächtnisordner fehlt, Websuche fand keinen bekannten TimeTrack-Fehler",
+      "type": "process",
+      "verified": true,
+      "evidence": "Das Transkript zeigt `ls ~/.claude/agent-memory/incident-manager/` und 5 WebSearch-Aufrufe, darunter 'TimeTrack Zeiterfassung config.ini ProgramData Zugriff verweigert'. Die Ausgaben selbst sind nicht protokolliert."
+    },
+    {
+      "claim": "Quellen (Microsoft Learn zu UAC, ProgramData-Standardrechten, icacls, Procmon)",
+      "type": "process",
+      "verified": true,
+      "evidence": "Das Transkript zeigt WebFetch auf die UAC-Seite und die ProgramData-Q&A-Seite."
+    }
+  ],
+  "user_notes_summary": {
+    "uncertainties": [],
+    "needs_review": [],
+    "workarounds": []
+  },
+  "eval_feedback": {
+    "suggestions": [
+      {
+        "assertion": "Die Rechteänderung wird gezielt vorgeschlagen (Ordner oder Datei, Benutzer oder Gruppe) und als Änderung mit Freigabe oder Eingriffsstufe gekennzeichnet",
+        "reason": "Die Formulierung 'mit Freigabe oder Eingriffsstufe' lässt Spielraum. Der Lauf nennt weder 'Stufe 2' noch 'Freigabe', sondern 'dauerhafte Änderung' samt /save und /restore. Prüfbarer wäre: 'nennt einen Rückweg (z. B. icacls /save) und macht die Änderung vom Prüfergebnis abhängig'."
+      },
+      {
+        "assertion": "Die Antwort stellt höchstens drei Rückfragen",
+        "reason": "Das Kriterium ist auch mit null Fragen erfüllt und trennt deshalb kaum. Es schützt nur vor zu vielen Fragen, nicht vor fehlenden sinnvollen Fragen."
+      },
+      {
+        "reason": "Kein Kriterium prüft den Hinweis, dass 'Als Administrator ausführen' mit fremden Admin-Anmeldedaten TimeTrack unter dem falschen Konto startet und Buchungen dort landen könnten. Das ist eine inhaltlich wichtige Folge des Workarounds, die nur der Skill-Lauf nennt."
+      }
+    ],
+    "overall": "Die Kriterien decken Kern (keine Adminrechte, Ursache, lesende Prüfung, gezielte Änderung) gut ab. Die Formulierung zur Eingriffsstufe sollte schärfer werden, das Rückfragen-Kriterium trennt kaum."
+  }
+}

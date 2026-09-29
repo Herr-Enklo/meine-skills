@@ -1,0 +1,170 @@
+{
+  "expectations": [
+    {
+      "text": "Die Antwort beginnt mit einer Statuszeile im Format `INC-JJJJMMTT-HHMM | P<1-4> | <Bereich> | <Status> | <Titel>`, deren Zeit der Uhrzeit aus der Nachricht (08:25) entspricht",
+      "passed": true,
+      "evidence": "Zeile 1: `INC-20260929-0825 | P1 | Windows-System | wartet auf Nutzer | Leipzig: Domänenanmeldung scheitert, ca. 60 Nutzer`. Das sind fünf Felder in der geforderten Reihenfolge, und 20260929-0825 passt zu 29.09.2026, 08:25. Die Zeile steht in Inline-Code-Backticks wie im Skill-Beispiel (vorlagen.md). Der sichtbare Text entspricht genau dem Format."
+    },
+    {
+      "text": "Die Priorität ist P1 und der Vorfall wird als Major Incident behandelt",
+      "passed": true,
+      "evidence": "Einordnung: 'Das ist P1 und ein Major Incident, weil ein ganzer Standort nicht arbeiten kann (Auswirkung hoch, Dringlichkeit hoch)'. Auch das Vorgehen entspricht einem Major Incident: Rollen werden verteilt ('Du übernimmst die Technik. Eine zweite Person ... übernimmt die Kommunikation'), die Zeitleiste steht ('08:00 Beginn, 08:25 Meldung, INC eröffnet'), und es gibt eine Nutzerinfo."
+    },
+    {
+      "text": "Die Hypothesen umfassen die Erreichbarkeit der Domänencontroller vom Standort aus (Standortverbindung, VPN, DC am Standort) und DNS",
+      "passed": true,
+      "evidence": "Ursache C: 'Netzweg zwischen Leipzig und den DCs (Leitung, VPN, Firewall, DNS am Standort)'. Ursache B: 'DC in Leipzig gestört oder aus Snapshot oder Backup zurückgesetzt'. DNS wird konkret geprüft über Port 53 und den DNS-Dienst am DC sowie mit `Resolve-DnsName \"_ldap._tcp.dc._msdcs.$dom\" -Type SRV`. Als Befund ist 'eine leere SRV-Abfrage' genannt."
+    },
+    {
+      "text": "Zeitabweichung oder Zeitdienst (Kerberos, w32tm) wird als Hypothese oder Prüfung genannt",
+      "passed": true,
+      "evidence": "Ursache E: 'Weichen Client, Leipziger DC und Zentrale in `w32tm` um mehr als 300 Sekunden voneinander ab, scheitert Kerberos.' Prüfungen: `w32tm /stripchart /computer:$($dc.HostName) /samples:3 /dataonly` im Zentrale-Block und `w32tm /query /status` im Client-Block."
+    },
+    {
+      "text": "Es gibt konkrete Prüfbefehle, die aus der Zentrale laufen (etwa nltest, Test-NetConnection zu den DCs, dcdiag, repadmin, Resolve-DnsName für SRV-Einträge)",
+      "passed": true,
+      "evidence": "Block 4 'Zentrale: auf deinem Admin-PC mit RSAT': Test-NetConnection zu den Leipziger DCs auf den Ports 53/88/389/445, `dcdiag /s:... /test:Advertising /test:NetLogons /test:Services /test:Replications` und `repadmin /replsummary`. Dazu w32tm /stripchart, Get-WinEvent für 2095/2103, 1074/6005/6008 und 4743 sowie Get-ADObject für gelöschte Computerkonten. nltest und die SRV-Abfrage stehen im Leipzig-Block 5, die zentralen Befehle reichen aber für das Kriterium."
+    },
+    {
+      "text": "Ein Entwurf für eine Nutzerinfo an die Betroffenen ist enthalten oder angeboten",
+      "passed": true,
+      "evidence": "Abschnitt 1 enthält einen versandfertigen Text: 'Betreff: Anmeldung am PC in Leipzig – gestört ... Was Sie tun können: Den Rechner bitte nicht wiederholt neu starten ... Nächste Information: 09:15 Uhr'. Er soll ohne Mail verteilt werden ('über die Standortleitung, per Telefon, Aushang oder Teams auf dem Handy')."
+    },
+    {
+      "text": "Massenhaftes Neu-Beitreten zur Domäne oder Zurücksetzen von Computerkonten wird nicht ohne Freigabe als Sofortmaßnahme angeordnet",
+      "passed": true,
+      "evidence": "Abschnitt 2: 'Nehmt vorerst keine Rechner neu in die Domäne auf, setzt keine Computerkonten zurück und lasst `Test-ComputerSecureChannel -Repair` weg.' Eingriffe am DC und der Update-Workaround sind als 'Stufe 2 und nur mit deinem Okay' gekennzeichnet. Für gelöschte Konten heißt es: 'aus dem AD-Papierkorb zurück, statt die Rechner neu aufzunehmen'."
+    },
+    {
+      "text": "Eine Sofortmaßnahme oder ein Workaround zur Wiederherstellung wird genannt, bevor die tiefe Ursachenanalyse beginnt",
+      "passed": true,
+      "evidence": "Abschnitt 3 'Übergangslösung an einem Rechner testen': Netzwerkkabel ziehen, mit der zwischengespeicherten Anmeldung anmelden, wieder verbinden, dann 'Wenn es klappt, schreibe ich dir die Anleitung für alle'. Das steht vor der Ursachenanalyse in Abschnitt 4 bis 6. Die Grenze bei 'kein Anmeldeserver' (nur mit früherer Anmeldung am Gerät) ist richtig benannt."
+    }
+  ],
+  "summary": {
+    "passed": 8,
+    "failed": 0,
+    "total": 8,
+    "pass_rate": 1.0
+  },
+  "execution_metrics": {
+    "tool_calls": {
+      "Bash": 7,
+      "ToolSearch": 2,
+      "WebSearch": 5,
+      "WebFetch": 2,
+      "Write": 1,
+      "SubagentHandback": 1
+    },
+    "total_tool_calls": 18,
+    "files_created": [
+      "antwort.md"
+    ],
+    "output_chars": 11985,
+    "transcript_chars": 6252,
+    "errors_encountered": 0
+  },
+  "timing": {
+    "executor_duration_seconds": 473.3,
+    "total_duration_seconds": 473.3,
+    "total_tokens": 133684
+  },
+  "claims": [
+    {
+      "claim": "'Kein Anmeldeserver' heißt: kein DC erreichbar und keine zwischengespeicherte Anmeldung. 'Vertrauensstellung' heißt: DC antwortet, lehnt aber das Computerkonto ab.",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Deckt sich mit dem Verhalten von Windows (Anmeldung mit zwischengespeicherten Daten, sicherer Kanal von Netlogon)."
+    },
+    {
+      "claim": "`0x51f` bei `nltest /sc_query` bedeutet 'kein Anmeldeserver'",
+      "type": "factual",
+      "verified": true,
+      "evidence": "ERROR_NO_LOGON_SERVERS = 1311 = 0x51F."
+    },
+    {
+      "claim": "Kerberos scheitert bei mehr als 300 Sekunden Zeitabweichung",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Die Standardtoleranz für Kerberos (Maximum tolerance for computer clock synchronization) beträgt 5 Minuten."
+    },
+    {
+      "claim": "Verzeichnisdienst-Ereignisse '2095/2103/1988 (USN-Rollback, Wiederherstellung)'",
+      "type": "factual",
+      "verified": false,
+      "evidence": "2095 (USN-Rollback erkannt) und 2103 (Datenbank auf nicht unterstütztem Weg wiederhergestellt) stimmen. 1988 meldet aber verwaiste Objekte (lingering objects), weder USN-Rollback noch Wiederherstellung. Kleiner Zuordnungsfehler, der Befehl selbst bleibt nützlich."
+    },
+    {
+      "claim": "NETLOGON 5722/5723 auf dem DC und Security 4743 = Computerkonto gelöscht",
+      "type": "factual",
+      "verified": true,
+      "evidence": "5722/5723 melden eine gescheiterte Sitzungseinrichtung oder ein fehlendes Vertrauenskonto, 4743 ist 'A computer account was deleted'."
+    },
+    {
+      "claim": "`SecurityServicesRunning` mit 1 = Credential Guard aktiv",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Win32_DeviceGuard: Wert 1 = Credential Guard."
+    },
+    {
+      "claim": "dcdiag mit mehreren /test:-Schaltern, nltest /dsgetsite, /dsgetdc, /sc_query, Test-ComputerSecureChannel ohne -Repair: Syntax und Wirkung",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Die Syntax stimmt, alle Befehle lesen nur. `$seit = (Get-Date).Date.AddHours(-6)` ergibt wie kommentiert gestern 18:00."
+    },
+    {
+      "claim": "Die Befehle lesen alle nur",
+      "type": "quality",
+      "verified": true,
+      "evidence": "Beide Blöcke enthalten nur Get-*, Test-*, nltest-Abfragen, dcdiag, repadmin /replsummary und w32tm /stripchart bzw. /query. Nichts davon ändert etwas."
+    },
+    {
+      "claim": "Bekanntes Microsoft-Problem: September-Update KB5124008 (Windows 11 24H2/25H2) bzw. KB5124012 (26H1) mit 'Machine Identity Isolation' trennt die Vertrauensstellung",
+      "type": "factual",
+      "verified": false,
+      "evidence": "Im Transkript unbelegt. Es zeigt eine WebSearch ('Windows release health known issue ... September 2026') und WebFetch-Abrufe von BleepingComputer und support.microsoft.com/.../kb5129194-windows-11-26h1-..., aber nicht deren Ergebnisse. Die KB-Nummern 5124008 und 5124012 kommen im Transkript nicht vor. Außerdem passt die zitierte Quelle (KB5129194 für 26H1, 14.09.2026) nicht zur Angabe 'KB5124012 (26H1)' im Text. Ohne Quellenprüfung lässt sich das nicht bestätigen."
+    },
+    {
+      "claim": "Erkennungsmerkmale und Workaround: `MachineIdentityIsolation` = 2, Domänenmodus unter Windows Server 2025, Einstellung zurücknehmen; 'Microsoft schreibt, dass diese Offline-Anmeldung weiter funktionieren kann'",
+      "type": "factual",
+      "verified": false,
+      "evidence": "Im Transkript unbelegt, weil dort nur die WebFetch-Prompts stehen und keine Inhalte. Die Quellen sind in antwort.md verlinkt, der Inhalt ist nicht nachprüfbar."
+    },
+    {
+      "claim": "5 Websuchen und 2 WebFetch-Abrufe von Seiten aus den Suchergebnissen, keine Adresse aus der Nutzernachricht",
+      "type": "process",
+      "verified": true,
+      "evidence": "Das Transkript listet genau 5 WebSearch- und 2 WebFetch-Aufrufe. Die Nutzernachricht enthält keine URL."
+    }
+  ],
+  "user_notes_summary": {
+    "uncertainties": [
+      "In antwort.md selbst benannt: Ob Netzlaufwerke, Drucker und Fachanwendungen nach der Offline-Anmeldung gehen, ist 'nicht geprüft'. Die Einstufung folgt der Standardmatrix, eigene Prioritätsregeln des Arbeitgebers sind unbekannt."
+    ],
+    "needs_review": [
+      "Die Angaben zu KB5124008/KB5124012, Machine Identity Isolation und Microsofts Workaround gegen die Quellen prüfen. Das Transkript enthält keine Abrufergebnisse, und die KB-Zuordnung widerspricht der zitierten KB5129194."
+    ],
+    "workarounds": [
+      "Es gibt keine user_notes.md. Laut Handback fehlte der Journal-Ordner des Skills, deshalb wurde kein Journal geführt (so vom Auftrag verlangt)."
+    ]
+  },
+  "eval_feedback": {
+    "suggestions": [
+      {
+        "assertion": "Massenhaftes Neu-Beitreten zur Domäne oder Zurücksetzen von Computerkonten wird nicht ohne Freigabe als Sofortmaßnahme angeordnet",
+        "reason": "Das Kriterium ist negativ formuliert und würde auch von einer Antwort erfüllt, die das Thema gar nicht anspricht. Besser: Die Antwort warnt ausdrücklich vor Neuaufnahme, Kontozurücksetzung und Test-ComputerSecureChannel -Repair, solange die Ursache offen ist."
+      },
+      {
+        "reason": "Kein Kriterium prüft, ob eingreifende Schritte am DC (vom Netz nehmen, herunterfahren, Dienste starten) nur mit Freigabe und mit Weg zurück empfohlen werden. Genau hier unterscheiden sich die Läufe: without_skill ordnet 'DC sofort vom Netz nehmen' direkt an, with_skill kennzeichnet es als 'Stufe 2 und nur mit deinem Okay'."
+      },
+      {
+        "reason": "Kein Kriterium prüft, ob Aussagen über aktuelle Microsoft-Updates und bekannte Probleme belegt und richtig sind. with_skill nennt KB5124008/KB5124012 und Registry-Werte zu Machine Identity Isolation. Im Transkript stehen nur die Abrufe, nicht deren Ergebnisse. Vorschlag: Kriterium 'Update-bezogene Ursachen werden nur mit genannter Quelle behauptet', und die WebFetch-Ergebnisse gehören ins Transkript."
+      },
+      {
+        "assertion": "Ein Entwurf für eine Nutzerinfo an die Betroffenen ist enthalten oder angeboten",
+        "reason": "Ein Satz mit Stichpunkten für den Anruf erfüllt das Kriterium schon. Schärfer wäre: ein versandfertiger Text mit Uhrzeit der nächsten Info und einem Kanal, der ohne PC-Anmeldung funktioniert."
+      }
+    ],
+    "overall": "Alle 8 Kriterien sind klar belegt. Sie prüfen vor allem, ob Inhalte vorkommen, nicht ob sie stimmen. Ungeprüft bleiben die zentrale Update-Hypothese A (im Transkript nicht belegt) und die Freigabepflicht für Eingriffe am DC."
+  }
+}

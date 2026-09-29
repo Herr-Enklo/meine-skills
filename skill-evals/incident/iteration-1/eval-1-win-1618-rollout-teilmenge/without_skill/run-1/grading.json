@@ -1,0 +1,144 @@
+{
+  "expectations": [
+    {
+      "text": "Die Antwort beginnt mit einer Statuszeile im Format `INC-JJJJMMTT-HHMM | P<1-4> | <Bereich> | <Status> | <Titel>`, deren Zeit der Uhrzeit aus der Nachricht (10:40) entspricht und nicht einer UTC-Zeit",
+      "passed": false,
+      "evidence": "Keine Statuszeile. antwort.md beginnt mit \"Kurz eingeordnet: 1618 heißt `ERROR_INSTALL_ALREADY_RUNNING` [...]\". Eine Incident-ID gibt es nirgends in der Antwort."
+    },
+    {
+      "text": "Die Priorität ist P3 oder P4 und wird mit Auswirkung und Dringlichkeit begründet",
+      "passed": false,
+      "evidence": "Nur \"Die Priorität ist niedrig, und bis morgen früh ist das gut zu schaffen.\" Es gibt keine Stufe P3/P4 und keine getrennte Begründung nach Auswirkung und Dringlichkeit."
+    },
+    {
+      "text": "1618 wird richtig als 'eine andere Windows-Installer-Installation läuft bereits' erklärt",
+      "passed": true,
+      "evidence": "\"1618 heißt `ERROR_INSTALL_ALREADY_RUNNING` und kommt vom Windows Installer. Als dein Paket auf diesen 14 Clients starten wollte, lief dort gerade eine andere MSI-Installation, und Windows lässt immer nur eine gleichzeitig zu.\""
+    },
+    {
+      "text": "Als Prüfweg wird genannt, welche andere Installation zur Fehlerzeit lief: MsiInstaller-Ereignisse 1040/1042 oder Windows-Update-Ereignisse im selben Zeitfenster",
+      "passed": true,
+      "evidence": "Skript fragt Provider MsiInstaller (Application) und Microsoft-Windows-WindowsUpdateClient (System) ab. Erklärung: \"MsiEreignisse: Kurz vor dem Fehlerzeitpunkt steht dort, welches Produkt gerade installiert wurde. 1040/1042 sind Beginn und Ende einer Installer-Transaktion [...]\" und \"WindowsUpdate: Installationen um dieselbe Uhrzeit sprechen für eine Überschneidung mit dem Update-Fenster.\""
+    },
+    {
+      "text": "Die Antwort schlägt vor, betroffene und erfolgreiche Clients zu vergleichen (was die 14 gemeinsam haben)",
+      "passed": false,
+      "evidence": "Nur Gemeinsamkeiten innerhalb der 14: \"Exportier die 14 Clients aus Empirum und schau, ob sie etwas gemeinsam haben: Standort, OU, Update-Ring, zusätzliche Pakete in derselben Nacht.\" Einen Abgleich mit den 216 erfolgreichen Clients schlägt die Antwort nicht vor. Das Skript läuft nur gegen die 14 (`$clients = Get-Content C:\\temp\\npp_1618.txt`), einen erfolgreichen Vergleichsclient gibt es nicht. Die 216 dienen nur als Argument (\"Am Paket selbst liegt das nicht, sonst wären nicht 216 Clients sauber durchgelaufen\"). Beim strengen Maßstab fehlt damit der Vergleich betroffen gegen erfolgreich."
+    },
+    {
+      "text": "Für die Clients gibt es einen nur lesenden Befehlsblock oder das Lagebild-Skript mit dem Zeitfenster der Rollout-Nacht",
+      "passed": true,
+      "evidence": "PowerShell-Block mit `$ab = Get-Date '2026-09-28 20:00'` (\"Beginn des Rollout-Fensters letzte Nacht, bitte anpassen\") und Invoke-Command auf die 14 Clients. Er enthält nur lesende Aufrufe: Get-WinEvent mit StartTime = $ab, Test-Path auf Reboot-Schlüssel, Get-CimInstance Win32_Process und Get-Item VersionInfo."
+    },
+    {
+      "text": "Die Antwort stellt höchstens drei Rückfragen",
+      "passed": true,
+      "evidence": "Außerhalb des Codes enthält die Antwort keinen Fragesatz (das einzige '?' steht in einem Regex im Skript). Höchstens das bedingte Angebot \"Wenn du mir sagst, wie das Paket gebaut ist (Empirum-Skript, PowerShell-Wrapper, MSI), schreibe ich dir die passende Variante\" zählt als implizite Rückfrage, also 0 bis 1."
+    },
+    {
+      "text": "Erneutes Verteilen des Pakets wird nicht sofort angeordnet, sondern als Schritt nach Klärung der Ursache oder mit Freigabe dargestellt",
+      "passed": true,
+      "evidence": "Auf \"## 1. Ursache prüfen\" folgt \"## 2. Die 14 Clients nachinstallieren\": \"In Empirum das Paket nur für diese 14 Clients neu anstoßen\" mit Zeitpunkt \"heute nach Feierabend oder heute Nacht, aber nicht im selben Zeitfenster, falls Schritt 1 zeigt [...]\", vorher Neustart bei hängendem msiexec oder ausstehendem Neustart aus Schritt 1. Das Neuverteilen steht also als Schritt nach der Ursachenprüfung, nicht sofort. Eine Freigabe holt die Antwort nicht ein, und das Neuverteilen hängt nicht davon ab, ob die Ursache tatsächlich gefunden wird."
+    },
+    {
+      "text": "Die Antwort enthält keinen als erledigt formulierten Tickettext (höchstens einen ausdrücklich als Entwurf markierten)",
+      "passed": true,
+      "evidence": "Die Antwort enthält keinen Tickettext."
+    }
+  ],
+  "summary": {
+    "passed": 6,
+    "failed": 3,
+    "total": 9,
+    "pass_rate": 0.67
+  },
+  "execution_metrics": {
+    "tool_calls": {
+      "ToolSearch": 1,
+      "WebSearch": 3,
+      "Bash": 1,
+      "Write": 1,
+      "SubagentHandback": 1
+    },
+    "total_tool_calls": 7,
+    "files_created": [
+      "antwort.md"
+    ],
+    "output_chars": 7041,
+    "transcript_chars": 3075
+  },
+  "timing": {
+    "executor_duration_seconds": 174.3,
+    "total_duration_seconds": 174.3,
+    "total_tokens": 68970
+  },
+  "claims": [
+    {
+      "claim": "Am Paket selbst liegt das nicht, sonst wären nicht 216 Clients sauber durchgelaufen. Es war eine Kollision im Zeitfenster.",
+      "type": "quality",
+      "verified": false,
+      "evidence": "Vorschnelle Festlegung. Ein Paket, das intern msiexec aufruft (z. B. Deinstallation einer MSI-Vorversion), kann 1618 nur auf Clients mit bestimmter Vorversion erzeugen. Die Antwort räumt das später selbst ein (\"es ruft msiexec für etwas anderes auf, etwa zum Deinstallieren der Vorversion. Genau um diesen Aufruf muss die Warteschleife\")."
+    },
+    {
+      "claim": "Bei 1618 bricht msiexec ab, bevor es etwas ändert, deshalb sollte auf den 14 Clients noch die alte Version laufen",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Gilt für den abgewiesenen msiexec-Aufruf selbst. Die Antwort schränkt den Fall eines vorher abgelaufenen Deinstallationsschritts korrekt ein (\"NppVersion = nicht installiert: Dann hat das Paket die alte Version vorher schon entfernt\")."
+    },
+    {
+      "claim": "MsiInstaller 1040/1042 = Beginn/Ende einer Installer-Transaktion, 11707/11708 = erfolgreiche bzw. fehlgeschlagene Installation",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Entspricht den bekannten MsiInstaller-Ereignis-IDs."
+    },
+    {
+      "claim": "SCCM und Intune behandeln 1618 standardmäßig als 'später erneut versuchen'",
+      "type": "factual",
+      "verified": true,
+      "evidence": "In den Standard-Rückgabecodes von ConfigMgr und Intune Win32 steht 1618 auf Retry."
+    },
+    {
+      "claim": "Der Befehlsblock ist nur lesend",
+      "type": "quality",
+      "verified": true,
+      "evidence": "Nur Get-Content (lokal), Get-WinEvent, Test-Path, Get-CimInstance und Get-Item; nichts ändert die Clients."
+    },
+    {
+      "claim": "Für 8.8.5 gibt es kein offizielles MSI; seit 8.8.8 gibt es ein offizielles MSI",
+      "type": "factual",
+      "verified": false,
+      "evidence": "Ohne Websuche nicht prüfbar. Die Quelle ist ein Blog eines Drittanbieters (Master Packager), der Aufruf wurde im Transkript nur gesucht, nicht abgerufen."
+    },
+    {
+      "claim": "Aktuell ist die 8.9-Reihe, zuletzt 8.9.8",
+      "type": "factual",
+      "verified": false,
+      "evidence": "Nicht prüfbar. Der Lauf mit Skill nennt 8.9.8.1 vom 24.09.2026 (per WebFetch belegt), die Angabe hier ist also möglicherweise leicht veraltet."
+    }
+  ],
+  "user_notes_summary": {
+    "uncertainties": [
+      "Beginn des Rollout-Fensters (28.09. 20:00) als anzupassender Wert gesetzt"
+    ],
+    "needs_review": [
+      "Keine user_notes.md vorhanden."
+    ],
+    "workarounds": []
+  },
+  "eval_feedback": {
+    "suggestions": [
+      {
+        "assertion": "Erneutes Verteilen des Pakets wird nicht sofort angeordnet, sondern als Schritt nach Klärung der Ursache oder mit Freigabe dargestellt",
+        "reason": "Die Baseline besteht, weil das Neuverteilen nummeriert nach 'Ursache prüfen' steht, obwohl es unabhängig vom Ergebnis angeordnet wird und keine Freigabe eingeholt wird. Schärfer wäre: Das Neuverteilen hängt vom Befund ab oder wird ausdrücklich zur Freigabe vorgelegt."
+      },
+      {
+        "reason": "Kein Kriterium prüft, ob nach der wörtlichen Empirum-Fehlerzeile gefragt wird, die das Playbook als wichtigste Angabe nennt. Die Baseline fragt nicht danach."
+      },
+      {
+        "assertion": "Die Antwort stellt höchstens drei Rückfragen",
+        "reason": "Die Baseline besteht es ohne eine einzige Rückfrage. Das Kriterium unterscheidet nicht und sollte mit einem Mindestkriterium zu sinnvollen Rückfragen kombiniert werden."
+      }
+    ],
+    "overall": "Die Kriterien 1, 2 und 5 unterscheiden deutlich zwischen den Läufen. Die Kriterien 7, 8 und 9 erfüllt auch eine Antwort ohne Skill-Vorgehen."
+  }
+}

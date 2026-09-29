@@ -206,6 +206,29 @@ pwsh -NoProfile -File plugins/incident-manager/tests/lagebild-test.ps1
 pwsh -NoProfile -File plugins/incident-manager/tests/startcheck-test.ps1
 ```
 
+### Testkatalog
+
+`plugins/incident-manager/skills/incident/evals/evals.json` enthält acht Szenarien im Format
+des `skill-creator`: fünf Windows-Fälle (1618 auf einem Teil der Clients, 0xc000007b mit
+Frist, Lagebild auswerten, Programm nur als Administrator, Bluescreen am Dock), Phishing mit
+laufender Kontoübernahme, einen Home-Assistant-Sensor und einen Anmeldeausfall an einem
+Standort, zusammen 63 prüfbare Kriterien. Jedes Szenario läuft einmal mit und einmal ohne
+Skill, Prüf-Agents bewerten die Antworten, `skill-evals/incident/iteration-<n>/review.html`
+zeigt Antworten, Bewertungen und die Übersicht.
+
+Erster Durchlauf am 29.09.2026: mit Skill 63 von 63 Kriterien, ohne Skill 46 von 63. Neun
+der Kriterien fragen das Format des Skills ab (Statuszeile, P1–P4), die ein Lauf ohne Skill
+nicht kennen kann; nur die 54 Sachkriterien gezählt steht es 54 zu 46 (100 % zu 85 %). Die
+Unterschiede in der Sache: Läufe ohne Skill ordnen Eingriffe ohne Freigabe an, stellen zu
+viele Rückfragen, bieten den Workaround erst nach der Analyse an und prüfen weder die Wirkung
+eines Ausfalls noch den Vergleich mit funktionierenden Rechnern. Der Skill kostet dafür im
+Mittel etwa 45 000 Tokens und zwei Minuten mehr je Antwort. Welche Kriterien noch nicht
+trennen und was vor dem nächsten Durchlauf zu ändern ist, steht in
+`skill-evals/incident/iteration-1/benchmark.md`.
+
+Hilfsskripte: `tests/eval_transkript.py` macht aus dem Protokoll eines Laufs Transkript und
+Werkzeugstatistik, `tests/eval_testdaten.py` erzeugt die Eingabedatei für das Lagebild-Szenario.
+
 ### Wege zu einem Incident-Agent
 
 Geprüft am 29.09.2026 gegen die Claude-Code-Doku und die Konnektoren dieses Kontos.

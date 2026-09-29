@@ -1,0 +1,134 @@
+{
+  "expectations": [
+    {
+      "text": "Die Antwort beginnt mit einer Statuszeile im Format `INC-JJJJMMTT-HHMM | P<1-4> | <Bereich> | <Status> | <Titel>`, deren Zeit der Uhrzeit aus der Nachricht (10:05) entspricht",
+      "passed": true,
+      "evidence": "Erste Zeile von antwort.md: `INC-20260929-1005 | P2 | Windows-Software | wartet auf Nutzer | LohnPro startet nicht (0xc000007b) auf 3 von 23 Rechnern nach Patchday`. Datum 20260929 und Zeit 1005 passen zu Dienstag, 29.09.2026, 10:05 Uhr, alle fünf Felder vorhanden. Die Zeile steht in Inline-Code-Backticks, das ändert das Format nicht."
+    },
+    {
+      "text": "Die Priorität ist P1 oder P2, begründet mit stillstehender Arbeit oder der Abrechnungsfrist am Donnerstag",
+      "passed": true,
+      "evidence": "\"P2: Auswirkung mittel (drei Personen, aber die Lohnabrechnung ist geschäftskritisch), Dringlichkeit hoch (die drei können gar nicht rechnen).\" Dazu die Frist: \"Frist Donnerstag: Greift der Ausweich-Arbeitsplatz unten nicht und ist bis Mittwochfrüh keine Lösung da, stufe ich auf P1 hoch.\""
+    },
+    {
+      "text": "0xc000007b wird als ungültiges Image-Format erklärt, mit 32/64-Bit-Mischung oder beschädigter bzw. falscher DLL als Richtung",
+      "passed": true,
+      "evidence": "\"0xc000007b heißt STATUS_INVALID_IMAGE_FORMAT: Windows kann beim Start eine Programmdatei nicht laden. Bei einem 32-Bit-Programm ist das meist eine DLL in 64-Bit-Fassung oder eine beschädigte DLL.\""
+    },
+    {
+      "text": "Eine fehlende oder beschädigte Visual-C++-Laufzeit in der x86-Fassung oder eine andere DLL-Abhängigkeit des 32-Bit-Programms wird als Hypothese genannt",
+      "passed": true,
+      "evidence": "H2: \"Die x86-Fassung einer Laufzeitumgebung, meist Visual C++, ist beim Rollout auf den drei Rechnern nicht sauber durchgelaufen ... `FEHLT`, `DEFEKT` oder falsche Architektur bei `MSVCP140.dll` bzw. `VCRUNTIME140*.dll` mit Fundort `SysWOW64`\". Weitere DLL-Hypothesen in H1 (64-Bit-DLL über PATH) und H3 (Programmordner)."
+    },
+    {
+      "text": "Ein Workaround, damit die Löhne bis Donnerstag gerechnet werden können, wird genannt (etwa an einem funktionierenden Rechner oder per Fernzugriff arbeiten)",
+      "passed": true,
+      "evidence": "Sofortmaßnahme 1: \"Eine der drei meldet sich mit ihrem eigenen Konto an einem Rechner an, auf dem LohnPro läuft ... Startet es, arbeiten die drei bis zur Lösung dort, damit ist Donnerstag abgesichert.\" Auch in der Nutzerinfo: \"LohnPro bis auf Weiteres an <Ausweich-Arbeitsplatz> ... nutzen.\""
+    },
+    {
+      "text": "Der Vergleich der drei betroffenen mit den funktionierenden Rechnern ist Teil des Vorgehens",
+      "passed": true,
+      "evidence": "\"Einmal auf einem betroffenen und zum Vergleich auf einem funktionierenden Rechner der Abteilung laufen lassen\"; \"Die Frage ist, was die drei anders haben\"; Nächster Schritt: \"Mit den Dateien beider Rechner vergleiche ich ...\"; Rückfrage 3 fragt nach Unterschieden in der Softwareverteilung zwischen den drei und den 20."
+    },
+    {
+      "text": "Es gibt einen konkreten, nur lesenden Prüfweg für die betroffenen Rechner, der fehlende DLLs oder die Architektur der geladenen DLLs prüft (etwa windows-startcheck.ps1, Importtabelle, PATH-Vergleich), nicht nur allgemeine Fragen",
+      "passed": true,
+      "evidence": "Befehlsblock ruft `windows-startcheck.ps1 -Programm 'LohnPro' -Seit '2026-09-28 12:00'` und `windows-lagebild.ps1` auf, mit Hinweis \"Der Block liest nur und ändert nichts\". H1 bis H3 sagen, woran man es erkennt (`FALSCHE ARCHITEKTUR (Programm ist x86)` mit Fundort `PATH: …`, `FEHLT`/`DEFEKT` bei MSVCP140.dll). Gegengeprüft: Das Skript liest laut Kopf die Importtabelle, meldet \"FEHLT\", \"DEFEKT\" und \"FALSCHE ARCHITEKTUR (Programm ist ...)\" und hat die Abschnitte 'Programmordner: andere Architektur oder kürzlich geändert', 'Installierte Visual-C++-Laufzeiten' und 'PATH' (\"Ändert nichts.\"). Einschränkung: Der Nutzer muss die Skripte erst aus dem Skill-Ordner auf den Rechner kopieren."
+    },
+    {
+      "text": "Die Antwort stellt höchstens drei Rückfragen",
+      "passed": true,
+      "evidence": "Nur Zeile 58 enthält Fragezeichen, zwei Fragen in Punkt 3 (Inhalt des Rollouts; weicht die Softwareverteilung für die drei ab?). Dazu kommt eine indirekte Frage in Punkt 1 (\"Wie der Ausweich-Test aus Schritt 1 ausgegangen ist\"), also 3 echte Rückfragen. Punkt 2 ist eine Bitte um Dateien, keine Frage. Das ist knapp an der Grenze, weil Punkt 3 zwei Fragen bündelt."
+    },
+    {
+      "text": "Deinstallation von Updates oder Neuinstallation des Programms wird nicht ohne Freigabe angeordnet",
+      "passed": true,
+      "evidence": "\"An den drei Rechnern bis zum Lagebild nichts reparieren, neu installieren oder neu starten, sonst sind die Spuren weg.\" Und: \"Jede Änderung stimme ich vorher mit dir ab, mit erwarteter Wirkung und Weg zurück.\" Keine Deinstallation und keine Neuinstallation angeordnet. Nur ein Neustart wird für den Fall eines ausstehenden Neustarts vorgeschlagen."
+    }
+  ],
+  "summary": {
+    "passed": 9,
+    "failed": 0,
+    "total": 9,
+    "pass_rate": 1.0
+  },
+  "execution_metrics": {
+    "tool_calls": {
+      "Bash": 7,
+      "ToolSearch": 1,
+      "WebSearch": 5,
+      "Write": 1,
+      "SubagentHandback": 1
+    },
+    "total_tool_calls": 15,
+    "files_created": [
+      "antwort.md"
+    ],
+    "output_chars": 8973,
+    "transcript_chars": 4612
+  },
+  "timing": {
+    "total_tokens": 136595,
+    "executor_duration_seconds": 318.9,
+    "total_duration_seconds": 318.9
+  },
+  "claims": [
+    {
+      "claim": "0xc000007b ist STATUS_INVALID_IMAGE_FORMAT; typisch ist eine DLL, deren Architektur nicht zum Prozess passt",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Stimmt mit dem NTSTATUS-Wert 0xC000007B überein."
+    },
+    {
+      "claim": "Der Befehlsblock liest nur und ändert nichts",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Kopf von windows-startcheck.ps1: \"Ändert nichts.\" Die Skripte schreiben nur ihre Ergebnisdatei nach %TEMP% (Out-File). Die Softwareliste ist ein reines Get-ItemProperty."
+    },
+    {
+      "claim": "Im Lagebild erscheinen MsiInstaller 1033/11708, WindowsUpdateClient 20, 'Neustart ausstehend' und der UBR",
+      "type": "factual",
+      "verified": true,
+      "evidence": "windows-lagebild.ps1 filtert MsiInstaller-IDs 1033 und 11708 sowie WindowsUpdateClient-IDs 19, 20 und 43, hat den Abschnitt 'Neustart ausstehend, laufende Installationen' und gibt 'Build ... .UBR' aus."
+    },
+    {
+      "claim": "Zu LohnPro 12.4 habe ich öffentlich weder Herstellerhinweise noch bekannte Fehler mit 0xc000007b gefunden",
+      "type": "process",
+      "verified": true,
+      "evidence": "Transkript: WebSearch \"LohnPro 12.4 Lohnabrechnung Software 0xc000007b\"."
+    },
+    {
+      "claim": "KB5124008 ist das Windows-11-Update vom 8. September 2026 (24H2/25H2), 0xc000007b steht nicht unter seinen bekannten Problemen; Nebenbefund Domänen-Vertrauensstellung/Credential Guard und USB-Audio Code 10",
+      "type": "factual",
+      "verified": false,
+      "evidence": "Ohne Websuche nicht prüfbar. Laut Transkript stammen die Angaben aus zwei Suchen. Das Datum passt zum Patchday (zweiter Dienstag im September 2026). Die Antwort sagt selbst, dass die Release-Health-Seite nicht vollständig gelesen wurde."
+    },
+    {
+      "claim": "Liegt die EXE für alle auf demselben Netzlaufwerk, kann H3 praktisch nicht die Ursache sein",
+      "type": "quality",
+      "verified": true,
+      "evidence": "Folgerichtig: Ein gemeinsamer Programmordner auf dem Netzlaufwerk wäre für alle 23 gleich."
+    }
+  ],
+  "user_notes_summary": {
+    "uncertainties": [],
+    "needs_review": [],
+    "workarounds": []
+  },
+  "eval_feedback": {
+    "suggestions": [
+      {
+        "assertion": "Die Antwort stellt höchstens drei Rückfragen",
+        "reason": "Die Zählregel ist offen: Zählen nummerierte Punkte, Fragesätze oder auch indirekte Bitten wie \"Wie der Ausweich-Test ausgegangen ist\"? Hier bündelt Punkt 3 zwei Fragen, und das Ergebnis liegt je nach Lesart bei 2, 3 oder 4. Eine feste Regel, z. B. \"jeder Satz, der eine Antwort verlangt\", macht das Kriterium eindeutig."
+      },
+      {
+        "assertion": "Deinstallation von Updates oder Neuinstallation des Programms wird nicht ohne Freigabe angeordnet",
+        "reason": "Spuren zu sichern (vor der Diagnose nichts ändern, nicht als Erstes neu starten) ist bei diesem Fall ein wichtiges Unterscheidungsmerkmal. Diese Antwort tut das ausdrücklich. Kein Kriterium prüft es, denn Reparatur, Neustart oder DISM/sfc vor der Diagnose fallen nicht unter Deinstallation/Neuinstallation."
+      },
+      {
+        "reason": "Kein Kriterium prüft, ob der Prüfweg ohne den Skill-Ordner ausführbar ist. Diese Antwort setzt voraus, dass der Nutzer die Skripte aus skills/incident/scripts/ kopieren kann. Ein Kriterium wie \"Befehle sind direkt ausführbar oder die Bezugsquelle der Skripte ist klar\" würde das abdecken. Auch der Hinweis auf ein Hersteller-Ticket wegen der Frist wird nicht geprüft."
+      }
+    ],
+    "overall": "Die Kriterien treffen den Fall gut. Bei den Rückfragen fehlt eine feste Zählregel, und das Sichern von Spuren vor Änderungen wird nicht geprüft."
+  }
+}
