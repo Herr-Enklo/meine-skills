@@ -33,7 +33,7 @@ const heuristicCss = (gate) =>
     `[${HIDE_ATTR}]:not(:root[${gate}] *){display:none!important}`,
     // Scroll-Sperre eines ausgeblendeten Cookie-Hinweises aufheben (nur wenn das Inhaltsskript
     // das Attribut setzt, und nie während Pause oder Ausnahme).
-    `:root[${SCROLL_ATTR}]:not([${gate}]),:root[${SCROLL_ATTR}]:not([${gate}])>body{overflow:auto!important;overflow-y:auto!important}`,
+    `:root[${SCROLL_ATTR}]:not([${gate}]),:root[${SCROLL_ATTR}]:not([${gate}])>body{overflow:auto!important;overflow-y:auto!important;pointer-events:auto!important}`,
     `:root[${SCROLL_ATTR}="fixed"]:not([${gate}])>body{position:relative!important;top:auto!important}`,
   ].join('\n');
 const UPDATE_ALARM = 'listen-aktualisieren';
@@ -569,9 +569,11 @@ const contentHandlers = {
    */
   async cmpRahmen(msg, sender) {
     if (!sender.frameId || !sender.tab || !['normal', 'bezahl', 'knopf'].includes(msg.art)) return { ok: false };
-    const reply = await chrome.tabs
-      .sendMessage(sender.tab.id, { type: 'werbefrei:cmp', art: msg.art }, { frameId: 0 })
-      .catch(() => null);
+    // frei: Abo-Abfrage in einem anderen Rahmen als Sourcepoint (gmx.net); die Seite muss davon nichts wissen.
+    if (msg.frei && msg.art !== 'bezahl') return { ok: false };
+    const reply = msg.frei
+      ? null
+      : await chrome.tabs.sendMessage(sender.tab.id, { type: 'werbefrei:cmp', art: msg.art }, { frameId: 0 }).catch(() => null);
     // "knopf": Im Rahmen steht nur der Zustimmungsknopf; die Seite sagt, ob ihr Dialog ein Abo anbietet.
     const pay = msg.art === 'bezahl' || (msg.art === 'knopf' && reply?.bezahl === true);
     if (!pay) return { ok: true };

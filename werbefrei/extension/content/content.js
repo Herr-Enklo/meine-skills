@@ -51,6 +51,10 @@
     cookies: false, // Cookie-Hinweise ausblenden
     autoConsent: false, // Abo-Abfragen mit "Einwilligen" beantworten
     consentClicked: new WeakSet(), // Zustimmungsknöpfe, die schon einmal geklickt wurden
+    payDialogs: new Set(), // selbst gebaute Abo-Abfragen, die stehen bleiben (für die Scroll-Sperre)
+    backdrops: new WeakMap(), // ausgeblendeter Dialog -> mit ihm ausgeblendete Hintergrundebenen
+    genericTimer: 0,
+    genericLast: 0,
     spVerdict: null, // Meldung aus dem Sourcepoint-Rahmen: 'normal' | 'bezahl'
   };
 
@@ -454,7 +458,9 @@
     state.lastScan = Date.now();
     state.scans++;
     try {
-      if (cmpActive()) scanCookieBanners([]);
+      // Auch bekannte Banner noch einmal prüfen: Beim ersten Blick sind sie oft noch leer oder werden
+      // gerade mit visibility: hidden eingeblendet (Usercentrics auf dm.de).
+      if (cmpActive()) scanCookieBanners([document.documentElement]);
       if (!state.heuristics) return;
       await collapseBlockedFrames();
       reviveFilled();
@@ -505,6 +511,7 @@
     '#shopify-pc__banner', // Shopify
     '#klaro', // Klaro
     '.c24-cookie-consent-wrapper', // check24
+    '.cmp-root-container', // OpenCMP (merkur.de); der Dialog steckt in einem Shadow DOM
   ].join(',');
   const SOURCEPOINT = 'div[id^="sp_message_container_"]';
   // Knöpfe "Alle akzeptieren" der Anbieter, deren Dialog im Seitendokument liegt. Sourcepoint
@@ -512,9 +519,28 @@
   const ACCEPT_BUTTONS = [
     '.cmpboxbtnyes', // consentmanager
     '#onetrust-accept-btn-handler', // OneTrust
+    '.cmp-button-accept-all', // OpenCMP
   ].join(',');
-  const PAY_TEXT = /\bpur\b|pur-abo|abonn|\babo\b|contentpass|werbefrei|ohne werbung|subscribe|subscription|€/i;
+  const PAY_TEXT = /\bpur\b|pur-abo|abonn|\babo\b|contentpass|freechoice|werbefrei|ohne werbung|subscribe|subscription|€/i;
   const SCROLL_ATTR = 'data-werbefrei-scroll';
+
+  // Allgemeine Erkennung für Dialoge ohne bekannten Anbieter (zdf.de baut seinen selbst).
+  const CONSENT_TEXT = /cookie|datenschutz|privacy|einwillig|consent|tracking|personenbezogen|nutzungsbasiert/i;
+  const DECISION_TEXT = /akzeptier|zustimm|einverstanden|annehm|erlaube|einwillig|ablehn|accept|agree|allow|reject|verstanden|^ok$|^okay$|nur notwendige|nur erforderliche|nur essenzielle|auswahl speichern|einstellungen speichern/i;
+  // Der Knopf, den "Abo-Abfragen automatisch beantworten" in einem selbst gebauten Dialog klickt.
+  const ACCEPT_TEXT = /^(alle[ns]?\s+)?(cookies\s+)?(akzeptieren|zustimmen|annehmen|erlauben)(\s+(und|&)\s+(weiter|schließen|fortfahren))?$|^einwilligen(\s+(und|&)\s+weiter)?$|^(ich\s+bin\s+)?einverstanden$|^(accept|agree|allow)(\s+all)?(\s+cookies)?$/i;
+  // Eindeutige Ablehnen-Knöpfe. Ein selbst gebauter Dialog wird nicht nur ausgeblendet, sondern auch
+  // abgelehnt: Manche Seiten sperren das Scrollen per Skript (react-remove-scroll auf zdf.de fängt
+  // das Mausrad ab), und das hebt erst der Dialog selbst wieder auf.
+  const REJECT_TEXT = /^(alle[ns]?\s+)?(cookies\s+)?ablehnen(\s+und\s+schließen)?$|^(einwilligung|zustimmung)\s+(ablehnen|verweigern)$|^(nur\s+)?(technisch\s+)?(notwendige|erforderliche|essenzielle|essentielle)(\s+cookies)?(\s+(akzeptieren|zulassen|erlauben|verwenden))?$|^(alle\s+)?(reject|decline|deny)(\s+all)?$|^nicht\s+zustimmen$|^(einwilligung\s+)?verweigern$/i;
+  const GENERIC_CANDIDATES = [
+    '[role="dialog"]', '[role="alertdialog"]', '[aria-modal="true"]', 'dialog[open]',
+    '[id*="cookie" i]', '[class*="cookie" i]', '[id*="consent" i]', '[class*="consent" i]',
+    '[id*="gdpr" i]', '[class*="gdpr" i]', '[id*="privacy" i]', '[class*="privacy" i]',
+    '[data-testid*="cmp" i]', '[data-testid*="consent" i]', '[data-testid*="cookie" i]',
+    '[id*="cmp" i]', '[id*="usercentrics" i]',
+  ].join(',');
+  const CLICKABLE = 'button, [role="button"], a, input[type="button"], input[type="submit"]';
 
   /**
    * Text eines Banners, auch aus offenen Shadow-DOM-Bereichen. Versteckte Ebenen im Banner
@@ -529,7 +555,12 @@
     const shownInBanner = (node) => {
       const chain = [];
       let result = true;
-      for (let cur = node; cur && cur !== el; cur = cur.parentElement || cur.getRootNode().host) {
+      for (let cur = node, prev = null; cur && cur !== el; prev = cur, cur = cur.parentElement || cur.getRootNode().host) {
+        // Zugeklapptes <details> (Anbieterlisten, Zwecke): Nur <summary> wird gerendert.
+        if (cur.tagName === 'DETAILS' && !cur.open && prev && prev.tagName !== 'SUMMARY') {
+          result = false;
+          break;
+        }
         if (shown.has(cur)) {
           result = shown.get(cur);
           break;
@@ -563,6 +594,9 @@
         budget.left -= n.data.length;
       }
     };
+    // Den Shadow DOM des Banners selbst eigens lesen: Der TreeWalker ruft seinen Filter für das
+    // Startelement nicht auf. OpenCMP und consentmanager legen ihren Dialog genau dorthin.
+    if (el.shadowRoot) walk(el.shadowRoot);
     walk(el);
     return text;
   }
@@ -592,23 +626,235 @@
    */
   function acceptPayDialog(el) {
     if (!state.autoConsent) return;
-    const button = el.querySelector(ACCEPT_BUTTONS) || el.shadowRoot?.querySelector(ACCEPT_BUTTONS);
+    const button =
+      el.querySelector(ACCEPT_BUTTONS) ||
+      el.shadowRoot?.querySelector(ACCEPT_BUTTONS) ||
+      clickablesIn(el).find((b) => ACCEPT_TEXT.test(labelOf(b)) && b.checkVisibility());
     if (!button || state.consentClicked.has(button)) return;
     state.consentClicked.add(button);
+    clickUntilGone(button, () => button.isConnected && button.checkVisibility());
+  }
+
+  /**
+   * Knopf klicken und nachklicken, solange der Dialog offen bleibt: Manche Seiten hängen ihre
+   * Handler erst ein paar Sekunden nach dem Anzeigen an (wetter.com), ein früher Klick verpufft dann.
+   * Höchstens viermal, mit wachsendem Abstand.
+   */
+  function clickUntilGone(button, stillOpen, attempt = 0) {
+    if (!button.isConnected) return;
     button.click();
+    if (attempt >= 3) return;
+    setTimeout(() => {
+      if (stillOpen()) clickUntilGone(button, stillOpen, attempt + 1);
+    }, 1500 * (attempt + 1));
+  }
+
+  /** Klickbare Elemente in einem Kasten, auch in offenen Shadow-DOM-Bereichen. */
+  function clickablesIn(el) {
+    const found = [];
+    const collect = (root) => {
+      root.querySelectorAll(CLICKABLE).forEach((b) => found.push(b));
+      root.querySelectorAll('*').forEach((c) => c.shadowRoot && collect(c.shadowRoot));
+    };
+    if (el.shadowRoot) collect(el.shadowRoot);
+    collect(el);
+    return found;
+  }
+
+  function labelOf(el) {
+    return (el.innerText || el.value || el.getAttribute('aria-label') || '').replace(/\s+/g, ' ').trim();
+  }
+
+  const parentAcrossShadow = (el) => el.parentElement || el.getRootNode()?.host || null;
+
+  /**
+   * Äußerstes fest positioniertes Element von el bis unter body, oder null. positions merkt sich die
+   * Position schon gesehener Elemente für die Dauer eines Durchlaufs (viele Kandidaten teilen sich
+   * ihre Vorfahren).
+   */
+  function overlayOf(el, positions = new Map()) {
+    let found = null;
+    for (let c = el; c && c !== document.body && c !== document.documentElement; c = parentAcrossShadow(c)) {
+      let p = positions.get(c);
+      if (p === undefined) {
+        p = getComputedStyle(c).position;
+        positions.set(c, p);
+      }
+      if (p === 'fixed' || p === 'sticky') found = c;
+    }
+    return found;
+  }
+
+  /** Hat das Element (oder bei Shadow-Hosts sein Inhalt) eine sichtbare Fläche? */
+  function hasArea(el) {
+    if (!el.checkVisibility()) return false;
+    const r = el.getBoundingClientRect();
+    if (r.width > 0 && r.height > 0) return true;
+    return [...(el.shadowRoot?.querySelectorAll('*') || [])].slice(0, 50).some((c) => c.getBoundingClientRect().height > 0);
+  }
+
+  /**
+   * Ist box ein selbst gebauter Einwilligungsdialog? Er liegt fest über der Seite, enthält
+   * Einwilligungstext und einen sichtbaren Knopf mit Entscheidungstext. Nie ein Dialog mit sichtbarem
+   * Eingabefeld (Anmeldung, Newsletter), mit Artikel oder Video. Gibt den Text zurück oder null.
+   */
+  function consentDialogText(box) {
+    // Schneller Vorfilter über den Rohtext (auch versteckter Text und Skripte): Fehlen die Wörter
+    // ganz, lohnt die genaue Prüfung nicht.
+    const raw = `${box.textContent} ${box.shadowRoot?.textContent || ''}`;
+    if (!CONSENT_TEXT.test(raw) || !/akzeptier|zustimm|einverstanden|annehm|erlaube|einwillig|ablehn|accept|agree|allow|reject|verstanden|\bok\b|okay|notwendig|erforderlich|essenziell|speichern/i.test(raw)) return null;
+    if (!hasArea(box)) return null;
+    // Nie den Hauptinhalt der Seite: das erste main, [role="main"] oder den Artikeltext im
+    // Seitendokument. Ein main im Shadow DOM eines Dialogs (Usercentrics auf alternate.de) zählt nicht.
+    const mainContent = document.querySelector('main, [role="main"], [itemprop="articleBody"]');
+    if (mainContent && (box === mainContent || box.contains(mainContent))) return null;
+    if ([...box.querySelectorAll('video')].some((v) => v.checkVisibility())) return null;
+    const inputs = box.querySelectorAll('input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([type="button"]):not([type="submit"]), textarea, select');
+    if ([...inputs].some((i) => i.checkVisibility())) return null;
+    const budget = { left: 6000 };
+    const text = bannerText(box, budget);
+    if (budget.left <= 0 || text.trim().length < 40 || !CONSENT_TEXT.test(text)) return null;
+    const buttons = clickablesIn(box).filter((b) => {
+      const label = labelOf(b);
+      return label && label.length <= 40 && DECISION_TEXT.test(label) && b.checkVisibility();
+    });
+    if (!buttons.length) return null;
+    // Viele sichtbare Links: eher Navigation oder Seitenteil als ein Dialog.
+    if ([...box.querySelectorAll('a[href]')].filter((a) => a.checkVisibility()).length > 30) return null;
+    return text;
+  }
+
+  /** Leere Hintergrundebenen neben einem ausgeblendeten Dialog mit ausblenden. */
+  function hideBackdrops(dialog) {
+    const hidden = [];
+    for (let c = dialog; c && c.parentElement && c !== document.body; c = c.parentElement) {
+      for (const sib of c.parentElement.children) {
+        if (sib === c || sib.hasAttribute(ATTR) || getComputedStyle(sib).position !== 'fixed') continue;
+        const r = sib.getBoundingClientRect();
+        if (r.width < innerWidth * 0.8 || r.height < innerHeight * 0.8) continue;
+        if (sib.querySelector(MEDIA) || bannerText(sib, { left: 50 }).trim().length > 0) continue;
+        if (hide(sib, 'cookie')) hidden.push(sib);
+      }
+    }
+    if (hidden.length) state.backdrops.set(dialog, hidden);
+  }
+
+  /** Selbst gebaute Einwilligungsdialoge suchen (höchstens etwa zweimal pro Sekunde). */
+  function scheduleGenericScan() {
+    if (state.genericTimer) return;
+    const wait = Math.max(0, state.genericLast + 400 - Date.now());
+    state.genericTimer = setTimeout(() => {
+      state.genericTimer = 0;
+      state.genericLast = Date.now();
+      if (state.active && cmpActive()) scanGenericConsent();
+    }, wait);
+  }
+
+  function scanGenericConsent() {
+    if (!document.body) return;
+    const candidates = new Set(document.querySelectorAll(GENERIC_CANDIDATES));
+    // Dazu fest positionierte Elemente in den obersten Ebenen unter body.
+    for (const a of document.body.children) {
+      candidates.add(a);
+      for (const b of a.children) {
+        candidates.add(b);
+        for (const c of b.children) candidates.add(c);
+      }
+    }
+    const known = `${COOKIE_BANNERS},${SOURCEPOINT}`;
+    const seen = new Set();
+    const positions = new Map();
+    for (const el of candidates) {
+      if (!el.isConnected || el.closest(`[${ATTR}]`) || el.closest(known)) continue;
+      let box = overlayOf(el, positions);
+      // Ausgeblendet wird immer ein Element im Seitendokument: Das Stylesheet von Werbefrei reicht
+      // nicht in Shadow-DOM-Bäume hinein.
+      let target = box;
+      if (!box && el.shadowRoot) {
+        // Fest positionierter Dialog im Shadow DOM eines Elements, das selbst mitten in der Seite
+        // steht (Usercentrics auf alternate.de): den Dialog prüfen, das Element ausblenden.
+        box = [...el.shadowRoot.querySelectorAll('*')].slice(0, 80).find((c) => getComputedStyle(c).position === 'fixed') || null;
+        target = el;
+      }
+      if (!box || seen.has(target) || target.hasAttribute(ATTR) || target.closest(known) || target.querySelector(known)) continue;
+      seen.add(target);
+      watchShadow(target);
+      const text = consentDialogText(box);
+      if (!text) continue;
+      if (PAY_TEXT.test(text)) {
+        state.payDialogs.add(target);
+        acceptPayDialog(box);
+        continue;
+      }
+      if (state.cookies && hide(target, 'cookie')) {
+        hideBackdrops(target);
+        rejectDialog(box, target);
+      }
+    }
+    unlockScroll();
+  }
+
+  /**
+   * Einen ausgeblendeten selbst gebauten Dialog zusätzlich ablehnen, wenn er einen eindeutigen Knopf
+   * hat. target ist das ausgeblendete Element (bei einem Dialog im Shadow DOM dessen Host).
+   */
+  function rejectDialog(box, target = box) {
+    const button = clickablesIn(box).find((b) => REJECT_TEXT.test(labelOf(b)));
+    if (!button || state.consentClicked.has(button)) return;
+    state.consentClicked.add(button);
+    // Der Dialog ist schon ausgeblendet; nachgeklickt wird, solange er noch im Dokument steht.
+    clickUntilGone(button, () => target.isConnected && button.isConnected && target.getAttribute(ATTR) === 'cookie');
+  }
+
+  // Änderungen im Shadow DOM sieht der MutationObserver der Seite nicht. OpenCMP (merkur.de) fügt
+  // sein Element zuerst fast leer ein und rendert den Dialog erst danach hinein; deshalb werden
+  // Shadow Roots gefundener Banner eigens beobachtet.
+  const watchedShadows = new WeakSet();
+  let shadowRescan = 0;
+  function watchShadow(el) {
+    const root = el.shadowRoot;
+    if (!root || watchedShadows.has(root)) return;
+    watchedShadows.add(root);
+    new MutationObserver(() => {
+      if (shadowRescan) return;
+      shadowRescan = setTimeout(() => {
+        shadowRescan = 0;
+        if (state.active) scanCookieBanners([document.documentElement]);
+      }, 150);
+    }).observe(root, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['class', 'style', 'hidden'] });
+  }
+
+  const rechecks = new WeakMap();
+  function recheckLater(el) {
+    const n = rechecks.get(el) || 0;
+    if (n >= 15) return;
+    rechecks.set(el, n + 1);
+    setTimeout(() => {
+      if (state.active && el.isConnected) handleBanner(el);
+    }, 700);
   }
 
   /** Einen gefundenen Banner behandeln: ausblenden, außer er bietet ein Abo an. */
   function handleBanner(el) {
     if (el.hasAttribute(ATTR) || el.parentElement?.closest(`[${ATTR}]`)) return;
+    watchShadow(el);
     if (el.matches(SOURCEPOINT)) {
       // Den Text liest das Skript im Sourcepoint-Rahmen; ohne seine Meldung bleibt der Dialog stehen.
       // Die Einwilligung bei einer Abo-Abfrage klickt es ebenfalls dort.
       if (state.cookies && state.spVerdict === 'normal') hide(el, 'cookie');
       return;
     }
-    if (PAY_TEXT.test(bannerText(el))) {
+    const text = bannerText(el);
+    if (PAY_TEXT.test(text)) {
       acceptPayDialog(el);
+      return;
+    }
+    // Dialog im Shadow DOM noch ohne sichtbaren Text: abwarten, bis er gerendert ist. watchShadow
+    // meldet neue Inhalte; eine Einblendung per CSS-Übergang (visibility) meldet niemand, deshalb
+    // zusätzlich etwa zehn Sekunden lang nachsehen. Hintergrundebenen ohne Shadow DOM (.cmpboxBG,
+    // .cky-overlay) haben nie Text und werden gleich ausgeblendet.
+    if (el.shadowRoot && text.trim().length < 20) {
+      recheckLater(el);
       return;
     }
     if (state.cookies) hide(el, 'cookie');
@@ -627,9 +873,16 @@
       if (!el.matches(SOURCEPOINT) && PAY_TEXT.test(bannerText(el))) {
         el.removeAttribute(ATTR);
         state.reasons.cookie--;
+        for (const b of state.backdrops.get(el) || []) {
+          if (b.getAttribute(ATTR) === 'cookie') {
+            b.removeAttribute(ATTR);
+            state.reasons.cookie--;
+          }
+        }
         acceptPayDialog(el);
       }
     }
+    scheduleGenericScan();
     unlockScroll();
   }
 
@@ -640,9 +893,12 @@
       root.removeAttribute(SCROLL_ATTR);
       return;
     }
-    // Steht noch ein sichtbarer Abo-Dialog, bleibt die Sperre.
-    const visibleDialog = [...document.querySelectorAll(`${COOKIE_BANNERS},${SOURCEPOINT}`)].some(
-      (el) => !el.closest(`[${ATTR}]`) && el.getBoundingClientRect().height > 0,
+    // Steht noch ein sichtbarer Abo-Dialog, bleibt die Sperre. Bei OpenCMP hat das Element selbst
+    // keine Höhe, der Dialog liegt fest positioniert in seinem Shadow DOM.
+    const hasBox = (el) => el.getBoundingClientRect().height > 0;
+    for (const el of state.payDialogs) if (!el.isConnected) state.payDialogs.delete(el);
+    const visibleDialog = [...document.querySelectorAll(`${COOKIE_BANNERS},${SOURCEPOINT}`), ...state.payDialogs].some(
+      (el) => !el.closest(`[${ATTR}]`) && (hasBox(el) || [...(el.shadowRoot?.querySelectorAll('*') || [])].slice(0, 50).some(hasBox)),
     );
     if (visibleDialog) {
       root.removeAttribute(SCROLL_ATTR);
@@ -651,7 +907,11 @@
     if (root.hasAttribute(SCROLL_ATTR)) return;
     const html = getComputedStyle(root);
     const body = getComputedStyle(document.body);
-    const locked = [html.overflow, html.overflowY, body.overflow, body.overflowY].some((v) => v === 'hidden' || v === 'clip');
+    // Dialog-Bibliotheken wie Radix (zdf.de) sperren zusätzlich Klicks per pointer-events: none.
+    const locked =
+      [html.overflow, html.overflowY, body.overflow, body.overflowY].some((v) => v === 'hidden' || v === 'clip') ||
+      html.pointerEvents === 'none' ||
+      body.pointerEvents === 'none';
     if (body.position === 'fixed') root.setAttribute(SCROLL_ATTR, 'fixed');
     else if (locked) root.setAttribute(SCROLL_ATTR, 'overflow');
   }

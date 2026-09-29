@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <title>Selbst gebauter Cookie-Dialog</title>
+  <style>
+    body { margin: 0; font: 16px/1.5 sans-serif; }
+    main { height: 3000px; padding: 24px; }
+    /* Wie react-remove-scroll (Radix, zdf.de): Scrollsperre per Attribut und !important */
+    body[data-scroll-locked] { overflow: hidden !important; }
+    .kx81 { position: fixed; inset: 0; background: #000b; z-index: 50; }
+    .qd7z { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 560px; background: #234; color: #fff; padding: 24px; z-index: 51; }
+    .v3pl { position: fixed; left: 0; right: 0; bottom: 0; background: #fff; box-shadow: 0 -2px 8px #0003; padding: 16px 24px; z-index: 50; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1 id="titel">Seite mit selbst gebautem Dialog</h1>
+    <p>Inhalt der Seite. <button id="klickmich">Klick mich</button> <span id="zaehler">0</span></p>
+  </main>
+  <script>
+    // Kein bekannter Anbieter, Klassennamen zufällig wie aus einem CSS-Build.
+    // ?art=zdf    wie zdf.de: Radix-Dialog mit Hintergrundebene, body mit pointer-events: none;
+    //             dazu eine zugeklappte Anbieterliste (wie wetter.com) mit "Subscription" und "€",
+    //             die weder als Abo-Angebot zählen noch die Textgrenze sprengen darf
+    // ?art=leiste schlichte Leiste unten mit "OK"
+    // ?art=abo    selbst gebaute Abo-Abfrage ("mit Werbung weiterlesen oder Pur-Abo")
+    // ?art=schatten wie alternate.de: Element mitten im Seiteninhalt, der fest positionierte Dialog
+    //             (mit eigenem <main>) liegt in dessen Shadow DOM
+    // ?art=uc     wie dm.de: #usercentrics-root, der Dialog wird per CSS-Animation sichtbar, ohne
+    //             dass sich das DOM danach noch ändert
+    document.getElementById('klickmich').addEventListener('click', () => {
+      const z = document.getElementById('zaehler');
+      z.textContent = String(Number(z.textContent) + 1);
+    });
+    const art = new URLSearchParams(location.search).get('art') || 'zdf';
+    const close = (el, how = 'zugestimmt') => {
+      window[`__${how}`] = true;
+      el.remove();
+      document.body.removeAttribute('data-scroll-locked');
+      document.body.style.pointerEvents = '';
+    };
+    // Wie react-remove-scroll: Solange der Dialog offen ist, fängt ein Skript das Mausrad ab. Dagegen
+    // hilft kein CSS; erst das Schließen des Dialogs gibt das Scrollen frei.
+    document.addEventListener('wheel', (e) => {
+      if (document.body.hasAttribute('data-scroll-locked') && !e.target.closest?.('[role="dialog"]')) e.preventDefault();
+    }, { passive: false });
+    setTimeout(() => {
+      if (art === 'zdf') {
+        const portal = document.createElement('div');
+        portal.id = 'portal-root';
+        portal.innerHTML = `<div class="kx81" data-state="open" aria-hidden="true" style="pointer-events: auto;"></div>
+          <div class="qd7z" role="dialog" id="radix-_r_2_" data-state="open" tabindex="-1" style="pointer-events: auto;">
+            <h2>Deine Datenschutz-Einstellungen</h2>
+            <p>Um dir eine optimale Website präsentieren zu können, setzen wir Cookies und vergleichbare Techniken ein.
+            Mit deiner Zustimmung dürfen wir und unsere Dienstleister darüber hinaus Informationen auf deinem Gerät speichern.</p>
+            <button data-testid="cmp-accept-all">Zustimmen</button> <button data-testid="cmp-revoke-all">Ablehnen</button> <button>Einstellen</button>
+            <details><summary>Anbieter anzeigen</summary><p>${'Beispiel Subscription GmbH, Vertragswert 5 €. '.repeat(160)}</p></details>
+          </div>`;
+        document.body.appendChild(portal);
+        document.body.setAttribute('data-scroll-locked', '1');
+        document.body.style.pointerEvents = 'none';
+        portal.querySelector('[data-testid="cmp-accept-all"]').addEventListener('click', () => close(portal));
+        portal.querySelector('[data-testid="cmp-revoke-all"]').addEventListener('click', () => close(portal, 'abgelehnt'));
+      } else if (art === 'schatten') {
+        const host = document.createElement('div');
+        host.id = 'cmp-xy-shadow';
+        document.querySelector('main').appendChild(host);
+        const root = host.attachShadow({ mode: 'open' });
+        root.innerHTML = `<div style="position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 520px; background: #fff; padding: 20px; z-index: 50; box-shadow: 0 0 0 100vmax #0006">
+            <main><h3>Privatsphäre-Einstellungen</h3>
+            <p>Für die Funktion der Website setzen wir Cookies ein. Mit Ihrer Einwilligung auch für Statistik und Marketing.</p></main>
+            <button id="nur">Nur notwendige Cookies</button> <button id="alle">Alles akzeptieren</button>
+          </div>`;
+        root.getElementById('nur').addEventListener('click', () => close(host, 'abgelehnt'));
+        root.getElementById('alle').addEventListener('click', () => close(host));
+      } else if (art === 'uc') {
+        const host = document.createElement('div');
+        host.id = 'usercentrics-root';
+        document.body.appendChild(host);
+        const root = host.attachShadow({ mode: 'open' });
+        root.innerHTML = `<style>
+            .dlg { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 520px; background: #fff; padding: 20px; z-index: 50;
+                   visibility: hidden; animation: zeigen 0s 1.2s forwards; }
+            @keyframes zeigen { to { visibility: visible; } }
+          </style>
+          <div class="dlg" role="dialog"><h3>Ein Moment für Deine Privatsphäre</h3>
+            <p>Wir und unsere Partner setzen Cookies und ähnliche Technologien ein.</p>
+            <button>Einwilligung ablehnen</button> <button>Alles akzeptieren</button></div>`;
+      } else if (art === 'leiste') {
+        const bar = document.createElement('div');
+        bar.className = 'v3pl';
+        bar.innerHTML = '<span>Wir verwenden Cookies, um unsere Website zu verbessern. Mehr dazu in der <a href="#">Datenschutzerklärung</a>.</span> <button>OK</button>';
+        document.body.appendChild(bar);
+        bar.querySelector('button').addEventListener('click', () => close(bar));
+      } else {
+        const box = document.createElement('div');
+        box.innerHTML = `<div class="kx81"></div><div class="qd7z" role="dialog" aria-modal="true">
+            <h2>Ihr Zugang zu news.test</h2>
+            <p>Mit Werbung weiterlesen: Wir und unsere Partner verarbeiten Ihre Daten mit Cookies und Tracking.</p>
+            <button class="b1">Akzeptieren und weiter</button>
+            <p>Oder werbefrei lesen mit dem Pur-Abo für 2,99 € im Monat.</p>
+            <button class="b2">Jetzt abonnieren</button>
+          </div>`;
+        document.body.appendChild(box);
+        document.body.setAttribute('data-scroll-locked', '1');
+        box.querySelector('.b1').addEventListener('click', () => close(box));
+      }
+    }, 500);
+  </script>
+</body>
+</html>

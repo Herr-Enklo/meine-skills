@@ -128,10 +128,11 @@ Einstellungsseite.
 ## Cookie-Hinweise
 
 Werbefrei blendet die Einwilligungsbanner verbreiteter Anbieter aus: OneTrust, Cookiebot,
-Usercentrics, Didomi, consentmanager, Borlabs, Complianz, CookieYes, Quantcast, TrustArc, Sourcepoint
-und einige weitere, dazu den eigenen Hinweis von check24. Es klickt dabei nichts an und speichert
-keine Auswahl. Die Seite verhält sich so, als hätte man den Hinweis nicht beantwortet, und das gilt
-bei diesen Anbietern nicht als Einwilligung. Sperrt die Seite das Scrollen, solange der Hinweis offen
+Usercentrics, Didomi, consentmanager, Borlabs, Complianz, CookieYes, Quantcast, TrustArc, Sourcepoint,
+OpenCMP und einige weitere, dazu den eigenen Hinweis von check24. Bei diesen Anbietern klickt es
+dabei nichts an und speichert keine Auswahl. Die Seite verhält sich so, als hätte man den Hinweis
+nicht beantwortet, und das gilt nicht als Einwilligung. Selbst gebaute Dialoge (siehe unten) lehnt
+Werbefrei zusätzlich ab, wenn sie einen eindeutigen Ablehnen-Knopf haben. Sperrt die Seite das Scrollen, solange der Hinweis offen
 ist, gibt Werbefrei es wieder frei.
 
 Stehen bleiben Dialoge, die statt der Zustimmung ein Abo anbieten, also „Mit Werbung lesen oder
@@ -150,11 +151,20 @@ der Seite. Die Werbeserver sperrt Werbefrei trotzdem; gegen Tracker hilft zusät
 EasyPrivacy, die man dafür einschalten sollte. Beantwortet werden nur Abo-Abfragen, gewöhnliche
 Cookie-Hinweise blendet Werbefrei weiter aus, ohne zuzustimmen. Auf ausgenommenen Seiten und im
 Pausenmodus klickt Werbefrei nichts. Unterstützt sind Dialoge von Sourcepoint (der Knopf mit der
-Klasse `sp_choice_type_11`), consentmanager (`.cmpboxbtnyes`) und OneTrust
-(`#onetrust-accept-btn-handler`). Der Schalter wirkt sofort, auch auf eine Abfrage, die beim
+Klasse `sp_choice_type_11`), consentmanager (`.cmpboxbtnyes`), OneTrust
+(`#onetrust-accept-btn-handler`) und OpenCMP (`.cmp-button-accept-all`, etwa auf merkur.de), dazu
+selbst gebaute Abfragen in der Seite (wetter.com, augsburger-allgemeine.de) und in einem eigenen
+Rahmen (gmx.net, web.de), wenn der Knopf eindeutig „Akzeptieren“, „Zustimmen“, „Einwilligen“ oder
+„Einverstanden“ heißt, auch mit „und weiter“. Manche Seiten hängen ihre Knopf-Handler erst ein paar
+Sekunden nach dem Anzeigen an (wetter.com); bleibt der Dialog nach dem Klick offen, klickt
+Werbefrei deshalb bis zu dreimal nach. Der Schalter wirkt sofort, auch auf eine Abfrage, die beim
 Einschalten schon offen ist. Im Test verschwand die Abfrage auf spiegel.de, bild.de, welt.de, faz.net,
-sueddeutsche.de, t-online.de, focus.de, n-tv.de, heise.de, golem.de, chip.de und tagesspiegel.de,
-und die Seite ließ sich scrollen. bild.de zeigt danach allerdings seine Sperre für Werbeblocker.
+sueddeutsche.de, t-online.de, focus.de, n-tv.de, heise.de, golem.de, chip.de, tagesspiegel.de und
+merkur.de, und die Seite ließ sich scrollen. bild.de zeigt danach allerdings seine Sperre für Werbeblocker.
+
+OpenCMP (merkur.de) und consentmanager legen ihren Dialog in ein Shadow DOM. Werbefrei liest dessen
+Text mit und beobachtet ihn, denn OpenCMP fügt das Element zuerst fast leer ein und rendert den Dialog
+erst danach hinein. Solange noch kein Text da ist, bleibt das Element unangetastet.
 
 Sourcepoint lädt seinen Dialog in einen Rahmen von einer fremden Domain, in den das Inhaltsskript
 der Seite nicht hineinsehen kann. In solchen Rahmen (erkennbar an `message_id=` in der Adresse)
@@ -166,17 +176,37 @@ der Seite um den Rahmen herum, aber nur Kästen mit höchstens 4.000 Zeichen Tex
 Menü der Seite nicht zählt. Steht dort ein Abo-Angebot, gilt der Dialog als Abo-Abfrage; sonst bleibt
 er unverändert stehen.
 
-Gewöhnliche Cookie-Hinweise, die eine Seite selbst gebaut hat, erkennt Werbefrei nicht. Sie lassen
-sich mit „Element ausblenden …“ entfernen. Das Ausblenden ist eingeschaltet und lässt sich unter
-Einstellungen → Allgemein abschalten.
+Dialoge, die eine Seite selbst gebaut hat (etwa zdf.de), erkennt Werbefrei an Aufbau und Text statt
+an einem festen Selektor. Als Einwilligungsdialog gilt ein Kasten, der fest über der Seite liegt,
+Einwilligungstext enthält („Cookies“, „Datenschutz“, „Einwilligung“, „Tracking“ …) und einen
+sichtbaren Knopf mit Entscheidungstext hat („Zustimmen“, „Ablehnen“, „Akzeptieren“, „OK“ …).
+Kandidaten sind Elemente mit `role="dialog"` oder `aria-modal`, Elemente mit „cookie“, „consent“,
+„gdpr“ oder „privacy“ in id oder Klasse, mit „cmp“ oder „usercentrics“ in der id und fest
+positionierte Elemente in den obersten Ebenen der Seite. Liegt der fest positionierte Dialog im
+Shadow DOM eines Elements mitten in der Seite (Usercentrics auf alternate.de), wird dieses Element
+ausgeblendet. Nie ausgeblendet werden Kästen mit sichtbarem Eingabefeld (Anmeldung, Newsletter), mit
+dem Hauptinhalt der Seite (`main`, Artikeltext) oder einem Video und mit mehr als 30 sichtbaren
+Links. Zugeklappte Abschnitte (`<details>`, etwa lange Anbieterlisten) zählen beim Lesen des Texts
+nicht mit. Leere Hintergrundebenen neben dem Dialog
+verschwinden mit, und sperrt die Seite Klicks per `pointer-events: none` (Radix, zdf.de), hebt
+Werbefrei das mit der Scrollsperre auf. Hat der Dialog einen eindeutigen Ablehnen-Knopf („Ablehnen“,
+„Alle ablehnen“, „Nur notwendige Cookies“ …), klickt Werbefrei ihn zusätzlich. Das ist nötig, weil
+manche Seiten das Scrollen per Skript sperren (zdf.de fängt das Mausrad ab), und diese Sperre hebt
+nur der Dialog selbst auf. Zugestimmt wird dabei nichts; die Seite merkt sich die Ablehnung, und der
+Dialog kommt beim nächsten Besuch nicht wieder. Bietet ein solcher Dialog ein Abo an, bleibt er stehen; mit
+eingeschaltetem Schalter klickt Werbefrei den Knopf mit dem Text „Akzeptieren“, „Zustimmen“,
+„Einwilligen“ oder „Einverstanden“ (auch mit „und weiter“).
+
+Was trotzdem durchrutscht, lässt sich mit „Element ausblenden …“ entfernen. Das Ausblenden ist
+eingeschaltet und lässt sich unter Einstellungen → Allgemein abschalten.
 
 ## Grenzen
 
 - Werbefrei umgeht keine Bezahlschranken und keine Abfragen der Art „Mit Werbung lesen oder Abo
   abschließen“. Diese Abfragen bleiben stehen, auch wenn Cookie-Hinweise ausgeblendet werden. Auf
   Wunsch beantwortet Werbefrei sie mit „Einwilligen“, siehe „Cookie-Hinweise“.
-- Manche Seiten mit eigener Abfrage (etwa merkur.de) kennt Werbefrei nicht; dort
-  bleibt die Abfrage auch mit eingeschaltetem Schalter stehen.
+- Selbst gebaute Dialoge erkennt Werbefrei nur, wenn sie dem beschriebenen Aufbau folgen. Liegt
+  der Dialog etwa nicht fest über der Seite oder heißen die Knöpfe anders, bleibt er stehen.
 - Ist ein Cookie-Hinweis ausgeblendet, hat man nichts erlaubt. Inhalte, die eine Einwilligung
   voraussetzen, etwa eingebettete Videos oder Karten, zeigen dann oft nur einen Platzhalter. Wer sie
   braucht, schaltet „Cookie-Hinweise ausblenden“ kurz ab und trifft seine Wahl im Hinweis.
@@ -219,10 +249,11 @@ npm install        # Playwright für die Browsertests
 npm test           # Parser, Regelwerk und Manifest, ohne Browser
 npm run e2e        # nachgebaute Artikelseite in Chromium mit geladener Erweiterung
 npm run e2e:echt   # echte Nachrichtenseiten ohne und mit Werbefrei, braucht Internet
+npm run e2e:cookies  # Cookie-Hinweise auf rund 120 echten Seiten, braucht Internet, etwa eine Stunde
 ```
 
 `npm run e2e` braucht keinen Internetzugang: Die Testseite lädt Werbung von echten Werbeservern, und
-diese Anfragen blockiert die Erweiterung, bevor sie das Netz erreichen. Geprüft wird in 77 Punkten,
+diese Anfragen blockiert die Erweiterung, bevor sie das Netz erreichen. Geprüft wird in 100 Punkten,
 dass elf typische Werbeplätze verschwinden (Billboard mit „Anzeige“, zwei Werbeplätze im Text, einer
 davon mit Inline-Skript, leerer Skyscraper, klebende Leiste, Taboola, gesponserter Teaser,
 nachgeladener Werbeplatz, ein Element, das erst nachträglich die Klasse `adsbygoogle` bekommt, zwei
@@ -234,17 +265,27 @@ zufällig klingendem Namen), ein eingebettetes Video, echte Teaser, der Einwilli
 Menü- und Fußzeilenlinks „Werbung“. Dazu kommen die Element-Auswahl, das Popup und das Ausnehmen einer
 Seite. Ein eigener Block prüft, dass Pause, Fortsetzen, Ausnahmen und neue Regeln in offenen Tabs ohne
 Neuladen wirken, sowohl für Netzanfragen als auch für Ausgeblendetes, und dass eine während der Pause
-geöffnete Seite beim Fortsetzen nachträglich eingerichtet wird. Der Block „Cookie-Hinweise“ prüft
-einen nachgebauten OneTrust-Banner mit Scrollsperre und versteckter Anbieterliste, einen
-consentmanager-Dialog mit Pur-Abo (auch mit spät nachgeladenem Angebot und versteckt eingefügt) und
-Sourcepoint-Rahmen: einen gewöhnlichen, einen mit Abo-Angebot, einen, in dem das Angebot erst nach
-dreieinhalb Sekunden erscheint, und zwei, die wie auf golem.de nur den Knopf liefern, einmal in einem
-Seitendialog mit Abo-Angebot und einmal ohne. Außerdem, dass der Schalter in den Einstellungen ohne Neuladen
-wirkt. Mit eingeschaltetem „Abo-Abfragen automatisch beantworten“ wird geprüft, dass Sourcepoint- und
-consentmanager-Abfragen mit „Zustimmen“ beantwortet werden (auch die Knopf-Variante) und die Seite
-danach scrollt, dass ein gewöhnlicher Hinweis nur ausgeblendet und nicht beantwortet wird, dass ohne
-Abo-Angebot nichts geklickt wird und dass auf einer ausgenommenen Seite nichts geklickt wird. Dazu:
-Wird der Schalter eingeschaltet, während eine Abfrage offen ist, wird sie sofort beantwortet. Bildschirmfotos landen in `test-ergebnisse/`.
+geöffnete Seite beim Fortsetzen nachträglich eingerichtet wird. Bildschirmfotos landen in
+`test-ergebnisse/`.
+
+Der Block „Cookie-Hinweise“ spielt nachgebaute Dialoge durch:
+
+- bekannte Anbieter: ein OneTrust-Banner mit Scrollsperre und versteckter Anbieterliste, ein
+  consentmanager-Dialog mit Pur-Abo (auch mit spät nachgeladenem Angebot und versteckt eingefügt),
+  ein OpenCMP-Dialog wie auf merkur.de, der erst nach dem Einfügen in sein Shadow DOM gerendert wird;
+- Sourcepoint-Rahmen: gewöhnlich, mit Abo-Angebot, mit spät erscheinendem Angebot und zwei, die wie
+  auf golem.de nur den Knopf liefern; dazu eine Abo-Abfrage in einem fremden Rahmen wie auf gmx.net;
+- selbst gebaute Dialoge: einer wie auf zdf.de (Radix, Hintergrundebene, `pointer-events: none`,
+  Mausrad per Skript gesperrt, zugeklappte Anbieterliste mit „Subscription“ und „€“), einer im Shadow
+  DOM eines Elements mitten in der Seite wie auf alternate.de, ein Usercentrics-Dialog, der erst per
+  CSS-Animation sichtbar wird wie auf dm.de, eine schlichte Leiste mit „OK“ und eine eigene
+  Abo-Abfrage;
+- Fallen, die sichtbar bleiben müssen: ein Anmeldefenster mit Datenschutz-Hinweis, ein
+  Newsletter-Kasten mit Einwilligung, eine feste Fußleiste mit „Cookie-Einstellungen“, ein
+  Chat-Fenster, ein Knopf „Cookie-Einstellungen“ und die Zustimmung für ein eingebettetes Video;
+- der Schalter „Abo-Abfragen automatisch beantworten“: Abo-Abfragen werden beantwortet, auch wenn der
+  Schalter bei offener Abfrage eingeschaltet wird; gewöhnliche Hinweise werden nie zugestimmt, und
+  auf ausgenommenen Seiten wird nichts geklickt.
 
 `npm run e2e:echt` öffnet auf 14 Nachrichtenseiten einen aktuellen Artikel, einmal ohne und einmal mit
 Werbefrei, bestätigt die Einwilligung (ohne sie laden diese Seiten keine Werbung), scrollt durch den
@@ -256,11 +297,38 @@ Artikel und zählt sichtbare Werberahmen, Werbeplätze, Ersatzanzeigen und Kennz
 ausgeblendet hat, mit Grund (`kennzeichnung`, `leer`, `rahmen`, `ersatz`). Damit lässt sich ein
 Fehlalarm schnell eingrenzen. Mit `FOTO=pfad/name` davor entstehen zusätzlich zwei Bildschirmfotos.
 
-`node tests/e2e/cookie-seiten.mjs [--einwilligen] [Adresse …]` öffnet Seiten mit Werbefrei und meldet
+`node tests/e2e/cookie-seiten.mjs [--einwilligen] [--de] [Adresse …]` öffnet Seiten mit Werbefrei und meldet
 für jede, ob ein bekannter Cookie-Hinweis ausgeblendet oder sichtbar ist und ob sich die Seite scrollen
 lässt. Ohne Adressen nimmt es eine feste Auswahl, von den Anbietern selbst bis zu Nachrichtenseiten
-mit Pur-Abo. `--einwilligen` schaltet „Abo-Abfragen automatisch beantworten“ ein. Bildschirmfotos:
+mit Pur-Abo. `--einwilligen` schaltet „Abo-Abfragen automatisch beantworten“ ein. `--de` meldet
+OpenCMP einen Besucher aus Deutschland; merkur.de zeigt seinen Dialog sonst nur Besuchern aus der EU. Bildschirmfotos:
 `test-ergebnisse/cookie-<seite>.png`.
+
+`npm run e2e:cookies` (`tests/e2e/cookie-umfrage.mjs`) prüft Cookie-Hinweise auf rund 120 deutschen
+Seiten aus Nachrichten, Technik, Rundfunk, Sport, Magazinen, Handel, Diensten, Banken und Reise sowie
+auf den Seiten der Anbieter selbst, in drei Durchgängen: ohne Werbefrei, mit Werbefrei und mit
+eingeschaltetem „Abo-Abfragen automatisch beantworten“. Die Dialogerkennung im Test ist unabhängig
+von der Erweiterung. Sie sucht bis zu 20 Sekunden lang einen sichtbaren Knopf mit Entscheidungstext
+in einem Kasten mit Einwilligungstext, der fest über der Seite liegt oder in einem eigenen Rahmen
+steckt. So fallen auch Dialoge auf, die Werbefrei nicht kennt. Geprüft wird, ob gewöhnliche Hinweise
+verschwinden und die Seite danach scrollt und klickbar ist, ob Abo-Abfragen stehen bleiben und mit
+dem Schalter beantwortet werden und ob Seiteninhalt verloren geht. Ergebnis:
+`test-ergebnisse/cookie-umfrage.md` mit Fehlerliste, dazu Bildschirmfotos pro Seite und Durchgang.
+`--weiter` setzt einen abgebrochenen Lauf fort, `--ohne-von=…` übernimmt den langsamen Durchgang ohne
+Werbefrei aus einem früheren Lauf, `--probleme-von=…` prüft nur dessen Problemfälle erneut, und
+`--gruppe=rundfunk,handel` beschränkt die Auswahl. Der Testbrowser meldet sich als gewöhnlicher
+Chrome mit Zeitzone Berlin.
+
+Letzter Lauf mit Version 1.4.0: 63 Seiten in Ordnung, 6 mit Befund, 50 ohne Aussage. Ohne Aussage
+heißt, die Seite sperrt den Testbrowser (18), zeigt dem Testserver keinen Dialog (24, oft nur für
+Besucher aus der EU), sperrt sich selbst bei Werbeblockern (3) oder lief in eine Zeitüberschreitung
+(5). Keiner der sechs Befunde ließ sich bei der Nachprüfung als Fehler von Werbefrei bestätigen:
+zufällige Fehlerseiten (zalando.de, hornbach.de), ein Neuladen der Seite während der Messung
+(heise.de), eine Abo-Abfrage, die der Test ohne Werbefrei nur halb erfasst hatte (mopo.de), und
+Unterschiede beim gezählten Seitentext, obwohl die Seite vollständig aussah (otto.de, stepstone.de).
+Ein früher Lauf mit dem Stand vor der allgemeinen Erkennung meldete 30 Probleme, darunter zdf.de,
+alternate.de, thomann.de, bahn.de, sparkasse.de, telekom.de und wetter.com; der Test selbst wurde danach
+noch genauer, der Vergleich ist also nur grob.
 
 ## Aufbau
 

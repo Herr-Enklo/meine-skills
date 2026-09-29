@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <title>Abo-Abfrage in einem fremden Rahmen</title>
+  <style>
+    body { margin: 0; font: 16px/1.5 sans-serif; }
+    main { height: 3000px; padding: 24px; }
+    #abfrage { position: fixed; inset: 0; background: #000a; display: grid; place-items: center; z-index: 10; }
+    #abfrage iframe { width: 640px; height: 360px; border: 0; background: #fff; }
+  </style>
+</head>
+<body>
+  <main><h1>Seite mit Abo-Abfrage im Rahmen</h1><p>Inhalt der Seite.</p></main>
+  <!-- Wie gmx.net: Die Abfrage kommt als eigene Seite von einer anderen Domain, ohne Sourcepoint. -->
+  <div id="abfrage"><iframe id="abfrage-rahmen" title="Abfrage"></iframe></div>
+  <script>
+    document.getElementById('abfrage-rahmen').src = `http://consent.test:${location.port}/rahmen-abo.html`;
+    window.addEventListener('message', (e) => {
+      if (e.data !== 'zugestimmt') return;
+      window.__zugestimmt = true;
+      document.getElementById('abfrage').remove();
+    });
+  </script>
+</body>
+</html>

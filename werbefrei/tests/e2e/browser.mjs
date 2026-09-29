@@ -7,7 +7,9 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 
-export const EXTENSION = fileURLToPath(new URL('../../extension', import.meta.url));
+// WERBEFREI_EXTENSION: anderer Ordner, etwa eine Kopie, damit ein langer Testlauf nicht von
+// gleichzeitigen Änderungen am Code berührt wird.
+export const EXTENSION = process.env.WERBEFREI_EXTENSION || fileURLToPath(new URL('../../extension', import.meta.url));
 
 /**
  * Läuft der Test hinter einem Proxy, der TLS aufbricht (etwa in der Claude-Cloud), vertraut
@@ -24,7 +26,29 @@ function proxyCaPins() {
   });
 }
 
-export async function launch({ withExtension = true, args = [], viewport = { width: 1366, height: 900 } } = {}) {
+let normalUserAgent = null;
+
+/**
+ * Kennung eines gewöhnlichen Chrome unter Linux mit der Versionsnummer des Test-Chromium. Headless
+ * Chromium meldet sich als "HeadlessChrome", und daran sperren manche Seiten den Testbrowser aus.
+ * Eine Windows-Kennung passt nicht zum Rest des Browsers (navigator.platform) und fällt erst recht
+ * auf (merkur.de antwortet dann mit 403).
+ */
+async function desktopUserAgent() {
+  if (!normalUserAgent) {
+    const browser = await chromium.launch({ channel: 'chromium', headless: true });
+    const major = browser.version().split('.')[0];
+    await browser.close();
+    normalUserAgent = `Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${major}.0.0.0 Safari/537.36`;
+  }
+  return normalUserAgent;
+}
+
+/**
+ * Startet Chromium, auf Wunsch mit Werbefrei. realistic: Zeitzone Berlin und gewöhnliche
+ * Chrome-Kennung, für Tests auf echten Seiten.
+ */
+export async function launch({ withExtension = true, args = [], viewport = { width: 1366, height: 900 }, realistic = false } = {}) {
   const pins = proxyCaPins();
   const allArgs = [...args];
   if (pins.length) allArgs.push(`--ignore-certificate-errors-spki-list=${pins.join(',')}`);
@@ -35,6 +59,7 @@ export async function launch({ withExtension = true, args = [], viewport = { wid
     viewport,
     locale: 'de-DE',
     args: allArgs,
+    ...(realistic ? { timezoneId: 'Europe/Berlin', userAgent: await desktopUserAgent() } : {}),
   });
   if (!withExtension) return { context };
   let [worker] = context.serviceWorkers();
