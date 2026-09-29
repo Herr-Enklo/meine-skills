@@ -7,6 +7,7 @@ uebersprungen.
 
 from __future__ import annotations
 
+import gc
 import os
 import sys
 import tempfile
@@ -41,6 +42,13 @@ def _read(path: str) -> bytes:
 @unittest.skipUnless(HAVE_TK, "tkinter oder Anzeige nicht verfuegbar")
 class GuiTests(unittest.TestCase):
     def setUp(self):
+        # Fenster frueherer Tests haengen in Referenzzyklen. Raeumt die
+        # Speicherbereinigung sie zufaellig im Scan- oder Wiederherstellungs-
+        # Thread ab, ruft tkinter aus diesem Thread Tcl auf: jede Variable
+        # wartet dann eine Sekunde auf die Hauptschleife, und Tcl bricht am
+        # Ende ab. Deshalb vor und nach jedem Test im Hauptthread aufraeumen.
+        gc.collect()
+        self.addCleanup(gc.collect)
         from gui import app as app_mod
         self.app_mod = app_mod
         self.root = tk.Tk()
