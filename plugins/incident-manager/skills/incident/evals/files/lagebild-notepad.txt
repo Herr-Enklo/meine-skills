@@ -1,0 +1,197 @@
+
+== Bericht
+Erstellt:         2026-09-29 09:02:00 (W. Europe Standard Time)
+Ereigniszeitraum: seit 2026-09-27 09:02
+Benutzer:         FIRMA\mmuster, Administratorrechte: False
+PowerShell:       5.1.22621.4111, 64-Bit-Prozess: True
+Software:         Notepad++
+Hinweis:          enthält Rechner- und Benutzernamen, vor dem Weitergeben prüfen
+
+== System
+
+Rechner       : PC01
+System        : Microsoft Windows 11 Enterprise
+Version       : 23H2 Build 22631.4169
+Architektur   : 64-Bit
+Sprache       : de-DE
+Domaene       : firma.local
+Modell        : Lenovo T14
+RAM_GB        : 16
+RAM_frei_GB   : 4
+LetzterStart  : 09/17/2026 09:02:00
+Laufzeit_Tage : 12
+
+== Neustart ausstehend, laufende Installationen
+
+Komponentenwartung    : False
+WindowsUpdate         : True
+Dateiumbenennungen    : True
+InstallerUnterbrochen : False
+
+Dateiumbenennungen allein ist ein schwaches Zeichen, viele Programme hinterlassen dort Einträge.
+msiexec-Prozesse (/V ist der Dienst und harmlos, /i oder /x mit altem Start ist verdächtig):
+
+ProcessId ParentProcessId CreationDate        Aufruf
+--------- --------------- ------------        ------
+       10               1 09/26/2026 09:02:00 C:\Windows\system32\msiexec.exe /V
+
+== Datenträger
+
+Laufwerk GroesseGB FreiGB FreiProzent
+-------- --------- ------ -----------
+C:             256      5           2
+
+== Prozesse: meiste CPU-Zeit seit Start und meister Arbeitsspeicher
+
+Name              Id CPU_s RAM_MB
+----              -- ----- ------
+MsMpEng         4120  5310    412
+OUTLOOK        10244  1822    690
+msedge          8812  1410    355
+Teams          11020  1203    520
+explorer        6004   640    180
+notepad++      14320    12     85
+SearchHost      7720    95    160
+svchost         1432    88     60
+dwm             1300    80    120
+EXCEL          12880    44    210
+
+
+Name              Id RAM_MB
+----              -- ------
+OUTLOOK        10244    690
+Teams          11020    520
+MsMpEng         4120    412
+msedge          8812    355
+EXCEL          12880    210
+explorer        6004    180
+SearchHost      7720    160
+dwm             1300    120
+notepad++      14320     85
+svchost         1432     60
+
+== Automatisch startende Dienste, die nicht laufen
+
+Name    DisplayName        State   ExitCode
+----    -----------        -----   --------
+Spooler Druckwarteschlange Stopped     1067
+
+Dienste mit Trigger-Start oder verzögertem Start stehen hier oft, ohne dass etwas fehlt.
+
+== Kritisch und Fehler in System und Application, gruppiert
+
+Anzahl Quelle                                   Id Erstes              Letztes             Meldung
+------ ------                                   -- ------              -------             -------
+     2 Application Error                      1000 09/29/2026 07:02:00 09/29/2026 08:02:00 Name der fehlerhaften Anwendung: notepad++.exe
+     2 Service Control Manager                7031 09/29/2026 02:02:00 09/29/2026 02:32:00 Der Dienst Druckwarteschlange wurde unerwartet beendet, zweites Mal.
+     1 .NET Runtime                           1026 09/29/2026 06:02:00 09/29/2026 06:02:00 Anwendung: Tool.exe Beschreibung: Der Prozess wurde aufgrund einer unbehandelten Ausnahme beendet. Ausnahmeinformationen: System.IO.FileNotFoundExcept ...
+     1 Microsoft-Windows-WindowsUpdateClient    20 09/29/2026 03:02:00 09/29/2026 03:02:00 Installationsfehler: Fehler 0x80073712 beim Installieren eines Updates.
+     1 MsiInstaller                          11708 09/29/2026 04:08:00 09/29/2026 04:08:00 Produkt: Notepad++ -- Installationsvorgang fehlgeschlagen.
+
+== Programmabstürze, Hänger und .NET-Fehler
+
+Zeit                Art     Programm              Modul                  Code       Meldung
+----                ---     --------              -----                  ----       -------
+09/29/2026 08:02:00 Absturz notepad++.exe 8.8.5.0 NppPlugin.dll 1.0.0.0  0xc0000005 
+09/29/2026 07:02:00 Absturz notepad++.exe 8.8.5.0 ntdll.dll 10.0.22621.1 0xc0000005 
+09/29/2026 06:02:00 .NET                                                            Anwendung: Tool.exe Beschreibung: Der Prozess wurde aufgrund einer unbehandelten Ausnahme beendet. Ausnahmeinformationen: System.IO.FileNotFoundException
+
+== Windows Installer (MsiInstaller)
+
+TimeCreated            Id Meldung
+-----------            -- -------
+09/29/2026 04:14:00  1042 Beenden einer Windows Installer-Transaktion: C:\Windows\Temp\Anderes.msi. Client-Prozess-ID: 1234.
+09/29/2026 04:08:00 11708 Produkt: Notepad++ -- Installationsvorgang fehlgeschlagen.
+09/29/2026 04:02:00  1040 Beginnen einer Windows Installer-Transaktion: C:\Windows\Temp\Anderes.msi. Client-Prozess-ID: 1234.
+
+1040 und 1042 sind Beginn und Ende einer Installer-Transaktion; schließen sie die Zeit eines 1618 ein, lief dort die andere Installation.
+
+== Windows Update im Zeitraum (43 gestartet, 19 installiert, 20 fehlgeschlagen)
+
+TimeCreated         Id Meldung
+-----------         -- -------
+09/29/2026 03:02:00 20 Installationsfehler: Fehler 0x80073712 beim Installieren eines Updates.
+
+== Windows Update, letzte Vorgänge
+
+Datum               Ergebnis       Code       Titel
+-----               --------       ----       -----
+09/29/2026 03:02:00 fehlgeschlagen 0x80073712 2026-09 Kumulatives Update für Windows 11 (KB5030000)
+
+== Microsoft Defender
+
+Modus          : Normal
+Echtzeitschutz : True
+Signaturen     : 09/29/2026 06:02:00
+
+Funde im Zeitraum:
+
+InitialDetectionTime   ThreatID ProcessName                              Dateien
+--------------------   -------- -----------                              -------
+09/29/2026 07:02:00  2147519003 C:\Program Files\Notepad++\notepad++.exe file:_C:\Users\x\Downloads\plugin.dll
+
+== Netzwerk
+
+InterfaceAlias IPv4     Gateway  DNS
+-------------- ----     -------  ---
+Ethernet       10.0.0.5 10.0.0.1 10.0.0.2, 10.0.0.3
+
+WinHTTP-Proxy (gilt für Dienste, Windows Update und viele Installer):
+Direkter Zugriff (kein Proxyserver).
+
+== Installiert: Notepad++
+
+Ansicht        : Rechner 64-Bit
+Name           : Notepad++ (64-bit x64)
+Version        : 8.8.4
+Hersteller     : Notepad++ Team
+InstalliertAm  : 
+Schluessel     : Notepad++
+MSI            : False
+Ausgeblendet   : False
+Ort            : C:\Program Files\Notepad++
+Deinstallation : C:\Program Files\Notepad++\uninstall.exe
+
+Ansicht        : Rechner 32-Bit
+Name           : Notepad++ 8.8.5
+Version        : 8.8.5
+Hersteller     : Notepad++ Team
+InstalliertAm  : 20260928
+Schluessel     : {11111111-2222-3333-4444-555555555555}
+MSI            : True
+Ausgeblendet   : False
+Ort            : 
+Deinstallation : MsiExec.exe /X{11111111-2222-3333-4444-555555555555}
+
+Mehrere Einträge: auf parallele Versionen, 32/64-Bit-Mischung oder Reste alter Installationen achten.
+
+== Store- und MSIX-Apps: Notepad++
+(nichts gefunden)
+
+== Laufende Prozesse: Notepad++
+
+Name          ProcessId CreationDate        RAM_MB ExecutablePath
+----          --------- ------------        ------ --------------
+notepad++.exe        20 09/29/2026 08:02:00     50 C:\Program Files\Notepad++\notepad++.exe
+
+== Dienste: Notepad++
+
+Name       DisplayName       State   StartMode StartName   ExitCode
+----       -----------       -----   --------- ---------   --------
+NppUpdater Notepad++ Updater Running Manual    LocalSystem        0
+
+== Geplante Aufgaben: Notepad++
+
+Aufgabe           Zustand LetzterLauf         Ergebnis
+-------           ------- -----------         --------
+\Notepad++ Update Ready   09/28/2026 09:02:00 0x80070002
+
+== Ereignisse mit Bezug zu Notepad++ (System, Application, höchstens 5000 durchsucht)
+
+TimeCreated         LevelDisplayName ProviderName         Id Meldung
+-----------         ---------------- ------------         -- -------
+09/29/2026 07:02:00 Fehler           Application Error  1000 Name der fehlerhaften Anwendung: notepad++.exe
+09/29/2026 08:02:00 Fehler           Application Error  1000 Name der fehlerhaften Anwendung: notepad++.exe
+09/29/2026 04:08:00 Fehler           MsiInstaller      11708 Produkt: Notepad++ -- Installationsvorgang fehlgeschlagen.
+
+== Ende, Dauer 0 s

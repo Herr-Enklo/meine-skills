@@ -1,0 +1,16 @@
+{
+  "eval_id": 2,
+  "eval_name": "win-0xc000007b-teilmenge-frist",
+  "prompt": "Seit dem Patchday-Rollout gestern Abend startet bei drei Kollegen in der Buchhaltung unser Fachprogramm LohnPro (32-Bit, Version 12.4) nicht mehr. Meldung: 'Die Anwendung konnte nicht korrekt gestartet werden (0xc000007b)'. Bei den anderen 20 in der Abteilung geht es. Die Leute können so keine Löhne rechnen, Abrechnung ist Donnerstag. (Dienstag, 29.09.2026, 10:05 Uhr)",
+  "assertions": [
+    "Die Antwort beginnt mit einer Statuszeile im Format `INC-JJJJMMTT-HHMM | P<1-4> | <Bereich> | <Status> | <Titel>`, deren Zeit der Uhrzeit aus der Nachricht (10:05) entspricht",
+    "Die Priorität ist P1 oder P2, begründet mit stillstehender Arbeit oder der Abrechnungsfrist am Donnerstag",
+    "0xc000007b wird als ungültiges Image-Format erklärt, mit 32/64-Bit-Mischung oder beschädigter bzw. falscher DLL als Richtung",
+    "Eine fehlende oder beschädigte Visual-C++-Laufzeit in der x86-Fassung oder eine andere DLL-Abhängigkeit des 32-Bit-Programms wird als Hypothese genannt",
+    "Ein Workaround, damit die Löhne bis Donnerstag gerechnet werden können, wird genannt (etwa an einem funktionierenden Rechner oder per Fernzugriff arbeiten)",
+    "Der Vergleich der drei betroffenen mit den funktionierenden Rechnern ist Teil des Vorgehens",
+    "Es gibt einen konkreten, nur lesenden Befehl oder das Lagebild-Skript mit -Software für die betroffenen Rechner",
+    "Die Antwort stellt höchstens drei Rückfragen",
+    "Deinstallation von Updates oder Neuinstallation des Programms wird nicht ohne Freigabe angeordnet"
+  ]
+}
