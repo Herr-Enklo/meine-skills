@@ -202,7 +202,6 @@ def _output_on_source_windows(source_path: str, out_dir: str) -> str | None:
         return None                                   # Image-Datei o.Ae.
     target = _existing_ancestor(out_dir)
     letter = _path_letter(target)
-    where = f"{letter}:" if letter else "demselben Volume"
 
     # Bevorzugt fragt das Programm Windows selbst, auf welchem Volume der
     # Ordner liegt. Das erfasst auch \\?\-Pfade, Junctions, symbolische Links
@@ -212,15 +211,19 @@ def _output_on_source_windows(source_path: str, out_dir: str) -> str | None:
         if m_vol:
             src_volume = _win_volume_of_letter(m_vol.group(1))
             if src_volume:
-                if src_volume.lower() == out_volume.lower():
-                    return f"Der Ausgabeordner liegt auf {where}, also auf der Quelle selbst."
-                return None
+                if src_volume.lower() != out_volume.lower():
+                    return None
+                src_letter = m_vol.group(1)
+                if letter == src_letter:
+                    return f"Der Ausgabeordner liegt auf {src_letter}:, also auf der Quelle selbst."
+                return (f"Der Ausgabeordner verweist auf {src_letter}: (Verknüpfung oder "
+                        "eingehängtes Laufwerk) und liegt damit auf der Quelle selbst.")
         else:
             disks = _win_volume_disks(out_volume)
             if disks is not None:
                 if int(m_disk.group(1)) in disks:
-                    return (f"Der Ausgabeordner liegt auf {where}, einer Partition der "
-                            f"gewaehlten Platte (Datentraeger {m_disk.group(1)}).")
+                    return ("Der Ausgabeordner liegt auf einer Partition der gewaehlten "
+                            f"Platte (Datentraeger {m_disk.group(1)}).")
                 return None
 
     # Rueckfall ohne Windows-Abfrage: Laufwerksbuchstabe aus dem Pfad.

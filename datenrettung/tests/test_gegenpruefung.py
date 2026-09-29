@@ -147,6 +147,8 @@ class ZielschutzTests(unittest.TestCase):
         hits = self.check(r"D:\Verweis_auf_C", final_volume=vol_c, letter_volume=vol_c,
                           disks={0})
         self.assertTrue(all(hits))
+        self.assertIn("verweist auf C:", hits[0])        # nicht "liegt auf D:"
+        self.assertNotIn("D:", hits[1])
         # Umgekehrt: Pfad sagt C:, liegt aber auf einem anderen Volume/einer
         # anderen Platte (z.B. in C:\ eingehaengte zweite Platte).
         hits = self.check(r"C:\Mount\Platte2", final_volume=vol_d, letter_volume=vol_c,

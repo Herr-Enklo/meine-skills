@@ -108,7 +108,7 @@ def check_target_paths(drives, physical: str) -> None:
         check(made.returncode == 0 and os.path.isdir(link), "Junction angelegt")
         reason = output_on_source("\\\\.\\C:", link + "\\Gerettet")
         print(f"  {link} -> {target}: {reason}")
-        check(reason is not None, "Junction nach C: als Quelle erkannt")
+        check(reason is not None and "C:" in reason, "Junction nach C: als Quelle erkannt")
         check(output_on_source(physical, link) is not None, "Junction nach C: auf der Platte erkannt")
     finally:
         for path in (link, target):
