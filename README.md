@@ -142,7 +142,9 @@ ausstehenden Neustart, laufende Installationen, Fehlerereignisse, Abstürze mit 
 Code, Windows-Installer- und Update-Vorgänge, Defender und Netzwerk sammelt, mit
 `-Software <Name>` auch Installationen in allen Registry-Ansichten, Prozesse, Dienste,
 Aufgaben und Ereignisse zu einem Programm. Claude fragt erst nach, was das Skript nicht
-zeigen kann.
+zeigen kann. Startet ein Programm gar nicht (0xc000007b, fehlende DLL), liest
+`scripts/windows-startcheck.ps1` die Importtabellen und meldet fehlende DLLs und DLLs in
+falscher Architektur mit Fundort.
 
 ```
 powershell -NoProfile -ExecutionPolicy Bypass -File .\windows-lagebild.ps1 -Software "Notepad++" -Seit "2026-09-28 18:00"
@@ -186,14 +188,22 @@ Installation bei 1618 (MsiInstaller 1040/1042 sind Informationsereignisse), die
 Reihenfolge bei einer Kontoübernahme und das Erkennen verwaister oder erwartbar nicht
 verfügbarer Entitäten in Home Assistant.
 
-Das Lagebild-Skript lief mangels Windows unter PowerShell 7.6 auf Linux: Syntaxprüfung,
-PSScriptAnalyzer mit Kompatibilitätsregeln für Windows PowerShell 5.1 ohne Befund, und ein
-Test mit nachgebauten Windows-Cmdlets (39 Prüfungen: Zeitfenster, Gruppierung,
-Absturzcodes, Softwaresuche in allen Registry-Ansichten, Update-Verlauf mit negativem
-HResult). Ein Lauf auf echtem Windows steht noch aus.
+Eine zweite Runde lief mit dem Agent `incident-manager` selbst: einen Lagebild-Bericht
+auswerten und ein 32-Bit-Programm, das nach einem Rollout auf 3 von 23 Rechnern mit
+0xc000007b nicht startet. Daraus stammen das Startcheck-Skript, Modulpfad, Startfehler,
+Defender-Name und -Status, Empirum-Skriptkopie und -Protokoll im Lagebild, einheitliche
+Zeitangaben sowie Regeln zu Neustart, Zurückstufen und einzelnen Virenscanner-Funden.
+
+Beide Skripte liefen mangels Windows unter PowerShell 7.6 auf Linux: PSScriptAnalyzer mit
+Kompatibilitätsregeln für Windows PowerShell 5.1 ohne Befund, das Lagebild mit
+nachgebauten Windows-Cmdlets (57 Prüfungen), der Startcheck mit echten x86-, x64- und
+ARM64-Programmdateien aus dem Python-Paket distlib (12 Prüfungen: falsche Architektur
+über PATH, fehlende und beschädigte DLL, fremde Architektur im Programmordner). Ein Lauf
+auf echtem Windows steht noch aus.
 
 ```
 pwsh -NoProfile -File plugins/incident-manager/tests/lagebild-test.ps1
+pwsh -NoProfile -File plugins/incident-manager/tests/startcheck-test.ps1
 ```
 
 ### Wege zu einem Incident-Agent

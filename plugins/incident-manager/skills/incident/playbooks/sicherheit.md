@@ -5,7 +5,7 @@ Dieses Playbook hat Vorrang vor allen anderen. Es gilt, sobald einer dieser Fäl
 - Link in einer verdächtigen Mail geklickt, Zugangsdaten eingegeben oder Anhang geöffnet
 - MFA-Anfragen, die der Nutzer nicht ausgelöst hat
 - Warnung über unbekannte Anmeldung, geänderte Wiederherstellungsdaten, neue Weiterleitungsregeln
-- Virenscanner schlägt an, fremde Prozesse, verschlüsselte Dateien, Erpressernachricht
+- Virenscanner schlägt an (ein Testmuster wie EICAR ist kein Vorfall, wird aber gemeldet), fremde Prozesse, verschlüsselte Dateien, Erpressernachricht
 - Passwort, Token oder API-Schlüssel in einem Repository, Chat, Ticket oder Log gelandet
 - Gerät verloren oder gestohlen
 - Daten an falsche Empfänger gegangen
@@ -86,6 +86,18 @@ Melden, nach Freigabe und als Entwurf: in Gmail über "Phishing melden", beim ec
 3. Prüfen, ob Netzlaufwerke, Cloud-Sync-Ordner oder angeschlossene Backup-Platten betroffen sind. Backup-Medien sofort trennen.
 4. Im beruflichen Umfeld: IT-Sicherheit, P1. Privat: saubere Wiederherstellung aus einem Backup von vor dem Befall, Passwörter von einem sauberen Gerät aus ändern.
 5. Agent `security-incident-responder` für Analyse und Plan, Befunde mit Beleg.
+
+### Einzelner Virenscanner-Fund oder unbekannte Komponente
+
+Ein Fund, den der Virenscanner schon behandelt hat, oder ein Dienst, eine Aufgabe oder ein Plugin, dessen Herkunft unklar ist. Erst einordnen, dann eindämmen:
+
+1. Name, Status und Aktion des Funds lesen (Lagebild, Abschnitt Defender, oder `Get-MpThreat` und `Get-MpThreatDetection`): Wurde die Datei bereinigt, in Quarantäne verschoben oder nur gemeldet?
+2. Herkunft klären: Pfad, Signatur (`Get-AuthenticodeSignature`), SHA-256 (`Get-FileHash`), Datum; gehört die Datei zu einem Paket der Softwareverteilung, hat der Nutzer sie heruntergeladen, kam sie über einen Updater?
+3. Den Hash nachschlagen, die Datei nicht hochladen.
+4. Im beruflichen Umfeld die IT-Sicherheit informieren, mit Name, Datei, Hash, Zeit und Prozess.
+5. Vom Netz trennen erst, wenn es nach echter Schadsoftware aussieht (aktiver Fund, Aktion fehlgeschlagen, unbekannte Komponente mit SYSTEM-Rechten ohne passende Herkunft) oder die IT-Sicherheit es entscheidet. Dann weiter wie bei Schadsoftware.
+
+Ein Testmuster wie EICAR ist harmlos; es beweist nur, dass jemand den Virenscanner geprüft hat. Trotzdem klären, wer es war.
 
 ### Geheimnis geleakt (Repository, Chat, Log)
 

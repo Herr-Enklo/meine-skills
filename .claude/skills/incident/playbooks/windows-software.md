@@ -10,7 +10,16 @@ Frag nicht nach, was ein Befehl beantworten kann. Nötig vom Nutzer sind nur: we
 powershell -NoProfile -ExecutionPolicy Bypass -File "<skill-ordner>\scripts\windows-lagebild.ps1" -Software "<Programmname>" -Ausgabe "$env:TEMP\lagebild.txt"
 ```
 
-Mit `-Seit "2026-09-28 18:00"` statt der voreingestellten 48 Stunden lässt sich das Zeitfenster auf eine Rollout-Nacht legen. Läuft Claude lokal auf dem Rechner, direkt ausführen. Sonst dem Nutzer den Befehl geben, das Skript liegt im Skill-Ordner; er kann den Inhalt auch in eine PowerShell kopieren. Mit WinRM und Administratorrechten geht es auch aus der Ferne: `Invoke-Command -ComputerName <PC> -FilePath <skript> -ArgumentList '<Programmname>'`.
+Mit `-Seit "2026-09-28 18:00"` statt der voreingestellten 48 Stunden lässt sich das Zeitfenster auf eine Rollout-Nacht legen. Startet ein Programm gar nicht, zusätzlich `windows-startcheck.ps1` (siehe "Startfehler" unten).
+
+So kommt das Skript auf den Rechner:
+
+- Läuft Claude lokal auf dem Rechner, direkt ausführen.
+- Sonst liegt es im Skill-Ordner und muss auf den Rechner kopiert werden. Einen festen Ablageort im Firmennetz (Freigabe für IT-Werkzeuge, Empirum-Paket) einmal erfragen und im Gedächtnis ablegen.
+- Ohne Datei: den Inhalt in einen Skriptblock einfügen und mit Parametern aufrufen, `& { <Inhalt des Skripts> } -Software "X" -Seit "2026-09-28 18:00"`. Das hilft auch, wenn eine per Gruppenrichtlinie gesetzte Ausführungsrichtlinie `-ExecutionPolicy Bypass` übersteuert.
+- Im eingeschränkten Sprachmodus (AppLocker, WDAC) scheitern einzelne Abschnitte; sie stehen dann als "nicht abrufbar" im Bericht, der Rest ist verwertbar.
+- Als der betroffene Benutzer ausführen, nicht mit einem separaten Admin-Konto, sonst zeigen Benutzerregistry und Profilpfade auf das falsche Konto. Einen zusätzlichen Lauf als Administrator nur für Defender- und Systemteile.
+- Aus der Ferne mit WinRM und Administratorrechten: `Invoke-Command -ComputerName <PC> -FilePath <skript> -ArgumentList 'Notepad++', 48, '2026-09-28 18:00'`. Die Argumente gehen nach Position (Software, Stunden, Seit, Ausgabe); eine Datei aus `-Ausgabe` landet auf dem fernen Rechner.
 
 Die wichtigsten Fragen an das Ergebnis:
 
@@ -49,6 +58,8 @@ Betrifft es alle, liegt es am Paket, an der Quelle, an einer Richtlinie oder an 
 | 1641 | Installer hat Neustart ausgelöst | Erfolg |
 | 3010 | Neustart erforderlich | Erfolg, Neustart ausstehend |
 
+Im Ereignisprotokoll steht der Rückgabewert in MsiInstaller 1033 (Installation) bzw. 1034 (Entfernung). 11708 ("Installationsvorgang fehlgeschlagen") allein nennt keinen Code. Fehlt 1033, den ErrorLevel aus der Softwareverteilung holen.
+
 Unbekannte Codes nicht raten, sondern nachschlagen: `certutil -error <code>` (siehe `windows-system.md`). EXE-Installer (NSIS, Inno Setup, InstallShield und andere) haben eigene Codes und Logschalter; die Doku des Herstellers suchen.
 
 ### 1618: eine andere Installation läuft
@@ -79,7 +90,7 @@ Das ist eine echte Installation: auf einem Testrechner Stufe 1, auf dem Rechner 
 
 Reihenfolge nach Eingriffsstärke:
 
-1. Neustart, wenn einer aussteht (Stufe 1 nach Absprache, der Nutzer verliert offene Arbeit).
+1. Neustart, wenn einer aussteht. Stufe 2, weil der Nutzer offene Arbeit verliert; Stufe 1 nur, wenn niemand angemeldet ist. Das Lagebild vorher ziehen, sonst ist "Neustart ausstehend" als Beleg weg.
 2. Reparatur: bei MSI `msiexec /fa {ProductCode}`, der Produktcode ist der GUID-Schlüssel aus dem Lagebild; sonst die Reparaturfunktion des Programms. Stufe 1.
 3. Deinstallieren und neu installieren. In einer Umgebung mit Softwareverteilung über die Verteilung, nicht von Hand, damit Zuweisung und Inventar stimmen. Stufe 2.
 4. Reste entfernen (Ordner, Registry, Dienste, geplante Aufgaben). Registry vorher mit `reg export` sichern, Ordner umbenennen statt löschen. Stufe 3.
@@ -91,6 +102,7 @@ Reihenfolge nach Eingriffsstärke:
 - Protokolle der Vorlagen: MSI-Pakete schreiben `%App%\<Hersteller>.<Produkt>.<Version>.<Revision>.MSI.log` und löschen es nur nach Erfolg; EXE-Pakete schreiben `%Temp%\<Produkt>.<Version>.<Revision>.log`, beim Agenten unter SYSTEM ist `%Temp%` in der Regel `C:\Windows\Temp`. Weitere Protokollorte des Agenten beim ersten Incident vom Nutzer erfragen und im Gedächtnis ablegen.
 - Die Skriptkopie des ausgeführten Pakets liegt unter `%ProgramData%\$Matrix42Scripts$\<Hersteller>\<Produkt>\<Version>\Install\Setup.inf`. In PowerShell den Pfad mit einfachen Anführungszeichen bauen, sonst wird `$Matrix42Scripts` als Variable gelesen: `Join-Path $env:ProgramData '$Matrix42Scripts$'`. Daran sieht man, welche Fassung und welche Aufrufe tatsächlich liefen: `Select-String -Path <Setup.inf> -Pattern 'Call|MsiExec'`.
 - Fehler im Paket selbst (Erkennung, Uninstall-Schlüssel in der falschen Registry-Ansicht, Uninstaller arbeitet asynchron weiter, Reste bleiben liegen) werden im Paket behoben: Skill `paketieren`, Packaging Center mit `python main.py check <setup.inf>` und die Simulation im Repo `matrix42-paketierung`. Ist `paketieren` in der Session nicht verfügbar, die Änderung an der setup.inf als begründeten Vorschlag liefern und den Paketierlauf als Folgeaufgabe nennen.
+- Wer einen Hersteller-Installer (EXE) als eigenes MSI nachbaut, verliert dessen Upgrade-Logik und hinterlässt doppelte Einträge, wenn die EXE-Vorversion nicht entfernt wird. Bei Notepad++ etwa sortiert nur der Herstellerinstaller inkompatible Plugins nach `plugins\disabled` aus.
 - Erneut ausführen erst, wenn die Ursache klar ist, sonst kommt derselbe Fehler. Tagsüber scheitern Installer oft anders, weil das Programm offen ist (viele Installer brechen dann still ab). Also außerhalb der Arbeitszeit wiederholen oder das Paket die Anwendung schließen lassen (`AskKillProcesses` oder `KillProcess` im Abschnitt `CloseApplication` der Vorlage). Wiederholen ist Stufe 2.
 - Bei Rollout-Incidents nebenbei prüfen, ob die ausgerollte Version noch aktuell ist und keine bekannte Schwachstelle hat. Das ist ein Hinweis oder ein Change, kein Sicherheitsvorfall, solange es keine Zeichen einer Kompromittierung gibt.
 
@@ -98,7 +110,7 @@ Reihenfolge nach Eingriffsstärke:
 
 ### Absturzereignisse lesen
 
-Das Lagebild zeigt Anwendungsfehler (Application Error 1000), Hänger (Application Hang 1002) und .NET-Fehler (.NET Runtime 1026) mit Programm, fehlerhaftem Modul und Ausnahmecode. Einen Überblick über Wochen zeigt die Zuverlässigkeitsüberwachung: `perfmon /rel`.
+Das Lagebild zeigt Anwendungsfehler (Application Error 1000), Hänger (Application Hang 1002) und .NET-Fehler (.NET Runtime 1026) mit Programm, fehlerhaftem Modul, Modulpfad und Ausnahmecode. Der Modulpfad zeigt, ob das Modul zum Programm gehört, ein Plugin ist oder von einem anderen Produkt stammt. Einen Überblick über Wochen zeigt die Zuverlässigkeitsüberwachung: `perfmon /rel`.
 
 | Ausnahmecode | Bedeutung | Typische Richtung |
 |---|---|---|
@@ -114,16 +126,30 @@ Das Lagebild zeigt Anwendungsfehler (Application Error 1000), Hänger (Applicati
 
 Das fehlerhafte Modul sagt, wo man sucht: eine DLL des Programms selbst spricht für einen Programmfehler (Update, bekannte Probleme beim Hersteller), eine fremde DLL für das Produkt, zu dem sie gehört, `ntdll.dll` und `KERNELBASE.dll` sind oft nur der Ort, an dem ein Fehler sichtbar wird, nicht die Ursache. Absturzberichte liegen unter `C:\ProgramData\Microsoft\Windows\WER\ReportArchive`.
 
+### Startfehler: 0xc000007b, 0xc0000135, fehlende DLL
+
+Startet ein Programm gar nicht, entsteht meist kein Absturzereignis 1000. Windows schreibt nur einen Eintrag "Application Popup" (Ereignis 26) ins Systemprotokoll; das Lagebild zeigt ihn im Abschnitt "Startfehler". Die Ursache sucht `windows-startcheck.ps1`:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File "<skill-ordner>\scripts\windows-startcheck.ps1" -Programm "<Name oder Pfad der EXE>" -Seit "<Rollout-Zeitpunkt>" -Ausgabe "$env:TEMP\startcheck.txt"
+```
+
+Es liest die Importtabelle des Programms und der DLLs aus seinem Ordner und sucht jede benötigte DLL dort, wo Windows sie sucht: bekannte System-DLLs, Programmordner, Systemordner, Windows-Ordner, dann `PATH`. Gemeldet werden fehlende DLLs, DLLs in falscher Architektur mit Fundort, beschädigte Dateien, Dateien im Programmordner mit anderer Architektur oder jüngerem Datum, installierte Visual-C++-Laufzeiten und der `PATH`. Ein Klassiker für 0xc000007b: Die 32-Bit-Fassung einer DLL fehlt, und über einen neuen `PATH`-Eintrag findet Windows die 64-Bit-Fassung.
+
+Für 32-Bit-Programme auf 64-Bit-Windows ist der Systemordner `SysWOW64`, nicht `System32`; das Skript berücksichtigt das. Bleibt es ohne Befund (etwa weil das Programm DLLs erst zur Laufzeit nachlädt), zeigt Process Monitor mit Filter auf den Prozess die letzte DLL vor dem Abbruch. Process Monitor erst nach Rückfrage starten.
+
+Wer die Befunde vergleichen will: Startcheck auf einem betroffenen und einem funktionierenden Rechner laufen lassen und die Abschnitte "Probleme" und "PATH" gegenüberstellen.
+
 ### Fehlende Laufzeitumgebungen
 
-- Meldung zu `MSVCP140.dll`, `VCRUNTIME140.dll` oder `VCRUNTIME140_1.dll`: Microsoft Visual C++ Redistributable 2015–2022 in der Architektur des Programms fehlt oder ist beschädigt. 32-Bit-Programme brauchen die x86-Fassung, auch auf 64-Bit-Windows.
+- Meldung zu `MSVCP140.dll`, `VCRUNTIME140.dll` oder `VCRUNTIME140_1.dll`: die Visual-C++-Laufzeit (aktuell "Visual C++ v14 Redistributable", früher als "2015–2022" geführt) fehlt in der Architektur des Programms oder ist beschädigt. In Listen nach `*Visual C++*` suchen, nicht nach einer Jahreszahl. 32-Bit-Programme brauchen die x86-Fassung, auch auf 64-Bit-Windows.
 - Ereignis SideBySide 33 im Anwendungsprotokoll: eine im Manifest verlangte Laufzeit fehlt; die Meldung nennt Name und Version.
 - .NET Framework 4.x: `(Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full').Release` liefert die installierte Stufe. Neueres .NET: `dotnet --list-runtimes`.
 
 ### Eingrenzen
 
 - Anderer Benutzer auf demselben Rechner: Geht es dort, liegt es am Profil (Einstellungen unter `%APPDATA%` und `%LOCALAPPDATA%`, Benutzerteil der Registry). Einstellungen durch Umbenennen des Ordners zurücksetzen, nicht löschen (Stufe 2).
-- Abgesicherter Start des Programms, wo es das gibt (Office: `outlook.exe /safe`, `winword.exe /safe`): geht es dann, ist ein Add-in schuld. Deaktivierte Add-ins zeigt das Programm unter Optionen, Add-Ins.
+- Start ohne Erweiterungen, wo es das gibt (Office: `outlook.exe /safe`, `winword.exe /safe`; Notepad++: `-noPlugin`): geht es dann, ist ein Add-in oder Plugin schuld. Deaktivierte Add-ins zeigt Office unter Optionen, Add-Ins.
 - Läuft nur als Administrator: fehlende Schreibrechte auf Programmordner, Registry oder Daten. "Als Administrator ausführen" ist ein Test, keine Lösung. Die fehlende Berechtigung findet Process Monitor (Sysinternals, von Microsoft) mit Filter auf den Prozess und Ergebnis `ACCESS DENIED` oder `NAME NOT FOUND`. Ein Werkzeug auf einem Firmenrechner zu starten, fragt man vorher.
 - Seit einem Update kaputt: Versionshistorie und bekannte Probleme beim Hersteller, Release Notes; Rückkehr zur Vorversion über die Softwareverteilung ist Stufe 2.
 - Virenscanner blockiert: Defender-Funde im Lagebild; bei fremden Produkten deren Protokoll. Ausnahmen einzurichten ist Stufe 2 und im Unternehmen Sache der IT-Sicherheit.

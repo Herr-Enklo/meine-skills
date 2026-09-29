@@ -23,7 +23,7 @@
       "id": 2,
       "name": "win-0xc000007b-teilmenge-frist",
       "prompt": "Seit dem Patchday-Rollout gestern Abend startet bei drei Kollegen in der Buchhaltung unser Fachprogramm LohnPro (32-Bit, Version 12.4) nicht mehr. Meldung: 'Die Anwendung konnte nicht korrekt gestartet werden (0xc000007b)'. Bei den anderen 20 in der Abteilung geht es. Die Leute können so keine Löhne rechnen, Abrechnung ist Donnerstag. (Dienstag, 29.09.2026, 10:05 Uhr)",
-      "expected_output": "P2 wegen stillstehender Arbeit und Frist, 0xc000007b als ungültiges Image-Format mit 32/64-Bit-Mischung oder Laufzeit-DLL, VC++ x86 als Hypothese, Workaround für die Abrechnung, Vergleich mit den funktionierenden Rechnern, lesender Befehl oder Lagebild mit -Software.",
+      "expected_output": "P2 wegen stillstehender Arbeit und Frist, 0xc000007b als ungültiges Image-Format mit 32/64-Bit-Mischung oder Laufzeit-DLL, VC++ x86 als Hypothese, Workaround für die Abrechnung, Vergleich mit den funktionierenden Rechnern, Startcheck-Skript oder gleichwertige lesende DLL-Prüfung.",
       "files": [],
       "expectations": [
         "Die Antwort beginnt mit einer Statuszeile im Format `INC-JJJJMMTT-HHMM | P<1-4> | <Bereich> | <Status> | <Titel>`, deren Zeit der Uhrzeit aus der Nachricht (10:05) entspricht",
@@ -32,7 +32,7 @@
         "Eine fehlende oder beschädigte Visual-C++-Laufzeit in der x86-Fassung oder eine andere DLL-Abhängigkeit des 32-Bit-Programms wird als Hypothese genannt",
         "Ein Workaround, damit die Löhne bis Donnerstag gerechnet werden können, wird genannt (etwa an einem funktionierenden Rechner oder per Fernzugriff arbeiten)",
         "Der Vergleich der drei betroffenen mit den funktionierenden Rechnern ist Teil des Vorgehens",
-        "Es gibt einen konkreten, nur lesenden Befehl oder das Lagebild-Skript mit -Software für die betroffenen Rechner",
+        "Es gibt einen konkreten, nur lesenden Prüfweg für die betroffenen Rechner, der fehlende DLLs oder die Architektur der geladenen DLLs prüft (etwa windows-startcheck.ps1, Importtabelle, PATH-Vergleich), nicht nur allgemeine Fragen",
         "Die Antwort stellt höchstens drei Rückfragen",
         "Deinstallation von Updates oder Neuinstallation des Programms wird nicht ohne Freigabe angeordnet"
       ]
@@ -41,18 +41,20 @@
       "id": 3,
       "name": "win-lagebild-auswerten",
       "prompt": "Notepad++ stürzt bei mir auf PC01 seit heute früh ständig ab, und das nächtliche Update über Empirum ging wohl auch schief. Du hattest mir das Lagebild-Skript gegeben, hier die Ausgabe: lagebild-notepad.txt (Dienstag, 29.09.2026, 09:40 Uhr)",
-      "expected_output": "Befunde nach Ursache gruppiert: Absturz im Plugin NppPlugin.dll, Defender-Fund plugin.dll als möglicher Sicherheitsbefund, zwei parallele Notepad++-Installationen, 11708 während fremder Installer-Transaktion, 2 % frei auf C:, Windows Update 0x80073712. Keine Fragen nach Dingen, die im Lagebild stehen.",
-      "files": ["evals/files/lagebild-notepad.txt"],
+      "expected_output": "Befunde nach Ursache gruppiert: Absturz im unsignierten Plugin NppPlugin.dll, Defender-Fund Wacatac in plugin.dll als möglicher Sicherheitsvorfall, zwei parallele Notepad++-Installationen, Empirum 1618 wegen fremder Installer-Transaktion, 2 % frei auf C:, Windows Update 0x80073712. Keine Fragen nach Dingen, die im Lagebild stehen.",
+      "files": [
+        "evals/files/lagebild-notepad.txt"
+      ],
       "expectations": [
-        "Die Antwort nennt den Absturz im Modul NppPlugin.dll mit 0xc0000005 als wahrscheinliche Absturzursache (Plugin statt Notepad++ selbst)",
-        "Der Defender-Fund plugin.dll (im Downloads-Ordner, von notepad++.exe geladen) wird erkannt und als möglicher Sicherheitsbefund behandelt, nicht nur als Absturzursache",
+        "Die Antwort nennt das Plugin NppPlugin.dll (Modulpfad im Plugin-Ordner, 0xc0000005, unsigniert, am Morgen geändert) als wahrscheinliche Absturzursache statt Notepad++ selbst",
+        "Der Defender-Fund Trojan:Win32/Wacatac.B!ml (plugin.dll im Downloads-Ordner, von notepad++.exe angefasst) wird als möglicher Sicherheitsvorfall behandelt: IT-Sicherheit informieren oder Herkunft des Plugins klären, nicht nur als Absturzursache",
         "Die zwei parallelen Notepad++-Installationen (8.8.4 als 64-Bit-EXE und 8.8.5 als 32-Bit-MSI) werden als Befund genannt",
-        "Der fehlgeschlagene MSI-Installationsvorgang (11708) wird mit der gleichzeitigen fremden Installer-Transaktion (1040/1042, Anderes.msi) in Verbindung gebracht",
+        "Der gescheiterte Empirum-Lauf wird mit 1618 erklärt und mit der gleichzeitigen fremden Installer-Transaktion (1040/1042, Anderes.msi) in Verbindung gebracht",
         "Nur 2 % freier Platz auf C: wird als Befund genannt",
         "Das fehlgeschlagene Windows-Update mit 0x80073712 wird als beschädigter Komponentenspeicher eingeordnet oder mindestens als eigener Befund genannt",
-        "Die Antwort fragt nicht nach Informationen, die im Lagebild bereits stehen (Windows-Version, installierte Versionen, freier Speicher, Fehlerereignisse)",
+        "Die Antwort fragt nicht nach Informationen, die im Lagebild bereits stehen (Windows-Version, installierte Versionen, freier Speicher, Fehlerereignisse, ErrorLevel des Empirum-Laufs)",
         "Die Befunde sind nach vermuteter Ursache gruppiert statt als ungeordnete Liste",
-        "Löschen oder Deinstallieren wird nur als Vorschlag mit Freigabe oder Eingriffsstufe genannt, nicht als ohne Rückfrage auszuführende Maßnahme"
+        "Löschen, Deinstallieren oder erneutes Verteilen wird nur als Vorschlag mit Freigabe oder Eingriffsstufe genannt, nicht als ohne Rückfrage auszuführende Maßnahme"
       ]
     },
     {

@@ -126,7 +126,7 @@ Quelle: <Incident-ID, Doku-Links>
 
 Ablage unter `~/.claude/agent-memory/incident-manager/`. Den Ordner bei Bedarf anlegen.
 
-- `MEMORY.md`: kurzer Index, höchstens 200 Zeilen. Oben Umgebungswissen, das bei künftigen Incidents hilft (Systeme, Versionen, Anbieter, Zuständigkeiten, Prioritätsregeln des Arbeitgebers), darunter bekannte Fehler als je eine Zeile `Symptom → Ursache → Lösung (INC-ID)`, darunter die letzten Incidents als je eine Zeile `INC-ID | P | Bereich | Status | Titel`.
+- `MEMORY.md`: kurzer Index, höchstens 200 Zeilen. Oben Umgebungswissen, das bei künftigen Incidents hilft, damit dieselbe Frage nur einmal gestellt wird: Systeme und Versionen, Anbieter, Softwareverteilung (Konsole, Protokollpfade des Agenten, Rollout-Fenster), Ablageort der Diagnoseskripte auf Firmenrechnern, Zuständige (IT-Sicherheit, Datenschutz, zweiter Level), Prioritätsregeln des Arbeitgebers. Darunter bekannte Fehler als je eine Zeile `Symptom → Ursache → Lösung (INC-ID)`, darunter die letzten Incidents als je eine Zeile `INC-ID | P | Bereich | Status | Titel`.
 - `incidents/<ID>.md`: der Tickettext, ergänzt um die wichtigsten Belege.
 
 Regeln: keine Passwörter, Schlüssel oder Tokens, keine Kamerabilder, Personendaten nur so weit nötig. Veraltetes Umgebungswissen korrigieren statt ergänzen. In einer Web-Session ist dieser Ordner flüchtig; dort das Journal nur fortschreiben, wenn der Nutzer einen dauerhaften Ort nennt (zum Beispiel ein privates Repository), sonst den Tickettext im Chat ausgeben.

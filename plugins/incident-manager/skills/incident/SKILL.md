@@ -23,6 +23,7 @@ Begleitdateien in `${CLAUDE_SKILL_DIR}`, jeweils erst lesen, wenn du sie brauchs
 | `playbooks/windows-software.md` | Programme: Installation, Update, Deinstallation, Softwareverteilung (Empirum, MSI), Start, Absturz, Hänger, Laufzeitumgebungen, Rechte |
 | `playbooks/windows-system.md` | Windows selbst: Fehlercodes, Ereignisse, Bluescreen, Windows Update, Anmeldung, Profil, Gruppenrichtlinien, Drucker, Outlook, Leistung |
 | `scripts/windows-lagebild.ps1` | nur lesendes Lagebild eines Windows-Rechners, optional für ein Programm (`-Software`) und ein Zeitfenster (`-Seit`) |
+| `scripts/windows-startcheck.ps1` | nur lesend: warum ein Programm nicht startet (fehlende DLLs, falsche Architektur, 0xc000007b, 0xc0000135) |
 | `playbooks/netzwerk.md` | Internet, WLAN, DNS, DHCP, VPN, Router |
 | `playbooks/smart-home.md` | Home Assistant, Geräte, Automationen, Sensoren |
 | `playbooks/dienste-und-code.md` | Webdienste, Server, Zertifikate, Deployments, eigener Code, CI |
@@ -54,9 +55,9 @@ Systeme, die du nicht selbst erreichst (Arbeitsrechner, Server im Firmennetz), b
 
 ### 1. Aufnehmen und einstufen
 
-- Incident-ID vergeben: `INC-JJJJMMTT-HHMM` in der Ortszeit des Nutzers. Uhrzeit aus seiner Nachricht nehmen. Steht keine drin: Zeitzone aus dem Gedächtnis, sonst Europe/Berlin, als Annahme markiert. Nie die Uhr des Containers, die meist auf UTC steht.
+- Incident-ID vergeben: `INC-JJJJMMTT-HHMM` in der Ortszeit des Nutzers. Uhrzeit aus seiner ersten Meldung nehmen. Steht keine drin: Zeitzone aus dem Gedächtnis, sonst Europe/Berlin, als Annahme markiert. Nie die Uhr des Containers, die meist auf UTC steht.
 - Aus der Beschreibung ziehen: Symptom und Fehlermeldung wörtlich, betroffenes System, wer und wie viele betroffen sind, seit wann, was sich geändert hat, was schon versucht wurde.
-- Bereich bestimmen und das passende Playbook lesen. Bereiche: Windows-Software, Windows-System, Netzwerk, Smart Home, Dienste und Code, Sicherheit, Sonstiges. Bei Verdacht auf Sicherheitsvorfall sofort `playbooks/sicherheit.md`, das hat Vorrang vor allem anderen.
+- Bereich bestimmen und das passende Playbook lesen. Bereiche: Windows-Software, Windows-System, Netzwerk, Smart Home, Dienste und Code, Sicherheit, Sonstiges. Bei Verdacht auf Sicherheitsvorfall sofort `playbooks/sicherheit.md`, das hat Vorrang vor allem anderen. Im Statuskopf steht der Bereich, der gerade die Arbeit bestimmt: bei Sicherheitsverdacht Sicherheit, nach Entlastung zurück zum fachlichen Bereich.
 - Priorität nach `prioritaet.md` festlegen und in einem Halbsatz begründen. Fehlen die Prioritätsregeln des Arbeitgebers, nicht danach fragen, sondern mit markierter Annahme einstufen.
 - Rückfragen: höchstens drei, und nur solche, ohne deren Antwort die Diagnose nicht weiterkommt und die kein Befehl beantwortet. Alles andere mit ausdrücklich markierten Annahmen weiterbearbeiten. Bei P1 gibst du die Sofortmaßnahme gleich mit, statt auf Antworten zu warten.
 - Eine Meldung, hinter der sich viele Befunde verbergen ("viele Sensoren nicht verfügbar", "auf 14 Clients Fehler"), ist ein Incident mit einer ID. Die Befunde nach gemeinsamer Ursache gruppieren und je Gruppe eine Hypothese führen. Eigene IDs bekommen nur voneinander unabhängige Störungen.
@@ -72,7 +73,7 @@ Systeme, die du nicht selbst erreichst (Arbeitsrechner, Server im Firmennetz), b
 - Hypothesen aufstellen, meist zwei bis fünf. Zu jeder: welcher Befund sie bestätigt oder widerlegt, und wie teuer die Prüfung ist. Die billigste aussagekräftige Prüfung zuerst.
 - Vom Symptom zur Ursache in Schichten prüfen (zum Beispiel Strom, Verbindung, Name, Dienst, Anwendung) und die Schicht eingrenzen, statt überall gleichzeitig zu suchen.
 - Betrifft es einen Teil von vielen gleichartigen Systemen, den Unterschied suchen: Was haben die betroffenen gemeinsam, was die anderen nicht?
-- Sammelt der Nutzer die Belege (Firmenrechner, Server), gibt es einen gemeinsamen, nur lesenden Befehlsblock je Zielsystem, der alle Hypothesen auf einmal abdeckt. Unter Windows ist das meist das Lagebild-Skript, gegebenenfalls mit einem kurzen Zusatzblock.
+- Sammelt der Nutzer die Belege (Firmenrechner, Server), gibt es einen gemeinsamen, nur lesenden Befehlsblock je Zielsystem, der alle Hypothesen auf einmal abdeckt. Unter Windows ist das meist das Lagebild-Skript, bei Programmen, die gar nicht starten, zusätzlich `windows-startcheck.ps1`.
 - Parallel arbeiten, wo Subagents die Belege selbst erreichen (Web, Repositories, Konnektoren): bei P1 und P2 oder bei mehreren unabhängigen Hypothesen je Hypothese einen Subagent losschicken (Spezialisten laut `werkzeuge.md`). Jeder bekommt Symptom, Kontext, seine eine Hypothese, die Eingriffsstufe 0 und den Auftrag, Befund mit Beleg zurückzugeben. Ohne Agent-Tool der Reihe nach selbst prüfen.
 - Zeitgrenze pro Hypothese. Bringt eine Spur nach angemessenem Aufwand nichts, die nächste nehmen und das im Status vermerken.
 - Neue Befunde können die Priorität ändern. Hochstufen, wenn der Kreis der Betroffenen wächst oder ein Sicherheits- oder Datenverlustverdacht auftaucht.
@@ -109,6 +110,7 @@ Jede Antwort beginnt mit dem Statuskopf aus `vorlagen.md`. Danach kurz und in di
 - Bei P1 besteht die erste Antwort nur aus Statuskopf, drei bis sieben Schritten und höchstens drei Fragen.
 - Den Tickettext gibt es bei der Lösung, bei Eskalation oder auf Wunsch, nicht in jeder Antwort.
 - Nebenbefunde ohne Bezug zum Incident (fälliges Update, anderer Fehler im Log) am Ende in je einer Zeile.
+- Müssen Betroffene selbst etwas tun (Workaround nutzen, Programm nicht öffnen), bei P1 und P2 schon in der ersten Antwort eine kurze Nutzerinfo anbieten.
 
 Mehrere voneinander unabhängige Incidents bekommen je eine eigene ID und werden getrennt geführt. Ihre Diagnosen dürfen parallel als Hintergrund-Agents laufen.
 

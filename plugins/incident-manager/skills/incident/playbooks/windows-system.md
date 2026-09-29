@@ -10,7 +10,7 @@ Erst das Skript, dann Fragen. Es liest nur und braucht keine Administratorrechte
 powershell -NoProfile -ExecutionPolicy Bypass -File "<skill-ordner>\scripts\windows-lagebild.ps1" -Ausgabe "$env:TEMP\lagebild.txt"
 ```
 
-Es zeigt System und Build, Laufzeit seit dem letzten Start, ausstehenden Neustart und laufende Installationen, Datenträger, Speicherfresser, gestoppte Autostart-Dienste, gruppierte Fehlerereignisse, Abstürze, Windows-Installer- und Windows-Update-Vorgänge, Defender und Netzwerk. Optionen: `-Software <Name>` für ein Programm, `-Stunden <n>` oder `-Seit <Zeitpunkt>` für das Zeitfenster. Aus der Ferne mit WinRM: `Invoke-Command -ComputerName <PC> -FilePath <skript>`.
+Es zeigt System und Build, Laufzeit seit dem letzten Start, ausstehenden Neustart und laufende Installationen, Datenträger, Speicherfresser, gestoppte Autostart-Dienste, gruppierte Fehlerereignisse, Abstürze mit Modulpfad, Startfehler, Windows-Installer- und Windows-Update-Vorgänge, Defender mit Name und Status eines Funds, Netzwerk und `PATH`. Optionen: `-Software <Name>` für ein Programm, `-Stunden <n>` oder `-Seit <Zeitpunkt>` für das Zeitfenster. Als der betroffene Benutzer ausführen. Wie das Skript auf den Rechner kommt, auch ohne Datei und aus der Ferne, steht in `windows-software.md` unter "Einstieg".
 
 Vom Nutzer brauchst du dann nur noch: was passiert, Fehlermeldung wörtlich oder als Screenshot, seit wann, ein Rechner oder mehrere, und ob sich vorher etwas geändert hat.
 
@@ -22,7 +22,7 @@ Nie raten. Windows löst Codes selbst auf:
 certutil -error 0x80070005
 ```
 
-Aufbau, der beim Lesen hilft: `0x8007xxxx` ist ein Win32-Fehler, die letzten vier Stellen hexadezimal (`0x80070005` ist Win32-Fehler 5, Zugriff verweigert). `0xC...` sind NTSTATUS-Codes, meist aus Abstürzen oder Treibern. `0x8024xxxx` stammen von Windows Update. Was `certutil` nicht kennt, mit dem genauen Code und dem Produkt suchen.
+Aufbau, der beim Lesen hilft: `0x8007xxxx` ist ein Win32-Fehler, die letzten vier Stellen hexadezimal (`0x80070005` ist Win32-Fehler 5, Zugriff verweigert). `0xC...` sind NTSTATUS-Codes, meist aus Abstürzen oder Treibern. `0x8024xxxx` stammen von Windows Update. Ohne Windows (etwa in einer Web-Session) gibt es kein `certutil`; dann ist die Referenz [MS-ERREF] von Microsoft die Quelle für Win32-, HRESULT- und NTSTATUS-Codes. Was beide nicht kennen, mit dem genauen Code und dem Produkt suchen.
 
 ## Ereignisse
 

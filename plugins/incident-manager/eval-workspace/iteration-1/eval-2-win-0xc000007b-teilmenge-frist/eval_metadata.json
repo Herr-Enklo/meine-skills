@@ -9,7 +9,7 @@
     "Eine fehlende oder beschädigte Visual-C++-Laufzeit in der x86-Fassung oder eine andere DLL-Abhängigkeit des 32-Bit-Programms wird als Hypothese genannt",
     "Ein Workaround, damit die Löhne bis Donnerstag gerechnet werden können, wird genannt (etwa an einem funktionierenden Rechner oder per Fernzugriff arbeiten)",
     "Der Vergleich der drei betroffenen mit den funktionierenden Rechnern ist Teil des Vorgehens",
-    "Es gibt einen konkreten, nur lesenden Befehl oder das Lagebild-Skript mit -Software für die betroffenen Rechner",
+    "Es gibt einen konkreten, nur lesenden Prüfweg für die betroffenen Rechner, der fehlende DLLs oder die Architektur der geladenen DLLs prüft (etwa windows-startcheck.ps1, Importtabelle, PATH-Vergleich), nicht nur allgemeine Fragen",
     "Die Antwort stellt höchstens drei Rückfragen",
     "Deinstallation von Updates oder Neuinstallation des Programms wird nicht ohne Freigabe angeordnet"
   ]

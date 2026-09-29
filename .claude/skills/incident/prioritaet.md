@@ -6,7 +6,7 @@ Die Priorität ergibt sich aus Auswirkung und Dringlichkeit, wie im ITIL-Inciden
 
 | Stufe | Beruflich | Zuhause |
 |---|---|---|
-| hoch | ganzer Dienst oder Standort, viele Nutzer, geschäftskritische Anwendung, Sicherheit oder Datenverlust | Übernahme eines Hauptkontos (Google, Apple, Microsoft, Mail), Online-Banking, Passwortmanager; Einbruchmeldung, Kameras, Schlösser; Heizung im Winter, Wasser oder Strom; Internet bei Homeoffice-Pflicht |
+| hoch | ganzer Dienst oder Standort, viele Nutzer, geschäftskritische Anwendung für einen großen Teil ihrer Nutzer nicht verfügbar, Sicherheit oder Datenverlust | Übernahme eines Hauptkontos (Google, Apple, Microsoft, Mail), Online-Banking, Passwortmanager; Einbruchmeldung, Kameras, Schlösser; Heizung im Winter, Wasser oder Strom; Internet bei Homeoffice-Pflicht |
 | mittel | eine Abteilung oder Gruppe, eine wichtige Funktion, ein Nutzer mit kritischer Rolle | eine Komfortfunktion für alle Bewohner, Energiedaten, Rollos, Kameras ohne Sicherheitsbezug |
 | niedrig | ein einzelner Nutzer, Workaround vorhanden | ein einzelnes Gerät, eine Anzeige, ein Dashboard |
 
@@ -19,6 +19,8 @@ Maßgeblich ist, wie stark die Arbeit beeinträchtigt ist, nicht nur die Zahl de
 | hoch | Schaden wächst schnell, Arbeit steht still, feste Frist in Stunden, Angreifer möglicherweise noch aktiv |
 | mittel | Arbeit eingeschränkt, aber möglich; Frist in Tagen |
 | niedrig | kann ohne Nachteil warten |
+
+Trifft mehr als eine Zeile zu, gilt die höhere. Wer gar nicht arbeiten kann, hat hohe Dringlichkeit, auch wenn die Frist erst in Tagen liegt.
 
 ## Matrix
 
@@ -34,8 +36,8 @@ Die Zeiten sind Richtwerte für die eigene Arbeit, keine Zusagen.
 
 | Priorität | Reaktion | Statusmeldungen | Vorgehen |
 |---|---|---|---|
-| P1 | sofort | nach jedem wesentlichen Schritt | Sofortmaßnahme vor Rückfragen, Hypothesen parallel mit Subagents, Nachbetrachtung Pflicht, Abschluss erst nach Prüfung durch `testing-reality-checker`. Ist nur eine Person privat betroffen und kann nur sie selbst handeln: keine Subagents vor der Sofortmaßnahme, Nachbetrachtung als Kurzform, Abschlussprüfung nur, wenn es etwas zu prüfen gibt |
-| P2 | innerhalb einer Stunde | bei jedem neuen Befund | parallele Diagnose, wenn mehrere Spuren offen sind, Nachbetrachtung Pflicht |
+| P1 | sofort | nach jedem wesentlichen Schritt | Sofortmaßnahme vor Rückfragen, Hypothesen parallel mit Subagents, wo diese die Belege selbst erreichen, Nachbetrachtung Pflicht, Abschluss erst nach Prüfung durch `testing-reality-checker`. Ist nur eine Person privat betroffen und kann nur sie selbst handeln: keine Subagents vor der Sofortmaßnahme, Nachbetrachtung als Kurzform, Abschlussprüfung nur, wenn es etwas zu prüfen gibt |
+| P2 | innerhalb einer Stunde | bei jedem neuen Befund | parallele Diagnose, wenn mehrere Spuren offen sind und Subagents die Belege selbst erreichen; sonst ein gemeinsamer Befehlsblock für den Nutzer. Nachbetrachtung Pflicht |
 | P3 | am selben Tag | am Ende | der Reihe nach, Workaround reicht zunächst |
 | P4 | planbar | am Ende | kann in eine Aufgabe oder ein Change überführt werden |
 
@@ -46,7 +48,11 @@ Eine Stufe höher, sobald eines davon eintritt:
 - Der Kreis der Betroffenen wächst deutlich, oder ein zweiter Dienst fällt aus.
 - Verdacht auf Sicherheitsvorfall oder Datenverlust. Das ist mindestens P2, bei aktivem Angreifer oder abfließenden Daten P1.
 - Keine Ursache nach angemessener Zeit bei P1 oder P2.
-- Eine Frist rückt näher, etwa ein Termin, eine Abgabe oder eine Meldepflicht.
+- Eine Frist rückt näher, etwa ein Termin, eine Abgabe oder eine Meldepflicht: bleibt weniger als ein Arbeitstag Puffer und greift kein Workaround, eine Stufe hoch.
+
+## Zurückstufen
+
+Wird ein Verdacht widerlegt, eine Stufe zurück und im Status vermerken, warum. Beispiele: Der Virenscanner-Fund ist nachweislich ein Testmuster wie EICAR, eine unbekannte Komponente stammt aus dem eigenen Paket, ein Workaround trägt bis zur Lösung.
 
 ## Major Incident
 

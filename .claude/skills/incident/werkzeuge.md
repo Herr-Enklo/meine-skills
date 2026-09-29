@@ -17,9 +17,11 @@ MCP-Werkzeuge erscheinen mit Präfix, etwa `mcp__HA-MCP__ha_get_state`. Unten st
 ### Windows
 
 - Lagebild: `scripts/windows-lagebild.ps1` im Skill-Ordner, nur lesend, ohne Administratorrechte, Windows PowerShell 5.1 und PowerShell 7. Aufruf und Optionen in `playbooks/windows-system.md`. Mit `-Software <Name>` alles zu einem Programm, mit `-Seit <Zeitpunkt>` ein festes Zeitfenster, mit `-Ausgabe <Datei>` zusätzlich als Datei.
+- Startfehler: `scripts/windows-startcheck.ps1 -Programm <Name oder Pfad>`, nur lesend. Findet fehlende DLLs und DLLs in falscher Architektur über die Importtabellen, siehe `playbooks/windows-software.md`.
+- Ohne Datei, bei gesperrter Ausführungsrichtlinie oder aus der Ferne: siehe "Einstieg" in `playbooks/windows-software.md`.
 - Läuft Claude Code lokal unter Windows, ist die Shell oft Git Bash. PowerShell dann über `powershell -NoProfile -Command "..."` aufrufen, das Skript über `powershell -NoProfile -ExecutionPolicy Bypass -File "<pfad>"`. `Bypass` gilt nur für diesen einen Aufruf.
 - Sitzt der Nutzer am Rechner und Claude nicht: Befehl zum Kopieren geben, die Ausgabe zurückbekommen. Bei langen Ausgaben um die Datei aus `-Ausgabe` bitten.
-- Fremde Rechner mit WinRM und Administratorrechten: `Invoke-Command -ComputerName <PC> -FilePath <skript> -ArgumentList '<Programm>'`, erst ein Rechner, dann alle.
+- Fremde Rechner mit WinRM und Administratorrechten: `Invoke-Command -ComputerName <PC> -FilePath <skript> -ArgumentList '<Programm>', 48, '<Seit>'` (Argumente nach Position), erst ein Rechner, dann alle.
 - Eingebaute Werkzeuge: `certutil -error <code>` für Fehlercodes, `Get-WinEvent` für Ereignisse, `perfmon /rel` für die Zuverlässigkeitsüberwachung, `gpresult` für Richtlinien, `msiexec /l*v` für Installer-Logs, `reg export` als Sicherung vor Registry-Änderungen. Process Monitor (Sysinternals) für Zugriffs- und Dateifehler, auf Firmenrechnern nur nach Rückfrage.
 
 ### Home Assistant (MCP `ha_*`)
