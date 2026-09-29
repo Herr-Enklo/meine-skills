@@ -1,7 +1,7 @@
 """Macht aus dem JSONL-Protokoll eines Subagent-Laufs ein Transkript für die Bewertung.
 
-Schreibt transcript.md (Auftrag, alle Werkzeugaufrufe mit gekürzten Parametern, letzte
-Antwort) und outputs/metrics.json (Werkzeugaufrufe je Werkzeug) in den Run-Ordner.
+Schreibt transcript.md (Auftrag, alle Werkzeugaufrufe mit gekürzten Parametern und gekürztem
+Ergebnis, letzte Antwort) und outputs/metrics.json (Werkzeugaufrufe je Werkzeug) in den Run-Ordner.
 
 Aufruf: python eval_transkript.py <agent.jsonl> <run-ordner>
 """
@@ -18,9 +18,15 @@ def texte(inhalt):
     return [teil.get("text", "") for teil in inhalt or [] if isinstance(teil, dict) and teil.get("type") == "text"]
 
 
+def kurz(text: str, laenge: int) -> str:
+    text = " ".join(text.split())
+    return text if len(text) <= laenge else text[:laenge] + " ..."
+
+
 def main(protokoll: Path, run_ordner: Path) -> None:
     auftrag = None
     aufrufe = []
+    ergebnisse = {}
     letzte_antwort = ""
     zaehler = collections.Counter()
 
@@ -34,21 +40,31 @@ def main(protokoll: Path, run_ordner: Path) -> None:
             gefunden = "\n".join(texte(inhalt)).strip()
             if gefunden:
                 auftrag = gefunden
+        if eintrag.get("type") == "user" and isinstance(inhalt, list):
+            for teil in inhalt:
+                if isinstance(teil, dict) and teil.get("type") == "tool_result":
+                    ergebnis = teil.get("content")
+                    if isinstance(ergebnis, list):
+                        ergebnis = "\n".join(texte(ergebnis))
+                    ergebnisse[teil.get("tool_use_id")] = str(ergebnis or "")
         if eintrag.get("type") == "assistant":
             for teil in inhalt if isinstance(inhalt, list) else []:
                 if teil.get("type") == "tool_use":
                     zaehler[teil.get("name", "?")] += 1
-                    parameter = json.dumps(teil.get("input"), ensure_ascii=False)
-                    if len(parameter) > 400:
-                        parameter = parameter[:400] + " ..."
-                    aufrufe.append(f"- `{teil.get('name')}` {parameter}")
+                    parameter = kurz(json.dumps(teil.get("input"), ensure_ascii=False), 400)
+                    aufrufe.append((teil.get("id"), f"- `{teil.get('name')}` {parameter}"))
             antwort = "\n".join(texte(inhalt)).strip()
             if antwort:
                 letzte_antwort = antwort
 
     zeilen = ["# Transkript", "", "## Auftrag", "", auftrag or "(nicht gefunden)", "",
               f"## Werkzeugaufrufe ({sum(zaehler.values())})", ""]
-    zeilen += aufrufe or ["(keine)"]
+    for kennung, aufruf in aufrufe:
+        zeilen.append(aufruf)
+        if kennung in ergebnisse:
+            zeilen.append(f"  Ergebnis: {kurz(ergebnisse[kennung], 700)}")
+    if not aufrufe:
+        zeilen.append("(keine)")
     zeilen += ["", "## Letzte Antwort des Laufs", "", letzte_antwort or "(leer)", ""]
     (run_ordner / "transcript.md").write_text("\n".join(zeilen), encoding="utf-8")
 
