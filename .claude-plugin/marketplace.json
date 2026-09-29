@@ -20,6 +20,11 @@
       "description": "Browser-Agent Jev Ultrafast: klickt, tippt und sucht in einem eigenen Chrome, Ergebnis wird geprüft"
     },
     {
+      "name": "incident-manager",
+      "source": "./plugins/incident-manager",
+      "description": "Incident Manager: Störungen aufnehmen, einstufen, diagnostizieren und mit Belegen lösen"
+    },
+    {
       "name": "agency-dev",
       "source": "./plugins/agency-dev",
       "description": "Entwicklung und Architektur: Architekten, Code-Review, Frontend, Backend, Git, Doku"

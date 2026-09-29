@@ -10,6 +10,7 @@ Auswahl an Agents, versioniert und auf jedem Rechner installierbar.
 /plugin install paketierung@meine-skills
 /plugin install grill-me@meine-skills
 /plugin install jev-ultrafast@meine-skills
+/plugin install incident-manager@meine-skills
 ```
 
 Danach `/reload-plugins`, falls die Installation das meldet.
@@ -51,6 +52,7 @@ Beschreibung Platz im Systemprompt jeder Session.
 | `paketierung` | Skills für das Paketierungsprojekt | 1 Skill |
 | `grill-me` | Kritisches Nachfragen zu Plänen, Entscheidungen und Ideen | 1 Skill |
 | `jev-ultrafast` | Browser-Agent Jev Ultrafast: Webseiten bedienen lassen, Ergebnis prüfen | 1 Skill mit Skript |
+| `incident-manager` | Incident Manager: Störungen annehmen, diagnostizieren und mit Belegen lösen | 1 Skill, 1 Agent |
 | `agency-dev` | Entwicklung und Architektur | 12 Agents |
 | `agency-ops` | Betrieb und Infrastruktur | 9 Agents |
 | `agency-security` | Sicherheit | 10 Agents |
@@ -79,9 +81,10 @@ Skills rufst du als Slash-Befehl auf:
 /paketierung:code-review <PR-URL oder Dateipfad>
 /grill-me:grill-me <Plan oder Idee>
 /jev-ultrafast:jev <Browseraufgabe>
+/incident-manager:incident <Beschreibung der Störung>
 ```
 
-In Web-Sessions auf diesem Repo heißt der Jev-Skill nur `/jev` (siehe unten).
+In Web-Sessions auf diesem Repo heißen die beiden nur `/jev` und `/incident` (siehe unten).
 
 Agents sprichst du im Gespräch an oder lässt Claude sie selbst auswählen:
 
@@ -121,6 +124,58 @@ sperrt.
 python -m unittest discover -s plugins/jev-ultrafast/tests
 python plugins/jev-ultrafast/tests/e2e_offline.py
 ```
+
+## incident-manager
+
+Du beschreibst eine Störung, Claude arbeitet sie ab wie ein Incident Manager: ID und
+Priorität vergeben, Hypothesen aufstellen, mit den Werkzeugen der Session prüfen,
+Workaround und Lösung umsetzen oder als fertige Befehle liefern, das Ergebnis belegen
+und einen Tickettext zum Kopieren schreiben. Bei P1 und P2 laufen unabhängige Prüfungen
+parallel als Subagents, am Ende steht eine Nachbetrachtung.
+
+Das Plugin hat zwei Teile. Der Skill `incident` enthält den Ablauf (`SKILL.md`), die
+Prioritätsmatrix, die Zuordnung von Werkzeugen, Konnektoren und Agents zu Störungsarten,
+Playbooks für Windows-Arbeitsplatz und Softwareverteilung, Netzwerk, Smart Home, Dienste
+und Code sowie Sicherheit, und Vorlagen für Tickettext, Nutzerinfo, Übergabe und
+Nachbetrachtung. Der Agent `incident-manager` lädt diesen Skill und hat ein Gedächtnis
+unter `~/.claude/agent-memory/incident-manager/` mit Umgebungswissen, bekannten Fehlern
+und den letzten Incidents. Der Skill schreibt in denselben Ordner.
+
+```
+/incident Drucker druckt seit dem Update nicht mehr, Fehler 0x0000011b
+/incident-manager:incident <Beschreibung>
+claude --agent incident-manager
+claude --bg --agent incident-manager "VPN verbindet nicht, Fehler 809"
+```
+
+Die erste Zeile gilt in Web-Sessions auf diesem Repo, die zweite lokal mit installiertem
+Plugin. Mit `--agent` wird die ganze Session zum Incident Manager, mit `--bg` läuft ein
+Incident im Hintergrund, `claude agents` zeigt alle laufenden. Den genauen Agent-Namen
+bei Installation als Plugin zeigt `/agents`.
+
+Lesen und diagnostizieren darf Claude ohne Rückfrage. Kleine, umkehrbare Eingriffe am
+defekten Teil (eine Integration neu laden, einen hängenden Dienst neu starten) kündigt
+es an und führt sie aus. Alles, was andere betrifft oder unterbricht, etwas im Haus
+schaltet, Nachrichten versendet oder dauerhaft umkonfiguriert, braucht eine Freigabe;
+Löschen und Zurücksetzen nur auf ausdrückliche Anweisung.
+
+### Wege zu einem Incident-Agent
+
+Geprüft am 29.09.2026 gegen die Claude-Code-Doku und die Konnektoren dieses Kontos.
+
+| Weg | Stand | Einschätzung |
+|---|---|---|
+| Skill `/incident` | gebaut | Kern des Ganzen. Die Session selbst wird Incident Manager, kann nachfragen, Konnektoren nutzen und Spezialisten parallel starten. Läuft lokal und in Web-Sessions. |
+| Agent `incident-manager` | gebaut | Für mehrere Incidents gleichzeitig (ein Agent je Incident, auch im Hintergrund) und als ganze Session per `--agent`. Bringt das Gedächtnis mit, das Claude Code bei jedem Start lädt. Als Subagent kann er nicht direkt nachfragen und gibt Rückfragen gesammelt zurück. |
+| Konnektoren | genutzt | Home Assistant für Diagnose und Reparatur zu Hause, GitHub für Code und CI, Gmail für Zusammenhänge und Antwortentwürfe, Kalender für die Frage, was sich geändert hat. Gesendet oder geschaltet wird erst nach Freigabe. |
+| Routine auf claude.ai/code | nicht eingerichtet | Läuft zeitgesteuert ohne offenen Rechner, etwa als täglicher Gesundheitscheck von Home Assistant (neue Repairs, ausgefallene Geräte) oder um Mails mit einem Label „Incident“ abzuarbeiten. Lohnt sich, sobald Störungen regelmäßig auf einem dieser Wege ankommen. |
+| Geplante Aufgabe in der Desktop-App | nicht eingerichtet | Wie eine Routine, aber auf dem eigenen Rechner und damit mit Zugriff aufs lokale Netz. |
+| GitHub Action `anthropics/claude-code-action` | nicht gebaut | Issues mit Label `incident` in einem privaten Repo würden automatisch analysiert. Braucht einen API-Schlüssel oder OAuth-Token als Secret, und der Runner erreicht weder Heim- noch Firmennetz. |
+| Eigenes Programm mit dem Agent SDK | nicht gebaut | Nur sinnvoll mit API-Zugang zum Ticketsystem, um Tickets selbst abzuholen und zurückzuschreiben. Größter Aufwand, eigene API-Kosten. |
+
+Die Einstellung `"agent": "incident-manager"` in `.claude/settings.json` würde jede
+Session in diesem Repo als Incident Manager starten. Sie ist nicht gesetzt, weil hier
+auch an den anderen Skills gearbeitet wird.
 
 ## Agent-Katalog
 
@@ -250,10 +305,11 @@ Ordner nicht.
 
 ### Was in diesem Repo eingestellt ist
 
-`.claude/agents/` enthält die 62 Agents und `.claude/skills/` den Paketierungs-Skill und
-den Jev-Skill, damit Web-Sessions sie haben. Damit lokale Sessions sie nicht zusätzlich
-über die global installierten Plugins bekommen und dadurch doppelt führen, stehen diese
-zehn Plugins in `.claude/settings.json` auf `false`. Das Projekt-Setting sticht die
+`.claude/agents/` enthält die 62 agency-Agents und den `incident-manager`,
+`.claude/skills/` den Paketierungs-Skill, den Jev-Skill und den Incident-Skill, damit
+Web-Sessions sie haben. Damit lokale Sessions sie nicht zusätzlich über die global
+installierten Plugins bekommen und dadurch doppelt führen, stehen diese elf Plugins in
+`.claude/settings.json` auf `false`. Das Projekt-Setting sticht die
 Nutzer-Einstellung, und zwar nur in diesem Repo: in anderen Projekten greifen die
 global installierten Plugins weiter.
 
@@ -274,6 +330,7 @@ Nach Änderungen an den Plugin-Agents:
 ```
 rm -rf .claude/agents && mkdir -p .claude/agents && cp plugins/agency-*/agents/*.md .claude/agents/
 cp plugins/agency-dev/NOTICE.md .claude/agents/NOTICE.md
+cp plugins/incident-manager/agents/incident-manager.md .claude/agents/
 ```
 
 Der Skill wird von Hand nachgezogen: `plugins/paketierung/skills/code-review/SKILL.md`
@@ -284,6 +341,12 @@ Der Jev-Skill wird als ganzer Ordner kopiert, Skript und Lockfile gehören dazu:
 
 ```
 rm -rf .claude/skills/jev && cp -r plugins/jev-ultrafast/skills/jev .claude/skills/jev
+```
+
+Der Incident-Skill ebenso, mit allen Playbooks und Vorlagen:
+
+```
+rm -rf .claude/skills/incident && cp -r plugins/incident-manager/skills/incident .claude/skills/incident
 ```
 
 ## Sicherheit
@@ -303,6 +366,12 @@ Frontmatter, 18 davon ohne Bash. Die Regel dahinter: Wer analysiert, entwirft od
 berichtet und dessen Umsetzung woanders liegt, braucht keine Shell. Wer baut, deployt,
 migriert, misst oder forensisch untersucht, behält sie. Die Zuordnung im Einzelnen steht
 in `SECURITY-ABWEICHUNGEN.md`.
+
+Der eigene Agent `incident-manager` hat kein `tools:` und damit den vollen Satz, weil
+Diagnose Shell und Konnektoren braucht. Er liest dabei viel fremden Text (Tickets, Logs,
+Mails). Agent und Skill legen deshalb fest, dass Anweisungen in solchen Inhalten nicht
+befolgt werden, und staffeln Eingriffe nach Wirkung: ohne Freigabe nur Lesen und kleine,
+umkehrbare Schritte am defekten Teil.
 
 ## Änderungen ausrollen
 

@@ -11,6 +11,7 @@
   "enabledPlugins": {
     "paketierung@meine-skills": false,
     "jev-ultrafast@meine-skills": false,
+    "incident-manager@meine-skills": false,
     "agency-dev@meine-skills": false,
     "agency-ops@meine-skills": false,
     "agency-security@meine-skills": false,
