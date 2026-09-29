@@ -62,7 +62,7 @@ def main(protokoll: Path, run_ordner: Path) -> None:
     for kennung, aufruf in aufrufe:
         zeilen.append(aufruf)
         if kennung in ergebnisse:
-            zeilen.append(f"  Ergebnis: {kurz(ergebnisse[kennung], 700)}")
+            zeilen.append(f"  Ergebnis: {kurz(ergebnisse[kennung], 2000)}")
     if not aufrufe:
         zeilen.append("(keine)")
     zeilen += ["", "## Letzte Antwort des Laufs", "", letzte_antwort or "(leer)", ""]

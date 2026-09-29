@@ -21,7 +21,7 @@ Priorität mindestens P2. P1, wenn ein Angreifer vermutlich noch aktiv ist, Date
 4. Wiederherstellen: Betrieb aus sauberem Zustand, verstärkt überwachen.
 5. Nachbereiten: Nachbetrachtung, Meldungen, Maßnahmen.
 
-Bei einer Kontoübernahme ist der Passwortwechsel Eindämmung, nicht Beseitigung, und kommt vor der Beweissicherung. Vorher nur sichern, was Sekunden dauert (Screenshot der Anmeldeanfrage). Fremde Regeln und Geräte erst per Screenshot festhalten, dann entfernen.
+Bei einer Kontoübernahme ist der Passwortwechsel Eindämmung, nicht Beseitigung, und kommt vor der Beweissicherung. Auch kein Screenshot vor dem Ablehnen einer Anmeldeanfrage: Wer unter Druck am Handy hantiert, tippt schnell das Falsche, und Beweise sichern kommt ohnehin erst nach dem Passwortwechsel. Fremde Regeln und Geräte erst per Screenshot festhalten, dann entfernen.
 
 Im beruflichen Umfeld als allererstes die IT-Sicherheit des Arbeitgebers informieren (lassen). Sie entscheidet über Eindämmung, Forensik und Meldungen. Bei einer Verletzung des Schutzes personenbezogener Daten muss der Verantwortliche sie unverzüglich und möglichst binnen 72 Stunden, nachdem sie ihm bekannt wurde, der Aufsichtsbehörde melden, es sei denn, sie führt voraussichtlich nicht zu einem Risiko für die Betroffenen (Art. 33 DSGVO). Bei hohem Risiko sind auch die Betroffenen zu benachrichtigen (Art. 34), und jede Verletzung ist intern zu dokumentieren (Art. 33 Abs. 5). Das entscheidet der Arbeitgeber mit dem Datenschutzbeauftragten; du hilfst mit Zeitleiste und Meldungsentwurf. Rein private Vorfälle fallen nicht unter die DSGVO (Art. 2 Abs. 2 lit. c).
 
@@ -50,7 +50,7 @@ Gilt für Zugangsdaten auf einer Phishing-Seite, unerwartete MFA-Anfragen und Wa
 3. Passwort sofort ändern, auf der echten Seite (Adresse selbst eintippen). Vom aktuellen Gerät, außer es wurde etwas heruntergeladen oder installiert; dann ein anderes Gerät nehmen. Danach überall ändern, wo dasselbe oder ein ähnliches Passwort verwendet wird.
 4. Fragen, ob auf der falschen Seite auch ein Code eingegeben oder eine Anfrage bestätigt wurde. Phishing-Baukästen reichen Code und Sitzung in Echtzeit durch; dann kann der Angreifer bereits angemeldet sein, ohne dass weitere Anfragen kommen. In dem Fall gilt er als aktiv.
 5. Fremde Sitzungen und Geräte abmelden. Manche Dienste haben dafür keinen Knopf mehr für alles; dann meldet der Passwortwechsel die meisten Sitzungen ab, und den Rest entfernt man einzeln in der Geräteliste.
-6. Hintertüren suchen, die ein Passwortwechsel nicht schließt: MFA-Methoden, Passkeys und Sicherheitsschlüssel, Wiederherstellungs-Mail und -Telefon, App-Passwörter, Drittanbieter-Apps mit Kontozugriff, im Postfach Weiterleitungen, Filter, Delegierung und "Senden als".
+6. Hintertüren suchen, die ein Passwortwechsel nicht schließt: MFA-Methoden, Passkeys und Sicherheitsschlüssel, Wiederherstellungs-Mail und -Telefon, Drittanbieter-Apps mit Kontozugriff, im Postfach Weiterleitungen, Filter, Delegierung und "Senden als". App-Passwörter je nach Dienst; Google widerruft sie beim Passwortwechsel.
 7. Das Postfach ist der Rücksetzkanal für fast alle anderen Konten: nach Mails zum Zurücksetzen von Passwörtern suchen, Konten prüfen, die "Mit Google anmelden" o. ä. nutzen, und im Ordner "Gesendet" nach Mails schauen, die der Nutzer nicht geschrieben hat. Wurden welche verschickt, Kontakte warnen.
 8. Anmeldeaktivität des Kontos auf fremde Orte und Geräte prüfen und fremde Ereignisse beim Dienst melden.
 
@@ -61,6 +61,7 @@ Ergänzend zu oben, Stand der Google-Hilfe September 2026. Menübezeichnungen k�
 - Sicherheitscheck unter myaccount.google.com (Adresse selbst eintippen) durchgehen. Fremde Ereignisse mit "Nein, das war ich nicht" melden.
 - Ein Passwortwechsel meldet fast alle Sitzungen ab, ausgenommen Geräte, mit denen Anmeldungen bestätigt werden, und manche Drittanbieter-Apps (Google-Hilfe, Artikel 41078). Übrige fremde Geräte einzeln entfernen.
 - Er widerruft auch nur Zugriffe von Apps mit Gmail-Berechtigung (Google-Doku zu OAuth 2.0, Abschnitt zum Ablauf von Refresh-Tokens: "The user changed passwords and the refresh token contains Gmail scopes"). Apps mit Zugriff auf Drive, Kontakte oder Kalender behalten ihn, deshalb die Liste der Drittanbieter-Apps immer prüfen.
+- App-Passwörter widerruft Google beim Passwortwechsel selbst (Google-Hilfe, Artikel 185833). Sie sind danach neu anzulegen, keine Hintertür.
 - Passkeys und Sicherheitsschlüssel prüfen: ein vom Angreifer angelegter Passkey überlebt den Passwortwechsel. Ersatzcodes neu erzeugen.
 - In Gmail: Weiterleitung, Filter und unter "Konten und Import" Delegierung, "Senden als" und E-Mail-Abruf.
 - War der Angreifer im Konto, gelten alle im Google Passwortmanager gespeicherten Passwörter als bekannt.

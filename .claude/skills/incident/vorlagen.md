@@ -16,6 +16,8 @@ Status ist einer von: aufgenommen, in Diagnose, Workaround aktiv, in Lösung, Pr
 
 Beispiel: `INC-20260312-0815 | P2 | Netzwerk | in Diagnose | VPN-Einwahl am Standort Nord scheitert`
 
+Entstehen aus einer Nachricht zwei unabhängige Incidents, bekommt der zweite die Endung `-2` (`INC-20260312-0815-2`).
+
 ## Tickettext
 
 Zum Kopieren in ein Ticketsystem. Knapp, sachlich, ohne Chat-Ton.

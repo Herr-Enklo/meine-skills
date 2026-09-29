@@ -296,7 +296,7 @@ Abschnitt 'Programmordner: andere Architektur oder kürzlich geändert' {
         $neu = $mitSeit -and ($_.LastWriteTime -ge $Seit -or $_.CreationTime -ge $Seit)
         if ($info.Arch -ne $haupt.Arch -or $info.Fehler -or $neu) {
             [pscustomobject]@{
-                Arch      = $(if ($info.Fehler) { $info.Fehler } else { $info.Arch })
+                Arch      = $(if ($info.Fehler) { "DEFEKT ($($info.Fehler))" } else { $info.Arch })
                 Geaendert = $_.LastWriteTime
                 Version   = $_.VersionInfo.FileVersion
                 Datei     = $_.FullName.Substring($ordner.Length).TrimStart('\', '/')

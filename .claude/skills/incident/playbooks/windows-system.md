@@ -51,6 +51,7 @@ Rauschen, das fast immer harmlos ist: DistributedCOM 10016 (Berechtigungsmeldung
 - Stopcode aus BugCheck 1001 oder aus der Zuverlässigkeitsüberwachung (`perfmon /rel`) lesen und mit Treibername suchen. Wechselnde Stopcodes sprechen für Hardware (Arbeitsspeicher, Datenträger), gleichbleibende mit demselben Treiber für diesen Treiber.
 - Speicherabbilder liegen unter `C:\Windows\Minidump`. Auswerten kann man sie mit WinDbg (`!analyze -v`); das installiert der Nutzer oder die IT.
 - Kürzlich installierte Treiber und Updates prüfen (Lagebild, Windows-Update-Verlauf).
+- Solange Foto, Lagebild oder Speicherabbild keinen Treiber nennen, Hypothesen als Treiberklassen formulieren (Dock-Netzwerk, USB/Thunderbolt, Grafik, DisplayLink). Eine konkrete `.sys`-Datei oder ein Hersteller aus einem Forenbeitrag ist für diesen Rechner eine Vermutung; Dock-Modell und Hersteller nicht unterstellen, sondern fragen.
 
 ## Windows Update
 

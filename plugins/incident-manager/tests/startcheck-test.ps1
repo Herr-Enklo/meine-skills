@@ -72,8 +72,10 @@ try {
     Pruefe (Abschnitt $b3 'Probleme') '(nichts gefunden)' 'alles passend: keine Probleme'
 
     'kein PE' | Set-Content (Join-Path $sys 'SHLWAPI.dll')
+    'kein PE' | Set-Content (Join-Path $app 'kaputt.dll')
     $b4 = & $skript -Programm $exe -SystemOrdner $sys -WindowsOrdner $win -Suchpfad $pfad | Out-String
     Pruefe (Abschnitt $b4 'Probleme') 'DEFEKT.*SHLWAPI' 'beschädigte DLL gemeldet'
+    Pruefe (Abschnitt $b4 'Programmordner') 'DEFEKT.*kaputt\.dll' 'beschädigte Datei im Programmordner gleich benannt'
 
     $b5 = & $skript -Programm 'GibtEsNichtXYZ' | Out-String
     Pruefe $b5 'Programm nicht gefunden' 'unbekannter Name führt zu klarer Meldung'
