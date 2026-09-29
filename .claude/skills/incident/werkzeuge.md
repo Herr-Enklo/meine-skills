@@ -14,15 +14,25 @@ MCP-Werkzeuge erscheinen mit Präfix, etwa `mcp__HA-MCP__ha_get_state`. Unten st
 
 ## Quellen je Bereich
 
+### Windows
+
+- Lagebild: `scripts/windows-lagebild.ps1` im Skill-Ordner, nur lesend, ohne Administratorrechte, Windows PowerShell 5.1 und PowerShell 7. Aufruf und Optionen in `playbooks/windows-system.md`. Mit `-Software <Name>` alles zu einem Programm, mit `-Seit <Zeitpunkt>` ein festes Zeitfenster, mit `-Ausgabe <Datei>` zusätzlich als Datei.
+- Läuft Claude Code lokal unter Windows, ist die Shell oft Git Bash. PowerShell dann über `powershell -NoProfile -Command "..."` aufrufen, das Skript über `powershell -NoProfile -ExecutionPolicy Bypass -File "<pfad>"`. `Bypass` gilt nur für diesen einen Aufruf.
+- Sitzt der Nutzer am Rechner und Claude nicht: Befehl zum Kopieren geben, die Ausgabe zurückbekommen. Bei langen Ausgaben um die Datei aus `-Ausgabe` bitten.
+- Fremde Rechner mit WinRM und Administratorrechten: `Invoke-Command -ComputerName <PC> -FilePath <skript> -ArgumentList '<Programm>'`, erst ein Rechner, dann alle.
+- Eingebaute Werkzeuge: `certutil -error <code>` für Fehlercodes, `Get-WinEvent` für Ereignisse, `perfmon /rel` für die Zuverlässigkeitsüberwachung, `gpresult` für Richtlinien, `msiexec /l*v` für Installer-Logs, `reg export` als Sicherung vor Registry-Änderungen. Process Monitor (Sysinternals) für Zugriffs- und Dateifehler, auf Firmenrechnern nur nach Rückfrage.
+
 ### Home Assistant (MCP `ha_*`)
 
-- Überblick mit bekannten Problemen: `ha_get_overview` mit `fields` auf `notifications`, `repairs`, `system_info` beschränkt. Nie ungefiltert auf großen Installationen.
-- Einzelne Entität: `ha_search` zum Finden, `ha_get_state`, `ha_get_entity`, `ha_get_device`.
-- Seit wann: `ha_get_history`.
-- Integration und Verbindung: `ha_get_integration`, `ha_get_system_health`, `ha_get_logs`.
+- Überblick mit bekannten Problemen: `ha_get_overview` mit `fields` auf `notifications`, `repairs`, `system_info` beschränkt. Nie ungefiltert auf großen Installationen. Den Zeitpunkt einer Repair mit dem Störungsbeginn vergleichen, bevor du sie als Ursache nimmst.
+- Viele Entitäten auf einmal: `ha_search` mit `state_filter="unavailable"` und `result_fields` (etwa `entity_id`, `friendly_name`, `area`), danach `ha_get_state` mit vielen IDs auf einmal für `last_changed` und Attribute.
+- Einzelne Entität: `ha_search` zum Finden, `ha_get_state`, `ha_get_entity`, `ha_get_device` (auch mit `entity_id`, um Gerät und Integration zu finden).
+- Wer hängt davon ab: `ha_search` mit der genauen `entity_id` findet Automationen, Skripte und Helfer, die sie benutzen.
+- Seit wann: `ha_get_history`. Der Verlauf reicht standardmäßig etwa zehn Tage zurück; ältere Beginne sind nur als "seit mindestens" angebbar.
+- Integration und Verbindung: `ha_get_integration`, `ha_get_system_health`. Fehler im Protokoll: `ha_get_logs` mit `source="system"` und `search=<Integration>`; ohne `source` liefert das Werkzeug das Logbuch mit Zustandswechseln, nicht die Fehler.
 - Automation hat nicht ausgelöst oder falsch reagiert: `ha_config_get_automation`, `ha_get_automation_traces`.
 - Kamerabild zur Sichtprüfung: `ha_get_camera_image` (nur wenn der Incident das braucht, Bilder aus dem Haus sind privat).
-- Eingriffe: `ha_call_service` (Stufe 1 oder 2 je nach Wirkung), `ha_restart` (Stufe 2), `ha_manage_backup` (vor Konfigurationsänderungen prüfen, ob ein aktuelles Backup existiert).
+- Werkzeuge, die etwas verändern: `ha_call_service`, `ha_bulk_control`, `ha_restart`, `ha_reload_core`, `ha_set_*`, `ha_config_set_*`, `ha_remove_*`, `ha_config_remove_*` und die `ha_manage_*`-Werkzeuge. Stufe nach Wirkung, siehe `playbooks/smart-home.md`. Ob ein aktuelles Backup existiert, zeigt die Entität des automatischen Backups; `ha_manage_backup` nur mit einer lesenden Aktion benutzen.
 - Vor Änderungen an Automationen, Skripten, Helfern oder Dashboards den Skill `home-assistant-best-practices` laden. Der MCP-Server verlangt das.
 
 ### GitHub (MCP)
@@ -54,13 +64,13 @@ MCP-Werkzeuge erscheinen mit Präfix, etwa `mcp__HA-MCP__ha_get_state`. Unten st
 
 ### Lokale Shell
 
-- Windows: PowerShell-Befehle aus `playbooks/arbeitsplatz-windows.md` und `playbooks/netzwerk.md`.
+- Windows: Lagebild-Skript und PowerShell-Befehle aus `playbooks/windows-software.md`, `playbooks/windows-system.md` und `playbooks/netzwerk.md`.
 - Linux und macOS: `journalctl`, `systemctl`, `ss`, `dig`, `curl`, `openssl` laut `playbooks/dienste-und-code.md`.
 - Lange Ausgaben in eine Datei im Scratchpad schreiben und gezielt durchsuchen, statt sie komplett in den Kontext zu holen.
 
 ## Spezialisten als Subagents
 
-Über das Agent-Tool, mit `subagent_type` wie unten. Welche davon installiert sind, zeigt die Liste der Agent-Typen in der Session. Fehlt ein Spezialist, übernimmt `general-purpose` mit einem genauen Auftrag.
+Über das Agent-Tool, mit `subagent_type` wie unten. Welche davon installiert sind, zeigt die Liste der Agent-Typen in der Session. Fehlt ein Spezialist, übernimmt `general-purpose` mit einem genauen Auftrag. Subagents lohnen sich nur, wenn sie die Belege selbst erreichen (Web, Repositories, Konnektoren). Liegen die Belege auf einem Rechner, den nur der Nutzer bedient, bringt ein Subagent nichts.
 
 | Bereich | Agent | Wofür |
 |---|---|---|
@@ -88,7 +98,7 @@ Auftrag an einen Subagent: Symptom, Umgebung, bisherige Befunde, genau eine Hypo
 | Skill | Wofür |
 |---|---|
 | `home-assistant-best-practices` | vor jeder Änderung an Home-Assistant-Konfiguration |
-| `paketieren` | fehlerhaftes Empirum-Paket korrigieren und neu testen |
+| `paketieren` | fehlerhaftes Empirum-Paket korrigieren und neu testen; nur lokal unter Windows mit dem Plugin `paketierung`, sonst Vorschlag und Folgeaufgabe |
 | `code-review`, `security-review` | Fix vor dem Pull Request prüfen |
 | `jev` | Webportale bedienen, bis vor das Absenden |
 | `loop` | nach der Lösung eine Weile beobachten |

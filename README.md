@@ -52,7 +52,7 @@ Beschreibung Platz im Systemprompt jeder Session.
 | `paketierung` | Skills für das Paketierungsprojekt | 1 Skill |
 | `grill-me` | Kritisches Nachfragen zu Plänen, Entscheidungen und Ideen | 1 Skill |
 | `jev-ultrafast` | Browser-Agent Jev Ultrafast: Webseiten bedienen lassen, Ergebnis prüfen | 1 Skill mit Skript |
-| `incident-manager` | Incident Manager: Störungen annehmen, diagnostizieren und mit Belegen lösen | 1 Skill, 1 Agent |
+| `incident-manager` | Incident Manager mit Schwerpunkt Windows und Software: Störungen annehmen, diagnostizieren und mit Belegen lösen | 1 Skill mit Skript, 1 Agent |
 | `agency-dev` | Entwicklung und Architektur | 12 Agents |
 | `agency-ops` | Betrieb und Infrastruktur | 9 Agents |
 | `agency-security` | Sicherheit | 10 Agents |
@@ -133,16 +133,31 @@ Workaround und Lösung umsetzen oder als fertige Befehle liefern, das Ergebnis b
 und einen Tickettext zum Kopieren schreiben. Bei P1 und P2 laufen unabhängige Prüfungen
 parallel als Subagents, am Ende steht eine Nachbetrachtung.
 
+Der Schwerpunkt liegt auf Windows-Clients und Software unter Windows. Dafür gibt es zwei
+Playbooks: `windows-software.md` für Installation, Softwareverteilung mit Empirum und MSI,
+Abstürze, fehlende Laufzeitumgebungen und Rechte, `windows-system.md` für Fehlercodes,
+Ereignisse, Bluescreens, Windows Update, Profile und Gruppenrichtlinien. Dazu kommt
+`scripts/windows-lagebild.ps1`, ein nur lesendes Skript, das in einem Lauf System,
+ausstehenden Neustart, laufende Installationen, Fehlerereignisse, Abstürze mit Modul und
+Code, Windows-Installer- und Update-Vorgänge, Defender und Netzwerk sammelt, mit
+`-Software <Name>` auch Installationen in allen Registry-Ansichten, Prozesse, Dienste,
+Aufgaben und Ereignisse zu einem Programm. Claude fragt erst nach, was das Skript nicht
+zeigen kann.
+
+```
+powershell -NoProfile -ExecutionPolicy Bypass -File .\windows-lagebild.ps1 -Software "Notepad++" -Seit "2026-09-28 18:00"
+```
+
 Das Plugin hat zwei Teile. Der Skill `incident` enthält den Ablauf (`SKILL.md`), die
 Prioritätsmatrix, die Zuordnung von Werkzeugen, Konnektoren und Agents zu Störungsarten,
-Playbooks für Windows-Arbeitsplatz und Softwareverteilung, Netzwerk, Smart Home, Dienste
+die beiden Windows-Playbooks und das Skript, Playbooks für Netzwerk, Smart Home, Dienste
 und Code sowie Sicherheit, und Vorlagen für Tickettext, Nutzerinfo, Übergabe und
 Nachbetrachtung. Der Agent `incident-manager` lädt diesen Skill und hat ein Gedächtnis
 unter `~/.claude/agent-memory/incident-manager/` mit Umgebungswissen, bekannten Fehlern
 und den letzten Incidents. Der Skill schreibt in denselben Ordner.
 
 ```
-/incident Drucker druckt seit dem Update nicht mehr, Fehler 0x0000011b
+/incident Notepad++-Rollout: auf 14 von 230 Clients Rückgabewert 1618
 /incident-manager:incident <Beschreibung>
 claude --agent incident-manager
 claude --bg --agent incident-manager "VPN verbindet nicht, Fehler 809"
@@ -158,6 +173,28 @@ defekten Teil (eine Integration neu laden, einen hängenden Dienst neu starten) 
 es an und führt sie aus. Alles, was andere betrifft oder unterbricht, etwas im Haus
 schaltet, Nachrichten versendet oder dauerhaft umkonfiguriert, braucht eine Freigabe;
 Löschen und Zurücksetzen nur auf ausdrückliche Anweisung.
+
+### Getestet
+
+Am 29.09.2026 in einer Web-Session mit vier Testläufen: ein Empirum-Rollout mit 1618 auf
+einem Teil der Clients (erfunden, ohne Zugriff aufs Firmennetz), ein echter, nur lesender
+Lauf gegen Home Assistant, ein Phishing-Fall mit laufender Kontoübernahme (erfunden) und
+ein Faktencheck aller Playbooks gegen Microsoft-, Home-Assistant-, Kubernetes- und
+DSGVO-Quellen. Die Befunde sind eingearbeitet: unter anderem die MSI-Logsuche auf deutschem
+Windows, `msiexec` über `Start-Process -Wait`, die Suche nach der konkurrierenden
+Installation bei 1618 (MsiInstaller 1040/1042 sind Informationsereignisse), die
+Reihenfolge bei einer Kontoübernahme und das Erkennen verwaister oder erwartbar nicht
+verfügbarer Entitäten in Home Assistant.
+
+Das Lagebild-Skript lief mangels Windows unter PowerShell 7.6 auf Linux: Syntaxprüfung,
+PSScriptAnalyzer mit Kompatibilitätsregeln für Windows PowerShell 5.1 ohne Befund, und ein
+Test mit nachgebauten Windows-Cmdlets (39 Prüfungen: Zeitfenster, Gruppierung,
+Absturzcodes, Softwaresuche in allen Registry-Ansichten, Update-Verlauf mit negativem
+HResult). Ein Lauf auf echtem Windows steht noch aus.
+
+```
+pwsh -NoProfile -File plugins/incident-manager/tests/lagebild-test.ps1
+```
 
 ### Wege zu einem Incident-Agent
 

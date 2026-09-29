@@ -1,6 +1,6 @@
 # Priorität
 
-Die Priorität ergibt sich aus Auswirkung und Dringlichkeit, wie im ITIL-Incident-Management üblich. Gibt es beim Nutzer oder seinem Arbeitgeber eigene Prioritätsregeln oder SLAs, gelten die. Frag danach, sobald ein Incident aus dem beruflichen Umfeld kommt und die Regeln noch nicht im Gedächtnis stehen.
+Die Priorität ergibt sich aus Auswirkung und Dringlichkeit, wie im ITIL-Incident-Management üblich. Gibt es beim Nutzer oder seinem Arbeitgeber eigene Prioritätsregeln oder SLAs, gelten die. Stehen sie nicht im Gedächtnis, nicht eigens danach fragen: mit der Matrix unten einstufen, das als Annahme markieren und die Regeln ins Gedächtnis aufnehmen, sobald der Nutzer sie nennt.
 
 ## Auswirkung
 
@@ -9,6 +9,8 @@ Die Priorität ergibt sich aus Auswirkung und Dringlichkeit, wie im ITIL-Inciden
 | hoch | ganzer Dienst oder Standort, viele Nutzer, geschäftskritische Anwendung, Sicherheit oder Datenverlust | Übernahme eines Hauptkontos (Google, Apple, Microsoft, Mail), Online-Banking, Passwortmanager; Einbruchmeldung, Kameras, Schlösser; Heizung im Winter, Wasser oder Strom; Internet bei Homeoffice-Pflicht |
 | mittel | eine Abteilung oder Gruppe, eine wichtige Funktion, ein Nutzer mit kritischer Rolle | eine Komfortfunktion für alle Bewohner, Energiedaten, Rollos, Kameras ohne Sicherheitsbezug |
 | niedrig | ein einzelner Nutzer, Workaround vorhanden | ein einzelnes Gerät, eine Anzeige, ein Dashboard |
+
+Maßgeblich ist, wie stark die Arbeit beeinträchtigt ist, nicht nur die Zahl der Betroffenen. Scheitert ein Rollout auf 14 von 230 Rechnern und läuft dort die alte Version weiter, ist die Auswirkung mittel. Fehlt das Programm danach ganz und wird es gebraucht, ist sie hoch.
 
 ## Dringlichkeit
 

@@ -1,0 +1,322 @@
+﻿<#
+.SYNOPSIS
+    Sammelt ein Lagebild eines Windows-Rechners für die Störungsdiagnose. Ändert nichts.
+
+.DESCRIPTION
+    Liest System, ausstehenden Neustart, Datenträger, Speicher, Dienste, Fehlerereignisse,
+    Programmabstürze, Windows-Installer-Ereignisse, Windows-Update-Verlauf, Defender und
+    Netzwerk. Mit -Software zusätzlich alles zu einem Programm: Installationen in allen
+    Registry-Ansichten, Store-Apps, Prozesse, Dienste, geplante Aufgaben und Ereignisse.
+
+    Läuft unter Windows PowerShell 5.1 und PowerShell 7, ohne Administratorrechte. Mit
+    Administratorrechten sind einzelne Abschnitte vollständiger (Defender-Funde).
+
+    Der Bericht enthält Rechner- und Benutzernamen. Vor dem Weitergeben prüfen.
+
+.PARAMETER Software
+    Teil des Programmnamens, zum Beispiel "Notepad++" oder "Acrobat".
+
+.PARAMETER Stunden
+    Zeitraum für Ereignisse in Stunden, Standard 48.
+
+.PARAMETER Seit
+    Beginn des Zeitraums als Zeitpunkt, zum Beispiel "2026-09-28 18:00". Hat Vorrang vor -Stunden.
+
+.PARAMETER Ausgabe
+    Datei, in die der Bericht zusätzlich geschrieben wird (UTF-8).
+
+.EXAMPLE
+    powershell -NoProfile -ExecutionPolicy Bypass -File .\windows-lagebild.ps1 -Software "Notepad++" -Ausgabe "$env:TEMP\lagebild.txt"
+#>
+[CmdletBinding()]
+param(
+    [string]$Software,
+    [ValidateRange(1, 720)][int]$Stunden = 48,
+    [datetime]$Seit,
+    [string]$Ausgabe
+)
+
+$start = Get-Date
+if ($PSBoundParameters.ContainsKey('Seit')) { $seit = $Seit } else { $seit = $start.AddHours(-$Stunden) }
+$bericht = New-Object System.Collections.Generic.List[string]
+
+function Kurz {
+    param([string]$Text, [int]$Laenge = 160)
+    if (-not $Text) { return '' }
+    $t = ($Text -replace '\s+', ' ').Trim()
+    if ($t.Length -gt $Laenge) { return $t.Substring(0, $Laenge) + ' ...' }
+    return $t
+}
+
+function Hex {
+    param($Wert)
+    if ($null -eq $Wert -or $Wert -eq '') { return '' }
+    if ($Wert -is [string]) {
+        if ($Wert -match '^0x') { return $Wert }
+        return '0x' + $Wert
+    }
+    $zahl = [int64]$Wert
+    if ($zahl -lt 0) { $zahl += 4294967296 }
+    return '0x{0:X8}' -f $zahl
+}
+
+function Abschnitt {
+    param([string]$Titel, [scriptblock]$Inhalt)
+    $bericht.Add('')
+    $bericht.Add("== $Titel")
+    $ErrorActionPreference = 'Stop'
+    try {
+        $text = & $Inhalt | Out-String -Width 250
+        if ([string]::IsNullOrWhiteSpace($text)) { $text = '(nichts gefunden)' }
+        $bericht.Add($text.TrimEnd())
+    }
+    catch {
+        $bericht.Add("(nicht abrufbar: $(Kurz $_.Exception.Message 200))")
+    }
+}
+
+$istAdmin = $false
+try {
+    $identitaet = [Security.Principal.WindowsIdentity]::GetCurrent()
+    $istAdmin = (New-Object Security.Principal.WindowsPrincipal $identitaet).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+}
+catch { $istAdmin = $false }
+
+Abschnitt 'Bericht' {
+    "Erstellt:         $($start.ToString('yyyy-MM-dd HH:mm:ss')) ($([TimeZoneInfo]::Local.Id))"
+    "Ereigniszeitraum: seit $($seit.ToString('yyyy-MM-dd HH:mm'))"
+    "Benutzer:         $env:USERDOMAIN\$env:USERNAME, Administratorrechte: $istAdmin"
+    "PowerShell:       $($PSVersionTable.PSVersion), 64-Bit-Prozess: $([Environment]::Is64BitProcess)"
+    if ($Software) { "Software:         $Software" }
+    'Hinweis:          enthält Rechner- und Benutzernamen, vor dem Weitergeben prüfen'
+}
+
+Abschnitt 'System' {
+    $os = Get-CimInstance Win32_OperatingSystem -ErrorAction Stop
+    $cs = Get-CimInstance Win32_ComputerSystem -ErrorAction Stop
+    $cv = Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion' -ErrorAction SilentlyContinue
+    [pscustomobject]@{
+        Rechner       = $os.CSName
+        System        = $os.Caption
+        Version       = "$($cv.DisplayVersion) Build $($os.BuildNumber).$($cv.UBR)"
+        Architektur   = $os.OSArchitecture
+        Sprache       = $os.MUILanguages -join ', '
+        Domaene       = $(if ($cs.PartOfDomain) { $cs.Domain } else { "Arbeitsgruppe $($cs.Workgroup)" })
+        Modell        = "$($cs.Manufacturer) $($cs.Model)"
+        RAM_GB        = [math]::Round([double]$cs.TotalPhysicalMemory / 1GB, 1)
+        RAM_frei_GB   = [math]::Round([double]$os.FreePhysicalMemory / 1MB, 1)
+        LetzterStart  = $os.LastBootUpTime
+        Laufzeit_Tage = [math]::Round(((Get-Date) - $os.LastBootUpTime).TotalDays, 1)
+    } | Format-List
+}
+
+Abschnitt 'Neustart ausstehend, laufende Installationen' {
+    $sm = Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager' -ErrorAction SilentlyContinue
+    [pscustomobject]@{
+        Komponentenwartung       = Test-Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending'
+        WindowsUpdate            = Test-Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired'
+        Dateiumbenennungen       = [bool]$sm.PendingFileRenameOperations
+        InstallerUnterbrochen    = Test-Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Installer\InProgress'
+    } | Format-List
+    'Dateiumbenennungen allein ist ein schwaches Zeichen, viele Programme hinterlassen dort Einträge.'
+    $msi = Get-CimInstance Win32_Process -Filter "Name='msiexec.exe'" -ErrorAction Stop
+    if ($msi) {
+        'msiexec-Prozesse (/V ist der Dienst und harmlos, /i oder /x mit altem Start ist verdächtig):'
+        $msi | Select-Object ProcessId, ParentProcessId, CreationDate, @{ n = 'Aufruf'; e = { Kurz $_.CommandLine 200 } } | Format-Table -AutoSize -Wrap
+    }
+    else { 'Kein msiexec-Prozess aktiv.' }
+}
+
+Abschnitt 'Datenträger' {
+    Get-CimInstance Win32_LogicalDisk -Filter 'DriveType=3' -ErrorAction Stop | ForEach-Object {
+        [pscustomobject]@{
+            Laufwerk    = $_.DeviceID
+            GroesseGB   = [math]::Round([double]$_.Size / 1GB, 1)
+            FreiGB      = [math]::Round([double]$_.FreeSpace / 1GB, 1)
+            FreiProzent = $(if ($_.Size) { [int](100 * [double]$_.FreeSpace / $_.Size) } else { $null })
+        }
+    } | Format-Table -AutoSize
+}
+
+Abschnitt 'Prozesse: meiste CPU-Zeit seit Start und meister Arbeitsspeicher' {
+    $prozesse = Get-Process -ErrorAction Stop
+    $prozesse | Sort-Object CPU -Descending | Select-Object -First 10 Name, Id,
+        @{ n = 'CPU_s'; e = { [int]$_.CPU } },
+        @{ n = 'RAM_MB'; e = { [int]($_.WorkingSet64 / 1MB) } } | Format-Table -AutoSize
+    $prozesse | Sort-Object WorkingSet64 -Descending | Select-Object -First 10 Name, Id,
+        @{ n = 'RAM_MB'; e = { [int]($_.WorkingSet64 / 1MB) } } | Format-Table -AutoSize
+}
+
+Abschnitt 'Automatisch startende Dienste, die nicht laufen' {
+    Get-CimInstance Win32_Service -Filter "StartMode='Auto' AND State<>'Running'" -ErrorAction Stop |
+        Select-Object Name, DisplayName, State, ExitCode | Format-Table -AutoSize -Wrap
+    'Dienste mit Trigger-Start oder verzögertem Start stehen hier oft, ohne dass etwas fehlt.'
+}
+
+Abschnitt 'Kritisch und Fehler in System und Application, gruppiert' {
+    $ereignisse = Get-WinEvent -FilterHashtable @{ LogName = 'System', 'Application'; Level = 1, 2; StartTime = $seit } -ErrorAction SilentlyContinue
+    $ereignisse | Group-Object ProviderName, Id | Sort-Object Count -Descending | Select-Object -First 25 | ForEach-Object {
+        $gruppe = @($_.Group | Sort-Object TimeCreated)
+        [pscustomobject]@{
+            Anzahl  = $_.Count
+            Quelle  = $gruppe[0].ProviderName
+            Id      = $gruppe[0].Id
+            Erstes  = $gruppe[0].TimeCreated
+            Letztes = $gruppe[-1].TimeCreated
+            Meldung = Kurz $gruppe[-1].Message 150
+        }
+    } | Format-Table -AutoSize -Wrap
+}
+
+Abschnitt 'Programmabstürze, Hänger und .NET-Fehler' {
+    $filter = @{ LogName = 'Application'; ProviderName = 'Application Error', 'Application Hang', '.NET Runtime'; Id = 1000, 1002, 1026; StartTime = $seit }
+    Get-WinEvent -FilterHashtable $filter -ErrorAction SilentlyContinue | Sort-Object TimeCreated -Descending | Select-Object -First 30 | ForEach-Object {
+        $p = $_.Properties
+        $art = switch ($_.Id) { 1000 { 'Absturz' } 1002 { 'Hänger' } 1026 { '.NET' } }
+        $programm = ''
+        $modul = ''
+        $code = ''
+        if ($_.Id -in 1000, 1002 -and $p.Count -gt 1) { $programm = "$($p[0].Value) $($p[1].Value)" }
+        if ($_.Id -eq 1000 -and $p.Count -gt 6) {
+            $modul = "$($p[3].Value) $($p[4].Value)"
+            $code = Hex $p[6].Value
+        }
+        [pscustomobject]@{
+            Zeit     = $_.TimeCreated
+            Art      = $art
+            Programm = $programm
+            Modul    = $modul
+            Code     = $code
+            Meldung  = $(if ($_.Id -eq 1026) { Kurz $_.Message 300 } else { '' })
+        }
+    } | Format-Table -AutoSize -Wrap
+}
+
+Abschnitt 'Windows Installer (MsiInstaller)' {
+    $filter = @{ LogName = 'Application'; ProviderName = 'MsiInstaller'; Id = 1033, 1034, 1035, 1040, 1042, 11707, 11708, 11724, 11725; StartTime = $seit }
+    $ereignisse = Get-WinEvent -FilterHashtable $filter -ErrorAction SilentlyContinue
+    if ($ereignisse) {
+        $ereignisse | Sort-Object TimeCreated -Descending | Select-Object -First 40 TimeCreated, Id,
+            @{ n = 'Meldung'; e = { Kurz $_.Message 200 } } | Format-Table -AutoSize -Wrap
+        '1040 und 1042 sind Beginn und Ende einer Installer-Transaktion; schließen sie die Zeit eines 1618 ein, lief dort die andere Installation.'
+    }
+}
+
+Abschnitt 'Windows Update im Zeitraum (43 gestartet, 19 installiert, 20 fehlgeschlagen)' {
+    $filter = @{ LogName = 'System'; ProviderName = 'Microsoft-Windows-WindowsUpdateClient'; Id = 19, 20, 43; StartTime = $seit }
+    Get-WinEvent -FilterHashtable $filter -ErrorAction SilentlyContinue | Sort-Object TimeCreated -Descending | Select-Object -First 30 TimeCreated, Id,
+        @{ n = 'Meldung'; e = { Kurz $_.Message 160 } } | Format-Table -AutoSize -Wrap
+}
+
+Abschnitt 'Windows Update, letzte Vorgänge' {
+    $suche = (New-Object -ComObject Microsoft.Update.Session).CreateUpdateSearcher()
+    $anzahl = $suche.GetTotalHistoryCount()
+    if ($anzahl -gt 0) {
+        $suche.QueryHistory(0, [math]::Min($anzahl, 15)) | ForEach-Object {
+            $ergebnis = switch ($_.ResultCode) { 1 { 'läuft' } 2 { 'erfolgreich' } 3 { 'mit Fehlern' } 4 { 'fehlgeschlagen' } 5 { 'abgebrochen' } default { "$_" } }
+            [pscustomobject]@{
+                Datum    = $_.Date
+                Ergebnis = $ergebnis
+                Code     = Hex $_.HResult
+                Titel    = Kurz $_.Title 110
+            }
+        } | Format-Table -AutoSize -Wrap
+    }
+}
+
+Abschnitt 'Microsoft Defender' {
+    $status = Get-MpComputerStatus -ErrorAction Stop
+    [pscustomobject]@{
+        Modus          = $status.AMRunningMode
+        Echtzeitschutz = $status.RealTimeProtectionEnabled
+        Signaturen     = $status.AntivirusSignatureLastUpdated
+    } | Format-List
+    $funde = Get-MpThreatDetection -ErrorAction SilentlyContinue | Where-Object { $_.InitialDetectionTime -ge $seit }
+    if ($funde) {
+        'Funde im Zeitraum:'
+        $funde | Select-Object -First 10 InitialDetectionTime, ThreatID, ProcessName,
+            @{ n = 'Dateien'; e = { Kurz ($_.Resources -join '; ') 200 } } | Format-Table -AutoSize -Wrap
+    }
+    else { 'Keine Funde im Zeitraum (ohne Administratorrechte unvollständig).' }
+}
+
+Abschnitt 'Netzwerk' {
+    Get-NetIPConfiguration -ErrorAction Stop | Where-Object { $_.NetAdapter.Status -eq 'Up' } | Select-Object InterfaceAlias,
+        @{ n = 'IPv4'; e = { $_.IPv4Address.IPAddress -join ', ' } },
+        @{ n = 'Gateway'; e = { $_.IPv4DefaultGateway.NextHop -join ', ' } },
+        @{ n = 'DNS'; e = { $_.DNSServer.ServerAddresses -join ', ' } } | Format-Table -AutoSize -Wrap
+    'WinHTTP-Proxy (gilt für Dienste, Windows Update und viele Installer):'
+    netsh winhttp show proxy
+}
+
+if ($Software) {
+    $muster = '*' + [System.Management.Automation.WildcardPattern]::Escape($Software) + '*'
+
+    Abschnitt "Installiert: $Software" {
+        $quellen = @(
+            @{ Pfad = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*'; Ansicht = 'Rechner 64-Bit' },
+            @{ Pfad = 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*'; Ansicht = 'Rechner 32-Bit' },
+            @{ Pfad = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*'; Ansicht = 'nur Benutzer' }
+        )
+        $treffer = foreach ($q in $quellen) {
+            Get-ItemProperty $q.Pfad -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -like $muster } | ForEach-Object {
+                [pscustomobject]@{
+                    Ansicht        = $q.Ansicht
+                    Name           = $_.DisplayName
+                    Version        = $_.DisplayVersion
+                    Hersteller     = $_.Publisher
+                    InstalliertAm  = $_.InstallDate
+                    Schluessel     = $_.PSChildName
+                    MSI            = [bool]$_.WindowsInstaller
+                    Ausgeblendet   = [bool]$_.SystemComponent
+                    Ort            = $_.InstallLocation
+                    Deinstallation = $_.UninstallString
+                }
+            }
+        }
+        $treffer | Format-List
+        if (@($treffer).Count -gt 1) { 'Mehrere Einträge: auf parallele Versionen, 32/64-Bit-Mischung oder Reste alter Installationen achten.' }
+    }
+
+    Abschnitt "Store- und MSIX-Apps: $Software" {
+        Get-AppxPackage -Name $muster -ErrorAction Stop | Select-Object Name, Version, Architecture, Status, InstallLocation | Format-List
+    }
+
+    Abschnitt "Laufende Prozesse: $Software" {
+        Get-CimInstance Win32_Process -ErrorAction Stop | Where-Object { $_.Name -like $muster -or $_.ExecutablePath -like $muster } |
+            Select-Object Name, ProcessId, CreationDate, @{ n = 'RAM_MB'; e = { [int]($_.WorkingSetSize / 1MB) } }, ExecutablePath | Format-Table -AutoSize -Wrap
+    }
+
+    Abschnitt "Dienste: $Software" {
+        Get-CimInstance Win32_Service -ErrorAction Stop | Where-Object { $_.Name -like $muster -or $_.DisplayName -like $muster -or $_.PathName -like $muster } |
+            Select-Object Name, DisplayName, State, StartMode, StartName, ExitCode | Format-Table -AutoSize -Wrap
+    }
+
+    Abschnitt "Geplante Aufgaben: $Software" {
+        Get-ScheduledTask -ErrorAction Stop | Where-Object { $_.TaskName -like $muster -or $_.TaskPath -like $muster } | ForEach-Object {
+            $info = $null
+            try { $info = $_ | Get-ScheduledTaskInfo -ErrorAction Stop } catch { $info = $null }
+            [pscustomobject]@{
+                Aufgabe     = $_.TaskPath + $_.TaskName
+                Zustand     = $_.State
+                LetzterLauf = $info.LastRunTime
+                Ergebnis    = $(if ($info) { Hex $info.LastTaskResult } else { '' })
+            }
+        } | Format-Table -AutoSize -Wrap
+    }
+
+    Abschnitt "Ereignisse mit Bezug zu $Software (System, Application, höchstens 5000 durchsucht)" {
+        Get-WinEvent -FilterHashtable @{ LogName = 'System', 'Application'; StartTime = $seit } -MaxEvents 5000 -ErrorAction SilentlyContinue |
+            Where-Object { $_.Message -like $muster } | Select-Object -First 30 TimeCreated, LevelDisplayName, ProviderName, Id,
+            @{ n = 'Meldung'; e = { Kurz $_.Message 200 } } | Format-Table -AutoSize -Wrap
+    }
+}
+
+$bericht.Add('')
+$bericht.Add("== Ende, Dauer $([math]::Round(((Get-Date) - $start).TotalSeconds)) s")
+$text = $bericht -join [Environment]::NewLine
+$text
+if ($Ausgabe) {
+    $text | Out-File -FilePath $Ausgabe -Encoding utf8
+    "Bericht gespeichert: $Ausgabe"
+}

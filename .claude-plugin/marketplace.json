@@ -22,7 +22,7 @@
     {
       "name": "incident-manager",
       "source": "./plugins/incident-manager",
-      "description": "Incident Manager: Störungen aufnehmen, einstufen, diagnostizieren und mit Belegen lösen"
+      "description": "Incident Manager mit Schwerpunkt Windows und Software: Störungen aufnehmen, diagnostizieren und mit Belegen lösen"
     },
     {
       "name": "agency-dev",

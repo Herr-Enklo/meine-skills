@@ -10,9 +10,11 @@ Steht über jeder Antwort zu einem Incident, eine Zeile:
 <ID> | <P1–P4> | <Bereich> | <Status> | <Kurztitel>
 ```
 
-Status ist einer von: aufgenommen, in Diagnose, Workaround aktiv, in Lösung, Prüfung, gelöst, eskaliert, wartet auf Nutzer.
+Bereich ist einer von: Windows-Software, Windows-System, Netzwerk, Smart Home, Dienste und Code, Sicherheit, Sonstiges.
 
-Beispiel: `INC-20260929-1412 | P3 | Smart Home | in Diagnose | Rollo Küche reagiert nicht`
+Status ist einer von: aufgenommen, in Diagnose, Workaround aktiv, in Lösung, Prüfung, gelöst, eskaliert, wartet auf Nutzer. Liegt der nächste Schritt beim Nutzer (Befehl ausführen, Freigabe, Handgriff vor Ort), gilt "wartet auf Nutzer".
+
+Beispiel: `INC-20260929-1412 | P3 | Windows-Software | wartet auf Nutzer | Rollout Notepad++: 1618 auf 14 Clients`
 
 ## Tickettext
 
@@ -22,7 +24,8 @@ Zum Kopieren in ein Ticketsystem. Knapp, sachlich, ohne Chat-Ton.
 Titel: <Symptom in einem Satz, ohne Vermutung>
 Priorität: <P1–P4> (Auswirkung <hoch|mittel|niedrig>, Dringlichkeit <hoch|mittel|niedrig>)
 Kategorie: <Bereich / Unterbereich>
-Betroffen: <System, Nutzer oder Gruppe, Anzahl>
+Bezug: <Change, Rollout, Paket und Version, falls vorhanden>
+Betroffen: <System, Nutzer oder Gruppe, Anzahl; lange Gerätelisten als Anhang>
 Beginn: <Datum Uhrzeit oder "unbekannt">   Erkannt: <...>   Behoben: <...>
 
 Symptom:
@@ -30,6 +33,7 @@ Symptom:
 
 Ursache:
 <bestätigt | vermutet>: <Ursache>. Beleg: <Logzeile, Zustand, Messwert>
+(Bei mehreren Befundgruppen je Gruppe eine Zeile.)
 
 Maßnahmen:
 - <Uhrzeit> <Was getan wurde, von wem, mit welchem Ergebnis>
