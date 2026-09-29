@@ -1,9 +1,9 @@
 # Datenrettung
 
-Ein Werkzeug, das NTFS-Datenträger und Disk-Images nach wiederherstellbaren
-Dateien durchsucht. Es hat eine kleine grafische Oberfläche zum Auswählen der
-Quelle und eine Kommandozeile für den Betrieb ohne Fenster. Geschrieben in
-Python, ohne externe Abhängigkeiten.
+Ein Werkzeug, das Windows-Datenträger (NTFS, FAT, exFAT) und Disk-Images nach
+wiederherstellbaren Dateien durchsucht. Es hat eine kleine grafische Oberfläche
+zum Auswählen der Quelle und eine Kommandozeile für den Betrieb ohne Fenster.
+Geschrieben in Python, ohne externe Abhängigkeiten.
 
 Das Programm liest die Quelle ausschließlich. Es gibt keine Funktion, die auf
 den untersuchten Datenträger schreibt.
@@ -15,26 +15,49 @@ Es kombiniert mehrere Verfahren, weil sie unterschiedliche Stärken haben.
 Der NTFS-Weg liest die Master File Table des Dateisystems. Wird eine Datei
 gelöscht, markiert Windows ihren Eintrag nur als frei; Name, Größe und der
 Verweis auf die Datencluster bleiben zunächst erhalten. Solange der Eintrag
-nicht überschrieben wurde, lässt sich die Datei mit ihrem Originalnamen zurückholen.
-Dabei werden auch der Ordnerpfad (über die Elternverweise der MFT) und die
-Zeitstempel aus `$STANDARD_INFORMATION` rekonstruiert.
+nicht überschrieben wurde, lässt sich die Datei mit ihrem Originalnamen
+zurückholen. Dabei werden auch der Ordnerpfad (über die Elternverweise der MFT)
+und die Zeitstempel rekonstruiert. NTFS-komprimierte Dateien werden entpackt.
+Sehr große oder stark fragmentierte Dateien, deren Verwaltungsdaten über mehrere
+MFT-Einträge verteilt sind (`$ATTRIBUTE_LIST`), werden vollständig
+zusammengesetzt, auch wenn die Liste selbst unvollständig ist.
 
 Der FAT/exFAT-Weg macht dasselbe für Wechselmedien wie SD-Karten und USB-Sticks.
 Er liest die Verzeichniseinträge, erkennt gelöschte Einträge (erstes Namensbyte
 `0xE5` bei FAT, gelöschtes InUse-Bit bei exFAT) und rekonstruiert Name, Pfad,
-Größe und Zeit. Der Inhalt wird unter der Annahme zusammenhängender Speicherung
-ab dem Startcluster gelesen.
+Größe und Zeit, auch für Dateien in gelöschten Ordnern. Vorhandene Dateien folgen
+ihrer FAT-Kette. Bei gelöschten Dateien ist die Kette meist freigegeben; sie
+werden ab dem Startcluster aus freien Clustern zusammengesetzt, Cluster anderer
+(noch vorhandener) Dateien werden dabei übersprungen.
 
 Das File-Carving braucht kein intaktes Dateisystem. Es durchsucht die Rohdaten
-nach bekannten Signaturen: Ein JPEG beginnt mit `FF D8 FF` und endet mit
-`FF D9`, ein PNG mit `89 50 4E 47`, eine PDF mit `%PDF`. Zwischen Anfang und
-Ende wird der Bereich herausgeschnitten. Vollständige Treffer werden über ihre
-interne Struktur geprüft (etwa die PNG-CRC oder die ZIP-Kompressionsmethode), um
-Fehltreffer zu verwerfen. Das funktioniert auch nach einer Formatierung, verliert
-aber Dateinamen, und stark fragmentierte Dateien können unvollständig sein.
+nach bekannten Signaturen: Ein JPEG beginnt mit `FF D8 FF`, ein PNG mit
+`89 50 4E 47`, eine PDF mit `%PDF`. Das Ende wird je nach Format bestimmt (siehe
+unten). Vollständige Treffer werden über ihre interne Struktur geprüft (etwa die
+PNG-CRC, die JPEG-Marker oder das GZIP-Entpacken), um Fehltreffer zu verwerfen.
+Das funktioniert auch nach einer Formatierung, verliert aber Dateinamen, und
+stark fragmentierte Dateien können unvollständig sein.
 
 Im Standard laufen die Verfahren nacheinander: erst die Dateisysteme (NTFS,
-FAT/exFAT) für Namen und Pfade, dann Carving für alles Übrige.
+FAT/exFAT) für Namen und Pfade, dann Carving für alles Übrige. Das Carving
+durchsucht dabei nur den freien Speicher erkannter Dateisysteme und lässt
+Dateien aus, die das Dateisystem schon geliefert hat. So erscheinen weder alle
+vorhandenen Dateien noch jede gelöschte Datei doppelt.
+
+## Zustand der Funde
+
+Jeder Fund trägt einen Zustand, der sagt, wie verlässlich der Inhalt ist:
+
+| Zustand | Bedeutung |
+|---|---|
+| gut | Die Daten liegen noch unverändert an ihrer Stelle. |
+| vollständig | Carving: Anfang und Ende der Datei wurden gefunden. |
+| vorhanden | Die Datei ist nicht gelöscht (Modus „auch vorhandene Dateien“). |
+| zusammengesetzt | FAT/exFAT: Die gelöschte Datei wurde über belegte Cluster hinweg aus freien Clustern zusammengesetzt. Meist richtig, aber nicht garantiert. |
+| teilweise überschrieben | Ein Teil der Cluster gehört inzwischen einer anderen Datei. |
+| unvollständig | Carving: Das Ende fehlt, gerettet wird der vorhandene Teil. |
+| überschrieben | Die Cluster sind neu belegt; der Inhalt stammt sehr wahrscheinlich von einer anderen Datei. |
+| unbekannt | Nicht prüfbar (z.B. Funde aus der Suche nach verwaisten MFT-Einträgen). |
 
 ## Voraussetzungen
 
@@ -56,14 +79,27 @@ python main.py
 ```
 
 Der Ablauf im Fenster: oben eine Quelle wählen (ein erkanntes Laufwerk aus der
-Liste oder über „Image-Datei…" eine `.dd`/`.img`-Datei), darunter einen
-Ausgabeordner auf einem anderen Datenträger, dann „Scannen". Die Funde
-erscheinen währenddessen in der Liste. Am Ende schreibt „Alle wiederherstellen"
-oder „Auswahl wiederherstellen" die Dateien in den Ausgabeordner.
+Liste oder über „Image-Datei …“ eine `.dd`/`.img`-Datei), darunter einen
+Ausgabeordner auf einem anderen Datenträger, dann „Scannen“. Die Funde
+erscheinen währenddessen in der Liste. Am Ende schreibt „Alle wiederherstellen“
+oder „Auswahl wiederherstellen“ die Dateien in den Ausgabeordner. Gelesen wird
+dabei immer die Quelle, die gescannt wurde, auch wenn man die Auswahl oben
+inzwischen geändert hat.
+
+Die Liste lässt sich über die Spaltenköpfe oder das Kontextmenü (Rechtsklick,
+Umschalt+F10) sortieren; Strg+A wählt alle Zeilen, Umschalt+Pfeil erweitert die
+Auswahl. Angezeigt werden höchstens 20.000 Zeilen, sortiert wird aber über alle
+Funde, und „Alle wiederherstellen“ rettet auch die ausgeblendeten.
 
 Bricht man eine Wiederherstellung ab, bleibt die Trefferliste erhalten. Ein
 erneuter Klick setzt fort und überspringt die schon geschriebenen Dateien; ein
-neuer Scan ist dafür nicht nötig.
+neuer Scan ist dafür nicht nötig. Welche Funde fertig sind, steht in der Datei
+`.datenrettung.json` im Ausgabeordner. Die Änderungszeit der geretteten Dateien
+wird vom Original übernommen, soweit sie bekannt ist.
+
+Schließt man das Fenster, während ein Scan oder eine Wiederherstellung läuft,
+fragt das Programm nach. Bestätigt man, bricht es den Lauf zuerst geordnet ab
+und schließt dann; eine halb geschriebene Datei bleibt dabei nicht zurück.
 
 Auf der Kommandozeile geht dasselbe ohne Fenster:
 
@@ -76,30 +112,38 @@ python main.py scan --source /dev/sdb1 --out ~/gerettet --no-ntfs
 
 Ohne `--out` wird nur gezählt und aufgelistet, nichts geschrieben. Weitere
 Schalter: `--no-ntfs`, `--no-fat` und `--no-carve` schalten je ein Verfahren ab,
+`--carve-all` lässt das Carving auch belegte Bereiche durchsuchen,
 `--no-validate` schaltet die Struktur-Prüfung der Carving-Treffer aus, `--all`
-listet bei NTFS auch die noch vorhandenen Dateien, `--orphan` sucht den ganzen
+listet auch die noch vorhandenen Dateien, `--orphan` sucht den ganzen
 Datenträger nach MFT-Einträgen ab (findet auch nach einer Formatierung, dauert
 aber deutlich länger), `--reconstruct` rekonstruiert eine verlorene
-Partitionstabelle über eine Boot-Sektor-Suche, `--no-partial` lässt
-unvollständige Dateien weg, `--sector 4096` stellt auf 4K-Sektoren um,
-`--max N` begrenzt die Zahl der Carving-Treffer.
+Partitionstabelle über eine Boot-Sektor-Suche, `--usn` wertet das
+USN-Journal aus, `--no-partial` lässt unvollständige Dateien weg, `--sector`
+erzwingt eine Sektorgröße (sonst wird sie erkannt), `--max N` begrenzt die Zahl
+der Carving-Treffer. Strg+C bricht geordnet ab und zeigt die Funde bis dahin;
+ein zweites Strg+C bricht sofort ab.
 
-Nach jedem Scan zeigt das Werkzeug „Gelesen: X von Y". Diese Zeile ist die
+Nach jedem Scan zeigt das Werkzeug „Durchsucht: X von Y“. Diese Zeile ist die
 wichtigste Kontrolle: Steht dort ein winziger Bruchteil, wurde der Datenträger
 gar nicht vollständig gelesen (meist fehlende Administratorrechte oder ein
-Zugriffsproblem), und dann kann auch nichts gefunden werden.
+Zugriffsproblem), und dann kann auch nichts gefunden werden. Hinweise, etwa auf
+beschädigte Strukturen oder verschlüsselte Partitionen, erscheinen nach dem Scan
+gesammelt.
 
 ## Warum ein Scan Zeit braucht
 
-Ein gründlicher Scan liest den kompletten Datenträger einmal Sektor für Sektor.
-Bei 2 TB sind das mehrere Stunden, egal mit welchem Werkzeug. Ein Durchlauf, der
-nach Sekunden fertig ist, hat den Datenträger nicht wirklich gelesen. Genau
-deshalb steht die „Gelesen"-Zeile am Ende jedes Scans: Sie macht sichtbar, ob
-tatsächlich die ganze Fläche gelesen wurde.
+Ein gründlicher Scan liest den kompletten Datenträger einmal. Bei 2 TB sind das
+mehrere Stunden, egal mit welchem Werkzeug. Ein Durchlauf, der nach Sekunden
+fertig ist, hat den Datenträger nicht wirklich gelesen. Leere Bereiche (nur
+Nullen oder `FF`) überspringt die Signatursuche allerdings sehr schnell, eine
+wenig belegte Platte ist also deutlich schneller durch als eine volle.
 
 Damit ein einzelner Lesefehler den Durchlauf nicht vorzeitig beendet, überbrückt
 das Werkzeug defekte oder gesperrte Sektoren, zählt sie und liest weiter bis zum
-Ende.
+Ende. Liegen acht defekte Sektoren hintereinander, wird der Rest des Bereichs
+(1 MiB) übersprungen, statt jeden Sektor einzeln anzufragen. Auf einer
+sterbenden Platte kann jeder Fehlversuch Sekunden dauern und die Mechanik weiter
+belasten.
 
 ## Sicherer Umgang
 
@@ -110,86 +154,97 @@ Datenträger nichts mehr geschrieben werden. Jeder neue Schreibvorgang kann gena
 die Blöcke überschreiben, die noch zu retten wären. Das gilt auch für den
 Rechner selbst, wenn das Systemlaufwerk betroffen ist.
 
-Der Ausgabeordner gehört auf einen anderen Datenträger als die Quelle. Schreibt
-man die geretteten Dateien zurück auf dieselbe Platte, überschreibt man
-möglicherweise weitere noch nicht gerettete Daten. Bei einer physisch defekten
-Platte ist der übliche Weg, zuerst ein Image zu ziehen (etwa mit `dd` oder
-`ddrescue`) und danach nur noch mit diesem Image zu arbeiten.
+Der Ausgabeordner gehört auf einen anderen Datenträger als die Quelle. Das
+Werkzeug prüft das vor dem Schreiben: Liegt der Ausgabeordner auf dem gewählten
+Laufwerk oder auf einer Partition der gewählten Platte, verweigert es die
+Wiederherstellung (auf der Kommandozeile lässt sich das mit `--allow-same-disk`
+übergehen). Bei einer physisch defekten Platte ist der übliche Weg, zuerst ein
+Image zu ziehen (etwa mit `ddrescue`) und danach nur noch mit diesem Image zu
+arbeiten.
+
+## BitLocker
+
+Ist eine Partition mit BitLocker verschlüsselt (unter Windows 11 bei vielen
+Geräten ab Werk), liefert das physische Laufwerk (`PhysicalDriveN`) nur
+verschlüsselte Daten. Das Werkzeug erkennt solche Partitionen, meldet sie und
+lässt sie beim Carving aus. Für die Rettung wählt man stattdessen das entsperrte
+Laufwerk über seinen Buchstaben (z.B. `C:`); darüber liefert Windows die
+entschlüsselten Daten.
 
 ## Unterstützte Dateitypen beim Carving
 
 Bilder (JPEG, PNG, GIF, BMP, TIFF und darauf aufbauende Kamera-RAW-Formate wie
 CR2, NEF, ARW, DNG, dazu CR3, RAF und RW2, außerdem WebP, HEIC, AVIF, JPEG 2000
-und ICO), Dokumente und Archive (PDF, RTF, die alten
-Office-Formate doc/xls/ppt über den OLE-Container, ZIP und damit DOCX/XLSX/PPTX,
-RAR, 7z, GZIP), Audio und Video (WAV, AVI, OGG, MP3, FLAC, MP4, MOV, HEIC,
-Matroska/WebM) sowie PSD und SQLite-Datenbanken. Container wie ftyp (MP4/MOV/HEIC)
-und RIFF (WAV/AVI/WebP) bekommen die passende Endung anhand ihrer Marke. Die
-Signaturen stehen in `recovery/signatures.py` und lassen sich dort erweitern.
+und ICO), Dokumente und Archive (PDF, RTF, die alten Office-Formate doc/xls/ppt
+über den OLE-Container, ZIP und damit DOCX/XLSX/PPTX, RAR, 7z, GZIP), Audio und
+Video (WAV, AVI, OGG, MP3, FLAC, MP4, MOV, HEIC, Matroska/WebM) sowie PSD und
+SQLite-Datenbanken. Container wie ftyp (MP4/MOV/HEIC) und RIFF (WAV/AVI/WebP)
+bekommen die passende Endung anhand ihrer Marke. Die Signaturen stehen in
+`recovery/signatures.py` und lassen sich dort erweitern.
 
 Das Dateiende wird je nach Typ unterschiedlich bestimmt. Bei JPEG folgt das
 Werkzeug der Marker-Struktur und überspringt so das in EXIF eingebettete
-Vorschaubild, das ein eigenes Endmuster trägt; sonst käme von jedem Kamerafoto
-nur die Vorschau heraus. PDFs mit inkrementellen Updates enden am letzten
-`%%EOF`, RTF-Dokumente an der äußersten Klammergruppe. Typen ohne Endmuster
-(TIFF/RAW, Archive, Videos) enden spätestens am nächsten Header desselben Typs.
+Vorschaubild, das ein eigenes Endmuster trägt. Bricht ein JPEG ab, weil es
+fragmentiert oder teilweise überschrieben ist, endet der Fund an der letzten
+sicheren Stelle, und ein direkt folgendes Bild wird eigenständig gefunden. ZIP-
+und Office-Dateien enden an dem Abschluss, der zu ihrem eigenen
+Inhaltsverzeichnis passt, sodass eingebettete Archive (JAR, DOCX in einem ZIP)
+die Datei nicht abschneiden. PDFs mit inkrementellen Updates enden am letzten
+`%%EOF` samt Zeilenende, RTF-Dokumente an der äußersten Klammergruppe. GZIP wird
+probeweise entpackt; das liefert das exakte Ende und verwirft zufällige Treffer.
+7z und SQLite bekommen ihre exakte Größe aus dem Dateikopf. Typen ohne
+Endmuster (TIFF/RAW, RAR, Videos) enden spätestens am nächsten Kopf desselben
+Typs.
 
-Fehlt einer Datei das Endmuster (etwa weil sie teilweise überschrieben wurde),
-wird sie als unvollständig bestmöglich gerettet, statt sie zu verwerfen. Solche
-Funde tragen `_unvollstaendig` im Namen.
+Fehlt einer Datei das Ende (etwa weil sie teilweise überschrieben wurde), wird
+sie als unvollständig bestmöglich gerettet, statt sie zu verwerfen. Solche Funde
+tragen `_unvollstaendig` im Namen.
 
 ## Grenzen
 
 Das ist ein kompaktes Werkzeug, kein Ersatz für kommerzielle Recovery-Software.
-Der Unterschied liegt vor allem in drei Punkten: Kommerzielle Tools kennen
-mehrere Hundert Dateitypen, sie setzen fragmentierte Dateien wieder zusammen, und
-sie werten die Dateisystem-Strukturen tiefer aus (Journale, beschädigte
-Metadaten). Dieses Werkzeug deckt die häufigsten Typen ab und schneidet
-zusammenhängende Bereiche heraus.
+Kommerzielle Tools kennen mehrere Hundert Dateitypen und setzen fragmentierte
+Dateien auch ohne Dateisystem-Informationen wieder zusammen. Dieses Werkzeug
+deckt die häufigsten Typen ab.
 
 Beim Carving hängt die Vollständigkeit von der Fragmentierung ab. Eine am Stück
-gespeicherte Datei kommt sauber heraus; eine über die Platte verteilte kann an
-der ersten Lücke abbrechen, weil das Verfahren die Fortsetzung nicht kennt.
+gespeicherte Datei kommt sauber heraus; eine über die Platte verteilte endet an
+der ersten Lücke.
 
-Das NTFS-Modul liest residente und über Data-Runs verteilte Dateien, verarbeitet
-fragmentierte MFT und mehrere Partitionen über MBR und GPT. Mit `--orphan` bzw.
-der entsprechenden Option in der Oberfläche durchsucht es den ganzen Datenträger
-nach MFT-Einträgen und findet gelöschte Dateien so auch nach einer Formatierung
-oder bei beschädigtem Boot-Sektor. Mit `--usn` bzw. der entsprechenden Option
-wertet es das USN-Change-Journal (`$UsnJrnl`) aus und listet die Namen und
-Zeitpunkte gelöschter Dateien — auch dann, wenn der MFT-Eintrag schon
+Das NTFS-Modul liest residente, über Data-Runs verteilte und NTFS-komprimierte
+Dateien, verarbeitet fragmentierte MFT, beschädigte Einzeleinträge und mehrere
+Partitionen über MBR (auch logische Laufwerke in erweiterten Partitionen) und
+GPT. Ist der Boot-Sektor beschädigt, nutzt es die Kopie am Volume-Ende. Mit
+`--orphan` bzw. der entsprechenden Option durchsucht es den ganzen Datenträger
+nach MFT-Einträgen und findet gelöschte Dateien so auch nach einer Formatierung.
+Mit `--usn` wertet es das USN-Change-Journal (`$UsnJrnl`) aus und listet die
+Namen und Zeitpunkte gelöschter Dateien, auch wenn der MFT-Eintrag schon
 wiederverwendet wurde. Diese Funde sind informativ: Sie zeigen, was gelöscht
-wurde, enthalten aber keinen Dateiinhalt. Das `$LogFile`-Journal wertet es nicht
-aus.
+wurde, enthalten aber keinen Dateiinhalt. Mit EFS verschlüsselte Dateien werden
+als solche markiert; ihren Inhalt kann das Werkzeug nicht entschlüsseln. Dateien,
+die Windows mit „CompactOS“/WOF komprimiert hat, und das `$LogFile`-Journal
+wertet es nicht aus.
 
-FAT12/16/32 und exFAT werden über einen eigenen Undelete-Weg gelesen (Namen,
-Pfade, Zeitstempel). Die Cluster-Kette gelöschter Dateien ist meist freigegeben,
-deshalb wird zusammenhängende Speicherung angenommen; fragmentierte Dateien
-kommen dann unvollständig heraus. Die Langnamen (LFN) gelöschter FAT-Einträge
-bleiben in der Regel erhalten und werden übernommen; nur ihre Reihenfolge ist
-nach dem Löschen nicht mehr abgesichert.
+Ist die Partitionstabelle verloren oder überschrieben, rekonstruiert
+`--reconstruct` die Volumes über eine Boot-Sektor-Suche (der Ansatz von TestDisk,
+in Python nachgebaut). Das Werkzeug durchsucht den Datenträger nach NTFS-, FAT-
+und exFAT-Boot-Sektoren, zieht bei NTFS bei Bedarf die Kopie am Volume-Ende heran
+und errechnet aus dem BPB Anfang und Größe der Partition. Die Boot-Sektor-Kopien
+von FAT32 (Sektor 6) und exFAT (Sektor 12) werden dabei erkannt und nicht als
+eigene Volumes gemeldet.
 
-Ist die Partitionstabelle verloren oder überschrieben, rekonstruiert `--reconstruct`
-die Volumes über eine Boot-Sektor-Suche (der Ansatz von TestDisk, in Python
-nachgebaut). Das Werkzeug durchsucht den Datenträger nach NTFS-, FAT- und
-exFAT-Boot-Sektoren, zieht bei NTFS bei Bedarf die Kopie am Volume-Ende heran und
-errechnet aus dem BPB Anfang und Größe der Partition. Die Boot-Sektor-Kopien von
-FAT32 (Sektor 6) und exFAT (Sektor 12) werden dabei erkannt und nicht als eigene
-Volumes gemeldet. Die so gefundenen Volumes werden anschließend über ihr
-Dateisystem ausgelesen – NTFS, FAT/exFAT und das USN-Journal gleichermaßen.
-
-Standardmäßig wird von 512-Byte-Sektoren ausgegangen. Datenträger mit reinen
-4K-Sektoren (4Kn) lassen sich über `--sector 4096` beziehungsweise die Option
-„4K-Sektoren" verarbeiten; die Sektorgröße fließt in die Umrechnung der
-MBR-/GPT-Einträge und in die Fixups der MFT-Einträge ein.
+Die logische Sektorgröße (512 Byte oder 4096 Byte bei 4Kn-Platten) fragt das
+Werkzeug beim Öffnen eines Laufwerks ab; sie bestimmt die Ausrichtung der
+Lesezugriffe und die Umrechnung der MBR-/GPT-Einträge. Passt sie nicht zur
+Partitionstabelle, wird die GPT trotzdem gefunden. Die MFT-Einträge sind
+unabhängig davon immer in 512-Byte-Abschnitten geschützt.
 
 Große Funde (Videos, Archive) werden blockweise geschrieben und liegen nie
 komplett im Speicher. Jede Datei entsteht erst unter der Endung `.part` und wird
-zum Schluss umbenannt – ein Abbruch mitten in einer Datei hinterlässt also keine
-unvollständige Datei, die bei der Fortsetzung fälschlich als fertig gilt.
-
-Ein Scan über eine große Platte liest sie einmal vollständig und dauert
-entsprechend. Für einen ersten Test empfiehlt sich ein kleines Image.
+zum Schluss umbenannt; ein Abbruch mitten in einer Datei hinterlässt also keine
+halbe Datei. Sehr lange Namen (tiefe Ordnerpfade) werden in der Mitte gekürzt,
+Nummer und Endung bleiben erhalten. Ist der Zieldatenträger voll, bricht die
+Wiederherstellung mit einer klaren Meldung ab.
 
 ## Projektaufbau
 
@@ -198,10 +253,11 @@ datenrettung/
   main.py                 Einstiegspunkt (GUI und CLI)
   recovery/
     sources.py            lesender Byte-Zugriff auf Image oder Gerät
-    drives.py             Laufwerke auflisten (Windows/Linux/macOS)
-    signatures.py         Datei-Signaturen und Struktur-Validatoren fürs Carving
+    drives.py             Laufwerke auflisten, Ausgabeordner gegen Quelle prüfen
+    signatures.py         Datei-Signaturen, Ende-Finder und Struktur-Validatoren
     carver.py             Carving-Engine
-    ntfs.py               NTFS-/MFT-Parser und Partitionsrekonstruktion
+    ntfs.py               NTFS-/MFT-Parser, Partitionstabellen, Rekonstruktion
+    lznt1.py              Entpacken NTFS-komprimierter Dateien
     usn.py                USN-Change-Journal ($UsnJrnl) auswerten
     fat.py                FAT12/16/32-Undelete
     exfat.py              exFAT-Undelete
@@ -212,23 +268,27 @@ datenrettung/
     sorting.py            Sortier-Logik der Trefferliste (tkinter-frei, testbar)
   tests/
     make_sample_image.py  baut synthetische Test-Images
-    test_engine.py        Tests für Carving und NTFS
+    fixtures/             kleine Images echter Dateisysteme (ntfs-3g, mtools, exfat-fuse)
+    test_engine.py        Tests für Carving, NTFS, FAT, exFAT, USN
+    test_befunde.py       Regressionstests zu den Befunden des Reviews
+    test_gui.py           Rauchtest der Oberfläche (braucht eine Anzeige)
+    windows_geraete.py    Prüfung der Windows-Gerätezugriffe (nur unter Windows)
 ```
 
 ## Tests
 
-Die Tests bauen ein synthetisches Carving-Image mit echten kleinen Dateien und
-ein von Hand konstruiertes NTFS-Volume mit einer gelöschten Datei. Sie prüfen,
-dass beide Verfahren die eingebetteten Daten byte-genau zurückholen, dass die
-Partitionserkennung ein NTFS-Volume hinter einer MBR-Tabelle findet und dass
-Zufallsdaten keine Flut von Fehltreffern erzeugen.
+Die Tests bauen synthetische Images (Carving, NTFS, FAT12/32, exFAT) und nutzen
+zusätzlich kleine Images echter Dateisysteme, die mit ntfs-3g, mtools und
+exfat-fuse angelegt wurden; darauf wurden Dateien gelöscht (normal, komprimiert,
+stark fragmentiert, in gelöschten Ordnern, auf 4K-Sektoren). Geprüft wird, dass
+Namen, Pfade und Inhalte byte-genau zurückkommen. Wie die Images entstehen,
+steht in `tests/fixtures/erzeuge_fixtures.py`.
 
 ```
-python -m unittest datenrettung.tests.test_engine
+python -m unittest discover -s datenrettung/tests -t .
 ```
 
-oder direkt:
-
-```
-python datenrettung/tests/test_engine.py
-```
+Die Oberfläche testet `test_gui.py`; unter Linux ohne Bildschirm etwa mit
+`xvfb-run python -m unittest datenrettung.tests.test_gui`. Die GitHub-Actions-CI
+führt alles unter Linux und Windows aus, unter Windows zusätzlich
+`tests/windows_geraete.py` mit echten Laufwerken.

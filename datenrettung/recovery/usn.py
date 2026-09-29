@@ -134,7 +134,7 @@ def _finding(rec: dict, index: int) -> Finding:
     deleted = bool(rec["reason"] & REASON_FILE_DELETE)
     return Finding(
         kind="usn",
-        type_name="USN-Journal (geloescht)" if deleted else "USN-Journal (Aenderung)",
+        type_name="USN-Journal (gelöscht)" if deleted else "USN-Journal (Änderung)",
         ext="txt",
         name=f"{index:06d}_{safe_name(rec['name'])}.usn.txt",
         offset=rec.get("offset", 0),
@@ -153,16 +153,19 @@ def scan_usn(source, base_offset: int = 0, only_delete: bool = True,
              progress_cb: Optional[ProgressCb] = None,
              should_cancel: Optional[CancelCb] = None,
              allow_carve: bool = True,
-             boot: Optional[ntfs.BootSector] = None) -> Iterator[Finding]:
+             boot: Optional[ntfs.BootSector] = None,
+             record_hint: Optional[int] = None) -> Iterator[Finding]:
     """Liefert Dateien aus dem USN-Journal als informative Funde.
 
     Zuerst wird der ``$J``-Stream ueber die MFT gesucht; gelingt das nicht und
     ist ``allow_carve`` gesetzt, werden USN-Datensaetze aus dem Rohdatenstrom
     herausgeschnitten (ein zusaetzlicher Durchlauf). ``boot`` kann ein bereits
-    rekonstruierter Boot-Sektor sein (Kopie am Volume-Ende).
+    rekonstruierter Boot-Sektor sein (Kopie am Volume-Ende). ``record_hint`` ist
+    die Nummer des ``$UsnJrnl``-Eintrags, falls der NTFS-Scan sie schon kennt –
+    dann entfaellt der zweite Durchlauf durch die MFT.
     """
     records = _read_from_mft(source, base_offset, only_delete, progress_cb,
-                             should_cancel, boot)
+                             should_cancel, boot, record_hint)
     if records is None:
         if not allow_carve:
             return
@@ -184,7 +187,7 @@ def scan_usn(source, base_offset: int = 0, only_delete: bool = True,
 
 
 def _read_from_mft(source, base_offset: int, only_delete: bool,
-                   progress_cb, should_cancel, boot):
+                   progress_cb, should_cancel, boot, record_hint=None):
     """Liest den ``$J``-Stream ueber die MFT. Gibt Datensaetze oder None zurueck."""
     try:
         if boot is None:
@@ -193,6 +196,17 @@ def _read_from_mft(source, base_offset: int, only_delete: bool,
         count = reader.record_count()
     except Exception:
         return None
+
+    if record_hint is not None:
+        record = reader.read_record(record_hint)
+        entry = ntfs._record_name_entry(record) if record is not None else None
+        if entry and entry[0] == "$UsnJrnl":
+            runs = _journal_runs(reader, record, boot, base_offset)
+            if not runs:
+                return None
+            chunks = _iter_allocated(source, runs, boot.cluster_size, base_offset,
+                                     progress_cb, should_cancel)
+            return iter_usn_stream(chunks, only_delete)
 
     limit = min(count, 200000)
     for n in range(limit):
