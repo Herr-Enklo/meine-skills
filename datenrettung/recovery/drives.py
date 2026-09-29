@@ -63,11 +63,14 @@ def _list_windows() -> list[Drive]:
 
 
 def _windows_physical_drives() -> list[Drive]:
+    # Hinweis: Win32_DiskDrive.Size wird aus der Zylindergeometrie berechnet und
+    # ist einige MB kleiner als die echte Platte. Der Wert dient nur der Anzeige;
+    # beim Lesen fragt ByteSource die exakte Groesse per IOCTL ab.
     ps = (
         "Get-CimInstance Win32_DiskDrive | "
         "Select-Object DeviceID,Model,Size | ConvertTo-Csv -NoTypeInformation"
     )
-    out = _run(["powershell", "-NoProfile", "-Command", ps])
+    out = _run_powershell(ps)
     result: list[Drive] = []
     if out:
         for row in _parse_csv(out):
@@ -81,17 +84,19 @@ def _windows_physical_drives() -> list[Drive]:
 
 
 def _windows_volumes() -> list[Drive]:
+    # DriveType 2 = Wechseldatentraeger, 3 = lokale Platte. Netzlaufwerke (4),
+    # CD/DVD (5) und RAM-Disks (6) lassen sich nicht roh lesen.
     ps = (
         "Get-CimInstance Win32_LogicalDisk | "
-        "Select-Object DeviceID,VolumeName,FileSystem,Size | "
+        "Select-Object DeviceID,DriveType,VolumeName,FileSystem,Size | "
         "ConvertTo-Csv -NoTypeInformation"
     )
-    out = _run(["powershell", "-NoProfile", "-Command", ps])
+    out = _run_powershell(ps)
     result: list[Drive] = []
     if out:
         for row in _parse_csv(out):
             letter = row.get("DeviceID", "").strip()  # z.B. "C:"
-            if not letter:
+            if not letter or _to_int(row.get("DriveType")) not in (2, 3):
                 continue
             name = row.get("VolumeName", "").strip()
             fs = row.get("FileSystem", "").strip()
@@ -149,13 +154,96 @@ def _list_macos() -> list[Drive]:
 # -- Hilfsfunktionen -----------------------------------------------------
 
 def _run(cmd: list[str]) -> str | None:
+    kwargs: dict = {}
+    if sys.platform.startswith("win"):
+        # Ohne dieses Flag blitzt beim Start aus pythonw.exe ein Konsolenfenster auf.
+        kwargs["creationflags"] = getattr(subprocess, "CREATE_NO_WINDOW", 0x08000000)
     try:
-        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=20)
+        proc = subprocess.run(cmd, capture_output=True, timeout=20, check=False, **kwargs)
     except (OSError, subprocess.SubprocessError):
         return None
     if proc.returncode != 0:
         return None
-    return proc.stdout
+    return proc.stdout.decode("utf-8", errors="replace")
+
+
+def _run_powershell(script: str) -> str | None:
+    # Ausgabe ausdruecklich als UTF-8, sonst kommen Umlaute in Laufwerks- und
+    # Modellnamen in der OEM-Codepage (cp850) an und werden verstuemmelt.
+    prefix = "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; "
+    return _run(["powershell", "-NoProfile", "-NonInteractive", "-Command", prefix + script])
+
+
+# -- Ausgabeordner auf dem Quelldatentraeger? ------------------------------
+
+def output_on_source(source_path: str, out_dir: str) -> str | None:
+    """Prueft, ob ``out_dir`` auf dem Datentraeger der Quelle liegt.
+
+    Rueckgabe: eine Begruendung (Text), wenn das so ist, sonst ``None``. Bei
+    Image-Dateien besteht keine Gefahr, weil die Image-Datei selbst belegt ist
+    und beim Schreiben nicht ueberschrieben wird. Wo sich der Datentraeger nicht
+    bestimmen laesst, wird ``None`` geliefert (kein Fehlalarm).
+    """
+    try:
+        if sys.platform.startswith("win"):
+            return _output_on_source_windows(source_path, out_dir)
+        if sys.platform.startswith("linux"):
+            return _output_on_source_linux(source_path, out_dir)
+    except Exception:
+        return None
+    return None
+
+
+def _output_on_source_windows(source_path: str, out_dir: str) -> str | None:
+    drive = os.path.splitdrive(os.path.abspath(out_dir))[0]
+    if len(drive) != 2 or drive[1] != ":":
+        return None                                   # UNC-Pfad/Netzlaufwerk
+    out_letter = drive[0].upper()
+    src = source_path.upper()
+    m = re.match(r"^\\\\\.\\([A-Z]):$", src)
+    if m:
+        if m.group(1) == out_letter:
+            return f"Der Ausgabeordner liegt auf {out_letter}:, also auf der Quelle selbst."
+        return None
+    m = re.match(r"^\\\\\.\\PHYSICALDRIVE(\d+)$", src)
+    if m:
+        letters = windows_disk_letters(int(m.group(1)))
+        if out_letter in letters:
+            return (f"Der Ausgabeordner liegt auf {out_letter}:, einer Partition der "
+                    f"gewaehlten Platte (Datentraeger {m.group(1)}).")
+    return None
+
+
+def windows_disk_letters(disk_number: int) -> list[str]:
+    """Laufwerksbuchstaben aller Partitionen einer physischen Platte."""
+    ps = (f"Get-Partition -DiskNumber {int(disk_number)} | "
+          "Where-Object { $_.DriveLetter } | ForEach-Object { $_.DriveLetter }")
+    out = _run_powershell(ps) or ""
+    return [line.strip().upper() for line in out.splitlines() if len(line.strip()) == 1]
+
+
+def _output_on_source_linux(source_path: str, out_dir: str) -> str | None:
+    if not source_path.startswith("/dev/"):
+        return None
+    src_disk = _linux_disk_of(os.path.basename(os.path.realpath(source_path)))
+    st = os.stat(out_dir if os.path.exists(out_dir) else os.path.dirname(os.path.abspath(out_dir)))
+    link = f"/sys/dev/block/{os.major(st.st_dev)}:{os.minor(st.st_dev)}"
+    if not os.path.exists(link):
+        return None
+    out_disk = _linux_disk_of(os.path.basename(os.path.realpath(link)))
+    if src_disk and src_disk == out_disk:
+        return f"Der Ausgabeordner liegt auf /dev/{out_disk}, also auf der Quelle selbst."
+    return None
+
+
+def _linux_disk_of(devname: str) -> str | None:
+    """'sdb1' -> 'sdb', 'nvme0n1p2' -> 'nvme0n1'; ganze Platten bleiben."""
+    real = os.path.realpath(f"/sys/class/block/{devname}")
+    if not os.path.exists(real):
+        return None
+    if os.path.exists(os.path.join(real, "partition")):
+        return os.path.basename(os.path.dirname(real))
+    return os.path.basename(real)
 
 
 def _parse_csv(text: str) -> list[dict]:

@@ -4,10 +4,12 @@ Der Ablauf besteht aus zwei Phasen:
 
 1. **Header-Suche** – die Quelle wird einmal sequentiell gelesen und nach allen
    bekannten Startmustern durchsucht. Ergebnis ist eine Liste von Kandidaten
-   (Position + Signatur).
+   (Position + Signatur). Gleichfoermige Bloecke (nur ``00`` oder nur ``FF``,
+   also leere Bereiche) werden dabei uebersprungen.
 2. **Grenzenbestimmung** – fuer jeden Kandidaten wird das Dateiende ermittelt:
-   ueber ein Endmuster (Footer), eine im Kopf hinterlegte Groesse, oder – als
-   Rueckfall – ueber eine feste Obergrenze.
+   strukturell (JPEG-Marker, GZIP-Strom), ueber eine im Kopf hinterlegte
+   Groesse, ueber ein Endmuster (Footer) oder – als Rueckfall – ueber eine
+   Obergrenze.
 
 Carving braucht kein intaktes Dateisystem und funktioniert daher auch nach einer
 Formatierung. Der Preis dafuer: Originalnamen und Ordnerstruktur sind verloren,
@@ -17,10 +19,26 @@ und stark fragmentierte Dateien koennen unvollstaendig sein.
 from __future__ import annotations
 
 import re
-from typing import Iterator, Optional
+import time
+from typing import Callable, Iterator, Optional
 
 from .models import CancelCb, Finding, ProgressCb
 from .signatures import SIGNATURES, Signature, max_header_span
+
+# Blockgroesse fuer das Erkennen leerer (gleichfoermiger) Bereiche.
+_UNIFORM_BLOCK = 64 * 1024
+_ZERO_BLOCK = bytes(_UNIFORM_BLOCK)
+_FF_BLOCK = b"\xff" * _UNIFORM_BLOCK
+
+# Lesefenster der Footer-Suche: klein anfangen, bei Bedarf verdoppeln. Die
+# meisten Dateien sind klein; ein festes 8-MiB-Fenster je Kandidat las bei
+# vielen kleinen Dateien ein Vielfaches der Quelle.
+_FIRST_WINDOW = 64 * 1024
+_MAX_WINDOW = 8 * 1024 * 1024
+
+# Obergrenze fuer eine Teil-Wiederherstellung (Footer nicht gefunden), damit ein
+# einzelner verirrter Header nicht gleich Gigabytes einsammelt.
+PARTIAL_MAX = 64 * 1024 * 1024
 
 
 def _build_pattern(signatures: list[Signature]):
@@ -34,6 +52,28 @@ def _build_pattern(signatures: list[Signature]):
     headers = sorted(header_to_sig, key=len, reverse=True)
     pattern = re.compile(b"|".join(re.escape(h) for h in headers))
     return pattern, header_to_sig
+
+
+def _search_spans(buf: bytes, overlap: int) -> list[tuple[int, int]]:
+    """Bereiche von ``buf``, die nicht nur aus ``00``/``FF`` bestehen.
+
+    Jeder Bereich wird um ``overlap`` Bytes erweitert, damit ein Header, der am
+    Rand eines leeren Blocks beginnt oder endet, nicht verloren geht.
+    """
+    spans: list[tuple[int, int]] = []
+    n = len(buf)
+    start = None
+    for i in range(0, n, _UNIFORM_BLOCK):
+        block = buf[i:i + _UNIFORM_BLOCK]
+        uniform = block == _ZERO_BLOCK[:len(block)] or block == _FF_BLOCK[:len(block)]
+        if not uniform and start is None:
+            start = i
+        elif uniform and start is not None:
+            spans.append((start, i))
+            start = None
+    if start is not None:
+        spans.append((start, n))
+    return [(max(0, s - overlap), min(n, e + overlap)) for s, e in spans]
 
 
 def find_headers(source, signatures, progress_cb, should_cancel):
@@ -50,18 +90,19 @@ def find_headers(source, signatures, progress_cb, should_cancel):
             break
         buf = carry + data
         buf_base = carry_base if carry else offset
-        for m in pattern.finditer(buf):
-            sig = header_to_sig.get(m.group())
-            if sig is None:
-                continue
-            file_rel = m.start() - sig.header_offset
-            if file_rel < 0:
-                continue
-            # Guenstiger Vorabtest, um Fehltreffer kurzer Header frueh zu verwerfen.
-            if sig.quick_check is not None:
-                if not sig.quick_check(buf[file_rel:file_rel + 64]):
+        for lo, hi in _search_spans(buf, overlap):
+            for m in pattern.finditer(buf, lo, hi):
+                sig = header_to_sig.get(m.group())
+                if sig is None:
                     continue
-            candidates.append((buf_base + file_rel, sig))
+                file_rel = m.start() - sig.header_offset
+                if file_rel < 0:
+                    continue
+                # Guenstiger Vorabtest, um Fehltreffer kurzer Header frueh zu verwerfen.
+                if sig.quick_check is not None:
+                    if not sig.quick_check(buf[file_rel:file_rel + 64]):
+                        continue
+                candidates.append((buf_base + file_rel, sig))
         keep = buf[-overlap:] if overlap else b""
         carry = keep
         carry_base = (offset + len(data)) - len(keep)
@@ -71,9 +112,10 @@ def find_headers(source, signatures, progress_cb, should_cancel):
 
     # Nach Startposition sortieren; bei gleichem Start die frueher gelistete
     # (spezialisiertere) Signatur bevorzugen.
-    candidates.sort(key=lambda c: c[0])
-    # Duplikate entfernen: derselbe Header kann an Blockgrenzen doppelt
-    # gefunden werden (Ueberlappungsbereich).
+    order = {id(sig): i for i, sig in enumerate(signatures)}
+    candidates.sort(key=lambda c: (c[0], order.get(id(c[1]), 0)))
+    # Duplikate entfernen: derselbe Header kann an Blockgrenzen oder in sich
+    # ueberlappenden Suchbereichen doppelt gefunden werden.
     deduped: list[tuple[int, Signature]] = []
     last: tuple[int, str] | None = None
     for start, sig in candidates:
@@ -84,18 +126,17 @@ def find_headers(source, signatures, progress_cb, should_cancel):
     return deduped
 
 
-def _find_footer(source, start: int, footer: bytes, max_size: int,
-                 source_size: Optional[int]) -> int:
-    """Sucht das Endmuster ab ``start`` innerhalb von ``max_size`` Bytes.
+def _find_footer(source, start: int, footer: bytes, limit: int,
+                 valid: Optional[Callable[[int], bool]] = None) -> int:
+    """Sucht das Endmuster ab ``start`` bis vor die absolute Grenze ``limit``.
 
-    Liest in Teilbloecken, damit auch grosse Suchfenster wenig Speicher
-    brauchen. Gibt die absolute Position des Footer-Anfangs zurueck oder -1.
+    Liest in wachsenden Bloecken (64 KiB, dann verdoppelt bis 8 MiB), damit
+    kleine Dateien nicht megabyteweise gelesen werden. ``valid`` kann einen
+    Treffer verwerfen (z.B. EOCD eines eingebetteten ZIP); dann wird hinter ihm
+    weitergesucht. Gibt die absolute Position des Footer-Anfangs zurueck oder -1.
     """
-    step = 8 * 1024 * 1024
+    step = _FIRST_WINDOW
     overlap = len(footer) - 1
-    limit = start + max_size
-    if source_size is not None:
-        limit = min(limit, source_size)
     pos = start
     carry = b""
     carry_base = start
@@ -106,30 +147,39 @@ def _find_footer(source, start: int, footer: bytes, max_size: int,
             break
         buf = carry + data
         idx = buf.find(footer)
-        if idx != -1:
-            return carry_base + idx
+        while idx != -1:
+            hit = carry_base + idx
+            if valid is None or valid(hit):
+                return hit
+            idx = buf.find(footer, idx + 1)
         keep = buf[-overlap:] if overlap else b""
         carry = keep
         carry_base = pos + len(data) - len(keep)
         pos += len(data)
+        step = min(step * 2, _MAX_WINDOW)
         if len(data) < want:
             break
     return -1
 
 
-def _find_nested_end(source, start: int, nesting: tuple[bytes, bytes],
-                     limit: int) -> int:
+def _find_nested_end(source, start: int, nesting: tuple, limit: int) -> int:
     """Sucht das Endmuster unter Beruecksichtigung verschachtelter Oeffner.
 
-    ``nesting`` ist ``(oeffner_regex, schliesser_regex)``. Die Suche beginnt
-    hinter dem Dateikopf mit Tiefe 1; jeder Oeffner erhoeht, jeder Schliesser
-    senkt die Tiefe. Der Schliesser, der die Tiefe auf 0 bringt, ist das Ende.
-    Gibt die absolute Position dieses Schliessers zurueck oder -1.
+    ``nesting`` ist ``(oeffner_regex, schliesser_regex[, ueberspringen_regex])``.
+    Die Suche beginnt hinter dem Dateikopf mit Tiefe 1; jeder Oeffner erhoeht,
+    jeder Schliesser senkt die Tiefe. Der Schliesser, der die Tiefe auf 0
+    bringt, ist das Ende. Treffer des dritten Musters (Escape-Sequenzen) werden
+    ueberlesen. Gibt die absolute Position dieses Schliessers zurueck oder -1.
     """
-    open_re, close_re = nesting
-    pattern = re.compile(b"(?P<o>" + open_re + b")|(?P<c>" + close_re + b")")
-    step = 8 * 1024 * 1024
-    overlap = 15                     # groesser als jedes Muster inkl. Lookbehind
+    open_re, close_re = nesting[0], nesting[1]
+    parts = []
+    if len(nesting) > 2 and nesting[2]:
+        parts.append(b"(?P<s>" + nesting[2] + b")")
+    parts.append(b"(?P<o>" + open_re + b")")
+    parts.append(b"(?P<c>" + close_re + b")")
+    pattern = re.compile(b"|".join(parts))
+    step = _FIRST_WINDOW
+    overlap = 15                     # groesser als jedes Muster
     depth = 1
     pos = start
     carry = b""
@@ -143,21 +193,20 @@ def _find_nested_end(source, start: int, nesting: tuple[bytes, bytes],
         for m in pattern.finditer(buf):
             if m.end() <= len(carry):
                 continue             # lag schon im vorigen Block
-            depth += 1 if m.group("o") is not None else -1
-            if depth == 0:
-                return carry_base + m.start()
+            if m.group("o") is not None:
+                depth += 1
+            elif m.group("c") is not None:
+                depth -= 1
+                if depth == 0:
+                    return carry_base + m.start()
         keep = buf[-overlap:]
         carry = keep
         carry_base = pos + len(data) - len(keep)
         pos += len(data)
+        step = min(step * 2, _MAX_WINDOW)
         if len(data) < want:
             break
     return -1
-
-
-# Obergrenze fuer eine Teil-Wiederherstellung (Footer nicht gefunden), damit ein
-# einzelner verirrter Header nicht gleich Gigabytes einsammelt.
-PARTIAL_MAX = 64 * 1024 * 1024
 
 
 def _footer_end(source, sig: Signature, foot_start: int) -> int:
@@ -172,50 +221,63 @@ def _footer_end(source, sig: Signature, foot_start: int) -> int:
 
 def _resolve_size(source, start: int, sig: Signature, source_size: Optional[int],
                   next_start: Optional[int], next_same: Optional[int],
-                  recover_partial: bool) -> Optional[tuple[int, bool]]:
+                  recover_partial: bool) -> Optional[tuple[int, bool, bool]]:
     """Bestimmt Groesse und Vollstaendigkeit eines Kandidaten.
 
     ``next_start`` ist der naechste Kandidat beliebigen Typs, ``next_same`` der
-    naechste Kandidat mit demselben Header. Rueckgabe ``(size, partial)`` oder
-    ``None``, wenn kein sinnvoller Bereich bestimmbar ist. ``partial`` markiert
-    eine unvollstaendige Datei (Footer nicht gefunden), die dennoch bestmoeglich
-    herausgeschnitten wird.
+    naechste Kandidat mit demselben Header. Rueckgabe ``(size, partial, certain)``
+    oder ``None``, wenn kein sinnvoller Bereich bestimmbar ist. ``partial``
+    markiert eine unvollstaendige Datei, ``certain`` einen Bereich, dessen Ende
+    strukturell belegt ist – darin liegende Treffer gelten als eingebettet.
     """
     header_len = sig.header_offset + len(sig.header)
     limit = start + sig.max_size
     if source_size is not None:
         limit = min(limit, source_size)
 
-    def clamp(size: int) -> Optional[tuple[int, bool]]:
+    def clamp(size: int, partial: bool = False, certain: bool = False):
         if source_size is not None:
             size = min(size, source_size - start)
-        return (size, False) if size > header_len else None
+        if size <= header_len:
+            return None
+        return (size, partial, certain)
 
     if sig.size_from_header is not None:
         # Genug fuer Formate, deren Groesse in einem Verzeichnis steht (z.B. ICO).
         head = source.read(start, 4096)
         declared = sig.size_from_header(head)
         if declared and header_len < declared <= sig.max_size:
-            return clamp(declared)
-        return None
+            return clamp(declared, certain=sig.trusted_size)
+        if sig.size_required:
+            return None
+
+    if sig.end_finder is not None:
+        try:
+            found = sig.end_finder(source.read, start, limit)
+        except Exception:
+            found = None
+        if isinstance(found, tuple):
+            end, complete = found
+            if not complete and not recover_partial:
+                return None
+            return clamp(end - start, partial=not complete, certain=True)
+        if found is None and sig.strict_end:
+            return None
 
     if sig.footer is not None:
-        # 1. Strukturell (z.B. JPEG-Marker verfolgen) – am verlaesslichsten.
-        if sig.end_finder is not None:
-            try:
-                end = sig.end_finder(source.read, start, limit)
-            except Exception:
-                end = None
-            if end is not None and end > start + header_len:
-                return clamp(end - start)
-
-        # 2. Endmuster suchen, ggf. mit Verschachtelung.
+        # Endmuster suchen, ggf. mit Verschachtelung bzw. Plausibilitaetspruefung.
         if sig.nesting is not None:
-            foot_start = _find_nested_end(source, start + header_len,
-                                          sig.nesting, limit)
+            foot_start = _find_nested_end(source, start + header_len, sig.nesting, limit)
         else:
-            foot_start = _find_footer(source, start + header_len, sig.footer,
-                                      sig.max_size, source_size)
+            checker = sig.footer_valid
+
+            def valid(hit: int) -> bool:
+                try:
+                    return bool(checker(source.read, start, hit))
+                except Exception:
+                    return False
+            foot_start = _find_footer(source, start + header_len, sig.footer, limit,
+                                      valid if checker is not None else None)
         if foot_start < 0:
             if not recover_partial:
                 return None
@@ -225,19 +287,18 @@ def _resolve_size(source, start: int, sig: Signature, source_size: Optional[int]
                 end = min(end, next_start)
             if source_size is not None:
                 end = min(end, source_size)
-            size = end - start
-            return (size, True) if size > header_len else None
+            return clamp(end - start, partial=True)
         end = _footer_end(source, sig, foot_start)
 
-        # 3. Geht die Datei hinter dem Footer weiter (PDF-Updates)? Dann gilt
-        #    das letzte Endmuster innerhalb der Obergrenze.
+        # Geht die Datei hinter dem Footer weiter (PDF-Updates)? Dann gilt
+        # das letzte Endmuster innerhalb der Obergrenze.
         if sig.footer_continue is not None:
             while end < limit and sig.footer_continue(source.read(end, 64)):
-                nxt = _find_footer(source, end, sig.footer, limit - end, source_size)
+                nxt = _find_footer(source, end, sig.footer, limit)
                 if nxt < 0:
                     break
                 end = _footer_end(source, sig, nxt)
-        return clamp(end - start)
+        return clamp(end - start, certain=True)
 
     # Weder Footer noch Groessenangabe: Obergrenze als bestmoegliche Schaetzung,
     # spaetestens aber beim naechsten Header desselben Typs (ein Typ kann sich
@@ -254,14 +315,17 @@ def carve(source, signatures: Optional[list[Signature]] = None,
           should_cancel: Optional[CancelCb] = None,
           max_files: Optional[int] = None,
           recover_partial: bool = True,
-          validate: bool = True) -> Iterator[Finding]:
+          validate: bool = True,
+          skip: Optional[Callable[[int], bool]] = None) -> Iterator[Finding]:
     """Durchsucht ``source`` und liefert die gefundenen Dateien als ``Finding``.
 
     Es werden keine Daten im Speicher gehalten – jeder Fund traegt nur Position
     und Groesse; die eigentlichen Bytes werden erst beim Wiederherstellen gelesen.
-    ``recover_partial`` rettet Dateien mit fehlendem Endmuster bestmoeglich als
+    ``recover_partial`` rettet Dateien mit fehlendem Ende bestmoeglich als
     unvollstaendig, statt sie zu verwerfen. ``validate`` prueft bei vollstaendigen
-    Funden interne Strukturen und verwirft Fehltreffer.
+    Funden interne Strukturen und verwirft Fehltreffer. ``skip(offset)`` kann
+    Kandidaten ausschliessen (belegter Speicher, schon per Dateisystem gefunden,
+    verschluesselte Partition).
     """
     signatures = signatures or SIGNATURES
     source_size = source.size
@@ -280,15 +344,21 @@ def carve(source, signatures: Optional[list[Signature]] = None,
     carved_until = 0           # Ende des letzten Funds mit belegtem Ende
     produced = 0
     index = 0
+    last_report = 0.0
     for i, (start, sig) in enumerate(candidates):
         if should_cancel and should_cancel():
             break
         if progress_cb and total:
-            progress_cb("Dateigrenzen bestimmen", (i + 1) / total, produced)
+            now = time.monotonic()
+            if now - last_report >= 0.2 or i + 1 == total:
+                last_report = now
+                progress_cb("Dateigrenzen bestimmen", (i + 1) / total, produced)
 
         # Innerhalb einer bereits herausgeschnittenen Datei (z.B. Vorschaubild
-        # in einem Office-Dokument) liegende Treffer ueberspringen.
+        # in einem JPEG oder Office-Dokument) liegende Treffer ueberspringen.
         if start < carved_until:
+            continue
+        if skip is not None and skip(start):
             continue
 
         next_start = candidates[i + 1][0] if i + 1 < total else None
@@ -296,9 +366,7 @@ def carve(source, signatures: Optional[list[Signature]] = None,
                                  next_same[i], recover_partial)
         if resolved is None:
             continue
-        size, partial = resolved
-        if size <= 0:
-            continue
+        size, partial, certain = resolved
 
         # Struktur-Validierung: vollstaendige Funde mit interner Pruefung
         # bestaetigen, Fehltreffer verwerfen. Teilfunde bleiben unberuehrt.
@@ -308,9 +376,9 @@ def carve(source, signatures: Optional[list[Signature]] = None,
                 continue
 
         index += 1
-        # Nur vollstaendige, footer-basierte Funde duerfen darin liegende
-        # Treffer unterdruecken. Geratene Groessen und Teilfunde nicht.
-        if sig.footer is not None and not partial:
+        # Nur Funde mit strukturell belegtem Ende duerfen darin liegende
+        # Treffer unterdruecken. Geratene Groessen nicht.
+        if certain:
             carved_until = start + size
 
         ext = sig.ext
@@ -321,7 +389,7 @@ def carve(source, signatures: Optional[list[Signature]] = None,
 
         suffix = "_unvollstaendig" if partial else ""
         name = f"{index:06d}_0x{start:X}{suffix}.{ext}"
-        type_name = sig.name + (" (unvollstaendig)" if partial else "")
+        type_name = sig.name + (" (unvollständig)" if partial else "")
         yield Finding(
             kind="carve",
             type_name=type_name,
@@ -329,7 +397,8 @@ def carve(source, signatures: Optional[list[Signature]] = None,
             name=name,
             offset=start,
             size=size,
-            extra={"partial": partial},
+            extra={"partial": partial,
+                   "state": "unvollständig" if partial else "vollständig"},
         )
         produced += 1
         if max_files and produced >= max_files:

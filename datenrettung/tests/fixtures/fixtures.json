@@ -1,0 +1,50 @@
+{
+  "ntfs_echt": {
+    "deleted": {
+      "klein.txt": "4c68295035d6be747f4e3c439982d552",
+      "Ordner/Unterordner/tief.txt": "deafa73acccba3e8786a132ce9627353",
+      "komprimiert/text.txt": "7f5646f92899fdf34c84aa392e208b03",
+      "Fotos/geloescht.jpg": "9924c3f03c13a924e1c75d369ee7ccb1"
+    },
+    "live_jpeg": "cee9c49d8740a2c8325deee1760e8df3"
+  },
+  "ntfs_ueberschrieben": {
+    "deleted": {
+      "alt.txt": "aa9937a1bdc0143bcfd004f57a85df55"
+    }
+  },
+  "ntfs4k": {
+    "deleted": {
+      "resident.txt": "a0839940b3562c00f4e487ac109c95a2",
+      "gross.txt": "ed7478bbc390d93d62d153dc92912f8a"
+    }
+  },
+  "ntfs_attrlist": {
+    "deleted": {
+      "fragmentiert.txt": "35a3c9c5b8fdc3d9a693c1d3837be56e"
+    }
+  },
+  "fat16": {
+    "deleted": {
+      "klein.txt": "a6c4622db947b7203f3dd03814f210e1",
+      "Urlaubsfoto vom Strand (1).jpg": "3f1c2d817da1488148279aa20bedbd83",
+      "Ordner/Unterordner/tief.txt": "61bb605a26fbcf031ffd38672bc644e6",
+      "fragmentiert.txt": "4b9d2860fd2ef3065476e6973e1bd8f3"
+    },
+    "live": {
+      "lebendig.txt": "321ea955626c9881f16da72340bb4edd"
+    }
+  },
+  "fat32_klein": {
+    "deleted": {
+      "notiz.txt": "292bf7889952e681bac12b7e7341c069"
+    }
+  },
+  "exfat": {
+    "deleted": {
+      "klein.txt": "2b8fa30f7c6e22d288ae00540d8409a6",
+      "Ordner/Unterordner/tief.txt": "3ac686be3e2c861aabc1b83c105449c9",
+      "fragmentiert.txt": "b6669e53fa3df228f5baf0c67b40eecf"
+    }
+  }
+}

@@ -13,6 +13,7 @@ Zwei Bauteile:
 from __future__ import annotations
 
 import io
+import random
 import struct
 import zipfile
 import zlib
@@ -31,12 +32,25 @@ def make_png() -> bytes:
     return sig + chunk(b"IHDR", ihdr) + chunk(b"IDAT", idat) + chunk(b"IEND", b"")
 
 
-def make_jpeg() -> bytes:
-    # Gueltiger Rahmen (Header + Footer); Inhalt ohne 0xFF, damit der Footer
-    # eindeutig am Ende steht.
-    header = b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x00\x00\x01\x00\x01\x00\x00"
-    body = bytes(range(0, 200)) .replace(b"\xff", b"\x7f")
-    return header + body + b"\xff\xd9"
+def jpeg_head() -> bytes:
+    """Kopf eines strukturell gueltigen Mini-JPEG bis einschliesslich SOS."""
+    app0 = b"\xff\xe0\x00\x10JFIF\x00\x01\x01\x00\x00\x01\x00\x01\x00\x00"
+    dqt = b"\xff\xdb\x00\x43\x00" + bytes(range(1, 65))
+    sof = b"\xff\xc0\x00\x0b\x08\x00\x10\x00\x10\x01\x01\x11\x00"
+    counts = bytes([0, 1, 5, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0])
+    dht = b"\xff\xc4" + struct.pack(">H", 2 + 1 + 16 + 12) + b"\x00" + counts + bytes(range(12))
+    sos = b"\xff\xda\x00\x08\x01\x01\x00\x00\x3f\x00"
+    return b"\xff\xd8" + app0 + dqt + sof + dht + sos
+
+
+def make_jpeg(entropy_len: int = 200, seed: int = 0) -> bytes:
+    """Strukturell gueltiges Mini-JPEG (SOI, APP0, DQT, SOF0, DHT, SOS, EOI).
+
+    Die Bilddaten enthalten kein 0xFF, damit nur das echte EOI als Marker gilt.
+    """
+    rng = random.Random(seed)
+    data = bytes(rng.randrange(0, 255) for _ in range(entropy_len))
+    return jpeg_head() + data + b"\xff\xd9"
 
 
 def make_pdf() -> bytes:

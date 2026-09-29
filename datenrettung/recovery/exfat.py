@@ -1,20 +1,23 @@
 """exFAT-Undelete (Metadaten-Analyse, Kategorie 1).
 
-exFAT ist das Dateisystem grosser SD-Karten und USB-Sticks. Ein Verzeichnis
-besteht aus 32-Byte-Eintraegen: ein File-Eintrag (Typ ``0x85``), ein
-Stream-Extension-Eintrag (``0xC0``) mit Startcluster und Groesse sowie ein oder
-mehrere Namens-Eintraege (``0xC1``). Beim Loeschen wird nur das InUse-Bit (0x80)
-im Typ geloescht (aus ``0x85`` wird ``0x05`` usw.); Name, Groesse und
-Startcluster bleiben erhalten.
+exFAT beschreibt jede Datei mit einem Satz von Verzeichniseintraegen: einem
+File-Eintrag (0x85), einem Stream-Eintrag (0xC0) mit Startcluster, Groesse und
+dem Flag *NoFatChain*, und einem oder mehreren Namens-Eintraegen (0xC1). Beim
+Loeschen wird in jedem Eintrag das InUse-Bit (0x80) geloescht und die Belegung
+in der Allocation Bitmap aufgehoben; Name, Groesse und Startcluster bleiben.
 
-Der Parser liest die Verzeichnisse, gruppiert die Eintraege ueber die
-SecondaryCount-Angabe und rekonstruiert geloeschte Dateien. Der Inhalt wird
-ab dem Startcluster gelesen – zusammenhaengend, wie bei exFAT ohne FAT-Kette
-ueblich (Flag NoFatChain) oder als bestmoegliche Annahme.
+Rekonstruktion:
+
+- *NoFatChain* gesetzt: die Datei lag am Stueck – exakt rekonstruierbar.
+- Sonst folgt eine vorhandene Datei ihrer FAT-Kette. Bei geloeschten Dateien
+  ist die Kette meist geloescht; dann wird ab dem Startcluster aus freien
+  Clustern zusammengesetzt (belegte werden uebersprungen).
+- Geloeschte Ordner werden durchsucht; ihre Groesse steht im Stream-Eintrag.
 """
 
 from __future__ import annotations
 
+import datetime
 import struct
 from typing import Iterator, Optional
 
@@ -23,7 +26,10 @@ from .models import CancelCb, Finding, ProgressCb, safe_name
 TYPE_FILE = 0x05          # 0x85 & 0x7F
 TYPE_STREAM = 0x40        # 0xC0 & 0x7F
 TYPE_NAME = 0x41          # 0xC1 & 0x7F
+TYPE_BITMAP = 0x81        # Allocation Bitmap (im Wurzelverzeichnis)
 IN_USE = 0x80
+
+MAX_DIR_BYTES = 64 * 1024 * 1024
 
 
 class ExfatError(Exception):
@@ -43,13 +49,17 @@ class ExfatBoot:
         self.root_cluster = struct.unpack_from("<I", data, 0x60)[0]
         bps_shift = data[0x6C]
         spc_shift = data[0x6D]
-        if not (9 <= bps_shift <= 12) or spc_shift > 25:
+        # Laut Spezifikation: 512 bis 4096 Byte je Sektor, Cluster hoechstens 32 MiB.
+        if not (9 <= bps_shift <= 12) or bps_shift + spc_shift > 25:
             raise ExfatError("ungueltige Geometrie")
         self.bytes_per_sector = 1 << bps_shift
         self.sectors_per_cluster = 1 << spc_shift
         self.cluster_size = self.bytes_per_sector * self.sectors_per_cluster
-        if self.root_cluster < 2 or self.heap_sector == 0:
+        if self.heap_sector == 0 or self.fat_sector == 0 or self.cluster_count == 0:
             raise ExfatError("ungueltiges Layout")
+        self.max_cluster = self.cluster_count + 1
+        if not (2 <= self.root_cluster <= self.max_cluster):
+            raise ExfatError("ungueltiger Wurzel-Cluster")
 
     def cluster_offset(self, cluster: int) -> int:
         sector = self.heap_sector + (cluster - 2) * self.sectors_per_cluster
@@ -58,132 +68,320 @@ class ExfatBoot:
     def fat_offset(self) -> int:
         return self.base + self.fat_sector * self.bytes_per_sector
 
-
-def _next_cluster(source, boot: ExfatBoot, cluster: int) -> Optional[int]:
-    val = struct.unpack_from("<I", source.read(boot.fat_offset() + cluster * 4, 4))[0]
-    if val < 2 or val >= 0xFFFFFFF7:
-        return None
-    return val
+    def valid_cluster(self, cluster: int) -> bool:
+        return 2 <= cluster <= self.max_cluster
 
 
-def _read_directory(source, boot: ExfatBoot, first_cluster: int,
-                    no_fat_chain: bool, length: int) -> bytes:
-    if no_fat_chain and length:
-        return source.read(boot.cluster_offset(first_cluster), length)
-    out = bytearray()
-    cluster = first_cluster
-    seen: set[int] = set()
-    while cluster and cluster >= 2 and cluster not in seen and len(out) < 64 * 1024 * 1024:
-        seen.add(cluster)
-        out += source.read(boot.cluster_offset(cluster), boot.cluster_size)
-        cluster = _next_cluster(source, boot, cluster)
-    return bytes(out)
+class ExfatVolume:
+    """FAT und Allocation Bitmap eines exFAT-Volumes."""
+
+    _BLOCK = 64 * 1024
+
+    def __init__(self, source, boot: ExfatBoot):
+        self.source = source
+        self.boot = boot
+        self._fat_cache: dict[int, bytes] = {}
+        self._bitmap: Optional[bytes] = None
+        self._load_bitmap()
+
+    def _load_bitmap(self) -> None:
+        root = self.read_chain(self.boot.root_cluster, 1 << 20)
+        for i in range(0, len(root) - 31, 32):
+            entry = root[i:i + 32]
+            if entry[0] == 0x00:
+                break
+            if entry[0] == TYPE_BITMAP and not (entry[1] & 0x01):   # erste Bitmap
+                first = struct.unpack_from("<I", entry, 0x14)[0]
+                length = struct.unpack_from("<Q", entry, 0x18)[0]
+                needed = (self.boot.cluster_count + 7) // 8
+                if self.boot.valid_cluster(first) and 0 < length <= 64 * 1024 * 1024:
+                    self._bitmap = self.source.read(self.boot.cluster_offset(first),
+                                                    min(length, needed))
+                return
+
+    def fat_entry(self, cluster: int) -> Optional[int]:
+        rel = cluster * 4
+        block = rel // self._BLOCK
+        data = self._fat_cache.get(block)
+        if data is None:
+            data = self.source.read(self.boot.fat_offset() + block * self._BLOCK, self._BLOCK)
+            if len(self._fat_cache) > 256:
+                self._fat_cache.clear()
+            self._fat_cache[block] = data
+        inner = rel - block * self._BLOCK
+        raw = data[inner:inner + 4]
+        return struct.unpack("<I", raw)[0] if len(raw) == 4 else None
+
+    def next_cluster(self, cluster: int) -> Optional[int]:
+        value = self.fat_entry(cluster)
+        if value is None or value < 2 or value >= 0xFFFFFFF7:
+            return None
+        return value if self.boot.valid_cluster(value) else None
+
+    def chain(self, start: int, limit: int) -> list[int]:
+        out: list[int] = []
+        seen: set[int] = set()
+        cluster: Optional[int] = start
+        while cluster is not None and cluster not in seen and len(out) < limit:
+            if not self.boot.valid_cluster(cluster):
+                break
+            seen.add(cluster)
+            out.append(cluster)
+            cluster = self.next_cluster(cluster)
+        return out
+
+    def read_chain(self, start: int, max_bytes: int) -> bytes:
+        out = bytearray()
+        for cluster in self.chain(start, max(1, max_bytes // self.boot.cluster_size)):
+            out += self.source.read(self.boot.cluster_offset(cluster), self.boot.cluster_size)
+        return bytes(out)
+
+    def is_allocated(self, cluster: int) -> Optional[bool]:
+        if self._bitmap is None:
+            return None
+        idx = cluster - 2
+        if idx < 0 or idx // 8 >= len(self._bitmap):
+            return None
+        return bool(self._bitmap[idx // 8] & (1 << (idx % 8)))
+
+    def is_allocated_offset(self, abs_offset: int) -> Optional[bool]:
+        rel = abs_offset - self.boot.cluster_offset(2)
+        if rel < 0:
+            return None
+        cluster = rel // self.boot.cluster_size + 2
+        if cluster > self.boot.max_cluster:
+            return None
+        return self.is_allocated(cluster)
+
+    def free_run(self, start: int, needed: int, window: int) -> tuple[list[int], int]:
+        out: list[int] = []
+        skipped = 0
+        cluster = start
+        end = min(self.boot.max_cluster, start + window)
+        while len(out) < needed and cluster <= end:
+            if self.is_allocated(cluster):
+                skipped += 1
+            else:
+                out.append(cluster)
+            cluster += 1
+        return out, skipped
 
 
-def _exfat_time(val: int) -> Optional[str]:
+def _clusters_to_runs(boot: ExfatBoot, clusters: list[int]) -> list[tuple[int, int]]:
+    runs: list[tuple[int, int]] = []
+    for cluster in clusters:
+        off = boot.cluster_offset(cluster)
+        if runs and runs[-1][0] + runs[-1][1] == off:
+            runs[-1] = (runs[-1][0], runs[-1][1] + boot.cluster_size)
+        else:
+            runs.append((off, boot.cluster_size))
+    return runs
+
+
+def _exfat_time(val: int, utc_offset: int = 0) -> tuple[Optional[str], Optional[float]]:
+    """Zeitstempel als Text (lokale Zeit des Geraets) und als Unix-Zeit.
+
+    ``utc_offset`` ist das UtcOffset-Byte: Bit 7 = gueltig, Bits 0-6 = Versatz
+    in Viertelstunden (vorzeichenbehaftet). Fehlt es, gilt die lokale Zeitzone.
+    """
     if val == 0:
-        return None
+        return None, None
     second = (val & 0x1F) * 2
     minute = (val >> 5) & 0x3F
     hour = (val >> 11) & 0x1F
     day = (val >> 16) & 0x1F
     month = (val >> 21) & 0x0F
     year = 1980 + ((val >> 25) & 0x7F)
-    if not (1 <= month <= 12 and 1 <= day <= 31):
-        return None
-    return f"{year:04d}-{month:02d}-{day:02d} {hour:02d}:{minute:02d}:{second:02d}"
+    if not (1 <= month <= 12 and 1 <= day <= 31 and hour < 24 and minute < 60 and second < 60):
+        return None, None
+    text = f"{year:04d}-{month:02d}-{day:02d} {hour:02d}:{minute:02d}:{second:02d}"
+    try:
+        local = datetime.datetime(year, month, day, hour, minute, second)
+        if utc_offset & 0x80:
+            quarters = utc_offset & 0x7F
+            if quarters & 0x40:
+                quarters -= 0x80
+            tz = datetime.timezone(datetime.timedelta(minutes=15 * quarters))
+            epoch = local.replace(tzinfo=tz).timestamp()
+        else:
+            epoch = local.timestamp()
+    except (OverflowError, ValueError, OSError):
+        epoch = None
+    return text, epoch
+
+
+class _Walker:
+    def __init__(self, source, boot: ExfatBoot, deleted_only: bool, should_cancel):
+        self.source = source
+        self.boot = boot
+        self.volume = ExfatVolume(source, boot)
+        self.deleted_only = deleted_only
+        self.should_cancel = should_cancel
+        self.findings: list[Finding] = []
+        self.visited: set[int] = set()
+        self.errors = 0
+
+    def read_directory(self, first: int, no_fat_chain: bool, length: int,
+                       deleted: bool) -> bytes:
+        boot = self.boot
+        length = min(length, MAX_DIR_BYTES) if length else 0
+        if no_fat_chain and length:
+            return self.source.read(boot.cluster_offset(first), length)
+        if not deleted:
+            return self.volume.read_chain(first, length or MAX_DIR_BYTES)
+        # Geloeschter Ordner mit FAT-Kette: die Kette ist meist geloescht.
+        clusters = self.volume.chain(first, max(1, length // boot.cluster_size))
+        needed = max(1, (length + boot.cluster_size - 1) // boot.cluster_size)
+        if len(clusters) < needed:
+            clusters, _skipped = self.volume.free_run(first, needed, needed * 4 + 64)
+        out = bytearray()
+        for cluster in clusters:
+            out += self.source.read(boot.cluster_offset(cluster), boot.cluster_size)
+        return bytes(out[:length] if length else out)
+
+    def walk(self, data: bytes, path: str, depth: int, parent_deleted: bool) -> None:
+        if depth > 32 or (self.should_cancel and self.should_cancel()):
+            return
+        slots = len(data) // 32
+        i = 0
+        while i < slots:
+            entry = data[i * 32:i * 32 + 32]
+            etype = entry[0]
+            if etype == 0x00:
+                break                                  # Ende des Verzeichnisses
+            if etype & 0x7F != TYPE_FILE:
+                i += 1
+                continue
+            sec_count = entry[1]
+            if not (2 <= sec_count <= 18):
+                i += 1
+                continue
+            in_use = bool(etype & IN_USE)
+            attrs = struct.unpack_from("<H", entry, 0x04)[0]
+            is_dir = bool(attrs & 0x10)
+            modified, epoch = _exfat_time(struct.unpack_from("<I", entry, 0x0C)[0], entry[0x17])
+
+            stream = None
+            name_bytes = bytearray()
+            for k in range(sec_count):
+                si = i + 1 + k
+                if si >= slots:
+                    break
+                se = data[si * 32:si * 32 + 32]
+                st = se[0] & 0x7F
+                if st == TYPE_STREAM and stream is None:
+                    stream = se
+                elif st == TYPE_NAME:
+                    name_bytes += se[2:32]
+                else:
+                    break
+            i += 1 + sec_count
+            if stream is None:
+                continue
+
+            name_len = stream[3]
+            no_fat_chain = bool(stream[1] & 0x02)
+            first = struct.unpack_from("<I", stream, 0x14)[0]
+            data_len = struct.unpack_from("<Q", stream, 0x18)[0]
+            name = name_bytes.decode("utf-16-le", "replace")[:name_len]
+            name = name.replace("/", "_").replace("\\", "_") or "unbenannt"
+            deleted = (not in_use) or parent_deleted
+            full = f"{path}/{name}" if path else name
+
+            if is_dir:
+                if self.boot.valid_cluster(first) and first not in self.visited:
+                    self.visited.add(first)
+                    try:
+                        sub = self.read_directory(first, no_fat_chain, data_len, deleted)
+                        self.walk(sub, full, depth + 1, deleted)
+                    except Exception:
+                        self.errors += 1
+                continue
+
+            if self.deleted_only and not deleted:
+                continue
+            if data_len <= 0 or not self.boot.valid_cluster(first):
+                continue
+            self._add_file(full, name, first, data_len, no_fat_chain, deleted, modified, epoch)
+
+    def _add_file(self, full: str, name: str, first: int, size: int, no_fat_chain: bool,
+                  deleted: bool, modified: Optional[str], epoch: Optional[float]) -> None:
+        boot = self.boot
+        vol = self.volume
+        needed = (size + boot.cluster_size - 1) // boot.cluster_size
+        if no_fat_chain:
+            clusters = list(range(first, first + needed))
+            if not deleted:
+                state = "vorhanden"
+            else:
+                used = sum(1 for c in clusters[:4096] if vol.is_allocated(c))
+                state = ("gut" if used == 0 else
+                         "überschrieben" if vol.is_allocated(first) else "teilweise überschrieben")
+        elif not deleted:
+            clusters = vol.chain(first, needed)
+            state = "vorhanden"
+            if len(clusters) < needed:
+                clusters = list(range(first, first + needed))
+                state = "vorhanden (FAT-Kette beschädigt)"
+        else:
+            chain = vol.chain(first, needed)
+            if len(chain) == needed and not any(vol.is_allocated(c) for c in chain):
+                clusters, state = chain, "gut"          # Kette blieb erhalten
+            elif vol.is_allocated(first):
+                clusters, state = list(range(first, first + needed)), "überschrieben"
+            else:
+                clusters, skipped = vol.free_run(first, needed, needed * 4 + 1024)
+                if len(clusters) < needed:
+                    clusters = list(range(first, first + needed))
+                    state = "teilweise überschrieben"
+                else:
+                    state = "zusammengesetzt" if skipped else "gut"
+        clusters = [c for c in clusters if boot.valid_cluster(c)]
+        if not clusters:
+            return
+        ext = name.rsplit(".", 1)[-1].lower() if "." in name else "bin"
+        number = len(self.findings) + 1
+        self.findings.append(Finding(
+            kind="exfat",
+            type_name="exFAT-Datei" + (" (gelöscht)" if deleted else ""),
+            ext=ext,
+            name=f"{number:06d}_{safe_name(full)}",
+            offset=boot.cluster_offset(clusters[0]),
+            size=size,
+            extra={"path": full, "modified": modified, "mtime_epoch": epoch, "fs": "exfat",
+                   "runs": _clusters_to_runs(boot, clusters), "state": state,
+                   "deleted": deleted},
+        ))
 
 
 def scan_exfat(source, base_offset: int = 0, deleted_only: bool = True,
                progress_cb: Optional[ProgressCb] = None,
-               should_cancel: Optional[CancelCb] = None) -> Iterator[Finding]:
+               should_cancel: Optional[CancelCb] = None,
+               warnings: Optional[list] = None) -> Iterator[Finding]:
     """Durchsucht ein exFAT-Volume ab ``base_offset`` nach (geloeschten) Dateien."""
     boot = ExfatBoot(source.read(base_offset, 512), base_offset)
     if progress_cb:
         progress_cb("exFAT-Verzeichnisse lesen", 0.0, 0)
-    findings: list[Finding] = []
-    counter = [0]
-    _walk(source, boot, boot.root_cluster, False, 0, "", 0, findings, counter,
-          deleted_only, set(), should_cancel)
-    for f in findings:
-        yield f
+    walker = _Walker(source, boot, deleted_only, should_cancel)
+    try:
+        root = walker.volume.read_chain(boot.root_cluster, MAX_DIR_BYTES)
+        walker.walk(root, "", 0, False)
+    except Exception:
+        walker.errors += 1
+    if walker.errors and warnings is not None:
+        warnings.append(f"exFAT-Volume bei Offset {base_offset:#x}: {walker.errors} "
+                        "Verzeichnis(se) nicht lesbar.")
+    if progress_cb:
+        progress_cb("exFAT-Verzeichnisse lesen", 1.0, len(walker.findings))
+    yield from walker.findings
 
 
-def _walk(source, boot: ExfatBoot, first_cluster: int, no_fat_chain: bool,
-          length: int, path: str, depth: int, findings: list, counter: list,
-          deleted_only: bool, visited: set, should_cancel) -> None:
-    if depth > 32 or (should_cancel and should_cancel()):
-        return
-    data = _read_directory(source, boot, first_cluster, no_fat_chain, length)
-    slots = len(data) // 32
-    i = 0
-    while i < slots:
-        entry = data[i * 32:i * 32 + 32]
-        etype = entry[0]
-        base_type = etype & 0x7F
-        if etype == 0x00:
-            i += 1
-            continue
-        if base_type != TYPE_FILE:
-            i += 1
-            continue
-
-        in_use = bool(etype & IN_USE)
-        sec_count = entry[1]
-        attrs = struct.unpack_from("<H", entry, 0x04)[0]
-        is_dir = bool(attrs & 0x10)
-        mtime = _exfat_time(struct.unpack_from("<I", entry, 0x0C)[0])
-
-        stream = None
-        name_bytes = bytearray()
-        for k in range(sec_count):
-            si = i + 1 + k
-            if si >= slots:
-                break
-            se = data[si * 32:si * 32 + 32]
-            st = se[0] & 0x7F
-            if st == TYPE_STREAM:
-                stream = se
-            elif st == TYPE_NAME:
-                name_bytes += se[2:32]
-        i += 1 + sec_count
-
-        if stream is None:
-            continue
-        name_len = stream[3]
-        flags = stream[1]
-        sub_no_fat = bool(flags & 0x02)
-        sub_first = struct.unpack_from("<I", stream, 0x14)[0]
-        data_len = struct.unpack_from("<Q", stream, 0x18)[0]
-        name = name_bytes.decode("utf-16-le", "replace")[:name_len]
-        deleted = not in_use
-
-        if is_dir:
-            if (not deleted and sub_first >= 2 and sub_first not in visited):
-                visited.add(sub_first)
-                sub = f"{path}/{name}" if path else name
-                _walk(source, boot, sub_first, sub_no_fat, data_len, sub,
-                      depth + 1, findings, counter, deleted_only, visited,
-                      should_cancel)
-            continue
-
-        if deleted_only and not deleted:
-            continue
-        if data_len <= 0 or sub_first < 2:
-            continue
-
-        counter[0] += 1
-        full = f"{path}/{name}" if path else name
-        ext = name.rsplit(".", 1)[-1].lower() if "." in name else "bin"
-        findings.append(Finding(
-            kind="exfat",
-            type_name="exFAT-Datei" + ("" if not deleted else " (geloescht)"),
-            ext=ext,
-            name=f"{counter[0]:06d}_{safe_name(full)}",
-            offset=boot.cluster_offset(sub_first),
-            size=data_len,
-            extra={"path": full, "modified": mtime, "fs": "exfat"},
-        ))
+def allocation_map(source, base_offset: int = 0) -> Optional[ExfatVolume]:
+    """Belegungskarte eines exFAT-Volumes, fuer das Carving im freien Bereich."""
+    try:
+        return ExfatVolume(source, ExfatBoot(source.read(base_offset, 512), base_offset))
+    except ExfatError:
+        return None
 
 
 def is_exfat(source, base_offset: int = 0) -> bool:
