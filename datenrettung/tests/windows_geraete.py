@@ -4,7 +4,9 @@ Laeuft in der CI auf einem Windows-Runner (dort mit Administratorrechten) und
 deckt ab, was sich unter Linux nicht testen laesst: Laufwerksliste ueber
 PowerShell, Groesse und Sektorgroesse ueber DeviceIoControl, Lesen von
 ``\\\\.\\PhysicalDriveN`` und ``\\\\.\\C:`` sowie die Pruefung, ob ein
-Ausgabeordner auf der Quelle liegt. Liest ausschliesslich.
+Ausgabeordner auf der Quelle liegt. Von den Geraeten wird nur gelesen; fuer die
+Junction-Pruefung legt das Skript kurz zwei leere Ordner an und entfernt sie
+wieder.
 
 Aufruf:  python datenrettung/tests/windows_geraete.py
 """
@@ -79,7 +81,41 @@ def main() -> int:
     check(output_on_source("\\\\.\\C:", "C:\\Gerettet") is not None, "C: als Quelle erkannt")
     check(output_on_source(physical, "C:\\Gerettet") is not None, "Platte als Quelle erkannt")
     check(output_on_source("\\\\.\\C:", "\\\\server\\freigabe") is None, "Netzpfad unkritisch")
+    check_target_paths(drives, physical)
     return 1 if check.failed else 0  # type: ignore[attr-defined]
+
+
+def check_target_paths(drives, physical: str) -> None:
+    """Zielschutz mit echten Windows-Pfaden: erweitertes Pfadpraefix, anderes
+    Laufwerk und eine Junction von einem anderen Laufwerk nach C:."""
+    check(output_on_source("\\\\.\\C:", "\\\\?\\C:\\Gerettet") is not None,
+          "erweiterter Pfad auf C: als Quelle erkannt")
+    check(output_on_source(physical, "\\\\?\\C:\\Gerettet") is not None,
+          "erweiterter Pfad auf der Platte erkannt")
+    other = next((d.path[4] for d in drives if d.kind == "volume"
+                  and d.path.upper() != "\\\\.\\C:"), None)
+    if other is None:
+        print("  kein zweites Laufwerk – Junction-Pruefung entfaellt")
+        return
+    check(output_on_source("\\\\.\\C:", f"{other}:\\Gerettet") is None,
+          f"{other}: gilt nicht als C:")
+    target = "C:\\datenrettung_ziel_test"
+    link = f"{other}:\\datenrettung_verweis_test"
+    os.makedirs(target, exist_ok=True)
+    try:
+        made = subprocess.run(["cmd", "/c", "mklink", "/J", link, target],
+                              capture_output=True, text=True, check=False)
+        check(made.returncode == 0 and os.path.isdir(link), "Junction angelegt")
+        reason = output_on_source("\\\\.\\C:", link + "\\Gerettet")
+        print(f"  {link} -> {target}: {reason}")
+        check(reason is not None and "C:" in reason, "Junction nach C: als Quelle erkannt")
+        check(output_on_source(physical, link) is not None, "Junction nach C: auf der Platte erkannt")
+    finally:
+        for path in (link, target):
+            try:
+                os.rmdir(path)
+            except OSError:
+                pass
 
 
 if __name__ == "__main__":

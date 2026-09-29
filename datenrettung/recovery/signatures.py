@@ -108,23 +108,32 @@ def _zip_eocd_valid(read, start: int, eocd: int) -> bool:
     Groesse stehen im EOCD relativ zum Dateianfang. Ein EOCD, bei dem die
     Rechnung nicht aufgeht, gehoert zu einem eingebetteten Archiv (JAR, DOCX
     oder ZIP als gespeicherte Datei) – dann wird weitergesucht.
+
+    ZIP64 (APPNOTE 4.3.14/4.3.15): Steht direkt vor dem EOCD ein ZIP64-Locator
+    oder enthaelt das EOCD Platzhalter (0xFFFF/0xFFFFFFFF), gelten die Werte des
+    ZIP64-EOCD-Satzes. Das kommt auch ohne grosse Dateien vor, allein wegen
+    mehr als 65.535 Eintraegen.
     """
     rec = read(eocd, 22)
     if len(rec) < 22:
         return False
-    cd_size, cd_off = struct.unpack_from("<II", rec, 12)
-    if cd_off == 0xFFFFFFFF or cd_size == 0xFFFFFFFF:
-        # ZIP64: Locator (20 Byte) vor dem EOCD verweist auf den ZIP64-EOCD-Satz.
-        loc = read(eocd - 20, 20)
-        if len(loc) < 20 or loc[0:4] != b"PK\x06\x07":
-            return False
+    disk, cd_disk, on_disk, total, cd_size, cd_off = struct.unpack_from("<HHHHII", rec, 4)
+    placeholder = (0xFFFF in (disk, cd_disk, on_disk, total)
+                   or 0xFFFFFFFF in (cd_size, cd_off))
+    loc = read(eocd - 20, 20) if eocd - start >= 20 else b""
+    if len(loc) == 20 and loc[0:4] == b"PK\x06\x07":
         rec64_rel = struct.unpack_from("<Q", loc, 8)[0]
         rec64 = read(start + rec64_rel, 56)
         if len(rec64) < 56 or rec64[0:4] != b"PK\x06\x06":
             return False
+        rec64_len = 12 + struct.unpack_from("<Q", rec64, 4)[0]
         cd_size, cd_off = struct.unpack_from("<QQ", rec64, 40)
-        return rec64_rel == cd_off + cd_size
-    if eocd - start != cd_off + cd_size:
+        # Reihenfolge: Zentralverzeichnis, ZIP64-EOCD-Satz, Locator, EOCD.
+        if rec64_rel != cd_off + cd_size or start + rec64_rel + rec64_len != eocd - 20:
+            return False
+    elif placeholder:
+        return False
+    elif eocd - start != cd_off + cd_size:
         return False
     if cd_size:
         return read(start + cd_off, 4) == b"PK\x01\x02"

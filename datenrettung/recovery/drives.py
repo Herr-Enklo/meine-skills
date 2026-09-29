@@ -195,23 +195,186 @@ def output_on_source(source_path: str, out_dir: str) -> str | None:
 
 
 def _output_on_source_windows(source_path: str, out_dir: str) -> str | None:
-    drive = os.path.splitdrive(os.path.abspath(out_dir))[0]
-    if len(drive) != 2 or drive[1] != ":":
-        return None                                   # UNC-Pfad/Netzlaufwerk
-    out_letter = drive[0].upper()
-    src = source_path.upper()
-    m = re.match(r"^\\\\\.\\([A-Z]):$", src)
-    if m:
-        if m.group(1) == out_letter:
-            return f"Der Ausgabeordner liegt auf {out_letter}:, also auf der Quelle selbst."
+    src = _device_path(source_path)
+    m_vol = re.match(r"^\\\\\.\\([A-Z]):$", src)
+    m_disk = re.match(r"^\\\\\.\\PHYSICALDRIVE(\d+)$", src)
+    if not (m_vol or m_disk):
+        return None                                   # Image-Datei o.Ae.
+    target = _existing_ancestor(out_dir)
+    letter = _path_letter(target)
+
+    # Bevorzugt fragt das Programm Windows selbst, auf welchem Volume der
+    # Ordner liegt. Das erfasst auch \\?\-Pfade, Junctions, symbolische Links
+    # und Volumes, die in einen Ordner eingehaengt sind.
+    out_volume = _win_final_volume(target)
+    if out_volume:
+        if m_vol:
+            src_volume = _win_volume_of_letter(m_vol.group(1))
+            if src_volume:
+                if src_volume.lower() != out_volume.lower():
+                    return None
+                src_letter = m_vol.group(1)
+                if letter == src_letter:
+                    return f"Der Ausgabeordner liegt auf {src_letter}:, also auf der Quelle selbst."
+                return (f"Der Ausgabeordner verweist auf {src_letter}: (Verknüpfung oder "
+                        "eingehängtes Laufwerk) und liegt damit auf der Quelle selbst.")
+        else:
+            disks = _win_volume_disks(out_volume)
+            if disks is not None:
+                if int(m_disk.group(1)) in disks:
+                    return ("Der Ausgabeordner liegt auf einer Partition der gewaehlten "
+                            f"Platte (Datentraeger {m_disk.group(1)}).")
+                return None
+
+    # Rueckfall ohne Windows-Abfrage: Laufwerksbuchstabe aus dem Pfad.
+    if not letter:
+        return None                                   # Netzpfad o.Ae.
+    if m_vol:
+        if m_vol.group(1) == letter:
+            return f"Der Ausgabeordner liegt auf {letter}:, also auf der Quelle selbst."
         return None
-    m = re.match(r"^\\\\\.\\PHYSICALDRIVE(\d+)$", src)
-    if m:
-        letters = windows_disk_letters(int(m.group(1)))
-        if out_letter in letters:
-            return (f"Der Ausgabeordner liegt auf {out_letter}:, einer Partition der "
-                    f"gewaehlten Platte (Datentraeger {m.group(1)}).")
+    if letter in windows_disk_letters(int(m_disk.group(1))):
+        return (f"Der Ausgabeordner liegt auf {letter}:, einer Partition der "
+                f"gewaehlten Platte (Datentraeger {m_disk.group(1)}).")
     return None
+
+
+def _device_path(path: str) -> str:
+    r"""Geraetepfad vereinheitlichen: ``\\?\C:`` wie ``\\.\C:``, Grossbuchstaben."""
+    path = path.upper().rstrip("\\")
+    if path.startswith("\\\\?\\") and not path.startswith("\\\\?\\UNC\\"):
+        path = "\\\\.\\" + path[4:]
+    return path
+
+
+def _strip_prefix(path: str) -> str:
+    r"""Erweiterte Praefixe entfernen: ``\\?\C:\x`` -> ``C:\x``,
+    ``\\?\UNC\srv\f`` -> ``\\srv\f``."""
+    upper = path.upper()
+    if upper.startswith("\\\\?\\UNC\\"):
+        return "\\\\" + path[8:]
+    if re.match(r"^\\\\[?.]\\[A-Z]:", upper):
+        return path[4:]
+    return path                      # z.B. \\?\Volume{...}\ bleibt, wie es ist
+
+
+def _path_letter(path: str) -> str | None:
+    drive = os.path.splitdrive(_strip_prefix(path))[0]
+    if len(drive) == 2 and drive[1] == ":" and drive[0].isalpha():
+        return drive[0].upper()
+    return None
+
+
+def _existing_ancestor(path: str) -> str:
+    """Naechster existierender Ordner (das Ziel wird oft erst angelegt)."""
+    path = _strip_prefix(path)
+    path = os.path.abspath(path)
+    while not os.path.exists(path):
+        parent = os.path.dirname(path)
+        if parent == path:
+            break
+        path = parent
+    return path
+
+
+def _kernel32():
+    import ctypes
+    from ctypes import wintypes
+    k32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    k32.CreateFileW.restype = wintypes.HANDLE
+    k32.CreateFileW.argtypes = [wintypes.LPCWSTR, wintypes.DWORD, wintypes.DWORD,
+                                wintypes.LPVOID, wintypes.DWORD, wintypes.DWORD,
+                                wintypes.HANDLE]
+    k32.CloseHandle.argtypes = [wintypes.HANDLE]
+    k32.GetFinalPathNameByHandleW.restype = wintypes.DWORD
+    k32.GetFinalPathNameByHandleW.argtypes = [wintypes.HANDLE, wintypes.LPWSTR,
+                                              wintypes.DWORD, wintypes.DWORD]
+    k32.GetVolumeNameForVolumeMountPointW.restype = wintypes.BOOL
+    k32.GetVolumeNameForVolumeMountPointW.argtypes = [wintypes.LPCWSTR, wintypes.LPWSTR,
+                                                      wintypes.DWORD]
+    k32.DeviceIoControl.restype = wintypes.BOOL
+    k32.DeviceIoControl.argtypes = [wintypes.HANDLE, wintypes.DWORD, wintypes.LPVOID,
+                                    wintypes.DWORD, wintypes.LPVOID, wintypes.DWORD,
+                                    ctypes.POINTER(wintypes.DWORD), wintypes.LPVOID]
+    return k32
+
+
+_INVALID_HANDLE = -1 & 0xFFFFFFFFFFFFFFFF
+
+
+def _open_handle(k32, path: str, flags: int):
+    # Zugriff 0: nur Abfragen, keine Lese- oder Schreibrechte noetig.
+    handle = k32.CreateFileW(path, 0, 0x7, None, 3, flags, None)
+    if handle in (None, 0, _INVALID_HANDLE, -1):
+        return None
+    return handle
+
+
+def _win_final_volume(path: str) -> str | None:
+    r"""Volume-GUID-Pfad (``\\?\Volume{...}\``), auf dem ``path`` wirklich liegt."""
+    if not sys.platform.startswith("win"):
+        return None
+    try:
+        import ctypes
+        k32 = _kernel32()
+        handle = _open_handle(k32, path, 0x02000000)   # FILE_FLAG_BACKUP_SEMANTICS
+        if handle is None:
+            return None
+        try:
+            buf = ctypes.create_unicode_buffer(1024)
+            n = k32.GetFinalPathNameByHandleW(handle, buf, 1024, 0x1)   # VOLUME_NAME_GUID
+        finally:
+            k32.CloseHandle(handle)
+        if not n or n >= 1024:
+            return None
+        m = re.match(r"^\\\\\?\\Volume\{[0-9A-Fa-f-]+\}", buf.value)
+        return m.group(0) + "\\" if m else None
+    except Exception:
+        return None
+
+
+def _win_volume_of_letter(letter: str) -> str | None:
+    if not sys.platform.startswith("win"):
+        return None
+    try:
+        import ctypes
+        k32 = _kernel32()
+        buf = ctypes.create_unicode_buffer(64)
+        if not k32.GetVolumeNameForVolumeMountPointW(f"{letter}:\\", buf, 64):
+            return None
+        return buf.value
+    except Exception:
+        return None
+
+
+def _win_volume_disks(volume: str) -> set[int] | None:
+    """Nummern der physischen Platten, auf denen ein Volume liegt."""
+    if not sys.platform.startswith("win"):
+        return None
+    try:
+        import ctypes
+        import struct
+        from ctypes import wintypes
+        k32 = _kernel32()
+        handle = _open_handle(k32, volume.rstrip("\\"), 0)
+        if handle is None:
+            return None
+        try:
+            out = ctypes.create_string_buffer(8 + 24 * 32)
+            returned = wintypes.DWORD(0)
+            ok = k32.DeviceIoControl(handle, 0x00560000, None, 0, out, len(out),
+                                     ctypes.byref(returned), None)
+        finally:
+            k32.CloseHandle(handle)
+        if not ok:
+            return None
+        raw = out.raw
+        count = struct.unpack_from("<I", raw, 0)[0]
+        if count == 0 or count > 32:
+            return None
+        return {struct.unpack_from("<I", raw, 8 + 24 * i)[0] for i in range(count)}
+    except Exception:
+        return None
 
 
 def windows_disk_letters(disk_number: int) -> list[str]:
