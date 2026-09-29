@@ -1,0 +1,141 @@
+{
+  "expectations": [
+    {
+      "text": "Die Antwort beginnt mit einer Statuszeile im Format `INC-JJJJMMTT-HHMM | P<1-4> | <Bereich> | <Status> | <Titel>`",
+      "passed": true,
+      "evidence": "Erste Zeile von antwort.md: `INC-20260929-1030 | P4 | Smart Home | wartet auf Nutzer | Büro-Temperatursensor (Shelly H&T) seit Tagen nicht verfügbar`. ID passt zu Datum und Uhrzeit aus der Nachricht (29.09.2026, 10:30), P4 liegt in P1-P4, fünf Felder mit ' | ' getrennt. Die Zeile steht in Inline-Code-Backticks, wie auch das Beispiel in vorlagen.md des Skills; das ist Markdown-Darstellung, keine Formatabweichung."
+    },
+    {
+      "text": "Die Wichtigkeit wird davon abhängig gemacht, was den Sensor benutzt (Automationen, Thermostat oder Heizungsregelung), mit einem konkreten Prüfweg dafür",
+      "passed": true,
+      "evidence": "\"Ob es schlimm ist, hängt davon ab, was den Wert benutzt. Nutzt eine Heizungsregelung oder Automation die Bürotemperatur, fehlt ihr gerade die Grundlage.\" und \"Priorität P4 ist eine Annahme ... Zeigt Schritt 1 eine Heizungsregelung, stufe ich auf P3 hoch\". Konkreter Prüfweg: Schritt 1 mit Template unter Entwicklerwerkzeuge → Template, das automations_with_entity, scripts_with_entity, automations_with_device und alle climate-Entitäten mit current_temperature ausgibt, dazu der Hinweis \"Thermostat-, Min/Max- oder Template-Helfer tauchen in der Liste nicht auf. Die findest du unter Einstellungen → Geräte & Dienste → Helfer.\""
+    },
+    {
+      "text": "Es wird darauf hingewiesen, dass ein eingefrorener letzter Wert eine Regelung (etwa die Heizung) falsch weiterarbeiten lassen kann",
+      "passed": true,
+      "evidence": "\"Schlimmer ist, wenn sie mit dem letzten Wert weiterregelt: Der Generic Thermostat hat in älteren Versionen genau das gemacht und die letzte Temperatur behalten, also weitergeheizt, obwohl der Sensor weg war (Issue #63419).\" Dazu Prüfhinweis: \"Zeigt ein Thermostat als Ist genau den letzten Wert des Sensors und ändert sich dieser seit Tagen nicht, regelt es mit einem eingefrorenen Wert.\" und Sofortmaßnahme \"Thermostat ... auf feste Temperatur oder manuell stellen, damit es nicht mit einem alten Wert regelt\"."
+    },
+    {
+      "text": "Eine leere Batterie bzw. ein schlafendes Batteriegerät wird als wahrscheinlichste Ursache genannt, mit Prüfung des Batterieverlaufs oder des Protokolls",
+      "passed": true,
+      "evidence": "Überschrift \"Vermutungen, die wahrscheinlichste zuerst\", Punkt 1: \"Batterie leer. Das passt, weil das Gerät dauerhaft weg ist\". Prüfung: Schritt 2 \"Öffne den Verlauf ... Temperatur, Luftfeuchte und Batterie dieses Geräts für die letzten zehn Tage. War die Batterie vor dem Ausfall niedrig oder ist sie gefallen, spricht das für Vermutung 1.\" und Schritt 3 Protokolle nach \"shelly\" filtern mit Einordnung der Meldung \"Sleeping device did not update within … seconds interval\"."
+    },
+    {
+      "text": "Neuladen der Integration oder Neustart von Home Assistant wird nicht als Lösung für eine leere Batterie empfohlen",
+      "passed": true,
+      "evidence": "Ausdrücklich abgeraten: \"Die Integration neu zu laden oder Home Assistant neu zu starten hilft bei einer leeren Batterie nicht. Das kannst du dir sparen.\" Nirgends wird ein Reload oder Neustart empfohlen."
+    },
+    {
+      "text": "Als Folgeaufgabe wird eine Warnung bei niedriger Batterie oder langer Funkstille vorgeschlagen",
+      "passed": true,
+      "evidence": "\"Folgeaufgabe: eine Benachrichtigung bei niedriger Batterie oder wenn der Sensor ein paar Stunden nicht verfügbar ist. Die richte ich dir gern ein, sobald ich Zugriff habe, vorher stimme ich sie mit dir ab.\""
+    }
+  ],
+  "summary": {
+    "passed": 6,
+    "failed": 0,
+    "total": 6,
+    "pass_rate": 1.0
+  },
+  "execution_metrics": {
+    "tool_calls": {
+      "Read": 1,
+      "Bash": 4,
+      "ToolSearch": 1,
+      "WebSearch": 5,
+      "Write": 1,
+      "SubagentHandback": 1
+    },
+    "total_tool_calls": 13,
+    "files_created": [
+      "antwort.md"
+    ],
+    "errors_encountered": 0,
+    "output_chars": 8614,
+    "transcript_chars": 4244
+  },
+  "timing": {
+    "executor_duration_seconds": 266.3,
+    "total_duration_seconds": 266.3,
+    "total_tokens": 102131
+  },
+  "claims": [
+    {
+      "claim": "Shellys funken nur auf 2,4 GHz",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Stimmt für H&T Gen1, Plus H&T und H&T Gen3 (2,4-GHz-WLAN)."
+    },
+    {
+      "claim": "H&T Gen1 schickt per CoIoT an <HA-IP>:5683, Plus H&T und H&T Gen3 per Outbound WebSocket an ws://<HA-IP>:8123/api/shelly/ws",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Entspricht der Doku der Shelly-Integration in Home Assistant (CoIoT-Peer Port 5683 für Gen1-Batteriegeräte, Outbound WebSocket /api/shelly/ws für Gen2+/Gen3-Schlafgeräte)."
+    },
+    {
+      "claim": "H&T Gen1 braucht eine CR123A, Plus H&T und H&T Gen3 brauchen 4× AA, beide auch dauerhaft über USB-C versorgbar",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Batterietypen stimmen. Kleine Unschärfe: Beim Plus H&T geht USB-Versorgung über ein separates Netzteil-Add-on, nicht direkt am Gerät; beim Gen3 ist USB-C vorgesehen."
+    },
+    {
+      "claim": "Der Generic Thermostat behält bei nicht verfügbarem Sensor die letzte Temperatur und regelt damit weiter (Issue #63419, PR #167290)",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Verhalten passt zum bekannten Code von generic_thermostat, der unavailable/unknown-Zustände des Sensors ignoriert und current_temperature stehen lässt. Die Issue- und PR-Nummern wurden nicht geprüft (keine Websuche). Die Antwort markiert offen, dass nicht geprüft wurde, ob es in der Version des Nutzers behoben ist."
+    },
+    {
+      "claim": "Das Template in Schritt 1 liefert Automationen, Skripte, Zustände und Thermostate",
+      "type": "quality",
+      "verified": true,
+      "evidence": "Alle verwendeten Funktionen gibt es in HA-Templates (device_id, device_attr, device_entities, automations_with_device, automations_with_entity, scripts_with_entity, integration_entities, as_local, is_state als Test, match-Test, for/else). Randfall: Hat die Entität kein Gerät, liefert device_id None und die Gerätezeilen bleiben leer bzw. werfen Fehler."
+    },
+    {
+      "claim": "Das Attribut `restored` kennzeichnet eine verwaiste Entität",
+      "type": "factual",
+      "verified": true,
+      "evidence": "HA setzt restored: true für Registry-Entitäten, die keine Integration mehr bereitstellt."
+    },
+    {
+      "claim": "Langes Drücken der Taste kann einen Shelly auf Werkseinstellungen zurücksetzen",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Stimmt (Gen1 H&T etwa 10 s halten = Werksreset; Plus/Gen3 ähnlich)."
+    },
+    {
+      "claim": "Beim H&T Gen3 schaltet ein Tastendruck in den Setup-Modus und ein zweiter zurück in den Schlafmodus",
+      "type": "factual",
+      "verified": false,
+      "evidence": "Ohne Websuche nicht überprüfbar; als Herstellerangabe mit Quelle (kb.shelly.cloud) gekennzeichnet, plausibel."
+    },
+    {
+      "claim": "Reload der Integration oder HA-Neustart hilft bei leerer Batterie nicht",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Richtig: Ein schlafendes Gerät ohne Strom meldet sich unabhängig vom Zustand der Integration nicht."
+    }
+  ],
+  "user_notes_summary": {
+    "uncertainties": [
+      "Keine user_notes.md vorhanden. In der Antwort selbst offen markiert: P4 als Annahme, Behebung des Thermostat-Verhaltens in der Version des Nutzers nicht geprüft, kein Incident-Journal in der Sitzung."
+    ],
+    "needs_review": [],
+    "workarounds": []
+  },
+  "eval_feedback": {
+    "suggestions": [
+      {
+        "assertion": "Neuladen der Integration oder Neustart von Home Assistant wird nicht als Lösung für eine leere Batterie empfohlen",
+        "reason": "Negativ formuliert und damit auch erfüllt, wenn Reload/Neustart gar nicht erwähnt wird. Die Vergleichsgruppe empfiehlt einen Reload (bedingt, nach Batteriewechsel) und besteht trotzdem. Trennschärfer wäre: 'Es wird ausdrücklich gesagt, dass Reload/Neustart bei leerer Batterie nicht hilft' oder 'Reload wird höchstens nach ausgeschlossener Batterieursache genannt'."
+      },
+      {
+        "assertion": "Es wird darauf hingewiesen, dass ein eingefrorener letzter Wert eine Regelung (etwa die Heizung) falsch weiterarbeiten lassen kann",
+        "reason": "Ein Halbsatz wie 'arbeiten mit einem alten Wert' reicht zum Bestehen. Wenn der Unterschied zählen soll, besser eine konkrete Folge (z. B. heizt weiter) oder einen Prüfweg (Ist-Temperatur des Thermostats mit letztem Sensorwert vergleichen) verlangen."
+      },
+      {
+        "reason": "Nicht abgedeckt: eine Sofortmaßnahme gegen Fehlregelung (Thermostat auf manuell/feste Temperatur) und die Warnung, die Taste nicht lange zu drücken (Werksreset). Der Lauf mit Skill liefert beides; ein Kriterium dafür würde gutes Verhalten messbar machen."
+      }
+    ],
+    "overall": "Die Kriterien treffen den Kern (Wirkung vor Ursache, Batterie zuerst, Folgeaufgabe), sind aber teils leicht zu erfüllen; das Kriterium zu Reload/Neustart trennt kaum."
+  }
+}

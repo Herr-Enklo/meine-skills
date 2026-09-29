@@ -1,0 +1,151 @@
+{
+  "expectations": [
+    {
+      "text": "Die Antwort beginnt mit einer Statuszeile im Format `INC-JJJJMMTT-HHMM | P<1-4> | <Bereich> | <Status> | <Titel>`, deren Zeit der Uhrzeit aus der Nachricht (08:25) entspricht",
+      "passed": false,
+      "evidence": "Es gibt keine Statuszeile. Die Antwort beginnt mit 'Das ist eine Großstörung mit höchster Priorität: ein ganzer Standort, rund 60 Leute, seit 8 Uhr.' Weder eine INC-ID noch das Format mit fünf Feldern kommt vor."
+    },
+    {
+      "text": "Die Priorität ist P1 und der Vorfall wird als Major Incident behandelt",
+      "passed": true,
+      "evidence": "'Das ist eine Großstörung mit höchster Priorität' und 'Ticket mit Priorität 1 anlegen'. Behandelt wird der Fall als Major Incident: Info über die Standortleitung, Ansprechpartner vor Ort, Zeitleiste ('Beginn (ca. 8:00), Meldung (8:25) sowie jeden Schritt mit Uhrzeit notieren'). Der Begriff 'Major Incident' fällt nicht, 'Großstörung' ist aber das deutsche Gegenstück."
+    },
+    {
+      "text": "Die Hypothesen umfassen die Erreichbarkeit der Domänencontroller vom Standort aus (Standortverbindung, VPN, DC am Standort) und DNS",
+      "passed": true,
+      "evidence": "Erreichbarkeit der DCs: 'Steht die WAN- bzw. VPN-Strecke nach Leipzig? Ist der DC dort ein normaler DC oder ein RODC?' und 'WAN/VPN nach Leipzig gestört, und dort steht kein eigener DC oder nur ein RODC'. DNS: 'DC aus oder Dienste gestoppt (NTDS, Netlogon, KDC, DNS) ... Prüfen, ob die Clients einen zweiten DNS-Server in der Zentrale haben, sonst finden sie ohne den Leipziger DC gar keinen DC', dazu `ipconfig /all` für die DNS-Server des Clients. DNS kommt nur als Abhängigkeit vor, eine SRV-Abfrage fehlt. Für das Kriterium reicht das knapp."
+    },
+    {
+      "text": "Zeitabweichung oder Zeitdienst (Kerberos, w32tm) wird als Hypothese oder Prüfung genannt",
+      "passed": true,
+      "evidence": "'Weicht die Uhrzeit mehr als 5 Minuten von der Zentrale ab, scheitert Kerberos.' Geprüft wird mit `w32tm /stripchart /computer:<DC-Leipzig> /samples:3 /dataonly`, als Maßnahme: 'Uhrzeit auf dem DC falsch: Zeitquelle korrigieren und mit `w32tm /resync` nachziehen'."
+    },
+    {
+      "text": "Es gibt konkrete Prüfbefehle, die aus der Zentrale laufen (etwa nltest, Test-NetConnection zu den DCs, dcdiag, repadmin, Resolve-DnsName für SRV-Einträge)",
+      "passed": true,
+      "evidence": "Abschnitt 'Erste Prüfungen von der Zentrale aus': `nltest /dclist:<domäne>`, `Test-NetConnection <DC-Leipzig> -Port 389`, `dcdiag /s:<DC-Leipzig> /q`, `repadmin /replsummary`, `repadmin /showrepl <DC-Leipzig>`, w32tm /stripchart, Get-ADComputer gegen den DC Leipzig und den DC der Zentrale, Get-ADObject für gelöschte Konten und Search-ADAccount."
+    },
+    {
+      "text": "Ein Entwurf für eine Nutzerinfo an die Betroffenen ist enthalten oder angeboten",
+      "passed": true,
+      "evidence": "Abschnitt Kommunikation: 'Informiere sie deshalb telefonisch über die Standortleitung: Störung ist bekannt und in Arbeit, bitte nicht selbst an den PCs herumreparieren, nächste Info um 9:00 Uhr.' Das ist nur eine knappe Inhaltsvorgabe in einem Satz, kein ausformulierter Text. Sie enthält aber Lage, Verhaltenshinweis und Zeitpunkt der nächsten Info und reicht knapp."
+    },
+    {
+      "text": "Massenhaftes Neu-Beitreten zur Domäne oder Zurücksetzen von Computerkonten wird nicht ohne Freigabe als Sofortmaßnahme angeordnet",
+      "passed": true,
+      "evidence": "Fett hervorgehoben: 'Bitte vorerst keine PCs aus der Domäne nehmen und neu aufnehmen. Liegt es am DC, machst du die Lage damit schlimmer.' `Test-ComputerSecureChannel -Repair` wird nur für 'Einzelne PCs, die danach noch hängen' empfohlen, also nach der Reparatur des DC. Computerkonten werden nicht zurückgesetzt. Aber: 'DC sofort vom Netz nehmen' und 'Server bzw. Dienste starten' stehen ohne Freigabevorbehalt da. Das betrifft das Kriterium nicht direkt."
+    },
+    {
+      "text": "Eine Sofortmaßnahme oder ein Workaround zur Wiederherstellung wird genannt, bevor die tiefe Ursachenanalyse beginnt",
+      "passed": false,
+      "evidence": "Die Übergangslösung (Offline-Anmeldung mit gezogenem Kabel) steht erst im vorletzten Abschnitt 'Überbrückung, falls es länger dauert', also nach allen Prüfungen und nach den Maßnahmen je Befund. Vor der Ursachenanalyse steht nur die Warnung vor Neuaufnahme. Das ist keine Maßnahme zur Wiederherstellung."
+    }
+  ],
+  "summary": {
+    "passed": 6,
+    "failed": 2,
+    "total": 8,
+    "pass_rate": 0.75
+  },
+  "execution_metrics": {
+    "tool_calls": {
+      "Bash": 1,
+      "Write": 1,
+      "SubagentHandback": 1
+    },
+    "total_tool_calls": 3,
+    "files_created": [
+      "antwort.md"
+    ],
+    "output_chars": 6150,
+    "transcript_chars": 3195,
+    "errors_encountered": 0
+  },
+  "timing": {
+    "executor_duration_seconds": 190.7,
+    "total_duration_seconds": 190.7,
+    "total_tokens": 68402
+  },
+  "claims": [
+    {
+      "claim": "'Kein Anmeldeserver' heißt: kein DC erreichbar und keine zwischengespeicherte Anmeldung. 'Vertrauensstellung' heißt: DC lehnt das Computerkonto ab, typisch bei veraltetem DC-Stand oder gelöschten oder deaktivierten Konten",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Fachlich zutreffend."
+    },
+    {
+      "claim": "Verzeichnisdienst 2095/2103 = USN-Rollback bzw. nicht unterstützte Wiederherstellung, Netlogon dann meist angehalten",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Stimmt: Nach 2095/2103 hält AD Netlogon an und sperrt eingehende Replikation."
+    },
+    {
+      "claim": "Netlogon 5722 oder 5805 auf dem DC als Gegenstück zur Vertrauensstellungs-Meldung",
+      "type": "factual",
+      "verified": true,
+      "evidence": "5722 und 5805 melden gescheiterte Sitzungseinrichtung bzw. Authentifizierung eines Computerkontos."
+    },
+    {
+      "claim": "Kerberos scheitert bei mehr als 5 Minuten Zeitabweichung",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Standardtoleranz 5 Minuten."
+    },
+    {
+      "claim": "Mit einem RODC kommen bei WAN-Ausfall nur Konten mit zwischengespeichertem Kennwort durch, was das gemischte Fehlerbild erklärt",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Password Replication Policy des RODC: Ohne Verbindung zu einem beschreibbaren DC authentifiziert er nur Konten, deren Kennwort bei ihm zwischengespeichert ist."
+    },
+    {
+      "claim": "Nach Wiederherstellung aus dem AD-Papierkorb stimmt die Vertrauensstellung wieder, eine Neuaufnahme ist nicht nötig",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Der Papierkorb erhält alle Attribute einschließlich des Kennworts des Computerkontos."
+    },
+    {
+      "claim": "USN-Rollback: DC nicht einfach wieder einschalten, sondern zwangsweise herabstufen, Metadaten bereinigen, neu hochstufen",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Entspricht der Microsoft-Anleitung für USN-Rollback (alternativ Wiederherstellung aus einem unterstützten Backup)."
+    },
+    {
+      "claim": "Maßnahmen je Befund können direkt umgesetzt werden",
+      "type": "quality",
+      "verified": false,
+      "evidence": "'DC sofort vom Netz nehmen (herunterfahren oder Netzwerk trennen)' und 'Server bzw. Dienste starten' stehen ohne Freigabe, Abstimmung oder Weg zurück da. Bei einem Major Incident mit ca. 60 Betroffenen ist das ein Risiko."
+    },
+    {
+      "claim": "Weder Websuche noch Skill genutzt, keine Aussagen über aktuelle Updates",
+      "type": "process",
+      "verified": true,
+      "evidence": "Das Transkript zeigt nur Bash (mkdir), Write und SubagentHandback. Die Antwort nennt keine KB-Nummern."
+    }
+  ],
+  "user_notes_summary": {
+    "uncertainties": [],
+    "needs_review": [],
+    "workarounds": [
+      "Es gibt keine user_notes.md. Der Handback meldet nur, dass keine Skills, keine Websuche und keine Skill-Ordner genutzt wurden."
+    ]
+  },
+  "eval_feedback": {
+    "suggestions": [
+      {
+        "assertion": "Massenhaftes Neu-Beitreten zur Domäne oder Zurücksetzen von Computerkonten wird nicht ohne Freigabe als Sofortmaßnahme angeordnet",
+        "reason": "Das Kriterium ist negativ formuliert und würde auch von einer Antwort erfüllt, die das Thema gar nicht anspricht. Besser: Die Antwort warnt ausdrücklich vor Neuaufnahme, Kontozurücksetzung und Test-ComputerSecureChannel -Repair, solange die Ursache offen ist."
+      },
+      {
+        "reason": "Kein Kriterium prüft, ob eingreifende Schritte am DC (vom Netz nehmen, herunterfahren, Dienste starten) nur mit Freigabe und mit Weg zurück empfohlen werden. Genau hier unterscheiden sich die Läufe: without_skill ordnet 'DC sofort vom Netz nehmen' direkt an, with_skill kennzeichnet es als 'Stufe 2 und nur mit deinem Okay'."
+      },
+      {
+        "reason": "Kein Kriterium prüft, ob Aussagen über aktuelle Microsoft-Updates und bekannte Probleme belegt und richtig sind. with_skill nennt KB5124008/KB5124012 und Registry-Werte zu Machine Identity Isolation. Im Transkript stehen nur die Abrufe, nicht deren Ergebnisse. Vorschlag: Kriterium 'Update-bezogene Ursachen werden nur mit genannter Quelle behauptet', und die WebFetch-Ergebnisse gehören ins Transkript."
+      },
+      {
+        "assertion": "Ein Entwurf für eine Nutzerinfo an die Betroffenen ist enthalten oder angeboten",
+        "reason": "Ein Satz mit Stichpunkten für den Anruf erfüllt das Kriterium schon. Schärfer wäre: ein versandfertiger Text mit Uhrzeit der nächsten Info und einem Kanal, der ohne PC-Anmeldung funktioniert."
+      }
+    ],
+    "overall": "Fachlich solide. Es fehlen die Statuszeile und eine Übergangslösung vor der Analyse. Die Kriterien 3 (DNS) und 6 (Nutzerinfo) werden nur knapp erreicht und sind so weich formuliert, dass auch ein Nebensatz reicht."
+  }
+}

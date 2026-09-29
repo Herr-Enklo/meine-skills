@@ -1,0 +1,128 @@
+{
+  "expectations": [
+    {
+      "text": "Die Antwort beginnt mit einer Statuszeile im Format `INC-JJJJMMTT-HHMM | P<1-4> | <Bereich> | <Status> | <Titel>`, deren Zeit der Uhrzeit aus der Nachricht (10:05) entspricht",
+      "passed": false,
+      "evidence": "Die Antwort beginnt mit \"Das ist dringend, lässt sich aber gut eingrenzen.\" Es gibt nirgends eine Statuszeile und keine INC-Nummer."
+    },
+    {
+      "text": "Die Priorität ist P1 oder P2, begründet mit stillstehender Arbeit oder der Abrechnungsfrist am Donnerstag",
+      "passed": false,
+      "evidence": "Nur \"**Priorität: hoch.** Die Lohnabrechnung hat eine feste Frist am Donnerstag, und drei Anwender können nicht arbeiten.\" Die Begründung ist da, aber es gibt keine Stufe P1 oder P2. Beim strengen Maßstab reicht \"hoch\" nicht."
+    },
+    {
+      "text": "0xc000007b wird als ungültiges Image-Format erklärt, mit 32/64-Bit-Mischung oder beschädigter bzw. falscher DLL als Richtung",
+      "passed": true,
+      "evidence": "\"0xc000007b heißt `STATUS_INVALID_IMAGE_FORMAT`. Windows bricht den Start ab, weil das 32-Bit-Programm beim Laden an eine DLL mit der falschen Architektur gerät (meist eine 64-Bit-DLL) oder an eine beschädigte DLL.\""
+    },
+    {
+      "text": "Eine fehlende oder beschädigte Visual-C++-Laufzeit in der x86-Fassung oder eine andere DLL-Abhängigkeit des 32-Bit-Programms wird als Hypothese genannt",
+      "passed": true,
+      "evidence": "\"Das **Visual C++ Redistributable (x86)** ist beschädigt oder wurde bei einer Installation überschrieben.\" Dazu die PATH-Hypothese mit gleichnamigen 64-Bit-DLLs (Datenbank-Clients, OpenSSL)."
+    },
+    {
+      "text": "Ein Workaround, damit die Löhne bis Donnerstag gerechnet werden können, wird genannt (etwa an einem funktionierenden Rechner oder per Fernzugriff arbeiten)",
+      "passed": true,
+      "evidence": "\"**Die drei an funktionierenden Rechnern arbeiten lassen:** freie Plätze, Plätze von Kollegen im Urlaub oder in Teilzeit, ein Ersatzgerät ... Falls es LohnPro auch auf einem Terminalserver gibt, geht es natürlich auch dort.\""
+    },
+    {
+      "text": "Der Vergleich der drei betroffenen mit den funktionierenden Rechnern ist Teil des Vorgehens",
+      "passed": true,
+      "evidence": "\"Danach auf einem betroffenen und einem funktionierenden Rechner in PowerShell prüfen\"; \"Die entscheidende Frage ist, was die drei gemeinsam haben und die anderen 20 nicht.\" Der VC++-Liste und dem PATH folgt jeweils \"mit einem funktionierenden Rechner vergleichen\"."
+    },
+    {
+      "text": "Es gibt einen konkreten, nur lesenden Prüfweg für die betroffenen Rechner, der fehlende DLLs oder die Architektur der geladenen DLLs prüft (etwa windows-startcheck.ps1, Importtabelle, PATH-Vergleich), nicht nur allgemeine Fragen",
+      "passed": true,
+      "evidence": "Schritt c: `[Environment]::GetEnvironmentVariable('Path','Machine') -split ';'` und dasselbe für 'User', zum Vergleich mit einem funktionierenden Rechner (PATH-Vergleich). Schritt d: Process Monitor mit Filter auf LohnPro.exe und Blick auf die letzten DLL-Zugriffe vor dem Prozessende. Beides liest nur. Einschränkung: Vorher wird in Schritt a ein Neustart angeordnet, und in c soll ein Eintrag \"vorübergehend entfernt\" werden. Der Prüfweg selbst liest aber nur."
+    },
+    {
+      "text": "Die Antwort stellt höchstens drei Rückfragen",
+      "passed": false,
+      "evidence": "Der Abschnitt \"Damit ich gezielter helfen kann\" enthält fünf Punkte, davon vier echte Fragen: (1) \"Welche Windows-Version läuft, und womit verteilt ihr Updates?\", (2) \"Wurden am Patchday nur Microsoft-Updates verteilt oder auch andere Pakete?\", (3) \"Was kam beim Test heraus ...?\", (5) \"Braucht LohnPro einen lokal installierten Datenbank-Client?\". Punkt 1 enthält sogar zwei Fragen, und in 3a wird die Paketfrage noch einmal gestellt."
+    },
+    {
+      "text": "Deinstallation von Updates oder Neuinstallation des Programms wird nicht ohne Freigabe angeordnet",
+      "passed": false,
+      "evidence": "Schritt f: \"Wenn ein bestimmtes Paket unter Verdacht steht, es auf **einem** der drei Rechner deinstallieren und testen.\" Schritt e: \"Danach kommt bei Bedarf eine Reparaturinstallation von LohnPro.\" Schritt b: \"Fehlende x86-Pakete von Microsoft nachinstallieren.\" Im Zeitplan: \"oder die drei Rechner werden neu aufgesetzt\". Nirgends wird eine Freigabe verlangt. Es gibt nur \"Das gehört dokumentiert\" und \"Vorher mit dem Hersteller klären, wo die Mandantendaten liegen\"."
+    }
+  ],
+  "summary": {
+    "passed": 5,
+    "failed": 4,
+    "total": 9,
+    "pass_rate": 0.56
+  },
+  "execution_metrics": {
+    "tool_calls": {
+      "ToolSearch": 1,
+      "WebSearch": 2,
+      "Bash": 1,
+      "Write": 1,
+      "SubagentHandback": 1
+    },
+    "total_tool_calls": 6,
+    "files_created": [
+      "antwort.md"
+    ],
+    "output_chars": 7396,
+    "transcript_chars": 2981
+  },
+  "timing": {
+    "total_tokens": 62913,
+    "executor_duration_seconds": 124.9,
+    "total_duration_seconds": 124.9
+  },
+  "claims": [
+    {
+      "claim": "0xc000007b = STATUS_INVALID_IMAGE_FORMAT, meist 64-Bit-DLL oder beschädigte DLL im 32-Bit-Prozess",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Korrekt."
+    },
+    {
+      "claim": "Eine DLL aus einem ungewöhnlichen Ordner ist fast immer die Ursache, zum Beispiel aus `C:\\Windows\\System32` statt `SysWOW64`",
+      "type": "factual",
+      "verified": false,
+      "evidence": "Irreführend: Bei einem 32-Bit-Prozess auf 64-Bit-Windows leitet die WOW64-Dateisystem-Umleitung Zugriffe auf System32 nach SysWOW64 um. Ein Laden aus System32 kommt so praktisch nicht vor und wäre in Process Monitor nicht das typische Bild."
+    },
+    {
+      "claim": "„Neu starten“ statt „Herunterfahren“, weil der Schnellstart keinen vollständigen Neustart macht",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Korrekt, Herunterfahren mit Schnellstart ist ein Ruhezustand des Kernels."
+    },
+    {
+      "claim": "Bei einer kurzen Suche habe ich für die September-Updates kein bekanntes Problem mit 0xc000007b gefunden",
+      "type": "process",
+      "verified": true,
+      "evidence": "Transkript: zwei WebSearch-Aufrufe zu September-2026-Updates und 0xc000007b. Die Ergebnisse selbst sind nicht protokolliert."
+    },
+    {
+      "claim": "Neustart als erster Diagnoseschritt (Schritt a) vor der Bestandsaufnahme",
+      "type": "quality",
+      "verified": false,
+      "evidence": "Fachlich fraglich: Der Neustart löscht Hinweise wie einen ausstehenden Neustart oder eine laufende Installation, bevor sie erfasst sind. Auch VC++-Reparatur, DISM/sfc und Deinstallation werden ohne Freigabe als Schritte vorgegeben."
+    }
+  ],
+  "user_notes_summary": {
+    "uncertainties": [],
+    "needs_review": [],
+    "workarounds": []
+  },
+  "eval_feedback": {
+    "suggestions": [
+      {
+        "assertion": "Es gibt einen konkreten, nur lesenden Prüfweg für die betroffenen Rechner, der fehlende DLLs oder die Architektur der geladenen DLLs prüft (etwa windows-startcheck.ps1, Importtabelle, PATH-Vergleich), nicht nur allgemeine Fragen",
+        "reason": "Das Kriterium besteht auch dann, wenn der lesende Prüfweg zwischen verändernden Schritten steht (Neustart zuerst, PATH-Eintrag entfernen, VC++ reparieren). Wer die Diagnose vor Eingriffe stellen will, sollte die Reihenfolge prüfen: erst lesen, dann ändern."
+      },
+      {
+        "assertion": "Die Priorität ist P1 oder P2, begründet mit stillstehender Arbeit oder der Abrechnungsfrist am Donnerstag",
+        "reason": "Das Kriterium mischt Form (P-Stufe) und Inhalt (Begründung). Diese Antwort begründet richtig, scheitert aber an der fehlenden P-Stufe, und das zählt fast doppelt mit dem Statuszeilen-Kriterium. Beides zu trennen würde zeigen, ob die Einstufung inhaltlich stimmt."
+      },
+      {
+        "reason": "Der Hinweis auf ein Hersteller-Ticket wegen der Frist ist hier ein sinnvoller Schritt, den die Antwort ohne Skill bringt und die mit Skill nicht. Kein Kriterium prüft ihn."
+      }
+    ],
+    "overall": "Die Kriterien unterscheiden gut zwischen den Läufen, vor allem Statuszeile, Rückfragen und Freigabe. Die Reihenfolge von Diagnose und Eingriff prüft keines."
+  }
+}

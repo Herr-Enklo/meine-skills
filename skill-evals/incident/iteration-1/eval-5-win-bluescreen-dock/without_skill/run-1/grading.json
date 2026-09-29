@@ -1,0 +1,145 @@
+{
+  "expectations": [
+    {
+      "text": "Die Antwort beginnt mit einer Statuszeile im Format `INC-JJJJMMTT-HHMM | P<1-4> | <Bereich> | <Status> | <Titel>`",
+      "passed": false,
+      "evidence": "antwort.md beginnt mit Fließtext: \"Das lässt sich meistens gut eingrenzen. DRIVER_IRQL_NOT_LESS_OR_EQUAL (Stopcode 0xD1) bedeutet ...\". Es gibt weder eine Incident-ID noch eine Priorität oder eine Statuszeile."
+    },
+    {
+      "text": "Es wird ein Weg genannt, den Treibernamen nachträglich zu finden: BugCheck-Ereignis 1001, Zuverlässigkeitsüberwachung (perfmon /rel) oder Minidump unter C:\\Windows\\Minidump",
+      "passed": true,
+      "evidence": "Abschnitt \"1. Den Treibernamen herausfinden\": \"Windows legt bei jedem Bluescreen eine kleine Absturzdatei unter `C:\\Windows\\Minidump` ab\", ausgewertet mit BlueScreenView (\"Caused By Driver\") oder WinDbg `!analyze -v`. Außerdem `perfmon /rel`, allerdings nur für den Zeitpunkt. Ereignis 1001 fehlt."
+    },
+    {
+      "text": "Kürzlich installierte Treiber oder Updates werden als Hypothese geprüft",
+      "passed": true,
+      "evidence": "Abschnitt \"2. Was hat sich seit gestern geändert?\": \"Einstellungen > Windows Update > Updateverlauf, besonders unter 'Treiberupdates'\", \"Dell Command Update oder SupportAssist: Wurden BIOS, Treiber oder Dock-Firmware aktualisiert?\". In \"3. Beheben\" steht der Zweig \"Treiber wurde gestern aktualisiert\"."
+    },
+    {
+      "text": "Treiber rund um die Dockingstation (Dock-Firmware, USB/Thunderbolt, Grafik, Netzwerk, DisplayLink o. ä.) werden als Hypothese genannt, ohne einen konkreten Treibernamen als Tatsache zu behaupten",
+      "passed": true,
+      "evidence": "\"kommen vor allem die Treiber für die Geräte im Dock in Frage\": LAN im Dock (\"bei Dell-Docks meist ein Realtek-USB-Netzwerkchip, Dateiname z. B. rtux64w10.sys\"), DisplayLink, \"Thunderbolt/USB4 oder der Intel-Grafiktreiber (igdkmd….sys)\". Die Treibernamen stehen als Beispiele unter Kandidaten und nicht als festgestellte Ursache. Eine Schwäche: \"der Intel-Grafiktreiber\" unterstellt ohne Beleg Intel-Grafik (siehe claims), benennt aber keinen Treiber als Verursacher."
+    },
+    {
+      "text": "Ein Workaround bis zur Lösung wird genannt (etwa ohne Dock arbeiten, Arbeit häufig speichern)",
+      "passed": true,
+      "evidence": "Abschnitt \"Bis es gelöst ist\": \"Vor dem Andocken alles speichern.\", \"Laptop ausgeschaltet ans Dock hängen und erst dann einschalten.\", \"den USB-/Dock-LAN-Adapter testweise deaktivieren\"."
+    },
+    {
+      "text": "Windows neu aufsetzen oder zurücksetzen wird nicht als erster Schritt vorgeschlagen",
+      "passed": true,
+      "evidence": "Zurücksetzen oder Neuinstallation wird nirgends vorgeschlagen. sfc/DISM/mdsched kommen nur bedingt vor (\"Analyse zeigt nur Windows-Dateien\")."
+    },
+    {
+      "text": "Treiber zurücksetzen oder deinstallieren wird als Änderung mit Freigabe oder Eingriffsstufe gekennzeichnet",
+      "passed": false,
+      "evidence": "Der Rollback steht als direkte Anleitung ohne Freigabe da: \"Treiber wurde gestern aktualisiert: Geräte-Manager > Gerät > Eigenschaften > Treiber > 'Vorheriger Treiber'.\" Ebenso \"diese aktualisieren oder testweise deinstallieren\" (VPN/Virenschutz). Der Firmenlaptop-Abschnitt verweist nur bei fehlenden Adminrechten an die IT und kennzeichnet den Rollback nicht als freigabepflichtige Änderung."
+    }
+  ],
+  "summary": {
+    "passed": 5,
+    "failed": 2,
+    "total": 7,
+    "pass_rate": 0.71
+  },
+  "execution_metrics": {
+    "tool_calls": {
+      "ToolSearch": 1,
+      "WebSearch": 3,
+      "Bash": 1,
+      "Write": 1,
+      "SubagentHandback": 1
+    },
+    "total_tool_calls": 7,
+    "errors_encountered": 0,
+    "files_created": [
+      "antwort.md"
+    ],
+    "output_chars": 4904,
+    "transcript_chars": 3448
+  },
+  "timing": {
+    "executor_duration_seconds": 119.5,
+    "total_duration_seconds": 119.5,
+    "total_tokens": 63300
+  },
+  "claims": [
+    {
+      "claim": "DRIVER_IRQL_NOT_LESS_OR_EQUAL ist Stopcode 0xD1, ein Treiber hat unerlaubt auf Speicher zugegriffen",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Stimmt mit der Microsoft-Dokumentation zu Bug Check 0xD1 überein."
+    },
+    {
+      "claim": "Die .sys-Datei unter dem Stopcode \"ist genau dieser Treiber\"",
+      "type": "factual",
+      "verified": false,
+      "evidence": "Zu absolut: Die angezeigte Datei ist der Modul-Ort des Absturzes und kann auch ein Opfer sein (ndis.sys, tcpip.sys). Die Antwort schränkt das weiter unten selbst ein (\"oft nur die Stelle des Absturzes, nicht der Verursacher\") und widerspricht damit dem Einstiegssatz."
+    },
+    {
+      "claim": "Windows legt bei jedem Bluescreen eine Absturzdatei unter C:\\Windows\\Minidump ab",
+      "type": "factual",
+      "verified": false,
+      "evidence": "Bei Standardeinstellungen meist richtig, aber nicht \"bei jedem\": Das hängt von den Dump-Einstellungen und der Auslagerungsdatei ab. Nicht erwähnt wird, dass der Ordner Adminrechte zum Lesen braucht, was auf einem Firmen-Latitude oft entscheidend ist."
+    },
+    {
+      "claim": "\"der Intel-Grafiktreiber (igdkmd….sys)\" bzw. \"Intel-Grafik\" beim Dell Command Update",
+      "type": "factual",
+      "verified": false,
+      "evidence": "Nicht belegt: Das Latitude-Modell ist unbekannt. Viele Latitudes haben Intel-Grafik, manche aber AMD oder NVIDIA. Die Hardware wird als Tatsache unterstellt."
+    },
+    {
+      "claim": "Bei Dell-Docks steckt meist ein Realtek-USB-Netzwerkchip (z. B. rtux64w10.sys); D6000 arbeitet mit DisplayLink",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Für die WD19/WD22-Familie plausibel, das D6000 ist ein DisplayLink-Dock. Mit \"meist\" und \"z. B.\" eingeschränkt, nicht als Tatsache für diesen Laptop behauptet."
+    },
+    {
+      "claim": "Nach mehreren Abstürzen kann BitLocker den Wiederherstellungsschlüssel verlangen; privat unter aka.ms/myrecoverykey",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Plausibel über automatische Reparatur/WinRE oder Änderungen an der Bootkette beim Andocken. aka.ms/myrecoverykey ist der richtige Kurzlink. Als Vorsorge ist der Hinweis sinnvoll."
+    },
+    {
+      "claim": "\"seit Montag (28.09.)\"",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Der 28.09.2026 ist ein Montag, passend zu \"seit gestern\" am Dienstag, 29.09.2026."
+    },
+    {
+      "claim": "Workaround \"Dock-LAN-Adapter im Geräte-Manager testweise deaktivieren\"",
+      "type": "quality",
+      "verified": false,
+      "evidence": "Das ist eine Konfigurationsänderung, die Adminrechte braucht, und sie ist nicht so gekennzeichnet. Der USB-LAN-Adapter erscheint außerdem nur angedockt (oder unter ausgeblendeten Geräten), also genau in dem Zustand, der den Absturz auslöst. Das sagt die Antwort nicht."
+    },
+    {
+      "claim": "Rückfragen",
+      "type": "process",
+      "verified": false,
+      "evidence": "Gezählt habe ich fünf echte Fragen in vier Punkten: Dock-Modell, Latitude-Modell, \"Welchen Treiber zeigt BlueScreenView an?\", \"Stürzt er auch ohne Dock ab?\", \"Privat- oder Firmengerät?\". Das sind mehr als drei. Das Latitude-Modell ließe sich mit einem Befehl klären, eine Diagnosehilfe dafür gibt es aber nicht."
+    }
+  ],
+  "user_notes_summary": {
+    "uncertainties": [
+      "Keine bekannte Störung vom September 2026 zu Dock und Bluescreen gefunden (laut Handback, 3 von 5 Websuchen)."
+    ],
+    "needs_review": [],
+    "workarounds": []
+  },
+  "eval_feedback": {
+    "suggestions": [
+      {
+        "assertion": "Treiber zurücksetzen oder deinstallieren wird als Änderung mit Freigabe oder Eingriffsstufe gekennzeichnet",
+        "reason": "Gut trennscharf. Man könnte es auf alle ändernden Schritte ausweiten: Die Baseline schlägt auch das Deaktivieren eines Adapters und das Deinstallieren des Virenschutzes ohne Kennzeichnung vor."
+      },
+      {
+        "assertion": "Windows neu aufsetzen oder zurücksetzen wird nicht als erster Schritt vorgeschlagen",
+        "reason": "Besteht trivial, auch ohne Skill. Liefert kein Signal."
+      },
+      {
+        "reason": "Keine Assertion prüft die Zahl der Rückfragen oder ob die Hardware (Intel-Grafik) ohne Beleg unterstellt wird. Die Baseline stellt fünf Fragen und nimmt Intel-Grafik als gegeben an."
+      }
+    ],
+    "overall": "Die Baseline besteht 2 bis 6 und fällt nur an Statuszeile und Freigabe-Kennzeichnung durch. Die inhaltlichen Kriterien sind für dieses Szenario zu leicht, um den Skill klar vom Grundverhalten abzugrenzen."
+  }
+}

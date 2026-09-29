@@ -1,0 +1,14 @@
+{
+  "eval_id": 5,
+  "eval_name": "win-bluescreen-dock",
+  "prompt": "Mein Laptop (Dell Latitude, Windows 11) macht seit gestern immer wieder einen Bluescreen, meistens wenn ich ihn an die Dockingstation anschließe. Stopcode war DRIVER_IRQL_NOT_LESS_OR_EQUAL, darunter stand irgendwas mit .sys, hab ich mir nicht gemerkt. (Dienstag, 29.09.2026, 08:30 Uhr)",
+  "assertions": [
+    "Die Antwort beginnt mit einer Statuszeile im Format `INC-JJJJMMTT-HHMM | P<1-4> | <Bereich> | <Status> | <Titel>`",
+    "Es wird ein Weg genannt, den Treibernamen nachträglich zu finden: BugCheck-Ereignis 1001, Zuverlässigkeitsüberwachung (perfmon /rel) oder Minidump unter C:\\Windows\\Minidump",
+    "Für die Ursachensuche gibt es einen einzigen nur lesenden Befehlsblock oder das Lagebild-Skript, der Stopcode, Treibername und kürzlich installierte Treiber auf einmal liefert, statt den Nutzer mehrere Programme (Ereignisanzeige, Zuverlässigkeitsverlauf, Geräte-Manager) von Hand durchsuchen zu lassen",
+    "Treiber rund um die Dockingstation (Dock-Firmware, USB/Thunderbolt, Grafik, Netzwerk, DisplayLink o. ä.) werden als Hypothese genannt, ohne für diesen Laptop einen konkreten Treibernamen oder Hersteller als Ursache zu behaupten (auch nicht nebenbei, etwa 'bei dir ist es der Intel-Grafiktreiber')",
+    "Ein Workaround bis zur Lösung wird genannt (etwa ohne Dock arbeiten, Arbeit häufig speichern)",
+    "Die Antwort stellt höchstens drei Rückfragen",
+    "Treiber zurücksetzen oder deinstallieren wird als Änderung mit Freigabe oder Eingriffsstufe gekennzeichnet"
+  ]
+}

@@ -1,0 +1,6 @@
+{
+  "total_tokens": 129756,
+  "duration_ms": 351654,
+  "total_duration_seconds": 351.7,
+  "hinweis": "Zeit und Tokens bis zur fertigen Antwort, aus dem Protokoll rekonstruiert. Die Abschlussmeldung kam erst 14 Minuten nach der Rückmeldung und meldete 259657 Tokens und 1157,6 s; nach der Rückmeldung gab es keine Werkzeugaufrufe mehr."
+}

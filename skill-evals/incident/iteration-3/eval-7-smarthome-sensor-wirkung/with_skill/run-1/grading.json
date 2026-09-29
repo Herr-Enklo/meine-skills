@@ -1,0 +1,172 @@
+{
+  "expectations": [
+    {
+      "text": "Die Antwort beginnt mit einer Statuszeile im Format `INC-JJJJMMTT-HHMM | P<1-4> | <Bereich> | <Status> | <Titel>`",
+      "passed": true,
+      "evidence": "Erste Zeile von antwort.md: `INC-20260929-1030 | P4 | Smart Home | wartet auf Nutzer | Temperatursensor Büro (Shelly H&T) seit Tagen nicht verfügbar`. Die ID passt zu Datum und Uhrzeit aus der Nachricht (29.09.2026, 10:30). P4 liegt im erlaubten Bereich. „Smart Home“ und „wartet auf Nutzer“ sind gültige Werte laut vorlagen.md. Es gibt fünf Felder, getrennt durch „ | “, mit ASCII-Bindestrichen. Einzige Abweichung: Die Zeile steht in Inline-Code-Backticks. Das ist nur Markdown-Formatierung, der Inhalt entspricht dem Format genau."
+    },
+    {
+      "text": "Die Wichtigkeit wird davon abhängig gemacht, was den Sensor benutzt (Automationen, Thermostat oder Heizungsregelung), mit einem konkreten Prüfweg dafür",
+      "passed": true,
+      "evidence": "Abhängigkeit: „Ich stufe das als P4 ein (ein einzelner Sensor, kann warten), unter der Annahme, dass nichts mit seinem Wert regelt.“ und „Nimmt eine Heizungsregelung im Büro diesen Sensor als Istwert, … Dann wird daraus P3.“ Prüfweg: „Wer hängt dran? Sensor antippen, dann ⋮ → Verwandt. Taucht dort ein Thermostat oder eine Heizungsautomation auf, …“. Später fragt die Antwort nach, „was unter ‚Verwandt‘ steht“."
+    },
+    {
+      "text": "Es wird darauf hingewiesen, dass ein eingefrorener letzter Wert eine Regelung (etwa die Heizung) falsch weiterarbeiten lassen kann",
+      "passed": true,
+      "evidence": "„… arbeitet sie womöglich mit dem letzten Wert von vor ein paar Tagen weiter. Der Generic Thermostat etwa übergeht ‚nicht verfügbar‘ und regelt mit der alten Temperatur, heizt also im Zweifel durch oder gar nicht.“ Dazu eine Sofortmaßnahme: „stell die Heizung im Büro bis zur Reparatur von Hand ein (Thermostat auf Aus oder Handbetrieb)“."
+    },
+    {
+      "text": "Eine leere Batterie bzw. ein schlafendes Batteriegerät wird als wahrscheinlichste Ursache genannt, mit Prüfung des Batterieverlaufs oder des Protokolls",
+      "passed": true,
+      "evidence": "Ursache mit ausdrücklicher Rangfolge: „Häufigste Ursache: leere Batterie.“ und „1. Batterie leer, am wahrscheinlichsten.“ Auch das Schlafverhalten wird erklärt: „Der batteriebetriebene H&T schläft zwischen seinen Meldungen.“ Prüfung beider Quellen: „Erkennbar im Verlauf an der Batterie-Entität des Geräts, die bis zum Ausfall sinkt, und im Protokoll (Einstellungen → System → Protokolle, Suche ‚shelly‘) an ‚Sleeping device did not update within … seconds interval‘“. Außerdem wird nach dem letzten Batteriewert aus dem Verlauf gefragt."
+    },
+    {
+      "text": "Neuladen der Integration oder Neustart von Home Assistant wird nicht als Lösung für eine leere Batterie empfohlen",
+      "passed": true,
+      "evidence": "Ausdrücklich abgeraten: „Integration neu laden oder Home Assistant neu starten hilft bei leerer Batterie nicht, das bitte vorerst lassen.“ Nirgends in der Antwort werden Reload oder Neustart empfohlen."
+    },
+    {
+      "text": "Als Folgeaufgabe wird eine Warnung bei niedriger Batterie oder langer Funkstille vorgeschlagen",
+      "passed": true,
+      "evidence": "„Wenn der Sensor wieder läuft, richte ich dir auf Wunsch eine Benachrichtigung bei niedriger Batterie oder längerer Funkstille ein, damit so ein Ausfall nicht erst nach Tagen auffällt.“"
+    }
+  ],
+  "summary": {
+    "passed": 6,
+    "failed": 0,
+    "total": 6,
+    "pass_rate": 1.0
+  },
+  "execution_metrics": {
+    "tool_calls": {
+      "Bash": 6,
+      "Skill": 1,
+      "ToolSearch": 1,
+      "WebSearch": 5,
+      "Write": 1,
+      "SubagentHandback": 1
+    },
+    "total_tool_calls": 15,
+    "files_created": [
+      "antwort.md"
+    ],
+    "output_chars": 4798,
+    "transcript_chars": 23816,
+    "errors_encountered": 1,
+    "errors_note": "Ein Bash-Aufruf endete mit Exit-Code 2: ls auf das nicht vorhandene Journalverzeichnis ~/.claude/agent-memory/incident-manager/. Das war eine beabsichtigte Prüfung, der Fehler ist harmlos."
+  },
+  "timing": {
+    "executor_duration_seconds": 250.7,
+    "total_duration_seconds": 250.7,
+    "total_tokens": 109291,
+    "duration_ms": 250666
+  },
+  "claims": [
+    {
+      "claim": "Der batteriebetriebene H&T schläft zwischen seinen Meldungen. Meldet er sich zu lange nicht, steht er in Home Assistant auf „nicht verfügbar“.",
+      "type": "factual",
+      "verified": true,
+      "evidence": "So verhält sich die Shelly-Integration bei schlafenden Geräten: Nach Ablauf des Schlafintervalls ohne Meldung gilt das Update als gescheitert, siehe home-assistant/core #101570."
+    },
+    {
+      "claim": "Protokollmeldung „Sleeping device did not update within … seconds interval“, zu finden unter Einstellungen → System → Protokolle",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Der Meldungstext stimmt mit dem Coordinator der Shelly-Integration überein (#101570). Auch der Menüpfad ist richtig."
+    },
+    {
+      "claim": "Der Generic Thermostat übergeht „nicht verfügbar“ und regelt mit der alten Temperatur, heizt also im Zweifel durch oder gar nicht.",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Der Sensor-Handler des Generic Thermostat ignoriert unavailable und unknown, die zuletzt gemessene Temperatur bleibt stehen. Der Heizungsschalter behält seinen Zustand, mit keep_alive wird mit dem alten Wert neu entschieden. Dazu passt Issue #63419 („not fail safe with sensor loss“)."
+    },
+    {
+      "claim": "Sensor antippen, dann ⋮ → Verwandt zeigt, wer den Sensor benutzt.",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Der Weitere-Infos-Dialog von HA hat im Drei-Punkte-Menü den Eintrag „Verwandt“ (Related). Er listet Automationen, Skripte, Szenen und Gruppen, die die Entität verwenden. Nicht jede Nutzung wird dort sicher erfasst, zum Beispiel Verweise in Jinja-Vorlagen. Als erster Prüfweg reicht das."
+    },
+    {
+      "claim": "Taste kurz drücken weckt den Sensor. Lang halten kann auf Werkseinstellungen zurücksetzen.",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Stimmt für H&T Gen1, Plus und Gen3: Ein kurzer Druck weckt das Gerät, etwa 10 s Halten setzt es zurück. Die Warnung ist angebracht."
+    },
+    {
+      "claim": "Gen1 nimmt eine CR123A, Plus H&T und H&T Gen3 nehmen vier AA-Zellen, Gen3 geht auch an USB-C.",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Deckt sich mit der Shelly Knowledge Base. Der Plus H&T lässt sich zusätzlich über ein USB-Add-on versorgen, das fehlt, ist aber nicht falsch."
+    },
+    {
+      "claim": "Das E-Paper-Display von Plus und Gen3 zeigt den letzten Wert auch bei leerer Batterie weiter an.",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Eine Eigenschaft von E-Paper. Der Hinweis ist nützlich, weil ein gleichbleibendes Display sonst als Lebenszeichen gelten könnte."
+    },
+    {
+      "claim": "Plus/Gen3: Outbound WebSocket auf ws://<IP von HA>:8123/api/shelly/ws, Gen1: CoIoT-Peer <IP>:5683",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Entspricht der Doku der HA-Shelly-Integration für batteriebetriebene Gen2+- und Gen1-Geräte."
+    },
+    {
+      "claim": "Ein verwaister Eintrag oder eine hängende Integration ist an restored: true erkennbar.",
+      "type": "factual",
+      "verified": true,
+      "evidence": "HA setzt restored: true bei Entitäten, die in der Registry stehen, aber von keiner geladenen Integration bereitgestellt werden. Das ist ein brauchbares Unterscheidungsmerkmal."
+    },
+    {
+      "claim": "Hypothese 2 erkennbar daran, dass der letzte Signalwert (RSSI) im Verlauf schwach war",
+      "type": "factual",
+      "verified": false,
+      "evidence": "Nicht falsch, aber unvollständig: Die RSSI-Entität der Shelly-Integration ist standardmäßig deaktiviert. Meist gibt es also keinen Verlauf, und die Antwort sagt das nicht."
+    },
+    {
+      "claim": "Vorlage mit expand(device_entities(device_id(sensor))) listet alle Entitäten des Geräts mit Zustand, last_changed und restored",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Die Syntax ist gültig und rein lesend. Deaktivierte Entitäten ohne Zustand fehlen in der Ausgabe. Die Einschränkung zu last_changed nach einem Neustart ist richtig vermerkt."
+    },
+    {
+      "claim": "Einen früheren Journaleintrag dazu gibt es nicht.",
+      "type": "process",
+      "verified": true,
+      "evidence": "Im Transkript: ls auf ~/.claude/agent-memory/incident-manager/ endet mit Exit-Code 2, das Verzeichnis gibt es nicht. Für den Nutzer ist der Satz allerdings eine interne Prozessangabe ohne Nutzen."
+    },
+    {
+      "claim": "Einstufung P4 und P3, falls eine Heizungsregelung dranhängt",
+      "type": "quality",
+      "verified": true,
+      "evidence": "Folgt prioritaet.md: Ein einzelnes Gerät hat niedrige Auswirkung. Hängt die Heizung eines Raums zu Beginn der Heizsaison daran, ist P3 vertretbar."
+    }
+  ],
+  "user_notes_summary": {
+    "uncertainties": [
+      "Keine user_notes.md vorhanden."
+    ],
+    "needs_review": [
+      "Die Antwort ist mit rund 4.800 Zeichen, vier Hypothesen, Jinja-Vorlage und fünf Quellen recht lang für eine P4-Frage „Ist das schlimm?“. SKILL.md verlangt „Kein Roman“."
+    ],
+    "workarounds": []
+  },
+  "eval_feedback": {
+    "suggestions": [
+      {
+        "assertion": "Die Antwort beginnt mit einer Statuszeile im Format `INC-JJJJMMTT-HHMM | P<1-4> | <Bereich> | <Status> | <Titel>`",
+        "reason": "Klarstellen, ob die Zeile in Inline-Code-Backticks stehen darf (hier der Fall). Außerdem könnte das Kriterium verlangen, dass die ID aus dem Zeitstempel der Nachricht stammt (INC-20260929-1030) und Bereich und Status aus den Listen in vorlagen.md kommen. Dieser Lauf erfüllt beides, geprüft wird es bisher nicht."
+      },
+      {
+        "reason": "Kein Kriterium prüft die Sofortmaßnahme für den Fall, dass eine Regelung am Sensor hängt: Heizung von Hand stellen, bis der Sensor wieder läuft. with_skill macht das, without_skill nicht. Das wäre ein trennscharfes Kriterium."
+      },
+      {
+        "assertion": "Neuladen der Integration oder Neustart von Home Assistant wird nicht als Lösung für eine leere Batterie empfohlen",
+        "reason": "Das Kriterium ist weiter negativ formuliert und besteht auch ohne jede Erwähnung. with_skill sagt ausdrücklich, dass Reload oder Neustart nicht helfen, without_skill empfiehlt einen Reload im Rückfallzweig. Beide bestehen. Positiv formuliert würde das Kriterium die Läufe trennen."
+      },
+      {
+        "reason": "Kein Kriterium prüft Länge oder Knappheit. Für eine P4-Frage wäre eine Obergrenze oder die Prüfung „Einordnung und erster Schritt stehen in den ersten Absätzen“ sinnvoll. Interne Angaben wie „Einen früheren Journaleintrag dazu gibt es nicht“ gehören nicht in die Nutzerantwort."
+      }
+    ],
+    "overall": "with_skill erfüllt alle sechs Kriterien mit klaren Belegen und ohne offensichtlich falsche Aussagen zu HA oder zum Shelly H&T. Einzige kleine Lücke: Die RSSI-Entität ist standardmäßig deaktiviert. Die Kriterien 1 und 2 trennen gut. Das Kriterium 5 und die fehlenden Kriterien zu Sofortmaßnahme und Knappheit sollten nachgeschärft werden."
+  }
+}

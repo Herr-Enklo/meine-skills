@@ -1,0 +1,165 @@
+{
+  "expectations": [
+    {
+      "text": "Die Antwort beginnt mit einer Statuszeile im Format `INC-JJJJMMTT-HHMM | P<1-4> | <Bereich> | <Status> | <Titel>`",
+      "passed": true,
+      "evidence": "Erste Zeile von antwort.md: `INC-20260928-1420 | P4 | Windows-Software | wartet auf Nutzer | TimeTrack auf PC-117 nur mit \"Als Administrator ausführen\" nutzbar`. Fünf Felder, durch ' | ' getrennt. Datum und Uhrzeit stimmen mit der Nachricht überein (28.09.2026, 14:20 -> 20260928-1420). Bereich und Status stammen aus den erlaubten Werten in vorlagen.md. Die Backticks entsprechen dem Beispiel in vorlagen.md."
+    },
+    {
+      "text": "Lokale Administratorrechte werden als Lösung abgelehnt oder ausdrücklich nur als Test bezeichnet, mit Begründung",
+      "passed": true,
+      "evidence": "„Kurz: Nein, bitte keine lokalen Adminrechte. Es fehlt das Schreibrecht auf eine einzige Datei. Adminrechte würden das überdecken und ihm dauerhaft volle Kontrolle über PC-117 geben, auch für jeden Mailanhang, den er öffnet. \"Als Administrator ausführen\" war ein guter Test (es ist ein Rechteproblem), aber keine Lösung.“ Die Antwort lehnt ab, begründet das und ordnet den Admin-Start als Test ein."
+    },
+    {
+      "text": "Als Ursache werden fehlende Schreibrechte des Benutzers auf C:\\ProgramData\\TimeTrack oder config.ini benannt",
+      "passed": true,
+      "evidence": "„Es fehlt das Schreibrecht auf eine einzige Datei.“ Dazu Hypothese 1: „Hat dort der Installer, die Softwareverteilung oder ein Admin-Konto `config.ini` angelegt, ist sie für ihn schreibgeschützt.“ Außerdem enthält der Block einen Schreibtest auf `$d\\config.ini`."
+    },
+    {
+      "text": "Es gibt einen lesenden Prüfbefehl für die Berechtigungen (etwa icacls oder Get-Acl auf Ordner oder Datei), bevor etwas geändert wird",
+      "passed": true,
+      "evidence": "Abschnitt „Nächster Schritt: ein Block, nur lesend“ steht vor dem Abschnitt „Lösung“ und enthält `icacls $d`, `icacls \"$d\\*\"` und `(Get-Acl $_.FullName).Owner` für C:\\ProgramData\\TimeTrack. Der Block läuft auf PC-117 und auf einem alten PC, jeweils in einer nicht erhöhten PowerShell. Der Schreibtest öffnet config.ini nur mit ReadWrite und schreibt nichts."
+    },
+    {
+      "text": "Die Rechteänderung wird gezielt vorgeschlagen (Ordner oder Datei, Benutzer oder Gruppe) und als Änderung mit Freigabe oder Eingriffsstufe gekennzeichnet",
+      "passed": true,
+      "evidence": "„Lösung bei Hypothese 1 oder 3 (Stufe 2, du führst aus): in einer Admin-PowerShell Ändern-Recht nur auf diese Datei, nur für ihn: `icacls \"C:\\ProgramData\\TimeTrack\\config.ini\" /grant \"<DOMÄNE>\\<kollege>:(M)\"`.“ Gezielt: eine Datei, ein Benutzer. Die Eingriffsstufe 2 aus SKILL.md ist genannt. Wirkung, Prüfung und Rückweg (`/remove:g`) sind angegeben. Die Antwort warnt, Schreibrecht auf den ganzen Ordner nur zu geben, wenn dort keine .exe/.dll/Skripte liegen."
+    },
+    {
+      "text": "Der Unterschied zu den alten Kollegen (Gruppenmitgliedschaft, frühere Rechtevergabe, Installation oder Paket setzt Rechte) wird als Hypothese genannt",
+      "passed": true,
+      "evidence": "Abschnitt „Warum es bei den alten Kollegen geht“ nennt drei Alternativen, jede mit einem Merkmal „Erkennbar:“. 1) Andere Dateirechte, weil Installer, Softwareverteilung oder Admin-Konto die Datei angelegt haben. 2) „Die alten Kollegen haben mehr Rechte“, zu prüfen mit `whoami /groups`. 3) VirtualStore. Später heißen sie ausdrücklich „Hypothese 1 oder 3“ und „Hypothese 2“. Zusätzlich: „Kommt TimeTrack über die Softwareverteilung, gehören die Rechte ins Paket“."
+    },
+    {
+      "text": "Die Antwort stellt höchstens drei Rückfragen",
+      "passed": true,
+      "evidence": "Kein Fragezeichen außerhalb von URLs. Unter „Was ich von dir brauche“ stehen zwei Bitten: die Ausgabe des Blocks von PC-117 und von einem alten PC, und unter welchem Namen die per „Als Administrator“ erfassten Zeiten gebucht sind. Die zweite Bitte steht vorher schon im Satz „Prüf bitte, unter welchem Namen …“. Zusammen sind das 2 Rückfragen, also höchstens drei."
+    }
+  ],
+  "summary": {
+    "passed": 7,
+    "failed": 0,
+    "total": 7,
+    "pass_rate": 1.0
+  },
+  "execution_metrics": {
+    "tool_calls": {
+      "Read": 1,
+      "Bash": 8,
+      "ToolSearch": 2,
+      "WebSearch": 5,
+      "WebFetch": 4,
+      "Write": 2,
+      "SubagentHandback": 1
+    },
+    "total_tool_calls": 23,
+    "files_created": [
+      "antwort.md"
+    ],
+    "output_chars": 6156,
+    "transcript_chars": 34639,
+    "errors_encountered": 0
+  },
+  "timing": {
+    "executor_duration_seconds": 405.3,
+    "total_duration_seconds": 405.3,
+    "total_tokens": 137396,
+    "grader_duration_seconds": null
+  },
+  "claims": [
+    {
+      "claim": "Incident-ID INC-20260928-1420 aus Datum und Uhrzeit der Nachricht",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Nachricht: „Montag, 28.09.2026, 14:20 Uhr“. Nicht aus der Container-Uhr genommen."
+    },
+    {
+      "claim": "In C:\\ProgramData dürfen Benutzer neue Dateien anlegen, fremde aber nur lesen; eine vom Installer/Admin angelegte config.ini zeigt für Benutzer nur (I)(RX).",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Entspricht den Standardrechten, die im Transkript per WebFetch aus Microsoft Q&A belegt sind: Users (OI)(CI)(RX), Users (CI)(WD,AD,WEA,WA) und CREATOR OWNER (OI)(CI)(IO)(F)."
+    },
+    {
+      "claim": "Mit deinem Admin-Passwort läuft TimeTrack unter deinem Konto, nicht unter seinem, also mit deinem Profil; Zeiten landen womöglich bei dir.",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Stimmt, wenn der Kollege Standardbenutzer ist: Bei der Anmeldeaufforderung von UAC läuft der erhöhte Prozess unter dem eingegebenen Admin-Konto mit dessen HKCU und Profil. Die Antwort macht die Folge daraus zu Recht nur zur Möglichkeit („womöglich“). Das ist ein wertvoller Hinweis, den kein Kriterium verlangt."
+    },
+    {
+      "claim": "Adminrechte würden ihm dauerhaft volle Kontrolle über PC-117 geben, auch für jeden Mailanhang, den er öffnet.",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Zugespitzt: Bei aktiver UAC läuft ein Anhang zunächst mit gefiltertem Token. Für einen Admin reicht aber ein Klick zur Erhöhung, und UAC ist keine Sicherheitsgrenze. Als Begründung ist das vertretbar."
+    },
+    {
+      "claim": "Hypothese 2: Die alten Kollegen haben mehr Rechte; erkennbar daran, dass `whoami /groups` bei ihnen VORDEFINIERT\\Administratoren zeigt.",
+      "type": "factual",
+      "verified": false,
+      "evidence": "Ungenau, aber nicht grob falsch. Bei aktiver UAC gibt die Mitgliedschaft in Administratoren einem nicht erhöhten TimeTrack kein Schreibrecht. `whoami /groups` zeigt die Gruppe dann als „Nur zum Verweigern verwendete Gruppe“. Die Hypothese trägt nur, wenn UAC aus ist, wenn Virtualisierung greift (Hypothese 3) oder wenn eine andere Gruppe in der ACL steht. Die Antwort nennt diese Einschränkung nicht."
+    },
+    {
+      "claim": "icacls \"C:\\ProgramData\\TimeTrack\\config.ini\" /grant \"<DOMÄNE>\\<kollege>:(M)\" in Admin-PowerShell; Rückweg mit /remove:g \"<DOMÄNE>\\<kollege>\".",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Die Syntax ist korrekt. Weil das ganze Argument gequotet ist, stören die Klammern in PowerShell nicht. /remove:g entfernt die explizit gewährten ACEs des Benutzers. Weil vorher nur geerbte Rechte da sind, ist das ein echter Rückweg. Eine ACL-Sicherung (icacls /save) fehlt, ist hier aber nicht nötig."
+    },
+    {
+      "claim": "UAC-Virtualisierung leitet bei älteren 32-Bit-Programmen ohne Manifest verweigerte Schreibzugriffe (auch unter %ProgramData%) nach %LOCALAPPDATA%\\VirtualStore um; abschaltbar über EnableVirtualization unter HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System.",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Korrekt. Belegt über Microsoft-Blogarchiv und Russinovich-Zitat (WebFetch im Transkript). Registry-Pfad und Wertname stimmen, und ein leerer Wert bedeutet: an."
+    },
+    {
+      "claim": "Schreibrecht auf den ganzen Ordner nur, wenn dort reine Daten liegen; bei .exe/.dll/Skripten, die ein Dienst oder Admin startet, wird das zum Weg zu Adminrechten.",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Zutreffender Hinweis auf Rechteausweitung über beschreibbare Binärdateien."
+    },
+    {
+      "claim": "Schreibtest `[IO.File]::Open(..., 'Open', 'ReadWrite', 'ReadWrite').Close()` öffnet nur, schreibt nichts.",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Stimmt, der Test ändert weder Inhalt noch Änderungszeit. Läuft TimeTrack gerade und sperrt die Datei, meldet der catch-Zweig eine Freigabeverletzung unter der Überschrift „Schreiben verweigert“. Das ist ein kleiner Schönheitsfehler, weil die Ausnahmemeldung mit ausgegeben wird."
+    },
+    {
+      "claim": "Geprüft: keine bekannten Herstellerfehler zu TimeTrack mit dieser Meldung gefunden; Aufzeichnungen früherer Incidents liegen nicht vor.",
+      "type": "process",
+      "verified": true,
+      "evidence": "Transkript: WebSearch „\"TimeTrack\" \"ProgramData\" config.ini Zugriff verweigert“ ohne passenden Treffer. `ls ~/.claude/agent-memory/incident-manager/` -> No such file or directory."
+    },
+    {
+      "claim": "Rahmen eingehalten: höchstens 5 Websuchen, keine Subagents, nur antwort.md geschrieben.",
+      "type": "process",
+      "verified": true,
+      "evidence": "Genau 5 WebSearch und 4 WebFetch auf Microsoft- und GitHub-Seiten, keine Adressen aus der Nutzernachricht. Kein Agent-Aufruf. Write nur auf antwort.md (zweimal, beim zweiten Mal gekürzt), dazu ein mkdir."
+    }
+  ],
+  "user_notes_summary": {
+    "uncertainties": [
+      "P4 als Annahme markiert, weil Prioritätsregeln des Arbeitgebers unbekannt sind."
+    ],
+    "needs_review": [
+      "Keine user_notes.md vorhanden.",
+      "Die Antwort verweist auf `windows-lagebild.ps1` „aus dem Skill-Ordner“. Ob der Nutzer das Skript auf PC-117 hat, bleibt offen; der Block funktioniert aber auch ohne die letzte Zeile."
+    ],
+    "workarounds": []
+  },
+  "eval_feedback": {
+    "suggestions": [
+      {
+        "assertion": "Die Antwort stellt höchstens drei Rückfragen",
+        "reason": "Nicht trennscharf: Beide Läufe bestehen, der ohne Skill mit 0 Rückfragen. Aussagekräftiger wäre die Prüfung, ob gezielt die Ausgabe des Prüfbefehls von PC-117 und von einem alten Rechner angefordert wird."
+      },
+      {
+        "reason": "Kein Kriterium deckt den Hinweis ab, dass „Als Administrator ausführen“ bei einem Standardbenutzer unter dem Admin-Konto des Nutzers läuft und Zeiten dann womöglich falsch gebucht werden. Der Lauf mit Skill bringt diesen fachlich wichtigen Punkt als einziger; ein Kriterium dazu würde die Qualität besser trennen."
+      },
+      {
+        "reason": "Kein Kriterium begrenzt Länge oder Fokus. Die Antwort hat rund 6.150 Zeichen, drei Hypothesen samt UAC-Virtualisierung, einen Diagnoseblock mit etwa 20 Zeilen und einen Quellenblock, und das für eine P4-Frage mit klarer Kernantwort. Ein Kriterium zur Knappheit, etwa Kernantwort und Lösung in den ersten Absätzen, würde Überlänge sichtbar machen."
+      },
+      {
+        "reason": "Die fachliche Richtigkeit der Hypothesen prüft kein Kriterium, zum Beispiel ob eine Admin-Mitgliedschaft bei aktiver UAC ohne Erhöhung überhaupt Schreibrecht gibt. Kriterium 6 besteht schon, wenn eine Hypothese irgendwie genannt wird."
+      }
+    ],
+    "overall": "Die Antwort mit Skill erfüllt alle sieben Kriterien mit klaren Belegen. Trennscharf gegenüber dem Lauf ohne Skill sind nur die Statuszeile und die Kennzeichnung der Änderung (Stufe 2, Wirkung, Prüfung, Rückweg). Die übrigen Kriterien besteht auch die Vergleichsantwort, und Länge oder fachliche Feinheiten prüft keines."
+  }
+}

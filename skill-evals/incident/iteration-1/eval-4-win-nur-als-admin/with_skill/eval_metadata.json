@@ -1,0 +1,14 @@
+{
+  "eval_id": 4,
+  "eval_name": "win-nur-als-admin",
+  "prompt": "Unser Zeiterfassungsprogramm TimeTrack läuft bei einem neuen Kollegen (Rechner PC-117) nur, wenn ich es mit 'Als Administrator ausführen' starte. Sonst kommt 'Zugriff verweigert: C:\\ProgramData\\TimeTrack\\config.ini'. Bei den alten Kollegen geht es normal. Soll ich ihm einfach lokale Adminrechte geben? (Montag, 28.09.2026, 14:20 Uhr)",
+  "assertions": [
+    "Die Antwort beginnt mit einer Statuszeile im Format `INC-JJJJMMTT-HHMM | P<1-4> | <Bereich> | <Status> | <Titel>`",
+    "Lokale Administratorrechte werden als Lösung abgelehnt oder ausdrücklich nur als Test bezeichnet, mit Begründung",
+    "Als Ursache werden fehlende Schreibrechte des Benutzers auf C:\\ProgramData\\TimeTrack oder config.ini benannt",
+    "Es gibt einen lesenden Prüfbefehl für die Berechtigungen (etwa icacls oder Get-Acl auf Ordner oder Datei), bevor etwas geändert wird",
+    "Die Rechteänderung wird gezielt vorgeschlagen (Ordner oder Datei, Benutzer oder Gruppe) und als Änderung mit Freigabe oder Eingriffsstufe gekennzeichnet",
+    "Der Unterschied zu den alten Kollegen (Gruppenmitgliedschaft, frühere Rechtevergabe, Installation oder Paket setzt Rechte) wird als Hypothese genannt",
+    "Die Antwort stellt höchstens drei Rückfragen"
+  ]
+}

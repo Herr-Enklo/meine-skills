@@ -1,0 +1,1 @@
+Lauf unverändert aus iteration-1 übernommen (gleiche Nachricht, gleicher Testrahmen); gegen die Kriterien von iteration-2 neu bewertet.

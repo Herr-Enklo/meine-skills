@@ -1,0 +1,137 @@
+{
+  "expectations": [
+    {
+      "text": "Die Antwort beginnt mit einer Statuszeile im Format `INC-JJJJMMTT-HHMM | P<1-4> | <Bereich> | <Status> | <Titel>`, deren Zeit der Uhrzeit aus der Nachricht (10:05) entspricht",
+      "passed": false,
+      "evidence": "antwort.md beginnt mit 'Das ist dringend, lässt sich aber gut eingrenzen.' Es gibt keine Statuszeile: keine INC-Nummer, keine P-Stufe, keine Uhrzeit 10:05, kein Bereich oder Status."
+    },
+    {
+      "text": "Die Priorität ist P1 oder P2, begründet mit stillstehender Arbeit oder der Abrechnungsfrist am Donnerstag",
+      "passed": true,
+      "evidence": "'**Priorität: hoch.** Die Lohnabrechnung hat eine feste Frist am Donnerstag, und drei Anwender können nicht arbeiten.' Begründet ist sie mit Stillstand und Frist. Eine P-Stufe fehlt; 'hoch' entspricht in jeder üblichen Skala P1 (drei Stufen) oder P2 (vier Stufen nach ITIL), liegt also im geforderten Bereich. Das fehlende P-Format wird schon in Kriterium 1 bestraft. Grenzfall, bewertet nach dem Inhalt."
+    },
+    {
+      "text": "0xc000007b wird als ungültiges Image-Format erklärt, mit 32/64-Bit-Mischung oder beschädigter bzw. falscher DLL als Richtung",
+      "passed": true,
+      "evidence": "'0xc000007b heißt `STATUS_INVALID_IMAGE_FORMAT`. Windows bricht den Start ab, weil das 32-Bit-Programm beim Laden an eine DLL mit der falschen Architektur gerät (meist eine 64-Bit-DLL) oder an eine beschädigte DLL.'"
+    },
+    {
+      "text": "Eine fehlende oder beschädigte Visual-C++-Laufzeit in der x86-Fassung oder eine andere DLL-Abhängigkeit des 32-Bit-Programms wird als Hypothese genannt",
+      "passed": true,
+      "evidence": "Unter den typischen Ursachen: 'Das **Visual C++ Redistributable (x86)** ist beschädigt oder wurde bei einer Installation überschrieben.' Dazu kommen 64-Bit-DLLs über PATH (Datenbank-Clients, OpenSSL)."
+    },
+    {
+      "text": "Ein Workaround, damit die Löhne bis Donnerstag gerechnet werden können, wird genannt (etwa an einem funktionierenden Rechner oder per Fernzugriff arbeiten)",
+      "passed": true,
+      "evidence": "Abschnitt 1: '**Die drei an funktionierenden Rechnern arbeiten lassen:** freie Plätze, Plätze von Kollegen im Urlaub oder in Teilzeit, ein Ersatzgerät oder versetzte Arbeitszeiten an einem Kollegen-PC. Falls es LohnPro auch auf einem Terminalserver gibt, geht es natürlich auch dort.' Dazu der Hinweis zur Lizenzprüfung und der Zeitplan 'Heute Vormittag: Der Workaround steht'."
+    },
+    {
+      "text": "Der Vergleich der drei betroffenen mit den funktionierenden Rechnern ist Teil des Vorgehens",
+      "passed": true,
+      "evidence": "'Danach auf einem betroffenen und einem funktionierenden Rechner in PowerShell prüfen'; 'Die entscheidende Frage ist, was die drei gemeinsam haben und die anderen 20 nicht.' Bei den VC++-Listen und bei PATH heißt es ausdrücklich 'mit einem funktionierenden Rechner vergleichen'."
+    },
+    {
+      "text": "Es gibt einen konkreten, nur lesenden Prüfweg für die betroffenen Rechner, der fehlende DLLs oder die Architektur der geladenen DLLs prüft (etwa windows-startcheck.ps1, Importtabelle, PATH-Vergleich), nicht nur allgemeine Fragen",
+      "passed": true,
+      "evidence": "c) PATH vergleichen: `[Environment]::GetEnvironmentVariable('Path','Machine') -split ';'` und dasselbe für 'User', 'mit einem funktionierenden Rechner vergleichen'. Das liest nur und steht als Beispiel im Kriterium. d) Process Monitor mit Filter auf LohnPro.exe, 'die letzten Zugriffe auf .dll-Dateien vor dem Prozessende ansehen': ein konkreter, nur lesender Weg zur geladenen DLL. Einschränkung: In der empfohlenen Reihenfolge kommen vorher ein Neustart (a) und die VC++-Reparatur (b), Process Monitor erst 'Wenn a bis c nichts ergeben'. Die Architektur der DLLs wird nicht direkt geprüft, nur indirekt über die Fundstelle."
+    },
+    {
+      "text": "Die Antwort stellt höchstens drei Rückfragen",
+      "passed": false,
+      "evidence": "Abschnitt 'Damit ich gezielter helfen kann' enthält fünf nummerierte Punkte mit sechs Fragen. 1. 'Welche Windows-Version läuft, und womit verteilt ihr Updates (...)?' (zwei Fragen), 2. 'Wurden am Patchday nur Microsoft-Updates verteilt oder auch andere Pakete?', 3. 'Was kam beim Test heraus, ...?', 5. 'Braucht LohnPro einen lokal installierten Datenbank-Client?'. Dazu kommt Punkt 4, die Bitte um Befehlsausgaben. Außerdem steht im Text von 3a noch 'Wurden am Patchday außer den Windows-Updates auch andere Pakete verteilt (...)?'. Das sind deutlich mehr als drei."
+    },
+    {
+      "text": "Deinstallation von Updates oder Neuinstallation des Programms wird nicht ohne Freigabe angeordnet",
+      "passed": false,
+      "evidence": "Die Antwort ordnet ändernde Schritte ohne Freigabe als Vorgehen an. f) 'Wenn ein bestimmtes Paket unter Verdacht steht, es auf **einem** der drei Rechner deinstallieren und testen.' Gefordert ist dabei nur Dokumentation, keine Freigabe. e) 'Danach kommt bei Bedarf eine Reparaturinstallation von LohnPro.' Der Hersteller wird dazu nur wegen der Mandantendaten gefragt. Im Zeitplan: 'oder die drei Rechner werden neu aufgesetzt'. Dazu b) VC++ 'Reparieren' und 'Fehlende x86-Pakete ... nachinstallieren'. Nirgends steht, dass vor Deinstallation oder Neuinstallation eine Freigabe einzuholen ist."
+    }
+  ],
+  "summary": {
+    "passed": 6,
+    "failed": 3,
+    "total": 9,
+    "pass_rate": 0.67
+  },
+  "execution_metrics": {
+    "tool_calls": {
+      "ToolSearch": 1,
+      "WebSearch": 2,
+      "Bash": 1,
+      "Write": 1,
+      "SubagentHandback": 1
+    },
+    "total_tool_calls": 6,
+    "files_created": [
+      "antwort.md"
+    ],
+    "output_chars": 7396,
+    "transcript_chars": 4807,
+    "errors_encountered": 0
+  },
+  "timing": {
+    "executor_duration_seconds": 124.9,
+    "total_duration_seconds": 124.9,
+    "total_tokens": 62913
+  },
+  "claims": [
+    {
+      "claim": "0xc000007b heißt STATUS_INVALID_IMAGE_FORMAT",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Richtiger NTSTATUS-Name."
+    },
+    {
+      "claim": "'Herunterfahren' startet wegen des Schnellstarts nicht ganz neu, 'Neu starten' schon",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Beim Schnellstart (Hybrid-Boot) wird der Kernel beim Herunterfahren gespeichert; ein Neustart umgeht das."
+    },
+    {
+      "claim": "Eine DLL aus einem ungewöhnlichen Ordner ist fast immer die Ursache, 'zum Beispiel aus C:\\Windows\\System32 statt SysWOW64'",
+      "type": "factual",
+      "verified": false,
+      "evidence": "Das Beispiel führt in die Irre. Bei einem 32-Bit-Prozess leitet die WOW64-Dateisystemumleitung Zugriffe auf System32 nach SysWOW64 um, und Process Monitor zeigt den umgeleiteten Pfad. System32 als Fundort ist für LohnPro kaum zu erwarten. Realistisch ist eine 64-Bit-DLL aus einem Programmordner im PATH, was die Antwort als zweites Beispiel auch nennt."
+    },
+    {
+      "claim": "Reparatur der VC++-Redistributables (x86) 'hilft am häufigsten'",
+      "type": "quality",
+      "verified": false,
+      "evidence": "Ohne Beleg. Bei 3 von 23 Rechnern nach einem gemeinsamen Rollout ist das nicht gut begründet, und die Reparatur ändert den Rechner vor der Diagnose."
+    },
+    {
+      "claim": "Bei einer kurzen Suche kein bekanntes Problem der September-Updates mit 0xc000007b gefunden",
+      "type": "process",
+      "verified": true,
+      "evidence": "Transkript: 2 Websuchen zu September-2026-Updates und Release Health. Dass es keinen solchen Fehler gibt, lässt sich hier nicht unabhängig prüfen."
+    },
+    {
+      "claim": "Die Befehle in a) bis c) prüfen den Zustand",
+      "type": "quality",
+      "verified": true,
+      "evidence": "Get-HotFix, Uninstall-Registry und PATH-Abfragen lesen nur. Get-HotFix zeigt allerdings nicht zuverlässig alle kumulativen Updates. Der empfohlene Ablauf beginnt mit einem Neustart, der Belege wie einen ausstehenden Neustart oder halbe Installationen verwischen kann."
+    }
+  ],
+  "user_notes_summary": {
+    "uncertainties": [],
+    "needs_review": [],
+    "workarounds": [
+      "Lauf unverändert aus iteration-1 übernommen (uebernommen.txt); das Transkript zeigt den Ausgabepfad aus iteration-1."
+    ]
+  },
+  "eval_feedback": {
+    "suggestions": [
+      {
+        "assertion": "Die Priorität ist P1 oder P2, begründet mit stillstehender Arbeit oder der Abrechnungsfrist am Donnerstag",
+        "reason": "Bei einer Antwort ohne P-Skala ('Priorität: hoch') ist offen, ob das als P1/P2 zählt. Das Kriterium sollte sagen, ob eine gleichwertige Stufe ohne P-Bezeichnung reicht."
+      },
+      {
+        "assertion": "Es gibt einen konkreten, nur lesenden Prüfweg für die betroffenen Rechner, der fehlende DLLs oder die Architektur der geladenen DLLs prüft (etwa windows-startcheck.ps1, Importtabelle, PATH-Vergleich), nicht nur allgemeine Fragen",
+        "reason": "Die Kombination aus Beispiel 'PATH-Vergleich' und 'nur lesend' lässt auch einen Ablauf bestehen, der vor der lesenden Prüfung Neustart und Reparatur empfiehlt. Besser wäre: Der lesende Prüfweg kommt vor jedem ändernden Schritt und benennt die konkrete DLL mit Architektur oder Fundstelle."
+      },
+      {
+        "reason": "Kein Kriterium belohnt das Hersteller-Ticket bei fester Frist. Dieser Lauf schlägt es vor, der Skill-Lauf nicht. Bei einem Fachprogramm mit Abrechnungsfrist ist das ein sinnvoller Parallelschritt."
+      }
+    ],
+    "overall": "Der Lauf ohne Skill trifft die fachlichen Kriterien (Fehlerbedeutung, VC++, Workaround, Vergleich). Er scheitert an Form (Statuszeile), Zahl der Rückfragen und Änderungsdisziplin. Die Kriterien trennen hier gut."
+  }
+}

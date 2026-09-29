@@ -1,0 +1,18 @@
+{
+  "eval_id": 3,
+  "eval_name": "win-lagebild-auswerten",
+  "prompt": "Notepad++ stürzt bei mir auf PC01 seit heute früh ständig ab, und das nächtliche Update über Empirum ging wohl auch schief. Du hattest mir das Lagebild-Skript gegeben, hier die Ausgabe: lagebild-notepad.txt (Dienstag, 29.09.2026, 09:40 Uhr)",
+  "assertions": [
+    "Die Antwort nennt das Plugin NppPlugin.dll (Modulpfad im Plugin-Ordner, 0xc0000005, unsigniert, am Morgen geändert) als wahrscheinliche Absturzursache statt Notepad++ selbst",
+    "Der Defender-Fund Trojan:Win32/Wacatac.B!ml (plugin.dll im Downloads-Ordner, von notepad++.exe angefasst) wird als möglicher Sicherheitsvorfall behandelt: IT-Sicherheit informieren oder Herkunft des Plugins klären, nicht nur als Absturzursache",
+    "Wegen des Defender-Funds wird der Fall als Sicherheitsfall geführt (Bereich Sicherheit im Statuskopf oder mindestens P2 mit Sicherheitsbegründung), nicht als reines Softwareproblem",
+    "Die zwei parallelen Notepad++-Installationen (8.8.4 als 64-Bit-EXE und 8.8.5 als 32-Bit-MSI) werden als Befund genannt",
+    "Der gescheiterte Empirum-Lauf wird mit 1618 erklärt und mit der gleichzeitigen fremden Installer-Transaktion (1040/1042, Anderes.msi) in Verbindung gebracht",
+    "Nur 2 % freier Platz auf C: wird als Befund genannt",
+    "Das fehlgeschlagene Windows-Update mit 0x80073712 wird als beschädigter Komponentenspeicher eingeordnet oder mindestens als eigener Befund genannt",
+    "Die Antwort fragt nicht nach Informationen, die im Lagebild bereits stehen (Windows-Version, installierte Versionen, freier Speicher, Fehlerereignisse, ErrorLevel des Empirum-Laufs)",
+    "Die Befunde sind nach vermuteter Ursache gruppiert statt als ungeordnete Liste",
+    "Löschen, Deinstallieren oder erneutes Verteilen wird nur als Vorschlag mit Freigabe oder Eingriffsstufe genannt, nicht als ohne Rückfrage auszuführende Maßnahme",
+    "Der Text der Antwort ist ohne Codeblöcke höchstens etwa 6000 Zeichen lang (mit einem kurzen Skript messen, Codeblöcke zwischen ``` nicht mitzählen)"
+  ]
+}

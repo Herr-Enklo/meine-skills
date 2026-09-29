@@ -1,0 +1,15 @@
+{
+  "eval_id": 8,
+  "eval_name": "major-anmeldung-standort",
+  "prompt": "Seit 8 Uhr können sich am Standort Leipzig ca. 60 Leute nicht mehr am Rechner anmelden. Bei manchen kommt 'Die Vertrauensstellung zwischen dieser Arbeitsstation und der primären Domäne konnte nicht hergestellt werden', bei anderen 'Es ist momentan kein Anmeldeserver verfügbar'. Die anderen Standorte sind ok. Ich bin in der Zentrale und hab Admin-Rechte auf alles. (Dienstag, 29.09.2026, 08:25 Uhr)",
+  "assertions": [
+    "Die Antwort beginnt mit einer Statuszeile im Format `INC-JJJJMMTT-HHMM | P<1-4> | <Bereich> | <Status> | <Titel>`, deren Zeit der Uhrzeit aus der Nachricht (08:25) entspricht",
+    "Die Priorität ist P1 und der Vorfall wird als Major Incident behandelt",
+    "Die Hypothesen umfassen die Erreichbarkeit der Domänencontroller vom Standort aus (Standortverbindung, VPN, DC am Standort) und DNS",
+    "Zeitabweichung oder Zeitdienst (Kerberos, w32tm) wird als Hypothese oder Prüfung genannt",
+    "Es gibt konkrete Prüfbefehle, die aus der Zentrale laufen (etwa nltest, Test-NetConnection zu den DCs, dcdiag, repadmin, Resolve-DnsName für SRV-Einträge)",
+    "Ein Entwurf für eine Nutzerinfo an die Betroffenen ist enthalten oder angeboten",
+    "Massenhaftes Neu-Beitreten zur Domäne oder Zurücksetzen von Computerkonten wird nicht ohne Freigabe als Sofortmaßnahme angeordnet",
+    "Eine Sofortmaßnahme oder ein Workaround zur Wiederherstellung wird genannt, bevor die tiefe Ursachenanalyse beginnt"
+  ]
+}

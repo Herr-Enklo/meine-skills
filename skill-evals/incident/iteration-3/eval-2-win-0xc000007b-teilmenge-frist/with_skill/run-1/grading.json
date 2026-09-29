@@ -1,0 +1,148 @@
+{
+  "expectations": [
+    {
+      "text": "Die Antwort beginnt mit einer Statuszeile im Format `INC-JJJJMMTT-HHMM | P<1-4> | <Bereich> | <Status> | <Titel>`, deren Zeit der Uhrzeit aus der Nachricht (10:05) entspricht",
+      "passed": true,
+      "evidence": "Erste Zeile von antwort.md: '`INC-20260929-1005 | P2 | Windows-Software | wartet auf Nutzer | LohnPro 12.4 startet seit Patchday-Rollout auf 3 PCs der Buchhaltung nicht (0xc000007b)`'. Datum 20260929 und Zeit 1005 stimmen mit 'Dienstag, 29.09.2026, 10:05 Uhr' überein, fünf Felder mit ' | ' getrennt. Bereich und Status stammen aus den erlaubten Werten in vorlagen.md; 'wartet auf Nutzer' passt, weil der nächste Schritt beim Nutzer liegt. Die Zeile steht als Inline-Code in Backticks, wie im Beispiel der Vorlage."
+    },
+    {
+      "text": "Die Priorität ist P1 oder P2, begründet mit stillstehender Arbeit oder der Abrechnungsfrist am Donnerstag",
+      "passed": true,
+      "evidence": "'P2: Auswirkung mittel (3 von 23 Plätzen einer Abteilung), Dringlichkeit hoch, weil die drei gar nicht abrechnen können.' Dazu: 'Steht bis Mittwochfrüh kein tragfähiger Workaround, stufe ich wegen Donnerstag auf P1 hoch.' Begründet sind beide Punkte, Stillstand und Frist. Das entspricht der Matrix in prioritaet.md (mittel/hoch = P2)."
+    },
+    {
+      "text": "0xc000007b wird als ungültiges Image-Format erklärt, mit 32/64-Bit-Mischung oder beschädigter bzw. falscher DLL als Richtung",
+      "passed": true,
+      "evidence": "'0xc000007b heißt: Windows lädt beim Start eine Datei, die nicht zum Programm passt, bei 32-Bit-Programmen fast immer eine 64-Bit-DLL, seltener eine beschädigte.' Die Richtung (64-Bit-DLL im 32-Bit-Programm, beschädigte DLL) ist klar. Den Begriff selbst nennt nur die Quellenliste: 'Microsoft, STATUS_INVALID_IMAGE_FORMAT (C000007B)'. Der Fließtext umschreibt das ungültige Image-Format in Alltagssprache ('Datei, die nicht zum Programm passt'). Grenzfall, bewertet nach dem Inhalt."
+    },
+    {
+      "text": "Eine fehlende oder beschädigte Visual-C++-Laufzeit in der x86-Fassung oder eine andere DLL-Abhängigkeit des 32-Bit-Programms wird als Hypothese genannt",
+      "passed": true,
+      "evidence": "'H2, Visual-C++-Laufzeit x86 beschädigt oder unvollständig aktualisiert: `MSVCP140.dll` oder `VCRUNTIME140.dll` mit `FEHLT`, `DEFEKT` oder `FALSCHE ARCHITEKTUR`, oder unter \"Installierte Visual-C++-Laufzeiten\" fehlt die x86-Zeile.' Weitere DLL-Hypothesen: H1 (64-Bit-DLLs über einen neuen PATH-Eintrag) und H3 (ersetzte Dateien im LohnPro-Ordner)."
+    },
+    {
+      "text": "Ein Workaround, damit die Löhne bis Donnerstag gerechnet werden können, wird genannt (etwa an einem funktionierenden Rechner oder per Fernzugriff arbeiten)",
+      "passed": true,
+      "evidence": "Unter 'Sofort', Punkt 1: 'Die drei heute an funktionierenden Plätzen mit ihrer eigenen Anmeldung arbeiten lassen (freier Platz, Urlaubsvertretung, Terminalserver, falls vorhanden). Startet LohnPro dort, liegt die Ursache am Rechner und der Ausweichplatz trägt bis Donnerstag.' Die Annahme dahinter steht dabei: 'Lohndaten liegen zentral, die Lizenz hängt nicht am Platz.'"
+    },
+    {
+      "text": "Der Vergleich der drei betroffenen mit den funktionierenden Rechnern ist Teil des Vorgehens",
+      "passed": true,
+      "evidence": "Überschrift 'Diagnose: ein Block auf einem betroffenen PC, derselbe zum Vergleich auf einem funktionierenden'; H1: 'ein Eintrag, der beim funktionierenden PC fehlt'; angefordert werden 'startcheck.txt und lagebild.txt ... von einem betroffenen und einem funktionierenden PC', dazu 'Die Paketliste des Rollouts mit Status je PC, für die drei und zwei, drei funktionierende' und 'Was haben die drei gemeinsam, was die anderen 20 nicht haben'."
+    },
+    {
+      "text": "Es gibt einen konkreten, nur lesenden Prüfweg für die betroffenen Rechner, der fehlende DLLs oder die Architektur der geladenen DLLs prüft (etwa windows-startcheck.ps1, Importtabelle, PATH-Vergleich), nicht nur allgemeine Fragen",
+      "passed": true,
+      "evidence": "Konkreter Aufruf: 'powershell -NoProfile -ExecutionPolicy Bypass -File \"$s\\windows-startcheck.ps1\" -Programm 'LohnPro' -Seit $seit -Ausgabe \"$env:TEMP\\startcheck.txt\"' und dasselbe für windows-lagebild.ps1, mit dem Hinweis 'Beide lesen nur.' und 'nicht als Admin'. Die Hypothesen sagen, woran man die Ursache im Bericht erkennt ('FALSCHE ARCHITEKTUR' mit Fundort 'PATH: …', 'FEHLT', 'DEFEKT', Abschnitt 'Programmordner: andere Architektur oder kürzlich geändert'). Laut Skriptkopf liest windows-startcheck.ps1 die Importtabelle und prüft jede DLL in der Suchreihenfolge auf Fehlen und Architektur ('Ändert nichts'). Die lesende Prüfung steht vor jeder Korrektur: 'Nichts auf Verdacht reparieren'."
+    },
+    {
+      "text": "Die Antwort stellt höchstens drei Rückfragen",
+      "passed": true,
+      "evidence": "Abschnitt 'Was ich von dir brauche' hat drei Punkte. Punkt 1 (Berichte und Ergebnis vom Ausweichplatz) und Punkt 2 (Paketliste mit Status je PC) sind Bitten um Daten. Punkt 3 ist die einzige echte Frage: 'Was haben die drei gemeinsam, was die anderen 20 nicht haben (Zusatzprogramm, Aufgabe, Gerätetyp)?' Auch wenn man alle drei als Rückfragen zählt, sind es nicht mehr als drei. 'Wenn du willst, schreibe ich eine kurze Info ...' ist ein Angebot, und 'dann bitte gleich melden' ist eine Bitte. Beides sind keine Fragen."
+    },
+    {
+      "text": "Deinstallation von Updates oder Neuinstallation des Programms wird nicht ohne Freigabe angeordnet",
+      "passed": true,
+      "evidence": "Weder eine Deinstallation noch eine Neuinstallation wird angeordnet. Die Antwort grenzt sich ausdrücklich ab: 'Nichts auf Verdacht reparieren: keine DLLs von Download-Seiten, keine \"All-in-One\"-Laufzeitpakete, LohnPro nicht tagsüber neu verteilen' und 'korrigiert wird dann über die Softwareverteilung, nicht von Hand am Client'. Der einzige ändernde Schritt, das Anhalten der Zuweisung, wird dem Nutzer zur Entscheidung gegeben und hat einen Rückweg: 'Deine Entscheidung, rückgängig durch erneutes Aktivieren.'"
+    }
+  ],
+  "summary": {
+    "passed": 9,
+    "failed": 0,
+    "total": 9,
+    "pass_rate": 1.0
+  },
+  "execution_metrics": {
+    "tool_calls": {
+      "Read": 2,
+      "Bash": 14,
+      "ToolSearch": 1,
+      "WebSearch": 5,
+      "Write": 2,
+      "SubagentHandback": 1
+    },
+    "total_tool_calls": 25,
+    "files_created": [
+      "antwort.md"
+    ],
+    "output_chars": 5001,
+    "transcript_chars": 38405,
+    "errors_encountered": 0
+  },
+  "timing": {
+    "executor_duration_seconds": 303.0,
+    "total_duration_seconds": 303.0,
+    "total_tokens": 134734
+  },
+  "claims": [
+    {
+      "claim": "0xc000007b: Windows lädt eine Datei, die nicht zum Programm passt, bei 32-Bit-Programmen fast immer eine 64-Bit-DLL, seltener eine beschädigte",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Das entspricht STATUS_INVALID_IMAGE_FORMAT. Die Microsoft-Quelle aus der ersten Websuche nennt die Architekturmischung als häufigste Ursache. 'Fast immer' verallgemeinert, ist aber nicht falsch."
+    },
+    {
+      "claim": "P2 nach ITIL-Matrix: Auswirkung mittel (3 von 23 Plätzen), Dringlichkeit hoch",
+      "type": "factual",
+      "verified": true,
+      "evidence": "3 + 20 = 23. prioritaet.md: 'Wer gar nicht arbeiten kann, hat hohe Dringlichkeit', Matrix mittel/hoch = P2. Die Einstufung ist als Annahme markiert, weil die Regeln des Hauses fehlen."
+    },
+    {
+      "claim": "Zum Microsoft-Patchday vom 8.9.2026 keine bekannten Probleme mit 0xc000007b oder 32-Bit-Programmen, zu LohnPro 12.4 öffentlich nichts",
+      "type": "process",
+      "verified": true,
+      "evidence": "Transkript: 5 Websuchen. Die Suchergebnisse zeigen KB5124008 vom 8.9.2026 und für Release Health nur ein Credential-Guard-Problem. Das Easy-Anti-Cheat-Problem mit 0xc000007b betraf nur Insider-Builds. Zu LohnPro gab es keine Treffer. Ob es wirklich keine solchen Probleme gibt, ist hier nicht unabhängig prüfbar. Nicht gesucht wurde, ob der Rollout vom 28.9. auch das optionale Vorschau-Update vom 22.9. enthielt."
+    },
+    {
+      "claim": "Frühere Fälle dazu gibt es in meinem Journal nicht",
+      "type": "process",
+      "verified": true,
+      "evidence": "Transkript: 'ls ~/.claude/agent-memory/incident-manager/' meldet 'No such file or directory'. Ein Journal gibt es also nicht."
+    },
+    {
+      "claim": "Beide Skripte lesen nur und brauchen keine Administratorrechte",
+      "type": "factual",
+      "verified": true,
+      "evidence": "In beiden Skriptköpfen steht 'Ändert nichts' und 'ohne Administratorrechte'. Gelesen im Transkript mit sed/cat."
+    },
+    {
+      "claim": "Die Berichte enthalten Rechner- und Benutzernamen, aber nichts aus LohnPro",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Gemeint sind keine Lohndaten. Das stimmt, soweit die Skripte gelesen wurden. Die Formulierung ist ungenau: Das Lagebild mit -Software 'LohnPro' listet Programmdateien, Versionen, Ereignisse und Zeilen aus dem Empirum-Protokoll zu LohnPro auf."
+    },
+    {
+      "claim": "Scheitert LohnPro auch am funktionierenden Platz mit der Anmeldung des Betroffenen, hängt es am Benutzerkonto",
+      "type": "quality",
+      "verified": true,
+      "evidence": "Der Schluss ist plausibel, denn der Benutzer-PATH oder das Profil kann eine 64-Bit-DLL einbringen. Er ist vereinfacht, aber nicht falsch."
+    },
+    {
+      "claim": "Quellen-URLs (Microsoft-Blog zu C000007B, Release Health, VC++-Laufzeiten)",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Alle drei URLs kommen genau so in den Suchergebnissen im Transkript vor."
+    }
+  ],
+  "user_notes_summary": {
+    "uncertainties": [],
+    "needs_review": [],
+    "workarounds": []
+  },
+  "eval_feedback": {
+    "suggestions": [
+      {
+        "assertion": "0xc000007b wird als ungültiges Image-Format erklärt, mit 32/64-Bit-Mischung oder beschädigter bzw. falscher DLL als Richtung",
+        "reason": "Der Skill-Lauf umschreibt den Code nur ('Datei, die nicht zum Programm passt'). Der Name STATUS_INVALID_IMAGE_FORMAT steht nur im Titel einer Quelle. Das Kriterium sollte festlegen, ob eine sinngemäße Erklärung reicht oder ob der Begriff fallen muss."
+      },
+      {
+        "assertion": "Deinstallation von Updates oder Neuinstallation des Programms wird nicht ohne Freigabe angeordnet",
+        "reason": "Das Kriterium prüft nur, dass etwas fehlt. Eine Antwort ohne jeden Lösungsschritt besteht es ebenso. Besser wäre ein positives Kriterium: Ändernde Schritte (Pakete zurücknehmen, Zuweisung anhalten, neu verteilen) sind als Entscheidung des Nutzers mit Rückweg gekennzeichnet und kommen erst nach der lesenden Diagnose."
+      },
+      {
+        "reason": "Wie schon beim Lauf ohne Skill fehlt ein Kriterium für ein paralleles Herstellerticket bei LohnPro. Der Skill-Lauf schlägt es nicht vor, obwohl ein Fachprogramm mit fester Abrechnungsfrist betroffen ist."
+      }
+    ],
+    "overall": "Der Skill-Lauf erfüllt alle neun Kriterien, mit klaren Belegen. Den Unterschied zum Lauf ohne Skill machen Statuszeile, Zahl der Rückfragen und Änderungsdisziplin. Die fachlichen Kriterien erfüllen beide Läufe."
+  }
+}

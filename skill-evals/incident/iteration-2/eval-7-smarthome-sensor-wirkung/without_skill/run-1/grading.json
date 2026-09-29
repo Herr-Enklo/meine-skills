@@ -1,0 +1,147 @@
+{
+  "expectations": [
+    {
+      "text": "Die Antwort beginnt mit einer Statuszeile im Format `INC-JJJJMMTT-HHMM | P<1-4> | <Bereich> | <Status> | <Titel>`",
+      "passed": false,
+      "evidence": "antwort.md beginnt mit „Meistens ist das nicht schlimm. …“. Es gibt keine Statuszeile, keine Incident-ID, keine Priorität, keinen Bereich und keinen Status."
+    },
+    {
+      "text": "Die Wichtigkeit wird davon abhängig gemacht, was den Sensor benutzt (Automationen, Thermostat oder Heizungsregelung), mit einem konkreten Prüfweg dafür",
+      "passed": false,
+      "evidence": "Die Abhängigkeit ist benannt: „Wichtig wird es nur, wenn etwas an dem Sensor hängt: eine Heizungsautomation fürs Büro, ein Lüftungs- oder Schimmelhinweis über die Luftfeuchte, ein Mittelwert über mehrere Räume.“ Es fehlt aber ein konkreter Prüfweg, wie man herausfindet, was den Sensor nutzt (etwa Entitätsdialog → Verwandt oder eine Suche in Automationen und Helfern). Die Prüfschritte in Abschnitt 1 betreffen nur den Batterieverlauf, den Ausfallzeitpunkt, andere Shellys und die Reparaturen."
+    },
+    {
+      "text": "Es wird darauf hingewiesen, dass ein eingefrorener letzter Wert eine Regelung (etwa die Heizung) falsch weiterarbeiten lassen kann",
+      "passed": true,
+      "evidence": "„Solche Automationen laufen im Moment blind. Sie lösen nicht aus oder arbeiten mit einem alten Wert. Jetzt, wo die Heizsaison anfängt, würde ich das also nicht wochenlang liegen lassen.“ Der alte Wert, mit dem eine Heizungsautomation weiterarbeitet, wird ausdrücklich genannt. Die konkrete Folge (z. B. dass weitergeheizt wird) wird nicht ausgeführt, der Hinweis ist aber eindeutig."
+    },
+    {
+      "text": "Eine leere Batterie bzw. ein schlafendes Batteriegerät wird als wahrscheinlichste Ursache genannt, mit Prüfung des Batterieverlaufs oder des Protokolls",
+      "passed": true,
+      "evidence": "„… sind in den allermeisten Fällen die Batterien leer oder er kommt nicht mehr ins WLAN“ (Batterie zuerst). Dazu der Batterieverlauf: „schau dir den Verlauf der **Batterie-Entität** an. Ist der Wert vor dem Ausfall Richtung 0–10 % gefallen, ist die Sache praktisch klar“ und „Reagiert er gar nicht …, sind es fast sicher die Batterien.“ Das Vorgehen beginnt mit der Batterie: Tausch in Schritt 3, WLAN erst in Schritt 4 („Falls er auch mit neuen Batterien nicht zurückkommt“). Das Protokoll wird ebenfalls geprüft. Einschränkung: Das Wort „am wahrscheinlichsten“ fehlt, im Einstiegssatz stehen Batterie und WLAN gleichrangig."
+    },
+    {
+      "text": "Neuladen der Integration oder Neustart von Home Assistant wird nicht als Lösung für eine leere Batterie empfohlen",
+      "passed": true,
+      "evidence": "Ein Reload kommt nur im Zweig „Falls er auch mit neuen Batterien nicht zurückkommt“ vor: „Die Shelly-Integration für dieses Gerät neu laden (drei Punkte → Neu laden) und danach wieder den Knopf am Sensor drücken.“ Er wird also nicht als Lösung für eine leere Batterie empfohlen. Ein HA-Neustart wird nirgends empfohlen. Dass ein Reload bei leerer Batterie nichts bringt, sagt die Antwort nicht ausdrücklich."
+    },
+    {
+      "text": "Als Folgeaufgabe wird eine Warnung bei niedriger Batterie oder langer Funkstille vorgeschlagen",
+      "passed": true,
+      "evidence": "„Für das nächste Mal: Eine kleine Automation, die dich benachrichtigt, wenn die Batterie unter etwa 20 % fällt oder der Sensor länger als ein paar Stunden nicht verfügbar ist.“"
+    }
+  ],
+  "summary": {
+    "passed": 4,
+    "failed": 2,
+    "total": 6,
+    "pass_rate": 0.67
+  },
+  "execution_metrics": {
+    "tool_calls": {
+      "ToolSearch": 1,
+      "WebSearch": 2,
+      "Bash": 1,
+      "Write": 1,
+      "SubagentHandback": 1
+    },
+    "total_tool_calls": 6,
+    "files_created": [
+      "antwort.md"
+    ],
+    "output_chars": 4519,
+    "transcript_chars": 4555,
+    "errors_encountered": 0
+  },
+  "timing": {
+    "executor_duration_seconds": 89.3,
+    "total_duration_seconds": 89.3,
+    "total_tokens": 58754,
+    "duration_ms": 89259
+  },
+  "claims": [
+    {
+      "claim": "Der H&T Gen1 hat kein Display und läuft mit einer CR123A. Plus H&T und H&T Gen3 haben ein E-Ink-Display und laufen mit 4× AA (oder per USB)",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Deckt sich mit den Shelly-KB-Angaben (CR123A bzw. 4× AA). Die USB-Versorgung gibt es optional."
+    },
+    {
+      "claim": "E-Ink zeigt den letzten Wert auch bei leeren Batterien weiter an",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Eine Eigenschaft von E-Paper-Displays. Der Hinweis ist sinnvoll."
+    },
+    {
+      "claim": "Langes Drücken der Taste setzt je nach Modell die WLAN-Einstellungen oder das ganze Gerät zurück",
+      "type": "factual",
+      "verified": false,
+      "evidence": "Ungenau: Laut Shelly KB aktivieren 5 s den Access Point (die WLAN-Einstellungen werden nicht zurückgesetzt), 10 s setzen auf Werkseinstellungen. Die Warnung selbst bleibt richtig."
+    },
+    {
+      "claim": "Plus H&T/Gen3: Outbound WebSocket muss aktiv sein und auf ws://<HA-IP>:8123/api/shelly/ws zeigen",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Entspricht der HA-Doku zur Shelly-Integration."
+    },
+    {
+      "claim": "H&T Gen1: als CoIoT-Peer „gegebenenfalls“ <HA-IP>:5683 eintragen",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Die Adresse stimmt. Laut HA-Doku ist der Peer für batteriebetriebene Gen1-Geräte aber Pflicht, „gegebenenfalls“ untertreibt das."
+    },
+    {
+      "claim": "Der Shelly braucht 2,4 GHz, und die Weboberfläche ist nur im Wachzustand erreichbar",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Stimmt für die Shelly-H&T-Modelle."
+    },
+    {
+      "claim": "„Sleeping device did not update within … seconds“ bedeutet nur, dass HA nichts vom Gerät gehört hat",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Deckt sich mit home-assistant/core#101570."
+    },
+    {
+      "claim": "Unter Reparaturen kann ein Hinweis zu diesem Shelly stehen, z. B. zu „Outbound WebSocket“",
+      "type": "factual",
+      "verified": false,
+      "evidence": "Nicht belegt. Soweit bekannt, betrifft die Reparaturmeldung der Shelly-Integration zum Outbound WebSocket netzbetriebene Gen2+-Geräte, bei denen er fälschlich aktiv ist, nicht schlafende H&T. Als Beispiel für ein H&T wahrscheinlich unpassend, aber nicht schädlich."
+    },
+    {
+      "claim": "Deinem Home Assistant schadet das nicht",
+      "type": "quality",
+      "verified": true,
+      "evidence": "Zutreffend. Die Antwort grenzt das Risiko auf abhängige Automationen ein."
+    }
+  ],
+  "user_notes_summary": {
+    "uncertainties": [
+      "Keine user_notes.md vorhanden."
+    ],
+    "needs_review": [
+      "Der Lauf wurde unverändert aus iteration-1 übernommen (uebernommen.txt). Die Ausgabepfade im Transkript verweisen auf plugins/incident-manager/eval-workspace/iteration-1/…. Er wurde frisch gegen die Kriterien von iteration-2 bewertet."
+    ],
+    "workarounds": []
+  },
+  "eval_feedback": {
+    "suggestions": [
+      {
+        "assertion": "Es wird darauf hingewiesen, dass ein eingefrorener letzter Wert eine Regelung (etwa die Heizung) falsch weiterarbeiten lassen kann",
+        "reason": "Der Wortlaut hängt an „eingefrorener letzter Wert“. Ob „bleiben im letzten Zustand“ (with_skill) genügt, ist unklar. Besser ausdrücklich verlangen, dass ein Thermostat oder eine Automation mit dem alten Istwert weiterregeln kann (z. B. weiterheizt) und dass das schlimmer ist als ein fehlender Wert. Der Skill enthält den Satz im Playbook, die Antwort hat ihn trotzdem verwässert."
+      },
+      {
+        "assertion": "Neuladen der Integration oder Neustart von Home Assistant wird nicht als Lösung für eine leere Batterie empfohlen",
+        "reason": "Eine negative Assertion: Sie besteht auch, wenn Reload oder Neustart gar nicht erwähnt werden. without_skill empfiehlt einen Reload im Rückfallzweig und besteht trotzdem. Wenn das Verhalten wichtig ist, positiv formulieren: Es wird ausdrücklich gesagt, dass Reload oder Neustart bei leerer Batterie nichts bringt."
+      },
+      {
+        "assertion": "Eine leere Batterie bzw. ein schlafendes Batteriegerät wird als wahrscheinlichste Ursache genannt, mit Prüfung des Batterieverlaufs oder des Protokolls",
+        "reason": "„Als wahrscheinlichste Ursache“ ist unscharf, wenn Batterie und WLAN im selben Satz gleichrangig stehen (without_skill). Klarstellen, ob eine ausdrückliche Rangfolge nötig ist oder ein Vorgehen reicht, das mit der Batterie beginnt."
+      },
+      {
+        "reason": "Keine Assertion prüft die modellabhängigen Fakten (Gen1 mit CoIoT-Peer und CR123A gegen Plus/Gen3 mit Outbound-WebSocket und 4× AA) oder die Warnung, die Taste nicht lang zu drücken. Beide Läufe hatten das richtig; als Schutz gegen falsche Hardwareangaben wäre es sinnvoll."
+      }
+    ],
+    "overall": "Die Assertions 1 und 2 trennen gut zwischen den Läufen. Die Assertions 3 bis 5 hängen stark an der Formulierung beziehungsweise bestehen zu leicht."
+  }
+}

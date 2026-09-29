@@ -1,0 +1,156 @@
+{
+  "expectations": [
+    {
+      "text": "Die Antwort beginnt mit einer Statuszeile im Format `INC-JJJJMMTT-HHMM | P<1-4> | <Bereich> | <Status> | <Titel>`, deren Zeit der Uhrzeit aus der Nachricht (10:40) entspricht und nicht einer UTC-Zeit",
+      "passed": true,
+      "evidence": "Erste Zeile von antwort.md: `INC-20260929-1040 | P3 | Windows-Software | wartet auf Nutzer | Rollout Notepad++ 8.8.5: 1618 auf 14 von 230 Clients`. Datum 20260929 und Zeit 1040 entsprechen der Nachricht (29.09.2026, 10:40), fünf durch ' | ' getrennte Felder. Die Zeile steht in Inline-Code-Backticks, so wie das Beispiel in vorlagen.md des Skills; der Inhalt entspricht exakt dem Format."
+    },
+    {
+      "text": "Die Priorität ist P3 oder P4 und wird mit Auswirkung und Dringlichkeit begründet",
+      "passed": true,
+      "evidence": "\"P3: Die Auswirkung ist mittel, weil 14 von 230 Clients betroffen sind und dort laut dir weitergearbeitet werden kann. [...] Die Dringlichkeit ist ebenfalls mittel, denn das Ziel ist morgen und bis dahin trägt der jetzige Zustand.\" Dazu Hinweis auf ITIL-Matrix als Annahme und Hochstufungsbedingung (P2, falls Notepad++ auf den 14 ganz fehlt)."
+    },
+    {
+      "text": "1618 wird richtig als 'eine andere Windows-Installer-Installation läuft bereits' erklärt",
+      "passed": true,
+      "evidence": "\"1618 ist `ERROR_INSTALL_ALREADY_RUNNING`. Windows Installer lässt nur eine Installation gleichzeitig zu, und auf diesen 14 Clients war er beim Paketlauf schon belegt.\""
+    },
+    {
+      "text": "Als Prüfweg wird genannt, welche andere Installation zur Fehlerzeit lief: MsiInstaller-Ereignisse 1040/1042 oder Windows-Update-Ereignisse im selben Zeitfenster",
+      "passed": true,
+      "evidence": "Hypothese 1: \"Im Lagebild des betroffenen Clients schließt ein MsiInstaller-Paar 1040/1042 mit einem anderen Produkt die Fehlerzeit ein, oder dort steht WindowsUpdateClient 43/19. Beim erfolgreichen Client fehlt das.\" Außerdem werden die Abschnitte \"Windows Installer (MsiInstaller)\" und \"Windows Update im Zeitraum\" ausdrücklich angefordert."
+    },
+    {
+      "text": "Die Antwort schlägt vor, betroffene und erfolgreiche Clients zu vergleichen (was die 14 gemeinsam haben)",
+      "passed": true,
+      "evidence": "\"Gesucht ist, was die 14 gemeinsam haben und die anderen nicht.\" Abschnitt a): \"Vergleich in der Empirum-Konsole, die 14 gegen den Rest\" mit Kriterien (Standort/Depot, Gerätetyp, Windows-Build, weitere Pakete, Vorversion). Abschnitt b): \"Lagebild von einem der 14 und von einem erfolgreichen Client, am besten mit gleichem Standort und Gerätetyp.\""
+    },
+    {
+      "text": "Für die Clients gibt es einen nur lesenden Befehlsblock oder das Lagebild-Skript mit dem Zeitfenster der Rollout-Nacht",
+      "passed": true,
+      "evidence": "PowerShell-Block mit `$seit = '2026-09-28 18:00'   # Annahme: vor Beginn des Rollout-Fensters` und `Invoke-Command -ComputerName $pc -FilePath .\\windows-lagebild.ps1 -ArgumentList 'Notepad++', 48, $seit`, alternativ lokal mit `-Seit \"2026-09-28 18:00\"`. \"Das Skript liest nur und ändert nichts.\" Geprüft: Das Skript hat param(Software, Stunden, Seit, Ausgabe), die Positionszuordnung stimmt, und es schreibt nur die Berichtsdatei bei -Ausgabe."
+    },
+    {
+      "text": "Die Antwort stellt höchstens drei Rückfragen",
+      "passed": true,
+      "evidence": "Abschnitt \"Was ich von dir brauche\" hat zwei nummerierte Punkte mit drei Fragesätzen: \"Scheitern alle 14 im selben Schritt?\", \"Wann lief das Rollout-Fenster?\", \"War für diese Clients in derselben Nacht ein WSUS- oder Update-Fenster oder ein anderes Paket geplant?\" (dazu die Bitte um die wörtliche Fehlerzeile). Die Zeile \"Liegen alle innerhalb weniger Minuten [...] oder über die Nacht verteilt?\" ist ein Prüfpunkt für die eigene Konsolenauswertung des Nutzers (mit Deutungshinweis \"spricht für 1\") und keine Rückfrage. Damit genau an der Grenze von drei."
+    },
+    {
+      "text": "Erneutes Verteilen des Pakets wird nicht sofort angeordnet, sondern als Schritt nach Klärung der Ursache oder mit Freigabe dargestellt",
+      "passed": true,
+      "evidence": "\"Stoß das Paket tagsüber nicht einfach neu an. Die Ursache ist noch offen [...]\". Plan: \"Heute: Belege auswerten und die Ursache festlegen.\" und dann \"Heute Abend nach Arbeitsende: Das Paket nur den 14 erneut zuweisen [...] Das ist ein Eingriff der Stufe 2, deshalb frage ich dich vorher mit genauer Aktion und dem Weg zurück.\" Beides erfüllt: nach Ursachenklärung und mit Freigabe."
+    },
+    {
+      "text": "Die Antwort enthält keinen als erledigt formulierten Tickettext (höchstens einen ausdrücklich als Entwurf markierten)",
+      "passed": true,
+      "evidence": "Kein Tickettext in antwort.md. Stattdessen: \"Morgen früh prüfen: [...] Danach bekommst du den Tickettext.\""
+    }
+  ],
+  "summary": {
+    "passed": 9,
+    "failed": 0,
+    "total": 9,
+    "pass_rate": 1.0
+  },
+  "execution_metrics": {
+    "tool_calls": {
+      "Read": 2,
+      "Bash": 6,
+      "ToolSearch": 2,
+      "WebSearch": 5,
+      "WebFetch": 2,
+      "Write": 1,
+      "SubagentHandback": 1
+    },
+    "total_tool_calls": 19,
+    "files_created": [
+      "antwort.md"
+    ],
+    "output_chars": 6928,
+    "transcript_chars": 5385
+  },
+  "timing": {
+    "executor_duration_seconds": 225.2,
+    "total_duration_seconds": 225.2,
+    "total_tokens": 114451
+  },
+  "claims": [
+    {
+      "claim": "Der Lauf hat SKILL.md, prioritaet.md, werkzeuge.md, vorlagen.md, das Playbook windows-software.md und windows-system.md sowie das Lagebild-Skript gelesen",
+      "type": "process",
+      "verified": true,
+      "evidence": "transcript.md: Read SKILL.md, Bash cat prioritaet.md/werkzeuge.md/vorlagen.md, Read playbooks/windows-software.md, Bash cat playbooks/windows-system.md, sed auf scripts/windows-lagebild.ps1."
+    },
+    {
+      "claim": "1618 ist ERROR_INSTALL_ALREADY_RUNNING; Windows Installer lässt nur eine Installation gleichzeitig zu",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Standardbedeutung des MSI-Rückgabewerts 1618 (_MSIExecute-Mutex); deckt sich mit dem Skill-Playbook."
+    },
+    {
+      "claim": "WindowsUpdateClient 43/19 kennzeichnen Beginn bzw. erfolgreiche Installation eines Updates",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Übliche Bedeutung der Ereignis-IDs; so auch im Abschnittstitel des Lagebild-Skripts (43 = gestartet, 19 = installiert, 20 = fehlgeschlagen)."
+    },
+    {
+      "claim": "Das Lagebild-Skript liest nur und ändert nichts; es enthält die Abschnitte 'Neustart ausstehend, laufende Installationen', 'Windows Installer (MsiInstaller)', 'Windows Update im Zeitraum', 'Installiert: Notepad++', 'Softwareverteilung (Empirum): Notepad++' mit Setup.inf-Call/MsiExec-Zeilen und Protokollzeilen aus C:\\Windows\\Temp",
+      "type": "factual",
+      "verified": true,
+      "evidence": "scripts/windows-lagebild.ps1: Abschnitte in Zeilen 124, 218, 229, 323, 390; einzige Schreiboperation ist Out-File auf -Ausgabe (Zeile 421)."
+    },
+    {
+      "claim": "Aufruf `Invoke-Command -FilePath .\\windows-lagebild.ps1 -ArgumentList 'Notepad++', 48, $seit` übergibt Software, Stunden und Seit",
+      "type": "factual",
+      "verified": true,
+      "evidence": "param-Block: [string]$Software, [int]$Stunden = 48, [datetime]$Seit, [string]$Ausgabe; Positionsreihenfolge passt, der String '2026-09-28 18:00' wird zu [datetime] konvertiert."
+    },
+    {
+      "claim": "Notepad++ 8.8.5 stammt vom 14.08.2025; aktuell ist 8.9.8.1 vom 24.09.2026 mit fünf behobenen Schwachstellen",
+      "type": "factual",
+      "verified": false,
+      "evidence": "Ohne Websuche nicht prüfbar. Laut Transkript per WebSearch und WebFetch (notepad-plus-plus.org/news/v8981-released/) recherchiert; plausibel, aber vom Grader nicht bestätigt."
+    },
+    {
+      "claim": "Erst ab 8.8.9 prüft WinGUp Zertifikat und Signatur; die Update-Infrastruktur war von Juni bis Dezember 2025 kompromittiert",
+      "type": "factual",
+      "verified": false,
+      "evidence": "Deckt sich mit der Baseline-Antwort und öffentlich bekannten Angaben zum Notepad++-Updater-Vorfall; Zeitraum vom Grader ohne Websuche nicht bestätigt. Keine offensichtlich falsche Aussage."
+    },
+    {
+      "claim": "Bei einem EXE-Installer stammt 1618 aus einem msiexec-Aufruf im Ablauf, meist der Deinstallation einer MSI-Vorversion",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Technisch stimmig: Der NSIS-Installer von Notepad++ nutzt kein Windows Installer, 1618 kann dann nur von einem msiexec-Aufruf im Paketablauf kommen. Entspricht dem Playbook."
+    }
+  ],
+  "user_notes_summary": {
+    "uncertainties": [
+      "Priorität nach ITIL-Matrix eingestuft, weil die Prioritätsregeln des Arbeitgebers unbekannt sind (als Annahme markiert)",
+      "Beginn des Rollout-Fensters (28.09. 18:00) als Annahme gesetzt"
+    ],
+    "needs_review": [
+      "Keine user_notes.md vorhanden. Die letzte Antwort des Laufs im Transkript enthält den Artefakt-Satz 'antml:reasoning_effort=40 ist gesetzt' (nicht in antwort.md)."
+    ],
+    "workarounds": [
+      "Skill 'paketieren' in der Sitzung nicht verfügbar; Paketkorrektur nur als setup.inf-Vorschlag angekündigt",
+      "Kein Zugriff auf Clients und Empirum-Konsole; Belege sammelt der Nutzer"
+    ]
+  },
+  "eval_feedback": {
+    "suggestions": [
+      {
+        "assertion": "Die Antwort beginnt mit einer Statuszeile im Format `INC-JJJJMMTT-HHMM | P<1-4> | <Bereich> | <Status> | <Titel>`, deren Zeit der Uhrzeit aus der Nachricht (10:40) entspricht und nicht einer UTC-Zeit",
+        "reason": "vorlagen.md enthält als Beispiel fast genau diesen Fall (`INC-20260929-1412 | P3 | Windows-Software | wartet auf Nutzer | Rollout Notepad++: 1618 auf 14 Clients`). Statuszeile, Priorität und Bereich lassen sich damit abschreiben; nur die Uhrzeit diskriminiert. Das Beispiel in vorlagen.md sollte einen anderen Fall zeigen, sonst misst das Eval Kopieren statt Generalisierung."
+      },
+      {
+        "reason": "Das Playbook nennt die wörtliche Empirum-Fehlerzeile (`<Meldung> ErrorLevel: 1618`) als wichtigste Angabe. Kein Kriterium prüft, ob danach gefragt wird; der Lauf mit Skill tut es, die Baseline nicht."
+      },
+      {
+        "assertion": "Die Antwort stellt höchstens drei Rückfragen",
+        "reason": "Eine Antwort ganz ohne Rückfragen besteht ebenfalls (die Baseline stellt keine). Zusammen mit einem Kriterium 'fragt nach der Fehlerzeile oder dem Rollout-Fenster' würde es diskriminieren."
+      }
+    ],
+    "overall": "Die Kriterien treffen die fachlichen Kernpunkte. Schwach sind die Kriterien 7 und 9, die eine knappe Antwort ohne Rückfragen und ohne Tickettext automatisch erfüllt. Kriterium 1 wird durch das fast identische Beispiel in vorlagen.md entwertet."
+  }
+}

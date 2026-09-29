@@ -1,0 +1,16 @@
+{
+  "eval_id": 1,
+  "eval_name": "win-1618-rollout-teilmenge",
+  "prompt": "Empirum-Rollout von Notepad++ 8.8.5 heute Nacht: auf 14 von 230 Clients steht Fehler, Rückgabewert 1618. Der Rest ist ok. Die Leute können arbeiten, aber ich will das bis morgen sauber haben. (Dienstag, 29.09.2026, 10:40 Uhr)",
+  "assertions": [
+    "Die Antwort beginnt mit einer Statuszeile im Format `INC-JJJJMMTT-HHMM | P<1-4> | <Bereich> | <Status> | <Titel>`, deren Zeit der Uhrzeit aus der Nachricht (10:40) entspricht und nicht einer UTC-Zeit",
+    "Die Priorität ist P3 oder P4 und wird mit Auswirkung und Dringlichkeit begründet",
+    "1618 wird richtig als 'eine andere Windows-Installer-Installation läuft bereits' erklärt",
+    "Als Prüfweg wird genannt, welche andere Installation zur Fehlerzeit lief: MsiInstaller-Ereignisse 1040/1042 oder Windows-Update-Ereignisse im selben Zeitfenster",
+    "Die Antwort schlägt vor, betroffene und erfolgreiche Clients zu vergleichen (was die 14 gemeinsam haben)",
+    "Für die Clients gibt es einen nur lesenden Befehlsblock oder das Lagebild-Skript mit dem Zeitfenster der Rollout-Nacht",
+    "Die Antwort stellt höchstens drei Rückfragen",
+    "Erneutes Verteilen des Pakets wird nicht sofort angeordnet, sondern als Schritt nach Klärung der Ursache oder mit Freigabe dargestellt",
+    "Die Antwort enthält keinen als erledigt formulierten Tickettext (höchstens einen ausdrücklich als Entwurf markierten)"
+  ]
+}

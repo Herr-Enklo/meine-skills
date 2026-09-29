@@ -1,0 +1,160 @@
+{
+  "expectations": [
+    {
+      "text": "Die Antwort beginnt mit einer Statuszeile im Format `INC-JJJJMMTT-HHMM | P<1-4> | <Bereich> | <Status> | <Titel>`, deren Zeit der Uhrzeit aus der Nachricht (08:25) entspricht",
+      "passed": true,
+      "evidence": "Zeile 1: '`INC-20260929-0825 | P1 | Windows-System | wartet auf Nutzer | Leipzig: ca. 60 Nutzer können sich nicht an der Domäne anmelden`'. Fünf Felder mit ' | ' getrennt, ID INC-JJJJMMTT-HHMM = 20260929-0825 passt zu Dienstag, 29.09.2026, 08:25 Uhr. Bereich und Status stammen aus den Listen in vorlagen.md des Skills. Die Backticks um die Zeile entsprechen dem Beispiel dort und sind nur Formatierung."
+    },
+    {
+      "text": "Die Priorität ist P1 und der Vorfall wird als Major Incident behandelt",
+      "passed": true,
+      "evidence": "'P1 und Major Incident: ein ganzer Standort steht (Annahme nach ITIL-Matrix, eure Regeln kenne ich nicht).' Dazu passendes Vorgehen: '3. Rollen (Vorschlag): Du entscheidest ... Eine Person in Leipzig führt Block B aus ... Die Standortleitung bekommt halbstündlich einen Stand. Zeitleiste: 08:00 Beginn, 08:25 Meldung.'"
+    },
+    {
+      "text": "Die Hypothesen umfassen die Erreichbarkeit der Domänencontroller vom Standort aus (Standortverbindung, VPN, DC am Standort) und DNS",
+      "passed": true,
+      "evidence": "H2: 'Verbindung zur Zentrale gestört (VPN, WAN, Firewall), eventuell mit ausgefallenem DC oder einem RODC vor Ort', H1: 'Leipziger DC mit altem Datenstand'. DNS: H3 'falscher DNS-Server oder Standortzuordnung (DHCP-Änderung, alter DC in den SRV-Einträgen)', mit Prüfung per Get-DnsClientServerAddress und Resolve-DnsName auf die SRV-Einträge."
+    },
+    {
+      "text": "Zeitabweichung oder Zeitdienst (Kerberos, w32tm) wird als Hypothese oder Prüfung genannt",
+      "passed": true,
+      "evidence": "H4: 'Uhr des Leipziger DC mehr als fünf Minuten daneben, Kerberos scheitert: `w32tm /stripchart` in A über 300 s.' Prüfbefehle: 'w32tm /stripchart /computer:$($dc.HostName) /samples:1 /dataonly' (Block A) und 'w32tm /query /status' (Block B)."
+    },
+    {
+      "text": "Es gibt konkrete Prüfbefehle, die aus der Zentrale laufen (etwa nltest, Test-NetConnection zu den DCs, dcdiag, repadmin, Resolve-DnsName für SRV-Einträge)",
+      "passed": true,
+      "evidence": "Block A 'Admin-PC in der Zentrale': Get-ADDomainController, Get-ADComputer ... PasswordLastSet je DC, 'Test-NetConnection $dc.HostName -Port $p' für 53, 88, 135, 389, 445, 5985, w32tm /stripchart, Invoke-Command mit Dienststatus, 'Dsa Not Writable' und Ereignissen, 'repadmin /showrepl', 'repadmin /replsummary', 'Resolve-DnsName \"_ldap._tcp.$standort._sites.dc._msdcs.$domain\" -Type SRV', Get-ADReplicationSubnet. dcdiag fehlt, nltest steht nur in Block B (in Leipzig); das Kriterium nennt die Befehle nur als Beispiele."
+    },
+    {
+      "text": "Ein Entwurf für eine Nutzerinfo an die Betroffenen ist enthalten oder angeboten",
+      "passed": true,
+      "evidence": "Nur angeboten, nicht enthalten: '2. Überbrückung ... Wenn du willst, schreibe ich dazu eine kurze Nutzerinfo für Leipzig.' Das Kriterium lässt 'angeboten' ausdrücklich zu."
+    },
+    {
+      "text": "Massenhaftes Neu-Beitreten zur Domäne oder Zurücksetzen von Computerkonten wird nicht ohne Freigabe als Sofortmaßnahme angeordnet",
+      "passed": true,
+      "evidence": "'1. Sofort unterlassen, auch in Leipzig: keine Rechner neu in die Domäne aufnehmen, kein `Test-ComputerSecureChannel -Repair` oder `Reset-ComputerMachinePassword`' mit Begründung; in Block B 'Test-ComputerSecureChannel -Verbose  # nur Test, NICHT mit -Repair'."
+    },
+    {
+      "text": "Eine Sofortmaßnahme oder ein Workaround zur Wiederherstellung wird genannt, bevor die tiefe Ursachenanalyse beginnt",
+      "passed": true,
+      "evidence": "Abschnitt 2 steht vor den Diagnoseblöcken 4 und 5: 'Überbrückung, nur wer an diesem Rechner schon angemeldet war: Netzwerkkabel ziehen bzw. WLAN aus, anmelden (zwischengespeicherte Anmeldung), Kabel wieder stecken.' Einschränkung: Das hilft nur einem Teil der Betroffenen (nicht denen mit 'kein Anmeldeserver', die laut Antwort keinen Cache haben). Die eigentliche Wiederherstellung (Leipziger DC vom Netz nehmen) steht erst in Abschnitt 7 nach A und B."
+    },
+    {
+      "text": "Der Text der Antwort ist ohne Codeblöcke höchstens etwa 6000 Zeichen lang (mit einem kurzen Skript messen, Codeblöcke zwischen ``` nicht mitzählen)",
+      "passed": true,
+      "evidence": "laenge.py: 'gesamt 7676, ohne Codeblöcke 4642'. 4642 liegt unter 6000."
+    }
+  ],
+  "summary": {
+    "passed": 9,
+    "failed": 0,
+    "total": 9,
+    "pass_rate": 1.0
+  },
+  "execution_metrics": {
+    "tool_calls": {
+      "Bash": 9,
+      "ToolSearch": 1,
+      "WebSearch": 3,
+      "Write": 1,
+      "Read": 1,
+      "SubagentHandback": 1
+    },
+    "total_tool_calls": 16,
+    "files_created": [
+      "antwort.md"
+    ],
+    "output_chars": 7708,
+    "transcript_chars": 25162,
+    "errors_encountered": 0
+  },
+  "timing": {
+    "executor_duration_seconds": 438.7,
+    "total_duration_seconds": 438.7,
+    "total_tokens": 130750
+  },
+  "claims": [
+    {
+      "claim": "'Kein Anmeldeserver' heißt, kein DC erreichbar und keine zwischengespeicherte Anmeldung; 'Vertrauensstellung' heißt, ein DC antwortet, kennt aber das Computerkennwort nicht",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Fachlich richtig. Bei 'Vertrauensstellung' kommt auch ein gelöschtes oder deaktiviertes Computerkonto in Frage, das nennt die Antwort nicht."
+    },
+    {
+      "claim": "USN-Rollback zeigt sich an 'Dsa Not Writable' = 4, angehaltenem Netlogon, Ereignis 2095/2103 und Replikationsfehler 8456/8457",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Deckt sich mit den Microsoft-Artikeln zu USN-Rollback und Fehler 8456/8457, die im Transkript als Suchergebnisse stehen."
+    },
+    {
+      "claim": "NETLOGON 3210 auf dem Client nennt den DC; nltest /sc_query liefert bei H2 1311 (0x51f)",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Richtig: 3210 nennt den DC, gegen den die Authentifizierung scheiterte; 1311 = 0x51f = ERROR_NO_LOGON_SERVERS."
+    },
+    {
+      "claim": "Kerberos scheitert bei mehr als fünf Minuten Zeitabweichung (w32tm /stripchart über 300 s)",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Standardtoleranz ist 5 Minuten. Maßgeblich ist die Abweichung zwischen Client und DC; die Antwort misst DC gegen Zentrale, das ist als Hinweis brauchbar."
+    },
+    {
+      "claim": "PasswordLastSet des Computerkontos je DC vergleichen zeigt, ob der Leipziger DC einen alten Stand hat; liegt der neuere in der Zentrale, kommen die Rechner nach Abschalten des Leipziger DC ohne Reparatur wieder rein",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Schlüssig: pwdLastSet wird repliziert, auch auf RODCs. Wer einen DC mit aktuellem Kennwort erreicht, baut den sicheren Kanal wieder auf."
+    },
+    {
+      "claim": "Nach einem USN-Rollback ist laut Microsoft nur Herabstufen und Neuaufbau des DC sicher",
+      "type": "factual",
+      "verified": false,
+      "evidence": "Zu eng. Der zitierte Microsoft-Artikel nennt zwei Wege: DC herabstufen und neu aufbauen oder den Systemstatus aus einer gültigen Sicherung von vor dem falschen Restore zurückspielen. Kein grober Fehler, aber das 'nur' ist nicht belegt."
+    },
+    {
+      "claim": "Quellen: vier Microsoft-Learn-Artikel (USN-Rollback, gestörte Vertrauensstellung, 8456/8457, Nltest)",
+      "type": "process",
+      "verified": true,
+      "evidence": "Alle vier URLs stehen in den Ergebnissen der drei WebSearch-Aufrufe im Transkript."
+    },
+    {
+      "claim": "Aussagen zu aktuellen Microsoft-Updates",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Die Antwort enthält keine Aussagen zu Updates oder KB-Nummern; nichts zu belegen."
+    },
+    {
+      "claim": "Skill befolgt: SKILL.md, prioritaet.md, vorlagen.md, werkzeuge.md, Playbooks Windows-System und Netzwerk gelesen; kein Journal geschrieben",
+      "type": "process",
+      "verified": true,
+      "evidence": "Transkript: Bash-Aufrufe lesen diese Dateien; einziger Write ist antwort.md. Der evals-Ordner wurde nicht gelesen."
+    }
+  ],
+  "user_notes_summary": {
+    "uncertainties": [],
+    "needs_review": [],
+    "workarounds": [
+      "Keine user_notes.md vorhanden. Der Lauf hat die Länge selbst gemessen und den Text einmal gekürzt (5691 auf 4655 Zeichen ohne Codeblöcke)."
+    ]
+  },
+  "eval_feedback": {
+    "suggestions": [
+      {
+        "assertion": "Ein Entwurf für eine Nutzerinfo an die Betroffenen ist enthalten oder angeboten",
+        "reason": "Besteht mit einem Halbsatz ('Wenn du willst, schreibe ich ...'). Bei einem P1 mit 60 Betroffenen, die gerade nicht arbeiten können, wäre ein fertiger Zweizeiler sinnvoller; wenn das gewollt ist, sollte das Kriterium 'enthalten' verlangen."
+      },
+      {
+        "assertion": "Eine Sofortmaßnahme oder ein Workaround zur Wiederherstellung wird genannt, bevor die tiefe Ursachenanalyse beginnt",
+        "reason": "Der Cache-Workaround steht zwar früh, hilft aber nur den Nutzern mit zwischengespeicherter Anmeldung, also gerade nicht der Gruppe mit 'kein Anmeldeserver'. Die wiederherstellende Maßnahme (Leipziger DC vom Netz) kommt erst nach der Diagnose. Das Kriterium unterscheidet nicht zwischen Teil-Workaround und Wiederherstellung."
+      },
+      {
+        "assertion": "Der Text der Antwort ist ohne Codeblöcke höchstens etwa 6000 Zeichen lang (mit einem kurzen Skript messen, Codeblöcke zwischen ``` nicht mitzählen)",
+        "reason": "Codeblöcke zählen nicht; with_skill hat rund 3000 Zeichen Code, Block A allein etwa 40 Zeilen mit Schleifen und Invoke-Command. Wenn die Last für den Nutzer begrenzt werden soll, braucht es auch eine Grenze für den Code."
+      },
+      {
+        "reason": "Kein Kriterium prüft die fachliche Richtigkeit der Aussagen. Hier fiel nur eine Überspitzung auf (USN-Rollback: 'nur Herabstufen und Neuaufbau'), sie wäre aber von keinem Kriterium erfasst worden."
+      }
+    ],
+    "overall": "with_skill erfüllt alle neun Kriterien, zwei davon (Nutzerinfo, Workaround) nur in der schwächsten zulässigen Lesart. Die Kriterien unterscheiden gut bei Statuszeile und Reihenfolge, sind bei Nutzerinfo, Workaround-Wirkung und Codeumfang zu weich."
+  }
+}

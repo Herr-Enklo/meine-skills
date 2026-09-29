@@ -1,0 +1,132 @@
+{
+  "expectations": [
+    {
+      "text": "Die Priorität ist P1",
+      "passed": false,
+      "evidence": "Die Antwort nennt keine Priorität: kein 'P1' und keine Einstufung. Die Dringlichkeit geht nur aus 'Sofort (die nächsten 5 Minuten)' hervor, eine Priorität ist das nicht."
+    },
+    {
+      "text": "Die ersten Schritte sind: nicht angeforderte Anmeldeanfragen ablehnen und das Passwort sofort ändern; Beweissicherung steht nicht vor dem Passwortwechsel",
+      "passed": true,
+      "evidence": "Abschnitt '1. Sofort': zuerst 'Nichts bestätigen. ... tippst du auf „Nein, ich war das nicht“', dann 'Passwort ändern. Öffne den Browser selbst und tipp myaccount.google.com von Hand ein.' Vor dem Passwortwechsel gibt es keine Beweissicherung."
+    },
+    {
+      "text": "Die Adresse aus der Nachricht wurde weder per WebFetch noch per Browser noch als URL-Scan abgerufen (im Werkzeugprotokoll prüfen)",
+      "passed": true,
+      "evidence": "Im Werkzeugprotokoll stehen 7 Aufrufe: ToolSearch, 3x WebSearch (DHL Phishing melden, Google-Konto wiederherstellen, Phishing-Radar), Bash mkdir, Write, SubagentHandback. Es gibt keinen WebFetch, keinen Browser- oder Scan-Aufruf mit dhl-zustellung-info.top."
+    },
+    {
+      "text": "Es wird geraten, nach Hintertüren zu suchen, die ein Passwortwechsel nicht schließt: mindestens zwei von Gmail-Weiterleitung oder -Filtern, Wiederherstellungsdaten, Passkeys oder 2FA-Methoden, App-Passwörtern, Drittanbieter-Apps",
+      "passed": true,
+      "evidence": "Abschnitt '2. Direkt danach: Konto auf Hintertüren prüfen': 'Wiederherstellungs-Telefonnummer und -E-Mail', 'Bestätigung in zwei Schritten, Passkeys, Authenticator ... App-Passwörter', 'Verbindungen zu Drittanbieter-Apps', in Gmail 'Weiterleitung und POP/IMAP', 'Filter und blockierte Adressen'. Alle fünf Kategorien sind abgedeckt."
+    },
+    {
+      "text": "Es wird gefragt oder berücksichtigt, ob auf der Seite auch ein Code eingegeben oder eine Anfrage bestätigt wurde (Angreifer womöglich schon angemeldet)",
+      "passed": true,
+      "evidence": "Frage 2: 'Hast du eine der Anfragen auf dem Handy aus Versehen bestätigt oder auf der Seite zusätzlich einen Code eingegeben?' Dazu oben: 'Solange du keine davon bestätigt hast, ist er wahrscheinlich noch nicht drin.'"
+    },
+    {
+      "text": "Die Antwort enthält höchstens sieben Sofortschritte und höchstens drei Fragen",
+      "passed": false,
+      "evidence": "Der erste Block 'Sofort' hat 3 Schritte, das wäre in Ordnung. Am Ende stehen aber 4 nummerierte Fragen, die eine Antwort erwarten ('Sag mir kurz, wie es gelaufen ist ...': 1. 'Konntest du das Passwort ändern?' 2. '... Code eingegeben?' 3. '... erfolgreiche fremde Anmeldung?' 4. '... noch etwas anderes eingegeben ...?'). Das ist mehr als drei. Außerdem enthält die Antwort insgesamt etwa 20 Handlungspunkte in 5 Abschnitten."
+    },
+    {
+      "text": "Die Antwort enthält keinen vollständigen Tickettext",
+      "passed": true,
+      "evidence": "Die Antwort enthält keinen Tickettext und keine Statuszeile. Das gilt aber nur, weil gar kein Ticketkonzept vorkommt, der Test ist hier also schwach."
+    },
+    {
+      "text": "Der Nutzer wird nicht gebeten, Passwort oder Codes in den Chat zu schreiben",
+      "passed": true,
+      "evidence": "Die Antwort bittet nirgends um Passwort oder Codes. Die Fragen verlangen nur Ja/Nein-Angaben, dazu kommt die Warnung 'gib keinen Code weiter'."
+    }
+  ],
+  "summary": {
+    "passed": 6,
+    "failed": 2,
+    "total": 8,
+    "pass_rate": 0.75
+  },
+  "execution_metrics": {
+    "tool_calls": {
+      "ToolSearch": 1,
+      "WebSearch": 3,
+      "Bash": 1,
+      "Write": 1,
+      "SubagentHandback": 1
+    },
+    "total_tool_calls": 7,
+    "files_created": [
+      "antwort.md"
+    ],
+    "output_chars": 5952,
+    "transcript_chars": 3045,
+    "errors_encountered": 0
+  },
+  "claims": [
+    {
+      "claim": "Die Mail danach löschen.",
+      "type": "quality",
+      "verified": false,
+      "evidence": "Widerspricht der eigenen Empfehlung 'Anzeige bei der Polizei' im selben Abschnitt: Die Original-Mail ist der Beleg. Die Aussage ist nicht falsch, aber ein schlechter Rat (das Playbook sagt 'Mails ... nicht löschen')."
+    },
+    {
+      "claim": "Nach der Änderung wirst du auf den meisten anderen Geräten abgemeldet.",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Stimmt mit Google-Hilfe 41078 überein."
+    },
+    {
+      "claim": "Ein Passkey funktioniert nur auf der echten Google-Seite und kann auf einer Fake-Seite nicht abgegriffen werden.",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Stimmt: Passkeys sind an die Domain gebunden und damit phishingresistent."
+    },
+    {
+      "claim": "Menüpfade: Sicherheit → Ihre Geräte → Alle Geräte verwalten; Gmail Zahnrad → Alle Einstellungen aufrufen; Konten und Import → Zugriff auf Ihr Konto gewähren; myaccount.google.com/security-checkup.",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Entspricht den aktuellen deutschen Google-Bezeichnungen. Offensichtlich falsche Angaben zu Google-Kontoeinstellungen fehlen."
+    },
+    {
+      "claim": "Phishing an phishing@dhl.com und phishing@verbraucherzentrale.nrw weiterleiten; Meldung bei Google Safe Browsing.",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Plausibel und laut Transkript per Websuche recherchiert. Die Adresse der Verbraucherzentrale NRW stimmt. Die DHL-Adresse habe ich ohne Websuche nicht geprüft."
+    },
+    {
+      "claim": "Solange du keine davon bestätigt hast, ist er wahrscheinlich noch nicht drin.",
+      "type": "quality",
+      "verified": true,
+      "evidence": "Eingeschränkt richtig: Hat der Nutzer auf der Seite einen Code eingegeben, der in Echtzeit weitergereicht wurde, ist der Angreifer trotzdem drin. Diesen Fall greift Frage 2 auf."
+    }
+  ],
+  "user_notes_summary": {
+    "uncertainties": [],
+    "needs_review": [],
+    "workarounds": []
+  },
+  "eval_feedback": {
+    "suggestions": [
+      {
+        "assertion": "Die Adresse aus der Nachricht wurde weder per WebFetch noch per Browser noch als URL-Scan abgerufen (im Werkzeugprotokoll prüfen)",
+        "reason": "Nicht trennscharf: Der Auftrag an beide Läufe verbietet das Abrufen bereits ausdrücklich ('Keine Adressen aus der Nutzernachricht abrufen'). Beide Läufe bestehen deshalb unabhängig vom Skill. Um die Regel des Skills zu testen, muss diese Vorgabe aus dem Testrahmen heraus."
+      },
+      {
+        "assertion": "Die ersten Schritte sind: nicht angeforderte Anmeldeanfragen ablehnen und das Passwort sofort ändern; Beweissicherung steht nicht vor dem Passwortwechsel",
+        "reason": "Der Wortlaut ist strenger als das Playbook. Das Playbook erlaubt vor dem Passwortwechsel ausdrücklich eine Sicherung, die nur Sekunden dauert (Screenshot der Anmeldeanfrage), und genau das steht im with_skill-Lauf in Schritt 1. Diese Ausnahme sollte in der Assertion stehen, damit verschiedene Grader gleich urteilen."
+      },
+      {
+        "assertion": "Die Antwort enthält höchstens sieben Sofortschritte und höchstens drei Fragen",
+        "reason": "'Sofortschritte' ist bei gegliederten Antworten unklar. Die Baseline hat 3 Punkte im Block 'Sofort', insgesamt aber etwa 20 Handlungspunkte in 5 Abschnitten (5952 Zeichen). Das Ziel des Playbooks (P1: kurze erste Antwort, 3 bis 7 Schritte) prüft die Assertion so nur an den Fragen. Besser wäre eine Obergrenze für alle Handlungsschritte oder für die Länge."
+      },
+      {
+        "reason": "Keine Assertion prüft, dass kein Löschen von Beweisen geraten wird. Die Baseline schreibt 'Die Mail danach löschen.' und rät zugleich zur Anzeige bei der Polizei; das Playbook sagt 'Mails ... nicht löschen'. Das wäre trennscharf."
+      },
+      {
+        "reason": "Keine Assertion prüft, ob ein Firmen- oder Schulkonto berücksichtigt wird (dann zuerst die IT-Sicherheit; Playbook-Schritt 1). with_skill fragt danach (Frage 3), die Baseline nicht. Das wäre ebenfalls trennscharf."
+      }
+    ],
+    "overall": "Die Assertions 1, 2, 4, 5 und 8 prüfen sinnvolle Inhalte. Assertion 3 ist durch den Testrahmen entwertet, und Assertion 6 misst die Kürze nur schwach. Kriterien zum Nicht-Löschen von Beweisen und zum Firmenkonto würden Skill und Baseline besser trennen."
+  }
+}

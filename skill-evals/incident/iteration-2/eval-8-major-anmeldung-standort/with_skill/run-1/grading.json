@@ -1,0 +1,165 @@
+{
+  "expectations": [
+    {
+      "text": "Die Antwort beginnt mit einer Statuszeile im Format `INC-JJJJMMTT-HHMM | P<1-4> | <Bereich> | <Status> | <Titel>`, deren Zeit der Uhrzeit aus der Nachricht (08:25) entspricht",
+      "passed": true,
+      "evidence": "Zeile 1: `INC-20260929-0825 | P1 | Windows-System | wartet auf Nutzer | Leipzig: ca. 60 Nutzer ohne Domänenanmeldung`. Das Datum 20260929 und die Zeit 0825 stimmen mit der Nachricht (29.09.2026, 08:25) überein. Bereich und Status sind gültige Werte, ein Titel ist vorhanden. Die Zeile steht als Inline-Code in Backticks, das Format selbst stimmt."
+    },
+    {
+      "text": "Die Priorität ist P1 und der Vorfall wird als Major Incident behandelt",
+      "passed": true,
+      "evidence": "Zeile 1 enthält 'P1', Zeile 3 lautet 'P1 und Major Incident: ein ganzer Standort kann nicht arbeiten'. Auch das Vorgehen entspricht einem Major Incident: 'Rollen festlegen: Du arbeitest technisch, Entscheidung (etwa IT-Leitung) und Kommunikation nach Leipzig übernimmt je jemand anderes. Zeitleiste: 08:00 ..., 08:25 Meldung'."
+    },
+    {
+      "text": "Die Hypothesen umfassen die Erreichbarkeit der Domänencontroller vom Standort aus (Standortverbindung, VPN, DC am Standort) und DNS",
+      "passed": true,
+      "evidence": "Schritt 6: 'H1 DC in Leipzig ausgefallen oder gestört', 'H2 Leitung/Firewall nach Leipzig oder falscher DNS-Server per DHCP'. Block A prüft die Ports 53/88/389/445 zu den Leipziger DCs und fragt die SRV-Einträge per Resolve-DnsName ab. VPN wird nicht wörtlich genannt, die Standortverbindung ist aber über 'Leitung/Firewall nach Leipzig' abgedeckt."
+    },
+    {
+      "text": "Zeitabweichung oder Zeitdienst (Kerberos, w32tm) wird als Hypothese oder Prüfung genannt",
+      "passed": true,
+      "evidence": "Als Prüfung vorhanden: In Block A steht 'w32tm /stripchart \"/computer:$h\" /samples:1 /dataonly' unter '== DCs in Leipzig: Zeit, ...', dazu der Dienststatus W32Time. Block B enthält 'w32tm /query /status'. Schwach ist, dass keine Hypothese zur Zeitabweichung formuliert ist und Kerberos oder die 5-Minuten-Toleranz nirgends erwähnt werden. Das Kriterium verlangt aber nur Hypothese oder Prüfung."
+    },
+    {
+      "text": "Es gibt konkrete Prüfbefehle, die aus der Zentrale laufen (etwa nltest, Test-NetConnection zu den DCs, dcdiag, repadmin, Resolve-DnsName für SRV-Einträge)",
+      "passed": true,
+      "evidence": "Block A läuft laut Kopf auf dem 'Admin-PC Zentrale' und enthält Test-NetConnection zu den DCs (Ports 53, 88, 389, 445), 'repadmin /replsummary', 'repadmin /showrepl', 'dcdiag \"/s:$h\" /q', w32tm /stripchart, Get-ADComputer gegen die DCs in Leipzig und in der Zentrale sowie Resolve-DnsName für '_ldap._tcp.<Site>._sites.dc._msdcs...' -Type SRV."
+    },
+    {
+      "text": "Ein Entwurf für eine Nutzerinfo an die Betroffenen ist enthalten oder angeboten",
+      "passed": true,
+      "evidence": "Schritt 1 enthält einen ausformulierten Entwurf: 'Betreff: Anmeldung an den PCs in Leipzig – gestört / Was ist los: Seit etwa 8 Uhr ... / Was wir tun: ... / Was Sie tun können: Rechner eingeschaltet lassen. Ein neues Passwort hilft hier nicht. / Nächste Information: spätestens 09:00 Uhr.'"
+    },
+    {
+      "text": "Massenhaftes Neu-Beitreten zur Domäne oder Zurücksetzen von Computerkonten wird nicht ohne Freigabe als Sofortmaßnahme angeordnet",
+      "passed": true,
+      "evidence": "Schritt 2: 'Vorerst nichts reparieren: kein `Test-ComputerSecureChannel -Repair`, keine Maschinenkennwörter zurücksetzen, nicht neu in die Domäne aufnehmen, am Leipziger DC kein Neustart und keine erzwungene Replikation.' Begründet wird das so: 'Reparaturen gegen einen DC mit altem Stand machen es schlimmer.'"
+    },
+    {
+      "text": "Eine Sofortmaßnahme oder ein Workaround zur Wiederherstellung wird genannt, bevor die tiefe Ursachenanalyse beginnt",
+      "passed": false,
+      "evidence": "Der einzige Workaround zur Wiederherstellung (Netzwerkkabel ziehen, zwischengespeicherte Anmeldung) steht erst in Schritt 5 und heißt dort 'Parallel Workaround an einem Rechner mit „Vertrauensstellung“ testen'. Davor stehen die Diagnoseblöcke A (Replikation, dcdiag, Ereignisse, gelöschte Konten, GPOs) und B. Die Schritte 1 und 2 (Nutzerinfo, nichts reparieren) stellen nichts wieder her. Der Workaround kommt also parallel zur Ursachenanalyse bzw. im Text nach ihrem Beginn und nicht davor. Der Abstand zum Kriterium ist knapp, bei strenger Auslegung reicht das aber nicht."
+    },
+    {
+      "text": "Der Text der Antwort ist ohne Codeblöcke höchstens etwa 6000 Zeichen lang (mit einem kurzen Skript messen, Codeblöcke zwischen ``` nicht mitzählen)",
+      "passed": true,
+      "evidence": "laenge.py: 'gesamt 9991, ohne Codeblöcke 4593'. 4593 liegt unter 6000."
+    }
+  ],
+  "summary": {
+    "passed": 8,
+    "failed": 1,
+    "total": 9,
+    "pass_rate": 0.89
+  },
+  "execution_metrics": {
+    "tool_calls": {
+      "Read": 9,
+      "Bash": 7,
+      "Grep": 1,
+      "ToolSearch": 2,
+      "WebSearch": 5,
+      "WebFetch": 1,
+      "Skill": 1,
+      "Write": 1,
+      "SubagentHandback": 1
+    },
+    "total_tool_calls": 28,
+    "files_created": [
+      "antwort.md"
+    ],
+    "output_chars": 10054,
+    "transcript_chars": 21187
+  },
+  "timing": {
+    "executor_duration_seconds": 612.9,
+    "total_duration_seconds": 612.9,
+    "total_tokens": 168356
+  },
+  "claims": [
+    {
+      "claim": "KB5124008 lässt Windows 11 24H2/25H2 mit Credential Guard die Vertrauensstellung verlieren, wenn Machine Identity Isolation an ist und die Domänenfunktionsebene unter Windows Server 2025 liegt; betroffen ist Build 26100/26200 ab UBR 9445, erkennbar an MachineIdentityIsolation = 2",
+      "type": "factual",
+      "verified": false,
+      "evidence": "Im Transkript nur teilweise gedeckt. Der WebFetch (bleepingcomputer) belegt 25H2, Build 26200.9445 und Machine Identity Isolation 'enabled in audit or enforcement mode'. Er sagt aber ausdrücklich, dass der Artikel keine Domänenfunktionsebene und keine DC-Version nennt. Der Q&A-Titel nennt 'Server 2019 DCs'. Für Credential Guard als Bedingung, für die Grenze 'Funktionsebene Windows Server 2025', für 24H2 als betroffen und für den Registrierungswert = 2 gibt es im sichtbaren Transkript keine Quelle (die Werkzeugergebnisse sind dort gekürzt). Außerdem zeigt ein Suchergebnis das Out-of-band-Update 'September 14, 2026—KB5129195 (OS Builds 26200.9457 and 26100.9457)'. Die Antwort erwähnt es nicht, obwohl es die Angabe 'UBR ab 9445' als betroffenen Bereich einschränken könnte."
+    },
+    {
+      "claim": "Quellenlinks auf die Supportseite zu KB5124008 und auf 'Windows 11 25H2, bekannte Probleme' (Release Health)",
+      "type": "factual",
+      "verified": false,
+      "evidence": "Keine der beiden URLs erscheint in den sichtbaren Werkzeugergebnissen. Sichtbar sind die Supportseite zu KB5129195 und die Seite 'Windows 11, version 26H1 known issues'. Beide Links sind damit unbelegt. Die Links zu Broken trust relationship und USN rollback sind in den Suchergebnissen gedeckt."
+    },
+    {
+      "claim": "USN-Rollback zeigt sich durch Ereignis 2095 in 'Directory Service' und ein angehaltenes Netlogon (Paused)",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Stimmt mit der Microsoft-Doku zum USN-Rollback überein, deren Suchergebnis im Transkript steht."
+    },
+    {
+      "claim": "repadmin meldet 1722 (RPC-Server nicht verfügbar), wenn der Standort nicht erreichbar ist; Netlogon 5719 auf dem Client, wenn kein DC gefunden wird",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Fachlich richtig: 1722 steht für RPC_S_SERVER_UNAVAILABLE, 5719 für 'kein sicherer Kanal zu einem DC'."
+    },
+    {
+      "claim": "Workaround: Netzwerk trennen, dann greift die zwischengespeicherte Anmeldung. Bei „kein Anmeldeserver“ hat Windows das schon erfolglos versucht",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Fachlich richtig: Die Meldung 'kein Anmeldeserver' kommt, wenn kein DC erreichbar ist und für den Benutzer keine Anmeldung zwischengespeichert ist."
+    },
+    {
+      "claim": "Mit aktiviertem AD-Papierkorb kommen gelöschte Computerkonten samt Kennwort zurück, ohne die Clients anzufassen",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Fachlich richtig: Beim Papierkorb bleiben alle Attribute erhalten. Die Einschränkung auf den aktivierten Papierkorb ist genannt."
+    },
+    {
+      "claim": "Kein Journal früherer Incidents vorhanden",
+      "type": "process",
+      "verified": true,
+      "evidence": "Das Transkript zeigt, dass 'ls ~/.claude/agent-memory/incident-manager/' mit 'No such file or directory' scheitert."
+    },
+    {
+      "claim": "Die Befehle in Block A und B sind korrekt (dcdiag /s: /q, repadmin, w32tm /stripchart, nltest /dsgetdc und /sc_query, Resolve-DnsName für den SRV-Namen des Standorts, Win32_DeviceGuard SecurityServicesRunning 1 = Credential Guard)",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Syntax und Semantik stimmen, keine offensichtlich falsche technische Aussage. Der Registrierungswert 'HKLM\\SYSTEM\\CurrentControlSet\\Control\\Lsa /v MachineIdentityIsolation' ist nicht überprüfbar (siehe oben)."
+    }
+  ],
+  "user_notes_summary": {
+    "uncertainties": [
+      "Die Priorität ist ausdrücklich als Annahme nach der ITIL-Matrix markiert ('eure eigenen Prioritätsregeln kenne ich nicht').",
+      "Die Werkzeugergebnisse im Transkript sind gekürzt. Die Details zu KB5124008 lassen sich deshalb nur teilweise nachprüfen."
+    ],
+    "needs_review": [
+      "Die H5-Bedingungen zu KB5124008 (Credential Guard, Funktionsebene 2025, Registrierungswert 2) und die Rolle des Out-of-band-Updates KB5129195 sollten gegen die Microsoft-Quelle geprüft werden."
+    ],
+    "workarounds": [
+      "Keine user_notes.md vorhanden. Der Ausführende hat die Antwort nach eigener Zählung (5448 Zeichen) gekürzt, um unter der Längengrenze zu bleiben."
+    ]
+  },
+  "eval_feedback": {
+    "suggestions": [
+      {
+        "assertion": "Zeitabweichung oder Zeitdienst (Kerberos, w32tm) wird als Hypothese oder Prüfung genannt",
+        "reason": "Besteht schon, wenn w32tm irgendwo in einem Skript steht. with_skill prüft die Zeit nur per Befehl und sagt nirgends, woran man eine schädliche Abweichung erkennt (Kerberos-Toleranz 5 Minuten); without_skill erklärt das. Besser: Die Zeitabweichung muss mit ihrer Folge für Kerberos oder einem Grenzwert genannt werden."
+      },
+      {
+        "assertion": "Ein Entwurf für eine Nutzerinfo an die Betroffenen ist enthalten oder angeboten",
+        "reason": "Unterscheidet nicht zwischen einem ausformulierten Entwurf (with_skill: Betreff, Was ist los, Was Sie tun können, nächste Info) und einem Einzeiler mit Stichpunkten (without_skill). Wenn der ausformulierte Text gemeint ist, sollte das Kriterium Bestandteile verlangen, etwa Uhrzeit der nächsten Info und eine Handlungsanweisung an die Betroffenen."
+      },
+      {
+        "assertion": "Eine Sofortmaßnahme oder ein Workaround zur Wiederherstellung wird genannt, bevor die tiefe Ursachenanalyse beginnt",
+        "reason": "Unklar, ob ein Workaround zählt, der nach den Diagnoseblöcken steht und als 'parallel' markiert ist. with_skill nennt ihn in Schritt 5 nach Block A/B, without_skill ganz am Ende als 'falls es länger dauert'. Beide wurden streng als nicht bestanden bewertet, obwohl der Abstand zwischen ihnen erheblich ist. Präziser wäre etwa 'Der Workaround steht vor dem ersten Diagnosebefehl' oder 'wird sofort und nicht erst bei langer Dauer empfohlen'."
+      },
+      {
+        "reason": "Kein Kriterium prüft, ob Aussagen über aktuelle Microsoft-Updates belegt und vollständig sind. with_skill nennt bei KB5124008 Bedingungen (Credential Guard, Domänenfunktionsebene unter Windows Server 2025, MachineIdentityIsolation = 2), die im sichtbaren Transkript nicht gedeckt sind, und übergeht das dort auftauchende Out-of-band-Update KB5129195."
+      },
+      {
+        "assertion": "Der Text der Antwort ist ohne Codeblöcke höchstens etwa 6000 Zeichen lang (mit einem kurzen Skript messen, Codeblöcke zwischen ``` nicht mitzählen)",
+        "reason": "Codeblöcke zählen nicht mit. Deshalb besteht with_skill mit 9991 Zeichen insgesamt, davon rund 5400 in zwei langen PowerShell-Blöcken (Block A etwa 55 Zeilen). Wenn die Last für den Nutzer begrenzt werden soll, braucht es auch eine Grenze für die Länge des Codes."
+      }
+    ],
+    "overall": "Die Kriterien decken die wichtigsten Punkte eines Major Incidents ab. Die Kriterien zu Zeitdienst, Nutzerinfo und Reihenfolge des Workarounds sind aber zu weich oder zu unscharf formuliert, und die Richtigkeit von Aussagen zu Updates prüft keines."
+  }
+}

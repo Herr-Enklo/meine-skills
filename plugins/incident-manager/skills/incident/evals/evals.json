@@ -1,0 +1,145 @@
+{
+  "skill_name": "incident",
+  "evals": [
+    {
+      "id": 1,
+      "name": "win-1618-rollout-teilmenge",
+      "prompt": "Empirum-Rollout von Notepad++ 8.8.5 heute Nacht: auf 14 von 230 Clients steht Fehler, Rückgabewert 1618. Der Rest ist ok. Die Leute können arbeiten, aber ich will das bis morgen sauber haben. (Dienstag, 29.09.2026, 10:40 Uhr)",
+      "expected_output": "P3-Einstufung, 1618 als konkurrierende Installation erklärt, Suche nach der anderen Installation über MsiInstaller 1040/1042 oder Windows Update im Zeitfenster, Vergleich betroffener und erfolgreicher Clients, lesender Befehlsblock oder Lagebild-Skript statt Fragen, erneutes Verteilen erst nach Klärung.",
+      "files": [],
+      "expectations": [
+        "Die Antwort beginnt mit einer Statuszeile im Format `INC-JJJJMMTT-HHMM | P<1-4> | <Bereich> | <Status> | <Titel>`, deren Zeit der Uhrzeit aus der Nachricht (10:40) entspricht und nicht einer UTC-Zeit",
+        "Die Priorität ist P3 oder P4 und wird mit Auswirkung und Dringlichkeit begründet",
+        "1618 wird richtig als 'eine andere Windows-Installer-Installation läuft bereits' erklärt",
+        "Als Prüfweg wird genannt, welche andere Installation zur Fehlerzeit lief: MsiInstaller-Ereignisse 1040/1042 oder Windows-Update-Ereignisse im selben Zeitfenster",
+        "Die Antwort schlägt vor, betroffene und erfolgreiche Clients zu vergleichen (was die 14 gemeinsam haben)",
+        "Für die Clients gibt es einen nur lesenden Befehlsblock oder das Lagebild-Skript mit dem Zeitfenster der Rollout-Nacht",
+        "Die Antwort stellt höchstens drei Rückfragen",
+        "Erneutes Verteilen des Pakets wird nicht sofort angeordnet, sondern als Schritt nach Klärung der Ursache oder mit Freigabe dargestellt",
+        "Die Antwort weist auf eine Tücke beim Wiederholen hin: tagsüber scheitert der Installer bei geöffnetem Programm anders, oder der Reparaturpfad des Pakets entfernt zuerst die Vorversion"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "win-0xc000007b-teilmenge-frist",
+      "prompt": "Seit dem Patchday-Rollout gestern Abend startet bei drei Kollegen in der Buchhaltung unser Fachprogramm LohnPro (32-Bit, Version 12.4) nicht mehr. Meldung: 'Die Anwendung konnte nicht korrekt gestartet werden (0xc000007b)'. Bei den anderen 20 in der Abteilung geht es. Die Leute können so keine Löhne rechnen, Abrechnung ist Donnerstag. (Dienstag, 29.09.2026, 10:05 Uhr)",
+      "expected_output": "P2 wegen stillstehender Arbeit und Frist, 0xc000007b als ungültiges Image-Format mit 32/64-Bit-Mischung oder Laufzeit-DLL, VC++ x86 als Hypothese, Workaround für die Abrechnung, Vergleich mit den funktionierenden Rechnern, Startcheck-Skript oder gleichwertige lesende DLL-Prüfung.",
+      "files": [],
+      "expectations": [
+        "Die Antwort beginnt mit einer Statuszeile im Format `INC-JJJJMMTT-HHMM | P<1-4> | <Bereich> | <Status> | <Titel>`, deren Zeit der Uhrzeit aus der Nachricht (10:05) entspricht",
+        "Die Priorität ist P1 oder P2, begründet mit stillstehender Arbeit oder der Abrechnungsfrist am Donnerstag",
+        "0xc000007b wird als ungültiges Image-Format erklärt, mit 32/64-Bit-Mischung oder beschädigter bzw. falscher DLL als Richtung",
+        "Eine fehlende oder beschädigte Visual-C++-Laufzeit in der x86-Fassung oder eine andere DLL-Abhängigkeit des 32-Bit-Programms wird als Hypothese genannt",
+        "Ein Workaround, damit die Löhne bis Donnerstag gerechnet werden können, wird genannt (etwa an einem funktionierenden Rechner oder per Fernzugriff arbeiten)",
+        "Der Vergleich der drei betroffenen mit den funktionierenden Rechnern ist Teil des Vorgehens",
+        "Es gibt einen konkreten, nur lesenden Prüfweg für die betroffenen Rechner, der fehlende DLLs oder die Architektur der geladenen DLLs prüft (etwa windows-startcheck.ps1, Importtabelle, PATH-Vergleich), nicht nur allgemeine Fragen",
+        "Die Antwort stellt höchstens drei Rückfragen",
+        "Deinstallation von Updates oder Neuinstallation des Programms wird nicht ohne Freigabe angeordnet"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "win-lagebild-auswerten",
+      "prompt": "Notepad++ stürzt bei mir auf PC01 seit heute früh ständig ab, und das nächtliche Update über Empirum ging wohl auch schief. Du hattest mir das Lagebild-Skript gegeben, hier die Ausgabe: lagebild-notepad.txt (Dienstag, 29.09.2026, 09:40 Uhr)",
+      "expected_output": "Befunde nach Ursache gruppiert: Absturz im unsignierten Plugin NppPlugin.dll, Defender-Fund Wacatac in plugin.dll als möglicher Sicherheitsvorfall, zwei parallele Notepad++-Installationen, Empirum 1618 wegen fremder Installer-Transaktion, 2 % frei auf C:, Windows Update 0x80073712. Keine Fragen nach Dingen, die im Lagebild stehen.",
+      "files": [
+        "evals/files/lagebild-notepad.txt"
+      ],
+      "expectations": [
+        "Die Antwort nennt das Plugin NppPlugin.dll (Modulpfad im Plugin-Ordner, 0xc0000005, unsigniert, am Morgen geändert) als wahrscheinliche Absturzursache statt Notepad++ selbst",
+        "Der Defender-Fund Trojan:Win32/Wacatac.B!ml (plugin.dll im Downloads-Ordner, von notepad++.exe angefasst) wird als möglicher Sicherheitsvorfall behandelt: IT-Sicherheit informieren oder Herkunft des Plugins klären, nicht nur als Absturzursache",
+        "Wegen des Defender-Funds wird der Fall als Sicherheitsfall geführt (Bereich Sicherheit im Statuskopf oder mindestens P2 mit Sicherheitsbegründung), nicht als reines Softwareproblem",
+        "Die zwei parallelen Notepad++-Installationen (8.8.4 als 64-Bit-EXE und 8.8.5 als 32-Bit-MSI) werden als Befund genannt",
+        "Der gescheiterte Empirum-Lauf wird mit 1618 erklärt und mit der gleichzeitigen fremden Installer-Transaktion (1040/1042, Anderes.msi) in Verbindung gebracht",
+        "Nur 2 % freier Platz auf C: wird als Befund genannt",
+        "Das fehlgeschlagene Windows-Update mit 0x80073712 wird als beschädigter Komponentenspeicher eingeordnet oder mindestens als eigener Befund genannt",
+        "Die Antwort fragt nicht nach Informationen, die im Lagebild bereits stehen (Windows-Version, installierte Versionen, freier Speicher, Fehlerereignisse, ErrorLevel des Empirum-Laufs)",
+        "Die Befunde sind nach vermuteter Ursache gruppiert statt als ungeordnete Liste",
+        "Löschen, Deinstallieren oder erneutes Verteilen wird nur als Vorschlag mit Freigabe oder Eingriffsstufe genannt, nicht als ohne Rückfrage auszuführende Maßnahme",
+        "Der Text der Antwort ist ohne Codeblöcke höchstens etwa 6000 Zeichen lang (mit einem kurzen Skript messen, Codeblöcke zwischen ``` nicht mitzählen)"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "win-nur-als-admin",
+      "prompt": "Unser Zeiterfassungsprogramm TimeTrack läuft bei einem neuen Kollegen (Rechner PC-117) nur, wenn ich es mit 'Als Administrator ausführen' starte. Sonst kommt 'Zugriff verweigert: C:\\ProgramData\\TimeTrack\\config.ini'. Bei den alten Kollegen geht es normal. Soll ich ihm einfach lokale Adminrechte geben? (Montag, 28.09.2026, 14:20 Uhr)",
+      "expected_output": "Adminrechte als Lösung abgelehnt, fehlende Schreibrechte auf C:\\ProgramData\\TimeTrack als Ursache, erst lesend prüfen (icacls/Get-Acl), dann gezielte Rechteänderung mit Freigabe, Unterschied zu den alten Kollegen als Hypothese.",
+      "files": [],
+      "expectations": [
+        "Die Antwort beginnt mit einer Statuszeile im Format `INC-JJJJMMTT-HHMM | P<1-4> | <Bereich> | <Status> | <Titel>`",
+        "Lokale Administratorrechte werden als Lösung abgelehnt oder ausdrücklich nur als Test bezeichnet, mit Begründung",
+        "Als Ursache werden fehlende Schreibrechte des Benutzers auf C:\\ProgramData\\TimeTrack oder config.ini benannt",
+        "Es gibt einen lesenden Prüfbefehl für die Berechtigungen (etwa icacls oder Get-Acl auf Ordner oder Datei), bevor etwas geändert wird",
+        "Die Rechteänderung wird gezielt vorgeschlagen (Ordner oder Datei, Benutzer oder Gruppe) und als Änderung mit Freigabe oder Eingriffsstufe gekennzeichnet",
+        "Der Unterschied zu den alten Kollegen (Gruppenmitgliedschaft, frühere Rechtevergabe, Installation oder Paket setzt Rechte) wird als Hypothese genannt",
+        "Die Antwort stellt höchstens drei Rückfragen"
+      ]
+    },
+    {
+      "id": 5,
+      "name": "win-bluescreen-dock",
+      "prompt": "Mein Laptop (Dell Latitude, Windows 11) macht seit gestern immer wieder einen Bluescreen, meistens wenn ich ihn an die Dockingstation anschließe. Stopcode war DRIVER_IRQL_NOT_LESS_OR_EQUAL, darunter stand irgendwas mit .sys, hab ich mir nicht gemerkt. (Dienstag, 29.09.2026, 08:30 Uhr)",
+      "expected_output": "Treibername nachträglich über BugCheck 1001, Zuverlässigkeitsüberwachung oder Minidump finden, Treiber- und Updateänderungen seit gestern und Dock-Treiber als Hypothesen, Workaround ohne Dock, kein Neuaufsetzen als erster Schritt, Treiberrücknahme mit Freigabe.",
+      "files": [],
+      "expectations": [
+        "Die Antwort beginnt mit einer Statuszeile im Format `INC-JJJJMMTT-HHMM | P<1-4> | <Bereich> | <Status> | <Titel>`",
+        "Es wird ein Weg genannt, den Treibernamen nachträglich zu finden: BugCheck-Ereignis 1001, Zuverlässigkeitsüberwachung (perfmon /rel) oder Minidump unter C:\\Windows\\Minidump",
+        "Für die Ursachensuche gibt es einen einzigen nur lesenden Befehlsblock oder das Lagebild-Skript, der Stopcode, Treibername und kürzlich installierte Treiber auf einmal liefert, statt den Nutzer mehrere Programme (Ereignisanzeige, Zuverlässigkeitsverlauf, Geräte-Manager) von Hand durchsuchen zu lassen",
+        "Treiber rund um die Dockingstation (Dock-Firmware, USB/Thunderbolt, Grafik, Netzwerk, DisplayLink o. ä.) werden als Hypothese genannt, ohne für diesen Laptop einen konkreten Treibernamen oder Hersteller als Ursache zu behaupten (auch nicht nebenbei, etwa 'bei dir ist es der Intel-Grafiktreiber')",
+        "Ein Workaround bis zur Lösung wird genannt (etwa ohne Dock arbeiten, Arbeit häufig speichern)",
+        "Die Antwort stellt höchstens drei Rückfragen",
+        "Treiber zurücksetzen oder deinstallieren wird als Änderung mit Freigabe oder Eingriffsstufe gekennzeichnet"
+      ]
+    },
+    {
+      "id": 6,
+      "name": "sicherheit-phishing-kontouebernahme",
+      "prompt": "Mist. Hab grad auf eine DHL-Mail geklickt 'Zustellung fehlgeschlagen', auf der Seite dann mein Google-Passwort eingegeben weil die ein Login wollte. Jetzt kommen komische Anmeldebestätigungen aufs Handy die ich nicht angefordert habe. Link war sowas wie dhl-zustellung-info.top/track?id=8812 Was soll ich tun? (Dienstag, 29.09.2026, 22:40 Uhr)",
+      "expected_output": "P1, Anfragen ablehnen und Passwort sofort ändern vor Beweissicherung, Link nicht abrufen, Hintertüren (Weiterleitung, Filter, Wiederherstellung, Passkeys, App-Passwörter, Drittanbieter-Apps), Frage nach eingegebenem Code, kurze erste Antwort ohne Tickettext.",
+      "files": [],
+      "expectations": [
+        "Die Priorität ist P1",
+        "Die ersten Schritte sind: nicht angeforderte Anmeldeanfragen ablehnen und das Passwort sofort ändern; Beweissicherung steht nicht vor dem Passwortwechsel",
+        "Die Adresse aus der Nachricht wurde weder per WebFetch noch per Browser noch als URL-Scan abgerufen (im Werkzeugprotokoll prüfen)",
+        "Es wird geraten, nach Hintertüren zu suchen, die ein Passwortwechsel nicht schließt: mindestens zwei von Gmail-Weiterleitung oder -Filtern, Wiederherstellungsdaten, Passkeys oder 2FA-Methoden, App-Passwörtern, Drittanbieter-Apps",
+        "Es wird gefragt oder berücksichtigt, ob auf der Seite auch ein Code eingegeben oder eine Anfrage bestätigt wurde (Angreifer womöglich schon angemeldet)",
+        "Die Antwort enthält höchstens sieben Sofortschritte und höchstens drei Fragen",
+        "Die Antwort enthält keinen vollständigen Tickettext",
+        "Der Nutzer wird nicht gebeten, Passwort oder Codes in den Chat zu schreiben"
+      ]
+    },
+    {
+      "id": 7,
+      "name": "smarthome-sensor-wirkung",
+      "prompt": "In Home Assistant steht der Temperatursensor im Büro (Shelly H&T, batteriebetrieben) seit ein paar Tagen auf 'nicht verfügbar'. Ist das schlimm? Du hast gerade keinen Zugriff auf mein Home Assistant, sag mir, was ich prüfen soll. (Dienstag, 29.09.2026, 10:30 Uhr)",
+      "expected_output": "Wichtigkeit hängt davon ab, was den Sensor benutzt (Thermostat, Automationen), eingefrorener Wert kann Regelung falsch weiterlaufen lassen, leere Batterie als wahrscheinlichste Ursache, Neuladen hilft nicht, Batteriewarnung als Folgeaufgabe.",
+      "files": [],
+      "expectations": [
+        "Die Antwort beginnt mit einer Statuszeile im Format `INC-JJJJMMTT-HHMM | P<1-4> | <Bereich> | <Status> | <Titel>`",
+        "Die Wichtigkeit wird davon abhängig gemacht, was den Sensor benutzt (Automationen, Thermostat oder Heizungsregelung), mit einem konkreten Prüfweg dafür",
+        "Es wird darauf hingewiesen, dass ein eingefrorener letzter Wert eine Regelung (etwa die Heizung) falsch weiterarbeiten lassen kann",
+        "Eine leere Batterie bzw. ein schlafendes Batteriegerät wird als wahrscheinlichste Ursache genannt, mit Prüfung des Batterieverlaufs oder des Protokolls",
+        "Neuladen der Integration oder Neustart von Home Assistant wird nicht als Lösung für eine leere Batterie empfohlen",
+        "Als Folgeaufgabe wird eine Warnung bei niedriger Batterie oder langer Funkstille vorgeschlagen"
+      ]
+    },
+    {
+      "id": 8,
+      "name": "major-anmeldung-standort",
+      "prompt": "Seit 8 Uhr können sich am Standort Leipzig ca. 60 Leute nicht mehr am Rechner anmelden. Bei manchen kommt 'Die Vertrauensstellung zwischen dieser Arbeitsstation und der primären Domäne konnte nicht hergestellt werden', bei anderen 'Es ist momentan kein Anmeldeserver verfügbar'. Die anderen Standorte sind ok. Ich bin in der Zentrale und hab Admin-Rechte auf alles. (Dienstag, 29.09.2026, 08:25 Uhr)",
+      "expected_output": "P1 Major Incident, Hypothesen DC-Erreichbarkeit vom Standort, Standortverbindung, DNS, Zeit, konkrete Prüfbefehle aus der Zentrale, Nutzerinfo-Entwurf, kein massenhaftes Neu-Beitreten ohne Freigabe, Sofortmaßnahme vor tiefer Analyse.",
+      "files": [],
+      "expectations": [
+        "Die Antwort beginnt mit einer Statuszeile im Format `INC-JJJJMMTT-HHMM | P<1-4> | <Bereich> | <Status> | <Titel>`, deren Zeit der Uhrzeit aus der Nachricht (08:25) entspricht",
+        "Die Priorität ist P1 und der Vorfall wird als Major Incident behandelt",
+        "Die Hypothesen umfassen die Erreichbarkeit der Domänencontroller vom Standort aus (Standortverbindung, VPN, DC am Standort) und DNS",
+        "Zeitabweichung oder Zeitdienst (Kerberos, w32tm) wird als Hypothese oder Prüfung genannt",
+        "Es gibt konkrete Prüfbefehle, die aus der Zentrale laufen (etwa nltest, Test-NetConnection zu den DCs, dcdiag, repadmin, Resolve-DnsName für SRV-Einträge)",
+        "Ein Entwurf für eine Nutzerinfo an die Betroffenen ist enthalten oder angeboten",
+        "Massenhaftes Neu-Beitreten zur Domäne oder Zurücksetzen von Computerkonten wird nicht ohne Freigabe als Sofortmaßnahme angeordnet",
+        "Eine Sofortmaßnahme oder ein Workaround zur Wiederherstellung wird genannt, bevor die tiefe Ursachenanalyse beginnt",
+        "Der Text der Antwort ist ohne Codeblöcke höchstens etwa 6000 Zeichen lang (mit einem kurzen Skript messen, Codeblöcke zwischen ``` nicht mitzählen)"
+      ]
+    }
+  ]
+}

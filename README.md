@@ -10,6 +10,7 @@ Auswahl an Agents, versioniert und auf jedem Rechner installierbar.
 /plugin install paketierung@meine-skills
 /plugin install grill-me@meine-skills
 /plugin install jev-ultrafast@meine-skills
+/plugin install incident-manager@meine-skills
 ```
 
 Danach `/reload-plugins`, falls die Installation das meldet.
@@ -51,6 +52,7 @@ Beschreibung Platz im Systemprompt jeder Session.
 | `paketierung` | Skills für das Paketierungsprojekt | 1 Skill |
 | `grill-me` | Kritisches Nachfragen zu Plänen, Entscheidungen und Ideen | 1 Skill |
 | `jev-ultrafast` | Browser-Agent Jev Ultrafast: Webseiten bedienen lassen, Ergebnis prüfen | 1 Skill mit Skript |
+| `incident-manager` | Incident Manager mit Schwerpunkt Windows und Software: Störungen annehmen, diagnostizieren und mit Belegen lösen | 1 Skill mit Skript, 1 Agent |
 | `agency-dev` | Entwicklung und Architektur | 12 Agents |
 | `agency-ops` | Betrieb und Infrastruktur | 9 Agents |
 | `agency-security` | Sicherheit | 10 Agents |
@@ -79,9 +81,10 @@ Skills rufst du als Slash-Befehl auf:
 /paketierung:code-review <PR-URL oder Dateipfad>
 /grill-me:grill-me <Plan oder Idee>
 /jev-ultrafast:jev <Browseraufgabe>
+/incident-manager:incident <Beschreibung der Störung>
 ```
 
-In Web-Sessions auf diesem Repo heißt der Jev-Skill nur `/jev` (siehe unten).
+In Web-Sessions auf diesem Repo heißen die beiden nur `/jev` und `/incident` (siehe unten).
 
 Agents sprichst du im Gespräch an oder lässt Claude sie selbst auswählen:
 
@@ -121,6 +124,150 @@ sperrt.
 python -m unittest discover -s plugins/jev-ultrafast/tests
 python plugins/jev-ultrafast/tests/e2e_offline.py
 ```
+
+## incident-manager
+
+Du beschreibst eine Störung, Claude arbeitet sie ab wie ein Incident Manager: ID und
+Priorität vergeben, Hypothesen aufstellen, mit den Werkzeugen der Session prüfen,
+Workaround und Lösung umsetzen oder als fertige Befehle liefern, das Ergebnis belegen
+und einen Tickettext zum Kopieren schreiben. Bei P1 und P2 laufen unabhängige Prüfungen
+parallel als Subagents, am Ende steht eine Nachbetrachtung.
+
+Der Schwerpunkt liegt auf Windows-Clients und Software unter Windows. Dafür gibt es zwei
+Playbooks: `windows-software.md` für Installation, Softwareverteilung mit Empirum und MSI,
+Abstürze, fehlende Laufzeitumgebungen und Rechte, `windows-system.md` für Fehlercodes,
+Ereignisse, Bluescreens, Windows Update, Profile und Gruppenrichtlinien. Dazu kommt
+`scripts/windows-lagebild.ps1`, ein nur lesendes Skript, das in einem Lauf System,
+ausstehenden Neustart, laufende Installationen, Fehlerereignisse, Abstürze mit Modul und
+Code, Windows-Installer- und Update-Vorgänge, Defender und Netzwerk sammelt, mit
+`-Software <Name>` auch Installationen in allen Registry-Ansichten, Prozesse, Dienste,
+Aufgaben und Ereignisse zu einem Programm. Claude fragt erst nach, was das Skript nicht
+zeigen kann. Startet ein Programm gar nicht (0xc000007b, fehlende DLL), liest
+`scripts/windows-startcheck.ps1` die Importtabellen und meldet fehlende DLLs und DLLs in
+falscher Architektur mit Fundort.
+
+```
+powershell -NoProfile -ExecutionPolicy Bypass -File .\windows-lagebild.ps1 -Software "Notepad++" -Seit "2026-09-28 18:00"
+```
+
+Das Plugin hat zwei Teile. Der Skill `incident` enthält den Ablauf (`SKILL.md`), die
+Prioritätsmatrix, die Zuordnung von Werkzeugen, Konnektoren und Agents zu Störungsarten,
+die beiden Windows-Playbooks und das Skript, Playbooks für Netzwerk, Smart Home, Dienste
+und Code sowie Sicherheit, und Vorlagen für Tickettext, Nutzerinfo, Übergabe und
+Nachbetrachtung. Der Agent `incident-manager` lädt diesen Skill und hat ein Gedächtnis
+unter `~/.claude/agent-memory/incident-manager/` mit Umgebungswissen, bekannten Fehlern
+und den letzten Incidents. Der Skill schreibt in denselben Ordner.
+
+```
+/incident Notepad++-Rollout: auf 14 von 230 Clients Rückgabewert 1618
+/incident-manager:incident <Beschreibung>
+claude --agent incident-manager
+claude --bg --agent incident-manager "VPN verbindet nicht, Fehler 809"
+```
+
+Die erste Zeile gilt in Web-Sessions auf diesem Repo, die zweite lokal mit installiertem
+Plugin. Mit `--agent` wird die ganze Session zum Incident Manager, mit `--bg` läuft ein
+Incident im Hintergrund, `claude agents` zeigt alle laufenden. Den genauen Agent-Namen
+bei Installation als Plugin zeigt `/agents`.
+
+Lesen und diagnostizieren darf Claude ohne Rückfrage. Kleine, umkehrbare Eingriffe am
+defekten Teil (eine Integration neu laden, einen hängenden Dienst neu starten) kündigt
+es an und führt sie aus. Alles, was andere betrifft oder unterbricht, etwas im Haus
+schaltet, Nachrichten versendet oder dauerhaft umkonfiguriert, braucht eine Freigabe;
+Löschen und Zurücksetzen nur auf ausdrückliche Anweisung.
+
+### Getestet
+
+Am 29.09.2026 in einer Web-Session mit vier Testläufen: ein Empirum-Rollout mit 1618 auf
+einem Teil der Clients (erfunden, ohne Zugriff aufs Firmennetz), ein echter, nur lesender
+Lauf gegen Home Assistant, ein Phishing-Fall mit laufender Kontoübernahme (erfunden) und
+ein Faktencheck aller Playbooks gegen Microsoft-, Home-Assistant-, Kubernetes- und
+DSGVO-Quellen. Die Befunde sind eingearbeitet: unter anderem die MSI-Logsuche auf deutschem
+Windows, `msiexec` über `Start-Process -Wait`, die Suche nach der konkurrierenden
+Installation bei 1618 (MsiInstaller 1040/1042 sind Informationsereignisse), die
+Reihenfolge bei einer Kontoübernahme und das Erkennen verwaister oder erwartbar nicht
+verfügbarer Entitäten in Home Assistant.
+
+Eine zweite Runde lief mit dem Agent `incident-manager` selbst: einen Lagebild-Bericht
+auswerten und ein 32-Bit-Programm, das nach einem Rollout auf 3 von 23 Rechnern mit
+0xc000007b nicht startet. Daraus stammen das Startcheck-Skript, Modulpfad, Startfehler,
+Defender-Name und -Status, Empirum-Skriptkopie und -Protokoll im Lagebild, einheitliche
+Zeitangaben sowie Regeln zu Neustart, Zurückstufen und einzelnen Virenscanner-Funden.
+
+Beide Skripte liefen mangels Windows unter PowerShell 7.6 auf Linux: PSScriptAnalyzer mit
+Kompatibilitätsregeln für Windows PowerShell 5.1 ohne Befund, das Lagebild mit
+nachgebauten Windows-Cmdlets (61 Prüfungen), der Startcheck mit echten x86-, x64- und
+ARM64-Programmdateien aus dem Python-Paket distlib (13 Prüfungen: falsche Architektur
+über PATH, fehlende und beschädigte DLL, fremde Architektur und beschädigte Dateien im
+Programmordner). Ein Lauf
+auf echtem Windows steht noch aus.
+
+```
+pwsh -NoProfile -File plugins/incident-manager/tests/lagebild-test.ps1
+pwsh -NoProfile -File plugins/incident-manager/tests/startcheck-test.ps1
+```
+
+### Testkatalog
+
+`plugins/incident-manager/skills/incident/evals/evals.json` enthält acht Szenarien im Format
+des `skill-creator`: fünf Windows-Fälle (1618 auf einem Teil der Clients, 0xc000007b mit
+Frist, Lagebild auswerten, Programm nur als Administrator, Bluescreen am Dock), Phishing mit
+laufender Kontoübernahme, einen Home-Assistant-Sensor und einen Anmeldeausfall an einem
+Standort, zusammen 66 prüfbare Kriterien (im ersten Durchlauf 63). Jedes Szenario läuft einmal mit und einmal ohne
+Skill, Prüf-Agents bewerten die Antworten, `skill-evals/incident/iteration-<n>/review.html`
+zeigt Antworten, Bewertungen und die Übersicht.
+
+Erster Durchlauf am 29.09.2026: mit Skill 63 von 63 Kriterien, ohne Skill 46 von 63. Neun
+der Kriterien fragen das Format des Skills ab (Statuszeile, P1–P4), die ein Lauf ohne Skill
+nicht kennen kann; nur die 54 Sachkriterien gezählt steht es 54 zu 46 (100 % zu 85 %). Die
+Unterschiede in der Sache: Läufe ohne Skill ordnen Eingriffe ohne Freigabe an, stellen zu
+viele Rückfragen, bieten den Workaround erst nach der Analyse an und prüfen weder die Wirkung
+eines Ausfalls noch den Vergleich mit funktionierenden Rechnern. Der Skill kostet dafür im
+Mittel etwa 45 000 Tokens und zwei Minuten mehr je Antwort. Welche Kriterien noch nicht
+trennen und was vor dem nächsten Durchlauf zu ändern ist, steht in
+`skill-evals/incident/iteration-1/benchmark.md`.
+
+Zweiter Durchlauf am selben Tag, mit kürzeren Antworten (Richtwert eine Bildschirmseite),
+geschärften Kriterien und einem Testrahmen, der bei Phishing Recherche erlaubt: mit Skill 61
+von 66, ohne Skill 48 von 66, in der Sache 52 zu 48 von 57 (91 % zu 84 %). Die Antworten mit
+Skill sind ohne Codeblöcke im Mittel 4 550 statt 6 870 Zeichen lang, die längste 5 055 statt
+10 432. Das Kürzen hat drei Regeln gekostet, die im ersten Durchlauf hielten: höchstens drei
+Rückfragen, der Workaround vor der Diagnose und die Warnung vor einem eingefrorenen Messwert.
+Dazu kamen zwei Fehler, die der Skill selbst verursacht hatte: der Screenshot vor dem Ablehnen
+der Anmeldeanfrage und ein unterstellter Dock-Treiber. Die Läufe fanden außerdem einen
+Sachfehler im Sicherheits-Playbook (Google widerruft App-Passwörter beim Passwortwechsel).
+Alle Punkte sind nach dem Durchlauf eingearbeitet. Einzelheiten in
+`skill-evals/incident/iteration-2/benchmark.md`.
+
+Dritter Durchlauf mit dem überarbeiteten Skill und unveränderten Kriterien: mit Skill 66 von
+66, ohne Skill weiter 48 von 66 (diese Läufe samt Bewertung aus dem zweiten Durchlauf
+übernommen). Alle fünf Fehler des zweiten Durchlaufs sind weg, die Antworten bleiben bei im
+Mittel 4 440 Zeichen ohne Codeblöcke. Der Katalog zeigt damit keine weiteren Verbesserungen
+mehr an; dafür bräuchte es schwerere Szenarien oder mehrere Läufe je Szenario. Was die
+Kriterien nicht erfassen, etwa dass der Anmeldeausfall diesmal ohne den bekannten Fehler des
+September-Updates auskam, steht in `skill-evals/incident/iteration-3/benchmark.md`. Die Seite
+`review.html` in jedem Durchlauf zeigt die Antworten neben denen des vorigen.
+
+Hilfsskripte: `tests/eval_transkript.py` macht aus dem Protokoll eines Laufs Transkript und
+Werkzeugstatistik, `tests/eval_testdaten.py` erzeugt die Eingabedatei für das Lagebild-Szenario.
+
+### Wege zu einem Incident-Agent
+
+Geprüft am 29.09.2026 gegen die Claude-Code-Doku und die Konnektoren dieses Kontos.
+
+| Weg | Stand | Einschätzung |
+|---|---|---|
+| Skill `/incident` | gebaut | Kern des Ganzen. Die Session selbst wird Incident Manager, kann nachfragen, Konnektoren nutzen und Spezialisten parallel starten. Läuft lokal und in Web-Sessions. |
+| Agent `incident-manager` | gebaut | Für mehrere Incidents gleichzeitig (ein Agent je Incident, auch im Hintergrund) und als ganze Session per `--agent`. Bringt das Gedächtnis mit, das Claude Code bei jedem Start lädt. Als Subagent kann er nicht direkt nachfragen und gibt Rückfragen gesammelt zurück. |
+| Konnektoren | genutzt | Home Assistant für Diagnose und Reparatur zu Hause, GitHub für Code und CI, Gmail für Zusammenhänge und Antwortentwürfe, Kalender für die Frage, was sich geändert hat. Gesendet oder geschaltet wird erst nach Freigabe. |
+| Routine auf claude.ai/code | nicht eingerichtet | Läuft zeitgesteuert ohne offenen Rechner, etwa als täglicher Gesundheitscheck von Home Assistant (neue Repairs, ausgefallene Geräte) oder um Mails mit einem Label „Incident“ abzuarbeiten. Lohnt sich, sobald Störungen regelmäßig auf einem dieser Wege ankommen. |
+| Geplante Aufgabe in der Desktop-App | nicht eingerichtet | Wie eine Routine, aber auf dem eigenen Rechner und damit mit Zugriff aufs lokale Netz. |
+| GitHub Action `anthropics/claude-code-action` | nicht gebaut | Issues mit Label `incident` in einem privaten Repo würden automatisch analysiert. Braucht einen API-Schlüssel oder OAuth-Token als Secret, und der Runner erreicht weder Heim- noch Firmennetz. |
+| Eigenes Programm mit dem Agent SDK | nicht gebaut | Nur sinnvoll mit API-Zugang zum Ticketsystem, um Tickets selbst abzuholen und zurückzuschreiben. Größter Aufwand, eigene API-Kosten. |
+
+Die Einstellung `"agent": "incident-manager"` in `.claude/settings.json` würde jede
+Session in diesem Repo als Incident Manager starten. Sie ist nicht gesetzt, weil hier
+auch an den anderen Skills gearbeitet wird.
 
 ## Agent-Katalog
 
@@ -250,10 +397,11 @@ Ordner nicht.
 
 ### Was in diesem Repo eingestellt ist
 
-`.claude/agents/` enthält die 62 Agents und `.claude/skills/` den Paketierungs-Skill und
-den Jev-Skill, damit Web-Sessions sie haben. Damit lokale Sessions sie nicht zusätzlich
-über die global installierten Plugins bekommen und dadurch doppelt führen, stehen diese
-zehn Plugins in `.claude/settings.json` auf `false`. Das Projekt-Setting sticht die
+`.claude/agents/` enthält die 62 agency-Agents und den `incident-manager`,
+`.claude/skills/` den Paketierungs-Skill, den Jev-Skill und den Incident-Skill, damit
+Web-Sessions sie haben. Damit lokale Sessions sie nicht zusätzlich über die global
+installierten Plugins bekommen und dadurch doppelt führen, stehen diese elf Plugins in
+`.claude/settings.json` auf `false`. Das Projekt-Setting sticht die
 Nutzer-Einstellung, und zwar nur in diesem Repo: in anderen Projekten greifen die
 global installierten Plugins weiter.
 
@@ -274,6 +422,7 @@ Nach Änderungen an den Plugin-Agents:
 ```
 rm -rf .claude/agents && mkdir -p .claude/agents && cp plugins/agency-*/agents/*.md .claude/agents/
 cp plugins/agency-dev/NOTICE.md .claude/agents/NOTICE.md
+cp plugins/incident-manager/agents/incident-manager.md .claude/agents/
 ```
 
 Der Skill wird von Hand nachgezogen: `plugins/paketierung/skills/code-review/SKILL.md`
@@ -284,6 +433,12 @@ Der Jev-Skill wird als ganzer Ordner kopiert, Skript und Lockfile gehören dazu:
 
 ```
 rm -rf .claude/skills/jev && cp -r plugins/jev-ultrafast/skills/jev .claude/skills/jev
+```
+
+Der Incident-Skill ebenso, mit allen Playbooks und Vorlagen:
+
+```
+rm -rf .claude/skills/incident && cp -r plugins/incident-manager/skills/incident .claude/skills/incident
 ```
 
 ## Sicherheit
@@ -303,6 +458,12 @@ Frontmatter, 18 davon ohne Bash. Die Regel dahinter: Wer analysiert, entwirft od
 berichtet und dessen Umsetzung woanders liegt, braucht keine Shell. Wer baut, deployt,
 migriert, misst oder forensisch untersucht, behält sie. Die Zuordnung im Einzelnen steht
 in `SECURITY-ABWEICHUNGEN.md`.
+
+Der eigene Agent `incident-manager` hat kein `tools:` und damit den vollen Satz, weil
+Diagnose Shell und Konnektoren braucht. Er liest dabei viel fremden Text (Tickets, Logs,
+Mails). Agent und Skill legen deshalb fest, dass Anweisungen in solchen Inhalten nicht
+befolgt werden, und staffeln Eingriffe nach Wirkung: ohne Freigabe nur Lesen und kleine,
+umkehrbare Schritte am defekten Teil.
 
 ## Änderungen ausrollen
 
