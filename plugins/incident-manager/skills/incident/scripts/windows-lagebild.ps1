@@ -215,6 +215,35 @@ Abschnitt 'Startfehler (Application Popup 26, etwa 0xc000007b oder fehlende DLL)
     'Startet ein Programm gar nicht, gibt es oft kein Absturzereignis, nur diesen Eintrag. Weiter mit windows-startcheck.ps1.'
 }
 
+Abschnitt 'Bluescreens, unerwartete Neustarts und Treiber' {
+    $filter = @{ LogName = 'System'; ProviderName = 'Microsoft-Windows-WER-SystemErrorReporting', 'Microsoft-Windows-Kernel-Power', 'EventLog'; Id = 1001, 41, 6008; StartTime = $seit }
+    $neustarts = Get-WinEvent -FilterHashtable $filter -ErrorAction SilentlyContinue |
+        Where-Object { ($_.Id -eq 1001 -and $_.ProviderName -like '*SystemErrorReporting') -or ($_.Id -eq 41 -and $_.ProviderName -like '*Kernel-Power') -or ($_.Id -eq 6008 -and $_.ProviderName -eq 'EventLog') }
+    if ($neustarts) {
+        $neustarts | Sort-Object TimeCreated -Descending | Select-Object -First 15 @{ n = 'Zeit'; e = { Zeit $_.TimeCreated } },
+            @{ n = 'Art'; e = { switch ($_.Id) { 1001 { 'Bluescreen' } 41 { 'Neustart ohne Herunterfahren' } 6008 { 'unerwartet beendet' } } } },
+            @{ n = 'Meldung'; e = { Kurz $_.Message 220 } } | Format-Table -AutoSize -Wrap
+    }
+    else { 'Keine Bluescreens oder unerwarteten Neustarts im Zeitraum.' }
+    $ordner = Join-Path $env:windir 'Minidump'
+    try {
+        $abbilder = @(Get-ChildItem -LiteralPath $ordner -Filter '*.dmp' -File -ErrorAction Stop | Sort-Object LastWriteTime -Descending | Select-Object -First 10)
+        if ($abbilder) {
+            "Speicherabbilder in ${ordner}:"
+            $abbilder | Select-Object Name, @{ n = 'Zeit'; e = { Zeit $_.LastWriteTime } }, @{ n = 'KB'; e = { [int]($_.Length / 1KB) } } | Format-Table -AutoSize
+        }
+        else { "Keine Speicherabbilder in $ordner." }
+    }
+    catch { "Speicherabbilder in $ordner nicht lesbar (meist fehlen Administratorrechte oder der Ordner existiert nicht)." }
+    $treiber = Get-WinEvent -FilterHashtable @{ LogName = 'System'; ProviderName = 'Microsoft-Windows-UserPnp'; Id = 20001; StartTime = $seit } -ErrorAction SilentlyContinue
+    if ($treiber) {
+        'Treiberinstallationen im Zeitraum (UserPnp 20001):'
+        $treiber | Sort-Object TimeCreated -Descending | Select-Object -First 20 @{ n = 'Zeit'; e = { Zeit $_.TimeCreated } },
+            @{ n = 'Meldung'; e = { Kurz $_.Message 220 } } | Format-Table -AutoSize -Wrap
+    }
+    else { 'Keine Treiberinstallationen im Zeitraum.' }
+}
+
 Abschnitt 'Windows Installer (MsiInstaller)' {
     $filter = @{ LogName = 'Application'; ProviderName = 'MsiInstaller'; Id = 1025, 1033, 1034, 1035, 1040, 1042, 11707, 11708, 11724, 11725; StartTime = $seit }
     $ereignisse = Get-WinEvent -FilterHashtable $filter -ErrorAction SilentlyContinue

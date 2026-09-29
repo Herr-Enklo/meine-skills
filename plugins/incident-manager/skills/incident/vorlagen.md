@@ -14,7 +14,7 @@ Bereich ist einer von: Windows-Software, Windows-System, Netzwerk, Smart Home, D
 
 Status ist einer von: aufgenommen, in Diagnose, Workaround aktiv, in Lösung, Prüfung, gelöst, eskaliert, wartet auf Nutzer. Liegt der nächste Schritt beim Nutzer (Befehl ausführen, Freigabe, Handgriff vor Ort), gilt "wartet auf Nutzer".
 
-Beispiel: `INC-20260929-1412 | P3 | Windows-Software | wartet auf Nutzer | Rollout Notepad++: 1618 auf 14 Clients`
+Beispiel: `INC-20260312-0815 | P2 | Netzwerk | in Diagnose | VPN-Einwahl am Standort Nord scheitert`
 
 ## Tickettext
 

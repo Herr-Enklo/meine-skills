@@ -46,6 +46,7 @@ Rauschen, das fast immer harmlos ist: DistributedCOM 10016 (Berechtigungsmeldung
 
 ## Bluescreen und unerwartete Neustarts
 
+- Das Lagebild zeigt im Abschnitt "Bluescreens, unerwartete Neustarts und Treiber" die Ereignisse BugCheck 1001, Kernel-Power 41 und EventLog 6008, die vorhandenen Speicherabbilder und die im Zeitraum installierten Treiber (UserPnp 20001). Für diesen Fall kein eigener Befehlsblock nötig.
 - Kernel-Power 41 ohne BugCheck 1001 spricht eher für Strom, Netzteil, Überhitzung oder langes Drücken der Einschalttaste; mit BugCheck für einen Bluescreen.
 - Stopcode aus BugCheck 1001 oder aus der Zuverlässigkeitsüberwachung (`perfmon /rel`) lesen und mit Treibername suchen. Wechselnde Stopcodes sprechen für Hardware (Arbeitsspeicher, Datenträger), gleichbleibende mit demselben Treiber für diesen Treiber.
 - Speicherabbilder liegen unter `C:\Windows\Minidump`. Auswerten kann man sie mit WinDbg (`!analyze -v`); das installiert der Nutzer oder die IT.

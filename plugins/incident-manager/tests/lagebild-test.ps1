@@ -16,7 +16,7 @@ if ($env:LAGEBILD_TEST_JETZT) { $global:jetzt = [datetime]$env:LAGEBILD_TEST_JET
 $global:basis = Join-Path ([IO.Path]::GetTempPath()) ('lagebild-' + [guid]::NewGuid().ToString('N'))
 $global:npp = Join-Path $basis 'Notepad++'
 $empirum = Join-Path $basis 'ProgramData/$Matrix42Scripts$/Notepad++ Team/Notepad++/8.8.5/Install'
-foreach ($o in (Join-Path $npp 'plugins/NppPlugin'), (Join-Path $npp 'updater'), $empirum, (Join-Path $basis 'windows/Temp')) {
+foreach ($o in (Join-Path $npp 'plugins/NppPlugin'), (Join-Path $npp 'updater'), $empirum, (Join-Path $basis 'windows/Temp'), (Join-Path $basis 'windows/Minidump')) {
     New-Item -ItemType Directory -Path $o -Force | Out-Null
 }
 'x' | Set-Content (Join-Path $npp 'notepad++.exe')
@@ -36,6 +36,8 @@ foreach ($o in (Join-Path $npp 'plugins/NppPlugin'), (Join-Path $npp 'updater'),
     'Start Paket Notepad++ 8.8.5'
     'Fehler beim Installieren von npp.8.8.5.Installer.x64.msi. ErrorLevel: 1618'
 ) | Set-Content (Join-Path $basis 'windows/Temp/Notepad++.8.8.5.1.log')
+'x' | Set-Content (Join-Path $basis 'windows/Minidump/092926-10312-01.dmp')
+(Get-Item (Join-Path $basis 'windows/Minidump/092926-10312-01.dmp')).LastWriteTime = $jetzt.AddMinutes(-1210)
 $alteUmgebung = @{ ProgramData = $env:ProgramData; windir = $env:windir }
 $env:ProgramData = Join-Path $basis 'ProgramData'
 $env:windir = Join-Path $basis 'windows'
@@ -67,6 +69,9 @@ $global:Ereignisse = @(
     Neues-Ereignis 'System' 'Service Control Manager' 7031 2 $jetzt.AddMinutes(-452) 'Der Dienst Druckwarteschlange wurde unerwartet beendet.' @()
     Neues-Ereignis 'System' 'Service Control Manager' 7031 2 $jetzt.AddMinutes(-421) 'Der Dienst Druckwarteschlange wurde unerwartet beendet, zweites Mal.' @()
     Neues-Ereignis 'Microsoft-Windows-Windows Defender/Operational' 'Microsoft-Windows-Windows Defender' 1116 3 $jetzt.AddMinutes(-158) 'Microsoft Defender Antivirus hat Schadsoftware erkannt. Name: Trojan:Win32/Wacatac.B!ml Pfad: file:_C:\Users\mmuster\Downloads\plugin.dll Prozessname: C:\Program Files\Notepad++\notepad++.exe' @()
+    Neues-Ereignis 'System' 'Microsoft-Windows-Kernel-Power' 41 1 $jetzt.AddMinutes(-1212) 'Das System wurde neu gestartet, ohne dass es zuvor ordnungsgemäß heruntergefahren wurde.' @()
+    Neues-Ereignis 'System' 'Microsoft-Windows-WER-SystemErrorReporting' 1001 2 $jetzt.AddMinutes(-1209) 'Der Computer wurde nach einem schwerwiegenden Fehler neu gestartet. Der Fehlercode war: 0x000000d1 (0x0000000000000010, 0x0000000000000002, 0x0000000000000000, 0xfffff8052a3c1b2e). Ein volles Abbild wurde gespeichert in: C:\Windows\Minidump\092926-10312-01.dmp.' @()
+    Neues-Ereignis 'System' 'Microsoft-Windows-UserPnp' 20001 4 $jetzt.AddMinutes(-1500) 'Die Installation des Treibers rtux64w10.inf_amd64_3d1c8a0e für die Geräteinstanz-ID USB\VID_0BDA&PID_8153 wurde mit folgendem Status abgeschlossen: 0x0.' @()
     Neues-Ereignis 'System' 'AlteQuelle' 1 2 $jetzt.AddDays(-10) 'ZU-ALT-DARF-NICHT-ERSCHEINEN' @()
 )
 
@@ -215,6 +220,11 @@ try {
     Pruefe $abstuerze '\d{4}-\d\d-\d\d \d\d:\d\d:\d\d' 'Zeiten im ISO-Format'
     Pruefe $abstuerze 'FileNotFoundException' '.NET-Ausnahme mit Typ'
     Pruefe (Abschnitt $bericht 'Startfehler') '0xc000007b' 'Startfehler aus Application Popup 26'
+    $blau = Abschnitt $bericht 'Bluescreens'
+    Pruefe $blau 'Bluescreen.*0x000000d1' 'Bluescreen mit Stopcode'
+    Pruefe $blau 'Neustart ohne Herunterfahren' 'Kernel-Power 41'
+    Pruefe $blau '092926-10312-01\.dmp' 'Speicherabbild aufgeführt'
+    Pruefe $blau 'rtux64w10' 'Treiberinstallation im Zeitraum'
     $msi = Abschnitt $bericht 'Windows Installer'
     Pruefe $msi '1040' 'Installer-Transaktion Beginn'
     Pruefe $msi '1042' 'Installer-Transaktion Ende'

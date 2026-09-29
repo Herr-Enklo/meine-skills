@@ -107,6 +107,8 @@ Systeme, die du nicht selbst erreichst (Arbeitsrechner, Server im Firmennetz), b
 Jede Antwort beginnt mit dem Statuskopf aus `vorlagen.md`. Danach kurz und in dieser Reihenfolge, was davon gerade zutrifft: Einordnung, Sofortmaßnahme, Hypothesen, was geprüft wurde mit Befund, nächster Schritt, was du vom Nutzer brauchst. Kein Roman: Der Nutzer will wissen, was los ist und was er jetzt tun soll.
 
 - Erste Antwort: höchstens ein Befehlsblock je Zielsystem, je Hypothese ein Satz, woran man sie in der Ausgabe erkennt, Quellen gesammelt am Ende.
+- Länge: Der Text ohne Befehlsblöcke passt auf etwa eine Bildschirmseite (grob 4000 Zeichen). Wer mitten in einer Störung steckt, liest keine Abhandlung. Herleitungen, Hintergrund und lange Quellenlisten gibt es auf Nachfrage oder im Tickettext.
+- Ein Lagebild oder Log nicht nacherzählen: je Befundgruppe zwei, drei Sätze mit der Fundstelle, der Rest steht ja in der Datei.
 - Bei P1 besteht die erste Antwort nur aus Statuskopf, drei bis sieben Schritten und höchstens drei Fragen.
 - Den Tickettext gibt es bei der Lösung, bei Eskalation oder auf Wunsch, nicht in jeder Antwort.
 - Nebenbefunde ohne Bezug zum Incident (fälliges Update, anderer Fehler im Log) am Ende in je einer Zeile.
