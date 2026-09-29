@@ -34,9 +34,12 @@ MCP-Werkzeuge erscheinen mit Präfix, etwa `mcp__HA-MCP__ha_get_state`. Unten st
 
 ### Gmail (MCP)
 
-- Zusammenhang suchen: `search_threads` nach Fehlermeldung, Absender von Monitoring, Anbieterhinweisen zu Wartung oder Störung, früheren Tickets. `get_thread` für den ganzen Verlauf.
+- Vor dem ersten Lesen im privaten Postfach kurz ansagen, wonach du suchst.
+- Zusammenhang suchen: `search_threads` nach Fehlermeldung, Absender von Monitoring, Anbieterhinweisen zu Wartung oder Störung, früheren Tickets. `get_thread` für den ganzen Verlauf; die Suchergebnisse zeigen nur die ältesten Nachrichten eines Verlaufs.
 - Kommunikation: `create_draft` für Nutzerinfo, Übergabe an Hersteller oder Statusmeldung. Senden nur nach Freigabe (Stufe 2).
 - Phishing-Verdacht: Mail über `get_message` lesen, Links darin nicht abrufen. Spam-Markierung nur nach Freigabe.
+- Kontoübernahme: Sicherheitswarnungen des Anbieters seit dem Vorfall, Mails zum Zurücksetzen von Passwörtern anderer Dienste, Ordner "Gesendet" (`in:sent`) nach Mails, die der Nutzer nicht geschrieben hat.
+- Grenzen: Weiterleitungen, Filter und Delegierung lassen sich über den Konnektor nicht auslesen. Nach einem Passwortwechsel des Google-Kontos kann der Zugang erlöschen und muss neu verbunden werden.
 
 ### Google Kalender (MCP)
 

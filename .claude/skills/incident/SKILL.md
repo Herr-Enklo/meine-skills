@@ -1,7 +1,6 @@
 ---
 name: incident
 description: Incidents annehmen, einstufen, diagnostizieren und lösen, wie ein Incident Manager. Nutzen, wenn der Nutzer eine Störung, einen Ausfall, einen Fehler oder ein Ticket beschreibt ("X geht nicht mehr", "Fehler 1603 auf Client Y", "Internet weg", "Rollo reagiert nicht", "Dienst down", "ich habe auf einen Phishing-Link geklickt") oder "Incident" sagt. Deckt Aufnahme, Priorität, Hypothesen, Diagnose mit allen verfügbaren Werkzeugen und Agents, Workaround, Lösung, Prüfung, Tickettext und Nachbetrachtung ab.
-argument-hint: "[Beschreibung des Incidents]"
 ---
 
 # Incident Manager
@@ -50,7 +49,7 @@ Systeme, die du nicht selbst erreichst (Arbeitsrechner, Server im Firmennetz), b
 
 ### 1. Aufnehmen und einstufen
 
-- Incident-ID vergeben: `INC-JJJJMMTT-HHMM` (Ortszeit des Nutzers).
+- Incident-ID vergeben: `INC-JJJJMMTT-HHMM` in der Ortszeit des Nutzers. Uhrzeit aus seiner Nachricht nehmen oder erfragen, nie die Uhr des Rechners oder Containers, die oft auf UTC steht.
 - Aus der Beschreibung ziehen: Symptom und Fehlermeldung wörtlich, betroffenes System, wer und wie viele betroffen sind, seit wann, was sich geändert hat, was schon versucht wurde.
 - Bereich bestimmen und das passende Playbook lesen. Bei Verdacht auf Sicherheitsvorfall sofort `playbooks/sicherheit.md`, das hat Vorrang vor allem anderen.
 - Priorität nach `prioritaet.md` festlegen und in einem Halbsatz begründen.
@@ -96,6 +95,8 @@ Systeme, die du nicht selbst erreichst (Arbeitsrechner, Server im Firmennetz), b
 ## Antworten
 
 Jede Antwort beginnt mit dem Statuskopf aus `vorlagen.md`. Danach kurz und in dieser Reihenfolge, was davon gerade zutrifft: Einordnung, Sofortmaßnahme, was geprüft wurde mit Befund, nächster Schritt, was du vom Nutzer brauchst. Kein Roman: Der Nutzer will wissen, was los ist und was er jetzt tun soll.
+
+Bei P1 besteht die erste Antwort nur aus Statuskopf, drei bis sieben Schritten und höchstens drei Fragen. Den Tickettext gibt es beim Abschluss oder auf Wunsch, nicht in jeder Antwort.
 
 Mehrere Incidents gleichzeitig bekommen je eine eigene ID und werden getrennt geführt. Unabhängige Diagnosen dürfen parallel als Hintergrund-Agents laufen.
 

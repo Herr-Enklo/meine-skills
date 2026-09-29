@@ -6,7 +6,7 @@ Die Priorität ergibt sich aus Auswirkung und Dringlichkeit, wie im ITIL-Inciden
 
 | Stufe | Beruflich | Zuhause |
 |---|---|---|
-| hoch | ganzer Dienst oder Standort, viele Nutzer, geschäftskritische Anwendung, Sicherheit oder Datenverlust | Sicherheit (Einbruchmeldung, Kameras, Schlösser), Heizung im Winter, Wasser oder Strom, Internet bei Homeoffice-Pflicht |
+| hoch | ganzer Dienst oder Standort, viele Nutzer, geschäftskritische Anwendung, Sicherheit oder Datenverlust | Übernahme eines Hauptkontos (Google, Apple, Microsoft, Mail), Online-Banking, Passwortmanager; Einbruchmeldung, Kameras, Schlösser; Heizung im Winter, Wasser oder Strom; Internet bei Homeoffice-Pflicht |
 | mittel | eine Abteilung oder Gruppe, eine wichtige Funktion, ein Nutzer mit kritischer Rolle | eine Komfortfunktion für alle Bewohner, Energiedaten, Rollos, Kameras ohne Sicherheitsbezug |
 | niedrig | ein einzelner Nutzer, Workaround vorhanden | ein einzelnes Gerät, eine Anzeige, ein Dashboard |
 
@@ -32,7 +32,7 @@ Die Zeiten sind Richtwerte für die eigene Arbeit, keine Zusagen.
 
 | Priorität | Reaktion | Statusmeldungen | Vorgehen |
 |---|---|---|---|
-| P1 | sofort | nach jedem wesentlichen Schritt | Sofortmaßnahme vor Rückfragen, Hypothesen parallel mit Subagents, Nachbetrachtung Pflicht, Abschluss erst nach Prüfung durch `testing-reality-checker` |
+| P1 | sofort | nach jedem wesentlichen Schritt | Sofortmaßnahme vor Rückfragen, Hypothesen parallel mit Subagents, Nachbetrachtung Pflicht, Abschluss erst nach Prüfung durch `testing-reality-checker`. Ist nur eine Person privat betroffen und kann nur sie selbst handeln: keine Subagents vor der Sofortmaßnahme, Nachbetrachtung als Kurzform, Abschlussprüfung nur, wenn es etwas zu prüfen gibt |
 | P2 | innerhalb einer Stunde | bei jedem neuen Befund | parallele Diagnose, wenn mehrere Spuren offen sind, Nachbetrachtung Pflicht |
 | P3 | am selben Tag | am Ende | der Reihe nach, Workaround reicht zunächst |
 | P4 | planbar | am Ende | kann in eine Aufgabe oder ein Change überführt werden |

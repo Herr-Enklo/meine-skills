@@ -39,7 +39,7 @@ df -h; free -m; uptime
 ss -tlnp
 ```
 
-Bei Containern entsprechend `docker ps -a`, `docker logs --since 1h <container>`, bei Kubernetes `kubectl get pods -A | grep -v Running`, `kubectl describe pod`, `kubectl logs --previous`.
+Bei Containern entsprechend `docker ps -a`, `docker logs --since 1h <container>`. Bei Kubernetes `kubectl get pods -A` (auch Pods mit `Running`, aber nicht bereit, etwa `0/1`, beachten), `kubectl describe pod <pod> -n <namespace>`, `kubectl logs <pod> -n <namespace> --previous` für den abgestürzten Vorgänger.
 
 Datenbanken: keine schreibenden Abfragen und keine Migrationen ohne Freigabe. Bei Verdacht auf Datenverlust zuerst prüfen, ob ein aktuelles Backup existiert und wiederherstellbar ist. Spezialist: `engineering-database-reliability-engineer`.
 

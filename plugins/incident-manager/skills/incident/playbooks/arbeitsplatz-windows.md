@@ -23,7 +23,7 @@ Test-Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Up
 Get-WinEvent -FilterHashtable @{LogName='System','Application'; Level=1,2; StartTime=$seit} -MaxEvents 40 -ErrorAction SilentlyContinue |
   Select-Object TimeCreated, LogName, ProviderName, Id, @{n='Meldung';e={($_.Message -split "`n")[0]}} | Format-Table -AutoSize -Wrap
 "== Netzwerk"
-Get-NetIPConfiguration | Format-List InterfaceAlias, IPv4Address, IPv4DefaultGateway, DNSServer
+Get-NetIPConfiguration | Select-Object InterfaceAlias, @{n='IPv4';e={$_.IPv4Address.IPAddress -join ', '}}, @{n='Gateway';e={$_.IPv4DefaultGateway.NextHop -join ', '}}, @{n='DNS';e={$_.DNSServer.ServerAddresses -join ', '}} | Format-List
 ```
 
 ## Softwareverteilung und Installation
@@ -47,11 +47,11 @@ Rückgabecodes von Windows Installer (msiexec), die in Verteilungsprotokollen of
 | 1641 | Installer hat einen Neustart ausgelöst | Erfolg, Neustart war Teil davon |
 | 3010 | Neustart erforderlich | Erfolg, Neustart ausstehend |
 
-Bei 1603 und unklaren Fehlern ein ausführliches Log erzeugen und darin die erste Zeile mit `Return value 3` suchen. Die Ursache steht meist in den Zeilen direkt davor.
+Bei 1603 und unklaren Fehlern ein ausführliches Log erzeugen und darin die erste Zeile mit `Return value 3` suchen, auf deutschem Windows `Rückgabewert 3`. Die Ursache steht meist in den Zeilen direkt davor. Das Log in einen vorhandenen Ordner schreiben, sonst bricht msiexec mit 1622 ab.
 
 ```powershell
-msiexec /i "C:\Pfad\paket.msi" /qn /l*v "C:\temp\install.log"
-Select-String -Path C:\temp\install.log -Pattern 'Return value 3' -Context 30,2 | Select-Object -First 1
+msiexec /i "C:\Pfad\paket.msi" /qn /l*v "$env:TEMP\install.log"
+Select-String -Path "$env:TEMP\install.log" -Pattern 'Return value 3|ckgabewert 3' -Context 30,2 | Select-Object -First 1
 ```
 
 Bei EXE-Installern hat jeder Hersteller eigene Rückgabecodes und Logschalter. Die Doku des Herstellers suchen, nicht raten.
@@ -67,7 +67,7 @@ Bei EXE-Installern hat jeder Hersteller eigene Rückgabecodes und Logschalter. D
 
 - Drucker druckt nicht: Warteschlange prüfen, `Get-Service Spooler`, `Get-Printer | Select-Object Name, PrinterStatus, PortName`, `Get-PrintJob -PrinterName "<Name>"`. Spooler neu starten ist am eigenen Rechner Stufe 1, auf einem Druckserver Stufe 2.
 - Outlook oder Microsoft 365: erst prüfen, ob der Dienst gestört ist (Dienststatus im Microsoft 365 Admin Center oder per Websuche), dann Anmeldung, dann Profil und Cache. Betrifft es mehrere Nutzer, ist es selten der Client.
-- Konto gesperrt: mit RSAT `Get-ADUser <name> -Properties LockedOut, BadLogonCount, LastBadPasswordAttempt, PasswordExpired`. Die Quelle wiederholter Sperren zeigt das Ereignis 4740 im Sicherheitsprotokoll eines Domänencontrollers; häufig sind es alte Passwörter auf Handy, in Laufwerkszuordnungen oder geplanten Aufgaben. Entsperren nur mit den Rechten und nach den Regeln des Nutzers.
+- Konto gesperrt: mit RSAT `$pdc = (Get-ADDomain).PDCEmulator` und `Get-ADUser <name> -Server $pdc -Properties LockedOut, BadLogonCount, LastBadPasswordAttempt, PasswordExpired`. Der Zähler für Fehlversuche wird nicht repliziert, deshalb den PDC-Emulator fragen. Die Quelle wiederholter Sperren zeigt das Ereignis 4740 im Sicherheitsprotokoll des PDC-Emulators, Feld "Aufrufername" bzw. "Caller Computer Name"; häufig sind es alte Passwörter auf Handy, in Laufwerkszuordnungen oder geplanten Aufgaben. Entsperren nur mit den Rechten und nach den Regeln des Nutzers.
 - Windows-Update schlägt fehl: Fehlercode aus dem Updateverlauf, `Get-WindowsUpdateLog` erzeugt eine lesbare `WindowsUpdate.log` auf dem Desktop. Freier Platz und ausstehender Neustart sind die häufigsten Ursachen.
 - Rechner langsam: `Get-Process | Sort-Object CPU -Descending | Select-Object -First 15 Name, Id, CPU, @{n='RAM_MB';e={[math]::Round($_.WS/1MB)}}`, freier Platz, Neustart seit wie vielen Tagen, Virenscanner beim Vollscan.
 - Datenträger voll: `Get-ChildItem C:\ -Directory -ErrorAction SilentlyContinue | ForEach-Object { [pscustomobject]@{Ordner=$_.FullName; GB=[math]::Round((Get-ChildItem $_.FullName -Recurse -File -ErrorAction SilentlyContinue | Measure-Object Length -Sum).Sum/1GB,1)} } | Sort-Object GB -Descending`. Das dauert auf großen Platten, vorher ankündigen. Nichts löschen ohne Freigabe (Stufe 3).

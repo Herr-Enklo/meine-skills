@@ -22,7 +22,7 @@ Dann Schicht für Schicht von unten, und bei der ersten Schicht stehen bleiben, 
 
 ## Router und Anbieter
 
-- Ist eine FRITZ!Box in Home Assistant eingebunden, zeigt die Integration den Verbindungsstatus zum Internet, die externe IP und die Betriebszeit. Kurze Betriebszeit heißt: der Router hat neu gestartet, etwa nach Stromausfall oder Firmware-Update. Über `ha_search` nach der Integration suchen, nicht nach geratenen Entitätsnamen.
+- Ist eine FRITZ!Box in Home Assistant eingebunden, zeigt die Integration den Verbindungsstatus zum Internet, die externe IP und zwei Betriebszeiten. Die Betriebszeit des Geräts springt nur bei einem Neustart des Routers zurück (Stromausfall, Firmware-Update). Die Betriebszeit der Verbindung springt bei jeder Neueinwahl zurück, auch bei der Zwangstrennung durch den Anbieter. Über `ha_search` nach der Integration suchen, nicht nach geratenen Entitätsnamen.
 - Hat nur ein einzelnes Gerät kein Internet, bei eingebundener FRITZ!Box den Schalter für den Internetzugang dieses Geräts prüfen (Kindersicherung, Zugangsprofil). Einschalten ist Stufe 1, wenn der Nutzer das Gerät selbst betreut; sonst fragen, denn jemand hat die Sperre vielleicht mit Absicht gesetzt.
 - Router neu starten unterbricht das ganze Haus oder Büro: Stufe 2, vorher fragen.
 - Anbieterstörung: Websuche nach "Störung <Anbieter> <Ort>" und nach der Störungsseite des Anbieters. Den Anbieter vom Nutzer erfragen, wenn er nicht im Gedächtnis steht.

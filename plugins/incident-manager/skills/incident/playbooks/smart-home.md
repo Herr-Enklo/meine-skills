@@ -10,15 +10,15 @@ Für Home Assistant und die Geräte dahinter: Gerät reagiert nicht, Sensor zeig
    - `unavailable`: Home Assistant erreicht das Gerät oder den Dienst nicht. Weiter bei Schritt 4.
    - `unknown`: Es liegt noch kein Wert vor, etwa nach einem Neustart oder bei einem Sensor, der selten meldet.
    - Plausibel, aber falsch: Einheit, Skalierung, falsche Entität in der Automation, veralteter Wert (Zeitstempel `last_updated` prüfen).
-4. Umfang bestimmen: Sind nur diese Entität oder alle Entitäten desselben Geräts oder derselben Integration betroffen? `ha_get_device`, `ha_get_integration`. Viele gleichzeitig `unavailable` heißt: Integration, Verbindung, Bridge oder Coordinator, nicht das einzelne Gerät. Der Zustand der Integration (`loaded`, `setup_retry`, `setup_error`, `not_loaded`) sagt, ob Home Assistant sie überhaupt laden konnte.
+4. Umfang bestimmen: Sind nur diese Entität oder alle Entitäten desselben Geräts oder derselben Integration betroffen? `ha_get_device`, `ha_get_integration`. Viele gleichzeitig `unavailable` heißt: Integration, Verbindung, Bridge oder Coordinator, nicht das einzelne Gerät. Der Zustand der Integration sagt, ob Home Assistant sie überhaupt laden konnte: `loaded` läuft, `setup_retry` versucht es gerade erneut (meist Gerät oder Dienst nicht erreichbar), `setup_error` und `migration_error` sind gescheitert, `not_loaded` ist deaktiviert oder entladen, `failed_unload` hängt.
 5. Seit wann: `ha_get_history` für die Entität. Ein fester Zeitpunkt passt zu einer Änderung (Update, Stromausfall, Router-Neustart, Passwortwechsel). Ständiges Wechseln zwischen verfügbar und nicht verfügbar passt zu Funkproblemen oder schwacher Batterie.
 6. Logs: `ha_get_logs`, nach Integration oder Gerät filtern. Die erste Fehlermeldung zählt, Folgefehler danach sind Rauschen.
-7. Was hat sich geändert: Update-Entitäten (`update.*`) und deren Verlauf, `ha_get_system_health`, neue oder umbenannte Entitäten. Eine umbenannte Entität bricht jede Automation, die den alten Namen verwendet.
+7. Was hat sich geändert: Update-Entitäten (`update.*`) und deren Verlauf, `ha_get_system_health`, neue oder umbenannte Entitäten. Eine geänderte Entitäts-ID bricht jede Automation und jedes Skript, das die alte ID verwendet; Home Assistant passt sie nicht an. Ein geänderter Anzeigename schadet nicht.
 
 ## Automation hat nicht oder falsch ausgelöst
 
 - `ha_config_get_automation` lesen und `ha_get_automation_traces` für den fraglichen Zeitpunkt holen.
-- Kein Trace zum Zeitpunkt: Der Auslöser hat nicht gefeuert. Automation deaktiviert? Auslöser-Entität zu dem Zeitpunkt `unavailable`? Zustandswechsel, der gar nicht stattfand (etwa von `unknown` statt vom erwarteten Wert)?
+- Kein Trace zum Zeitpunkt: Entweder hat der Auslöser nicht gefeuert, oder der Trace ist schon überschrieben, denn Home Assistant hebt standardmäßig nur die letzten fünf auf. Im Logbuch oder Verlauf gegenprüfen. Hat der Auslöser nicht gefeuert: Automation deaktiviert? Auslöser-Entität zu dem Zeitpunkt `unavailable`? Zustandswechsel, der gar nicht stattfand (etwa von `unknown` statt vom erwarteten Wert)?
 - Trace vorhanden, aber abgebrochen: An welcher Bedingung ist er gestoppt, welche Aktion hat einen Fehler geworfen? Der Trace zeigt es.
 - Modus der Automation: Bei `single` wird ein zweiter Auslöser verworfen, solange der erste läuft. Das steht dann als Warnung im Log.
 
@@ -27,7 +27,8 @@ Für Home Assistant und die Geräte dahinter: Gerät reagiert nicht, Sensor zeig
 | Eingriff | Stufe |
 |---|---|
 | Zustände, Verlauf, Logs, Traces lesen | 0 |
-| Eine ausgefallene Integration neu laden (`ha_call_service` mit `homeassistant.reload_config_entry`) | 1 |
+| Eine ausgefallene Integration neu laden (`ha_call_service` mit `homeassistant.reload_config_entry` und der `entry_id` aus `ha_get_integration`), wenn nur Geräte dieser Integration betroffen sind | 1 |
+| Dasselbe bei einer Hub-Integration, an der viele Geräte hängen (Zigbee, Z-Wave, Matter, MQTT): alle Geräte daran sind kurz weg | 2 |
 | Ein einzelnes hängendes Gerät über seinen Neustart-Knopf neu starten, wenn es nichts Wichtiges steuert | 1 |
 | Aktionen, die im Haus etwas bewegen oder schalten: Rollos, Heizung, Licht bei Anwesenheit, Geräte wie Waschmaschine oder Backofen | 2 |
 | Alarmanlage, Kameras, Sirene, Schlösser, Anwesenheitserkennung | 2, nie von dir aus entschärfen oder abschalten |
@@ -35,7 +36,7 @@ Für Home Assistant und die Geräte dahinter: Gerät reagiert nicht, Sensor zeig
 | Home Assistant neu starten (`ha_restart`), Firmware- oder Core-Update | 2 |
 | Gerät, Entität oder Integration entfernen, Backup einspielen | 3 |
 
-Eine Automation zum Test manuell auszulösen, führt ihre Aktionen wirklich aus. Das ist so viel Stufe, wie die Aktionen haben.
+Eine Automation zum Test manuell auszulösen (`automation.trigger`), führt ihre Aktionen wirklich aus, und zwar standardmäßig ohne ihre Bedingungen zu prüfen (`skip_condition` ist voreingestellt). Das ist so viel Stufe, wie die Aktionen haben.
 
 ## Häufige Ursachen
 
