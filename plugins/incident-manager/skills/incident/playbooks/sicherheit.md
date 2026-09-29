@@ -60,7 +60,7 @@ Ergänzend zu oben, Stand der Google-Hilfe September 2026. Menübezeichnungen k�
 
 - Sicherheitscheck unter myaccount.google.com (Adresse selbst eintippen) durchgehen. Fremde Ereignisse mit "Nein, das war ich nicht" melden.
 - Ein Passwortwechsel meldet fast alle Sitzungen ab, ausgenommen Geräte, mit denen Anmeldungen bestätigt werden, und manche Drittanbieter-Apps (Google-Hilfe, Artikel 41078). Übrige fremde Geräte einzeln entfernen.
-- Er widerruft auch nur Zugriffe von Apps mit Gmail-Berechtigung. Apps mit Zugriff auf Drive, Kontakte oder Kalender behalten ihn, deshalb die Liste der Drittanbieter-Apps immer prüfen.
+- Er widerruft auch nur Zugriffe von Apps mit Gmail-Berechtigung (Google-Doku zu OAuth 2.0, Abschnitt zum Ablauf von Refresh-Tokens: "The user changed passwords and the refresh token contains Gmail scopes"). Apps mit Zugriff auf Drive, Kontakte oder Kalender behalten ihn, deshalb die Liste der Drittanbieter-Apps immer prüfen.
 - Passkeys und Sicherheitsschlüssel prüfen: ein vom Angreifer angelegter Passkey überlebt den Passwortwechsel. Ersatzcodes neu erzeugen.
 - In Gmail: Weiterleitung, Filter und unter "Konten und Import" Delegierung, "Senden als" und E-Mail-Abruf.
 - War der Angreifer im Konto, gelten alle im Google Passwortmanager gespeicherten Passwörter als bekannt.
