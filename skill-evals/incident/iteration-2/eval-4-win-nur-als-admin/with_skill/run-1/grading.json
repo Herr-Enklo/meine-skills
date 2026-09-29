@@ -1,0 +1,160 @@
+{
+  "expectations": [
+    {
+      "text": "Die Antwort beginnt mit einer Statuszeile im Format `INC-JJJJMMTT-HHMM | P<1-4> | <Bereich> | <Status> | <Titel>`",
+      "passed": true,
+      "evidence": "Zeile 1: `INC-20260928-1420 | P4 | Windows-Software | wartet auf Nutzer | TimeTrack auf PC-117 nur als Administrator: Zugriff verweigert auf config.ini`. Datum/Uhrzeit aus der Nachricht (28.09.2026, 14:20) korrekt als 20260928-1420, P4 im Bereich 1-4, fünf durch „ | “ getrennte Felder, Titel ohne Pipe. Die Zeile steht in Inline-Code-Backticks; das ist Markdown-Formatierung, Inhalt und Reihenfolge entsprechen dem Format (auch das Kriterium notiert das Format in Backticks)."
+    },
+    {
+      "text": "Lokale Administratorrechte werden als Lösung abgelehnt oder ausdrücklich nur als Test bezeichnet, mit Begründung",
+      "passed": true,
+      "evidence": "„**Kurz: Nein, bitte keine lokalen Adminrechte.**“ Begründung: „Adminrechte lösen es nicht: Bei eingeschalteter Benutzerkontensteuerung laufen Programme auch bei Admins ohne Adminrechte. Er müsste TimeTrack weiter über \"Als Administrator ausführen\" starten“ und „Mit Adminrechten kann alles, was er startet, auch ein verseuchter Mailanhang, den Rechner übernehmen und den Virenschutz abschalten.“"
+    },
+    {
+      "text": "Als Ursache werden fehlende Schreibrechte des Benutzers auf C:\\ProgramData\\TimeTrack oder config.ini benannt",
+      "passed": true,
+      "evidence": "„Seinem Konto fehlt das Schreibrecht auf eine Datei“ (Zeile 3), konkretisiert in Hypothese 1: „config.ini wurde von einem anderen Konto angelegt ... Unter `C:\\ProgramData` hat nur der Ersteller einer Datei Vollzugriff (CREATOR OWNER), alle anderen dürfen sie nur lesen.“ Der Titel der Statuszeile nennt config.ini."
+    },
+    {
+      "text": "Es gibt einen lesenden Prüfbefehl für die Berechtigungen (etwa icacls oder Get-Acl auf Ordner oder Datei), bevor etwas geändert wird",
+      "passed": true,
+      "evidence": "Block unter „Nächster Schritt“ mit $d = 'C:\\ProgramData\\TimeTrack': `icacls $d; icacls \"$d\\config.ini\"` und `(Get-Acl $_.FullName).Owner`, ausdrücklich „in einer normalen PowerShell ausführen (nicht als Administrator) ... Er ändert nichts.“ Die Änderung kommt erst danach: „deine Entscheidung nach Blick auf die Ausgabe“."
+    },
+    {
+      "text": "Die Rechteänderung wird gezielt vorgeschlagen (Ordner oder Datei, Benutzer oder Gruppe) und als Änderung mit Freigabe oder Eingriffsstufe gekennzeichnet",
+      "passed": true,
+      "evidence": "„**Lösungsvorschlag (Stufe 2, deine Entscheidung nach Blick auf die Ausgabe):** ... der lokalen Gruppe Benutzer Ändern-Rechte auf genau diesen Ordner geben: `icacls \"C:\\ProgramData\\TimeTrack\" /grant \"*S-1-5-32-545:(OI)(CI)M\"`“. Gezielt (ein Ordner, Gruppe Benutzer per SID), mit Eingriffsstufe und Freigabe durch den Nutzer, dazu Sicherung (`/save`), Wirkung, Prüfung und Weg zurück (`/restore`). Alternative: „Dann bekommt nur sein Konto Schreibrecht auf die eine Datei.“"
+    },
+    {
+      "text": "Der Unterschied zu den alten Kollegen (Gruppenmitgliedschaft, frühere Rechtevergabe, Installation oder Paket setzt Rechte) wird als Hypothese genannt",
+      "passed": true,
+      "evidence": "Abschnitt „Hypothesen“: (1) config.ini beim Erststart als Admin oder vom Installer angelegt, „Auf den alten Rechnern haben die Kollegen TimeTrack vermutlich selbst zuerst gestartet“; (2) „Auf den alten Rechnern sind Rechte ausdrücklich gesetzt (Paket, Handgriff, eigene Gruppe), auf PC-117 nicht“; (3) „Die alten Kollegen sind selbst lokale Admins“; (4) VirtualStore/andere Version. Deckt Gruppenmitgliedschaft, frühere Rechtevergabe und Installation/Paket ab, jeweils mit Erkennungsmerkmal."
+    },
+    {
+      "text": "Die Antwort stellt höchstens drei Rückfragen",
+      "passed": true,
+      "evidence": "Kein Fragezeichen in antwort.md. Anfragen mit erwarteter Antwort nur unter „Was ich von dir brauche“: 1. „Die Ausgabe von PC-117 und von einem alten Rechner.“ 2. „Ob in der config.ini Zugangsdaten stehen“. Allenfalls noch „(Vermutung, bitte nachsehen)“ zur Buchungszuordnung. Das sind 2, höchstens 3."
+    }
+  ],
+  "summary": {
+    "passed": 7,
+    "failed": 0,
+    "total": 7,
+    "pass_rate": 1.0
+  },
+  "execution_metrics": {
+    "tool_calls": {
+      "Bash": 7,
+      "ToolSearch": 1,
+      "WebSearch": 5,
+      "Write": 2,
+      "SubagentHandback": 1
+    },
+    "total_tool_calls": 16,
+    "files_created": [
+      "antwort.md"
+    ],
+    "output_chars": 5866,
+    "transcript_chars": 12827,
+    "errors_encountered": 0
+  },
+  "timing": {
+    "executor_duration_seconds": 343.9,
+    "total_duration_seconds": 343.9,
+    "total_tokens": 114796,
+    "grader_duration_seconds": null
+  },
+  "claims": [
+    {
+      "claim": "Bei eingeschalteter Benutzerkontensteuerung laufen Programme auch bei Admins ohne Adminrechte; er müsste weiter „Als Administrator ausführen“.",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Stimmt: Admins erhalten unter UAC ein gefiltertes Token, Schreiben in fremde Dateien unter ProgramData bräuchte weiterhin Elevation."
+    },
+    {
+      "claim": "Unter C:\\ProgramData hat nur der Ersteller einer Datei Vollzugriff (CREATOR OWNER), alle anderen dürfen sie nur lesen.",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Für normale Benutzer zutreffend (Benutzer: RX, CREATOR OWNER: F auf Unterobjekte). Ungenau, weil SYSTEM und Administratoren ebenfalls Vollzugriff haben; für die Diagnose unschädlich."
+    },
+    {
+      "claim": "UAC-Virtualisierung gilt für ältere 32-Bit-Programme auch für ProgramData; Umleitung nach %LOCALAPPDATA%\\VirtualStore\\ProgramData.",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Deckt sich mit Windows-Internals-Angaben (virtualisiert: Program Files, ProgramData, Windows) für 32-Bit-Prozesse ohne requestedExecutionLevel-Manifest; im Transkript per Websuche recherchiert."
+    },
+    {
+      "claim": "icacls C:\\ProgramData\\TimeTrack /save ... /t /c sichert, Wiederherstellung mit icacls C:\\ProgramData /restore am übergeordneten Ordner.",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Korrekt: /save speichert relative Namen, /restore wird auf das übergeordnete Verzeichnis angewendet. Kleinigkeit: $env:TEMP ist in der Admin-PowerShell der Temp-Ordner des Admin-Kontos; Restore muss im selben Konto laufen."
+    },
+    {
+      "claim": "icacls C:\\ProgramData\\TimeTrack /grant *S-1-5-32-545:(OI)(CI)M gibt der Gruppe Benutzer sprachunabhängig Ändern-Rechte.",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Syntax korrekt, in PowerShell richtig gequotet; S-1-5-32-545 ist VORDEFINIERT\\Benutzer. Nicht erwähnt: Hat config.ini die Vererbung abgeschaltet, greift die Ordnerfreigabe nicht; die funktionale Prüfung würde das aber aufdecken."
+    },
+    {
+      "claim": "Schreibschutz oder Dateisperre scheiden aus, sonst ginge es auch als Administrator nicht.",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Schlüssig: Schreibschutzattribut und Freigabeverletzung treffen auch erhöhte Prozesse."
+    },
+    {
+      "claim": "Mit deiner Bestätigung läuft TimeTrack unter deinem Admin-Konto; Buchungen könnten unter deinem Namen landen.",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Stimmt für einen Standardbenutzer, der über die UAC-Anmeldeabfrage mit fremden Admin-Anmeldedaten erhöht; als Vermutung markiert."
+    },
+    {
+      "claim": "Empirum-Skriptkopie unter %ProgramData%\\$Matrix42Scripts$ (Suche nach Setup.inf).",
+      "type": "factual",
+      "verified": false,
+      "evidence": "Hier nicht unabhängig prüfbar; der Pfad stammt aus playbooks/windows-software.md Zeile 103. Durch -ErrorAction SilentlyContinue harmlos, falls er nicht existiert."
+    },
+    {
+      "claim": "Herstellerhinweise zur config.ini von TimeTrack habe ich nicht gefunden.",
+      "type": "process",
+      "verified": true,
+      "evidence": "Transkript: eine Websuche nach TimeTrack/config.ini/ProgramData lieferte nur Produkt- und Marketingseiten. Insgesamt 5 Websuchen, Limit eingehalten."
+    },
+    {
+      "claim": "P4 (ein Nutzer, arbeitsfähig mit Hilfe), Annahme nach Standardmatrix.",
+      "type": "quality",
+      "verified": true,
+      "evidence": "Plausibel und als Annahme markiert, mit Hochstufungsbedingung („Sind weitere neue Rechner betroffen, stufe ich hoch.“)."
+    }
+  ],
+  "user_notes_summary": {
+    "uncertainties": [
+      "Priorität P4 als Annahme nach Standardmatrix, Regeln des Arbeitgebers unbekannt",
+      "Herstellerhinweise zur config.ini von TimeTrack nicht gefunden",
+      "Buchungszuordnung beim Start unter dem Admin-Konto nur vermutet"
+    ],
+    "needs_review": [
+      "Keine user_notes.md vorhanden. Ordnerweite Ändern-Rechte ohne Warnung vor ausführbaren Dateien im Ordner"
+    ],
+    "workarounds": [
+      "Laut Handback liest das Lagebild-Skript des Skills keine Dateirechte; statt des Skripts wurde ein eigener lesender PowerShell-Block geliefert"
+    ]
+  },
+  "eval_feedback": {
+    "suggestions": [
+      {
+        "assertion": "Die Antwort stellt höchstens drei Rückfragen",
+        "reason": "Nicht trennscharf: Eine Antwort ganz ohne Rückfrage besteht trivial (der Lauf ohne Skill stellt null Fragen). Sinnvoller wäre zusätzlich zu prüfen, dass gezielt die Ausgabe des Prüfbefehls von PC-117 und einem alten Rechner angefordert wird."
+      },
+      {
+        "reason": "Die Kriterien 2, 3, 4 und 6 besteht auch die Vergleichsantwort ohne Skill; trennscharf sind in diesem Eval nur Statuszeile (1) und Kennzeichnung der Änderung (5). Ein Kriterium zum Weg zurück (ACL vorher sichern, etwa icacls /save und /restore am übergeordneten Ordner) würde den Unterschied besser messen: Der Lauf mit Skill hat es, der ohne Skill nicht."
+      },
+      {
+        "reason": "Kein Kriterium prüft das Risiko einer Ordnerfreigabe: Ändern-Recht für Benutzer auf C:\\ProgramData\\TimeTrack ist unkritisch nur, wenn dort keine .exe/.dll/Skripte liegen, die später erhöht laufen (Rechteausweitung). Der Lauf ohne Skill warnt davor und bietet die reine Dateifreigabe an, der Lauf mit Skill nicht (er begründet die Dateivariante nur mit Zugangsdaten in config.ini). Vorschlag: Kriterium „Rechte möglichst nur auf config.ini oder Warnung bei ausführbaren Dateien im Ordner“."
+      },
+      {
+        "reason": "Kein Kriterium begrenzt Länge oder Fokus. Die Antwort mit Skill hat rund 5.900 Zeichen, vier Hypothesen (inkl. UAC-Virtualisierung) und einen 16-zeiligen Diagnoseblock für eine P4-Frage, die mit Ja/Nein plus Befehl beantwortbar wäre."
+      }
+    ],
+    "overall": "Der Lauf erfüllt alle Kriterien mit klaren Belegen. Die Kriterien prüfen Vorhandensein gut, sind aber außer Statuszeile und Änderungskennzeichnung kaum trennscharf; Rollback und das Risiko ordnerweiter Schreibrechte fehlen als Kriterien."
+  }
+}

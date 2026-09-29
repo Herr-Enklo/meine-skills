@@ -1,0 +1,153 @@
+{
+  "expectations": [
+    {
+      "text": "Die Antwort beginnt mit einer Statuszeile im Format `INC-JJJJMMTT-HHMM | P<1-4> | <Bereich> | <Status> | <Titel>`",
+      "passed": true,
+      "evidence": "Erste Zeile von antwort.md: `INC-20260929-1030 | P4 | Smart Home | wartet auf Nutzer | Temperatursensor Büro (Shelly H&T) seit Tagen nicht verfügbar`. ID stimmt mit Datum und Uhrzeit der Nachricht überein (29.09.2026, 10:30), P4 liegt in P1–P4, fünf Felder mit \" | \" getrennt, Bereich und Status stammen aus den erlaubten Werten der Skill-Vorlage. Die Zeile steht in Inline-Backticks wie das Beispiel in vorlagen.md; der Inhalt entspricht exakt dem Format."
+    },
+    {
+      "text": "Die Wichtigkeit wird davon abhängig gemacht, was den Sensor benutzt (Automationen, Thermostat oder Heizungsregelung), mit einem konkreten Prüfweg dafür",
+      "passed": true,
+      "evidence": "Abhängigkeit: „Wichtig wird es, wenn etwas an ihm hängt: Nimmt ein Thermostat oder eine Heizungsautomation ihn als Istwert, oder hängt eine Lüftungs-, Schimmel- oder Frostwarnung daran …“. Konkreter Prüfweg als erster Schritt: „Wer benutzt den Sensor? Sensor in HA öffnen, oben rechts ⋮ → „Verwandt\". Dort stehen Automationen, Skripte und Szenen, die ihn verwenden. Das beantwortet „schlimm oder nicht\".“ Auch die Priorität hängt daran: „Hängt eine Heizungsregelung dran, wird es P3.“"
+    },
+    {
+      "text": "Es wird darauf hingewiesen, dass ein eingefrorener letzter Wert eine Regelung (etwa die Heizung) falsch weiterarbeiten lassen kann",
+      "passed": false,
+      "evidence": "Die Antwort sagt nur: „… arbeiten die gerade ohne Wert. Sie lösen nicht aus oder bleiben im letzten Zustand.“ Der Ausfall wird als fehlender Wert beschrieben, nicht als eingefrorener letzter Wert, mit dem eine Regelung weiterrechnet. „Bleiben im letzten Zustand“ deutet die Folge höchstens an. Ein Warnhinweis, dass ein Thermostat mit dem alten Istwert falsch weiterregelt (etwa weiterheizt), fehlt. Die Sofortmaßnahme „dort von Hand heizen“ geht sogar nur vom Fall aus, dass nicht geheizt wird. Das Smart-Home-Playbook des Skills enthält den Punkt („Ein eingefrorener letzter Wert ist gefährlicher als ein fehlender …“), in der Antwort ist er nicht angekommen. Grenzfall, beim strengen Maßstab nicht bestanden."
+    },
+    {
+      "text": "Eine leere Batterie bzw. ein schlafendes Batteriegerät wird als wahrscheinlichste Ursache genannt, mit Prüfung des Batterieverlaufs oder des Protokolls",
+      "passed": true,
+      "evidence": "Hypothese 1: „Batterie leer (am wahrscheinlichsten): Der Batteriewert fiel vor dem Ausfall ab, der Sensor reagiert nicht auf Tastendruck.“ Prüfung in Schritt 2: „Beim Temperatur- und Batteriesensor den Verlauf öffnen: Wann genau war der Ausfall, wie hoch war die Batterie zuletzt, gab es vorher Lücken?“ Protokoll zusätzlich in Schritt 6 („Einstellungen → System → Protokolle nach „shelly\" durchsuchen“)."
+    },
+    {
+      "text": "Neuladen der Integration oder Neustart von Home Assistant wird nicht als Lösung für eine leere Batterie empfohlen",
+      "passed": true,
+      "evidence": "Ausdrücklich in Schritt 5: „Integration neu laden oder HA neu starten hilft bei leerer Batterie nicht.“ Weder Reload noch Neustart wird irgendwo in der Antwort als Maßnahme empfohlen."
+    },
+    {
+      "text": "Als Folgeaufgabe wird eine Warnung bei niedriger Batterie oder langer Funkstille vorgeschlagen",
+      "passed": true,
+      "evidence": "„Folgeaufgabe: Benachrichtigung bei Batterie unter etwa 20 % oder wenn ein Sensor mehrere Stunden nicht verfügbar ist. Die richte ich dir gern ein.“"
+    }
+  ],
+  "summary": {
+    "passed": 5,
+    "failed": 1,
+    "total": 6,
+    "pass_rate": 0.83
+  },
+  "execution_metrics": {
+    "tool_calls": {
+      "Read": 1,
+      "Bash": 6,
+      "ToolSearch": 1,
+      "WebFetch": 5,
+      "WebSearch": 4,
+      "Write": 2,
+      "SubagentHandback": 1
+    },
+    "total_tool_calls": 20,
+    "files_created": [
+      "antwort.md"
+    ],
+    "output_chars": 5148,
+    "transcript_chars": 16686,
+    "errors_encountered": 0
+  },
+  "timing": {
+    "executor_duration_seconds": 305.2,
+    "total_duration_seconds": 305.2,
+    "total_tokens": 104995,
+    "duration_ms": 305219
+  },
+  "claims": [
+    {
+      "claim": "Gen1-H&T meldet sich über den CoIoT-Peer <HA-IP>:5683, Plus H&T und H&T Gen3 über den Outbound-WebSocket ws://<HA-IP>:8123/api/shelly/ws",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Entspricht der Home-Assistant-Doku zur Shelly-Integration (WebFetch im Transkript)."
+    },
+    {
+      "claim": "Batterien: Gen1 eine CR123A, Plus H&T und Gen3 vier AA",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Deckt sich mit den Shelly-KB-Seiten, die im Transkript abgerufen wurden (H&T: CR123A; Plus H&T: 4 AA; Gen3: 4 AA)."
+    },
+    {
+      "claim": "Gen1: Taste 5 s halten öffnet den Access Point, 10 s setzt zurück",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Shelly KB H&T (Gen1) laut WebFetch: 5 s Access Point, 10 s Werksreset."
+    },
+    {
+      "claim": "Plus H&T und Gen3: Taste hinter der Rückabdeckung",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Für den Plus H&T durch den KB-Abruf belegt. Für Gen3 nennt der Abruf im Transkript die Lage nicht ausdrücklich, die Angabe ist aber plausibel."
+    },
+    {
+      "claim": "Im Entitätsdialog zeigt ⋮ → „Verwandt“ die Automationen, Skripte und Szenen, die den Sensor verwenden",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Das entspricht dem Mehr-Infos-Dialog in HA. Einschränkung: Dashboards und YAML-Vorlagen tauchen dort nicht zuverlässig auf. Die Aussage ist nicht falsch, aber nicht vollständig."
+    },
+    {
+      "claim": "„seit“ (last_changed) zeigt nach einem HA-Neustart dessen Startzeit",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Bekanntes HA-Verhalten: last_changed wird beim Start neu gesetzt."
+    },
+    {
+      "claim": "Die Jinja-Vorlage liest nur und listet Temperatur, Luftfeuchte und Batterie aller Shelly-Geräte",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Sie nutzt nur lesende Funktionen (integration_entities, area_name, as_local). Im Transkript wurde sie mit jinja2 und Attrappen-Zuständen getestet, nicht gegen ein echtes HA. Das Attribut „restored“ gibt es nur bei verwaisten Registry-Einträgen und wird bei Shelly-Schlafgeräten selten erscheinen. Harmlos."
+    },
+    {
+      "claim": "Eine aktuelle Sammelstörung der Shelly-Integration für H&T-Sensoren wurde nicht gefunden",
+      "type": "process",
+      "verified": true,
+      "evidence": "Das Transkript zeigt die Websuche und den Abruf von core#171057 (Mai 2026, core-2026.5.2, geschlossen), also keine aktuelle Störung. Die Antwort erwähnt dieses Issue nicht."
+    },
+    {
+      "claim": "Frühere Incidents sind nicht bekannt, in der Sitzung gibt es kein Journal",
+      "type": "process",
+      "verified": true,
+      "evidence": "Transkript: ls auf ~/.claude/agent-memory/incident-manager/ scheitert mit „No such file or directory“."
+    },
+    {
+      "claim": "P4 als Annahme, P3 bei Heizungsregelung",
+      "type": "quality",
+      "verified": true,
+      "evidence": "Plausibel für ein einzelnes Gerät ohne bekannte Abhängigkeit. In der Antwort ausdrücklich als Annahme markiert."
+    }
+  ],
+  "user_notes_summary": {
+    "uncertainties": [
+      "Keine user_notes.md vorhanden. Die Priorität P4 ist in der Antwort selbst als Annahme markiert."
+    ],
+    "needs_review": [],
+    "workarounds": []
+  },
+  "eval_feedback": {
+    "suggestions": [
+      {
+        "assertion": "Es wird darauf hingewiesen, dass ein eingefrorener letzter Wert eine Regelung (etwa die Heizung) falsch weiterarbeiten lassen kann",
+        "reason": "Der Wortlaut hängt an „eingefrorener letzter Wert“. Ob „bleiben im letzten Zustand“ (with_skill) genügt, ist unklar. Besser ausdrücklich verlangen, dass ein Thermostat oder eine Automation mit dem alten Istwert weiterregeln kann (z. B. weiterheizt) und dass das schlimmer ist als ein fehlender Wert. Der Skill enthält den Satz im Playbook, die Antwort hat ihn trotzdem verwässert."
+      },
+      {
+        "assertion": "Neuladen der Integration oder Neustart von Home Assistant wird nicht als Lösung für eine leere Batterie empfohlen",
+        "reason": "Eine negative Assertion: Sie besteht auch, wenn Reload oder Neustart gar nicht erwähnt werden. without_skill empfiehlt einen Reload im Rückfallzweig und besteht trotzdem. Wenn das Verhalten wichtig ist, positiv formulieren: Es wird ausdrücklich gesagt, dass Reload oder Neustart bei leerer Batterie nichts bringt."
+      },
+      {
+        "assertion": "Eine leere Batterie bzw. ein schlafendes Batteriegerät wird als wahrscheinlichste Ursache genannt, mit Prüfung des Batterieverlaufs oder des Protokolls",
+        "reason": "„Als wahrscheinlichste Ursache“ ist unscharf, wenn Batterie und WLAN im selben Satz gleichrangig stehen (without_skill). Klarstellen, ob eine ausdrückliche Rangfolge nötig ist oder ein Vorgehen reicht, das mit der Batterie beginnt."
+      },
+      {
+        "reason": "Keine Assertion prüft die modellabhängigen Fakten (Gen1 mit CoIoT-Peer und CR123A gegen Plus/Gen3 mit Outbound-WebSocket und 4× AA) oder die Warnung, die Taste nicht lang zu drücken. Beide Läufe hatten das richtig; als Schutz gegen falsche Hardwareangaben wäre es sinnvoll."
+      }
+    ],
+    "overall": "Die Assertions 1 und 2 trennen gut zwischen den Läufen. Die Assertions 3 bis 5 hängen stark an der Formulierung beziehungsweise bestehen zu leicht."
+  }
+}

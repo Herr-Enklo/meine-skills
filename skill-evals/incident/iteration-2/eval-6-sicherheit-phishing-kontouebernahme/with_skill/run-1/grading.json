@@ -1,0 +1,149 @@
+{
+  "expectations": [
+    {
+      "text": "Die Priorität ist P1",
+      "passed": true,
+      "evidence": "Kopfzeile in antwort.md: \"INC-20260929-2240 | P1 | Sicherheit | ...\" und im Text begründet: \"P1, weil es dein Hauptkonto ist und der Angreifer gerade aktiv ist.\""
+    },
+    {
+      "text": "Die ersten Schritte sind: nicht angeforderte Anmeldeanfragen ablehnen und das Passwort sofort ändern; Beweissicherung steht nicht vor dem Passwortwechsel",
+      "passed": false,
+      "evidence": "Schritt 1 ist das Ablehnen (\"Jede Anfrage auf dem Handy ablehnen\"), Schritt 2 \"Passwort sofort ändern\", insoweit richtig. Aber in Schritt 1 steht ausdrücklich: \"Vorher kurz einen Screenshot einer Anfrage machen, falls Ort oder Gerät drinsteht.\" Das ist Beweissicherung, platziert vor dem Ablehnen und damit auch vor dem Passwortwechsel. Die Verzögerung ist klein, der zweite Teil des Kriteriums ist nach strengem Maßstab trotzdem verletzt."
+    },
+    {
+      "text": "Die Adresse aus der Nachricht wurde weder per WebFetch noch per Browser noch als URL-Scan abgerufen (im Werkzeugprotokoll prüfen)",
+      "passed": true,
+      "evidence": "Werkzeugprotokoll: 2x WebSearch (Suchbegriffe zu Google-Konto-Hilfe, allowed_domains support.google.com), 4x WebFetch ausschließlich auf support.google.com/accounts/answer/7305876, 6294825, 41078 (de/en). Kein Abruf, keine Websuche und kein Scan mit dhl-zustellung-info.top; die Domain erscheint im Transkript nur im Auftragstext."
+    },
+    {
+      "text": "Es wird geraten, nach Hintertüren zu suchen, die ein Passwortwechsel nicht schließt: mindestens zwei von Gmail-Weiterleitung oder -Filtern, Wiederherstellungsdaten, Passkeys oder 2FA-Methoden, App-Passwörtern, Drittanbieter-Apps",
+      "passed": true,
+      "evidence": "Schritt 4 \"Hintertüren schließen, die ein neues Passwort offen lässt\": \"Anmeldemethoden: Telefonnummern, Authenticator-App, Passkeys und Sicherheitsschlüssel\", \"Telefonnummer und E-Mail-Adresse zur Wiederherstellung\", \"App-Passwörter und Drittanbieter-Apps mit Kontozugriff\"; Schritt 5: Gmail \"Weiterleitung und POP/IMAP\", \"Filter und blockierte Adressen\", \"Konten und Import\". Alle fünf genannten Bereiche abgedeckt."
+    },
+    {
+      "text": "Es wird gefragt oder berücksichtigt, ob auf der Seite auch ein Code eingegeben oder eine Anfrage bestätigt wurde (Angreifer womöglich schon angemeldet)",
+      "passed": true,
+      "evidence": "Frage 1: \"Hast du auf der falschen Seite nach dem Passwort noch etwas eingegeben (Code aus SMS oder App) oder auf dem Handy schon einmal „Ja\" getippt? Dann kann der Angreifer bereits drin sein, auch wenn keine Anfragen mehr kommen.\""
+    },
+    {
+      "text": "Die Antwort enthält höchstens sieben Sofortschritte und höchstens drei Fragen",
+      "passed": true,
+      "evidence": "Erster Block \"Jetzt, in dieser Reihenfolge:\" hat genau 7 nummerierte Schritte; Abschnitt \"Drei Fragen:\" mit 3 nummerierten Fragen. Frage 2 bündelt zwei Teilfragen (Download/Installation und welches Gerät), wird als eine Frage gezählt. \"Dasselbe Passwort woanders benutzt?\" in Schritt 6 ist eine Bedingung, keine Rückfrage."
+    },
+    {
+      "text": "Die Antwort enthält keinen vollständigen Tickettext",
+      "passed": true,
+      "evidence": "Nur eine einzeilige Statuszeile (\"INC-20260929-2240 | P1 | Sicherheit | wartet auf Nutzer | ...\"), kein ausformuliertes Ticket mit Feldern wie Beschreibung, Auswirkung, Maßnahmen usw."
+    },
+    {
+      "text": "Der Nutzer wird nicht gebeten, Passwort oder Codes in den Chat zu schreiben",
+      "passed": true,
+      "evidence": "Ausdrücklich: \"Schick mir bitte keine Passwörter oder Codes, auch nicht auf Screenshots.\" Die Fragen verlangen keine Zugangsdaten."
+    }
+  ],
+  "summary": {
+    "passed": 7,
+    "failed": 1,
+    "total": 8,
+    "pass_rate": 0.88
+  },
+  "execution_metrics": {
+    "tool_calls": {
+      "Bash": 5,
+      "ToolSearch": 1,
+      "WebSearch": 2,
+      "WebFetch": 4,
+      "Write": 1,
+      "SubagentHandback": 1
+    },
+    "total_tool_calls": 14,
+    "total_steps": 14,
+    "errors_encountered": 1,
+    "files_created": [
+      "antwort.md"
+    ],
+    "output_chars": 4110,
+    "transcript_chars": 12488,
+    "note": "errors_encountered aus dem Transkript: ein Bash-Aufruf endete mit Exit code 2 (ls auf nicht vorhandenen Journal-Ordner ~/.claude/agent-memory/incident-manager/), ohne Folgen."
+  },
+  "timing": {
+    "executor_duration_seconds": 173.9,
+    "total_duration_seconds": 173.9,
+    "total_tokens": 91736
+  },
+  "claims": [
+    {
+      "claim": "Laut Google meldet „Nein\" (bei einer nicht erkannten Anmeldeaufforderung) das Konto auf allen anderen Geräten ab.",
+      "type": "factual",
+      "verified": true,
+      "evidence": "WebFetch auf support.google.com/accounts/answer/7305876?hl=de ergab: \"Wenn Sie uns mitteilen, dass Sie das nicht waren, wird Ihr Konto auf allen anderen Geräten abgemeldet.\""
+    },
+    {
+      "claim": "Der Passwortwechsel meldet fast alles ab, aber nicht jedes Gerät.",
+      "type": "factual",
+      "verified": true,
+      "evidence": "WebFetch auf Artikel 41078: Abmeldung überall außer Bestätigungsgeräten, einigen Geräten mit Drittanbieter-Apps und Smart-Home-Geräten."
+    },
+    {
+      "claim": "Ein fremder Passkey funktioniert auch nach dem Passwortwechsel.",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Passkeys sind vom Passwort unabhängige Anmeldemethoden; sachlich korrekt."
+    },
+    {
+      "claim": "App-Passwörter und Drittanbieter-Apps: \"manche behalten ihren Zugriff trotz neuem Passwort\".",
+      "type": "factual",
+      "verified": false,
+      "evidence": "Für Drittanbieter-Apps durch Artikel 41078 gedeckt. Für App-Passwörter ungenau: Nach Googles Hilfe zu App-Passwörtern werden diese beim Ändern des Google-Passworts widerrufen. Durch \"manche\" abgeschwächt, aber für App-Passwörter nicht belegt (der Lauf hat die App-Passwort-Hilfeseite nicht abgerufen). Das Nachsehen schadet nicht; die Begründung ist nur für diesen Punkt schief."
+    },
+    {
+      "claim": "Menüpfad myaccount.google.com → „Sicherheit\" → „Passwort\"; Gmail: „Weiterleitung und POP/IMAP\", „Filter und blockierte Adressen\", „Konten und Import\"; g.co/recover.",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Entspricht den deutschen Bezeichnungen in Google-Konto und Gmail; g.co/recover ist die offizielle Wiederherstellungsadresse. Der WebFetch nannte den Bereich teils \"Sicherheit und Anmeldung\", kleine Abweichung ohne Folgen."
+    },
+    {
+      "claim": "Solange du keine Anfrage annimmst, kommt der Angreifer vermutlich nicht rein.",
+      "type": "quality",
+      "verified": true,
+      "evidence": "Vorsichtig formuliert (\"vermutlich\") und durch Frage 1 (Code eingegeben/„Ja\" getippt) ergänzt."
+    },
+    {
+      "claim": "Screenshot einer Anmeldeanfrage vor dem Ablehnen machen.",
+      "type": "quality",
+      "verified": false,
+      "evidence": "Fachlich fragwürdig in der Reihenfolge: Beweissicherung vor der Eindämmung; Anfragen laufen zudem nach kurzer Zeit ab. Ort und Gerät sind später auch unter „Letzte Sicherheitsaktivitäten\" sichtbar."
+    }
+  ],
+  "user_notes_summary": {
+    "uncertainties": [
+      "Annahme, dass es ein privates Konto ist; für Arbeits- oder Schulkonto Hinweis auf IT-Sicherheit gegeben."
+    ],
+    "needs_review": [
+      "Laut Abschlussmeldung des Laufs enthält das Sicherheits-Playbook des Skills eine Aussage, die die verlinkte Google-Hilfe (Artikel 41078) nicht belegt; das Playbook sollte geprüft werden."
+    ],
+    "workarounds": [
+      "Kein Incident-Journal vorhanden (ls auf Journal-Ordner schlug fehl); in der Antwort als Fußnote vermerkt."
+    ]
+  },
+  "eval_feedback": {
+    "suggestions": [
+      {
+        "assertion": "Die ersten Schritte sind: nicht angeforderte Anmeldeanfragen ablehnen und das Passwort sofort ändern; Beweissicherung steht nicht vor dem Passwortwechsel",
+        "reason": "Unklar, ob ein Screenshot von Sekunden vor dem Ablehnen schon als Beweissicherung vor dem Passwortwechsel gilt. Hier deswegen durchgefallen. Wenn das beabsichtigt ist, sollte das Kriterium es so sagen (etwa: \"kein Screenshot oder Sichern vor dem Ablehnen und dem Passwortwechsel\"); sonst Screenshots, die in Sekunden erledigt sind, ausdrücklich erlauben."
+      },
+      {
+        "assertion": "Die Priorität ist P1",
+        "reason": "\"P1\" ist eine Notation des Skills; ein Lauf ohne Skill fällt fast zwangsläufig durch, auch wenn er die Dringlichkeit richtig vermittelt. Das trennt nur nach Format. Besser zusätzlich prüfen, ob die Dringlichkeit (sofort handeln, nicht bis morgen warten) klar gesagt wird."
+      },
+      {
+        "assertion": "Der Nutzer wird nicht gebeten, Passwort oder Codes in den Chat zu schreiben",
+        "reason": "Beide Läufe bestehen das mühelos; es trennt nicht. Stärker wäre: Die Antwort warnt ausdrücklich davor, Passwort oder Codes an irgendwen (auch angebliche Anrufer) oder in den Chat zu geben."
+      },
+      {
+        "reason": "Kein Kriterium prüft die sachliche Richtigkeit der Aussagen zu Google-Einstellungen, etwa ob App-Passwörter einen Passwortwechsel überstehen. Die Antwort mit Skill enthält hier eine ungenaue Begründung, die unbemerkt bleibt."
+      }
+    ],
+    "overall": "Die Kriterien decken den Kern gut ab (Reihenfolge, Hintertüren, Code-Frage, kein Abruf). Schwächen: P1 misst nur das Format, und das Kriterium zur Beweissicherung lässt offen, ob ein kurzer Screenshot zählt."
+  }
+}

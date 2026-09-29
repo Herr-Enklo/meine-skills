@@ -196,9 +196,10 @@ Zeitangaben sowie Regeln zu Neustart, Zurückstufen und einzelnen Virenscanner-F
 
 Beide Skripte liefen mangels Windows unter PowerShell 7.6 auf Linux: PSScriptAnalyzer mit
 Kompatibilitätsregeln für Windows PowerShell 5.1 ohne Befund, das Lagebild mit
-nachgebauten Windows-Cmdlets (57 Prüfungen), der Startcheck mit echten x86-, x64- und
-ARM64-Programmdateien aus dem Python-Paket distlib (12 Prüfungen: falsche Architektur
-über PATH, fehlende und beschädigte DLL, fremde Architektur im Programmordner). Ein Lauf
+nachgebauten Windows-Cmdlets (61 Prüfungen), der Startcheck mit echten x86-, x64- und
+ARM64-Programmdateien aus dem Python-Paket distlib (13 Prüfungen: falsche Architektur
+über PATH, fehlende und beschädigte DLL, fremde Architektur und beschädigte Dateien im
+Programmordner). Ein Lauf
 auf echtem Windows steht noch aus.
 
 ```
@@ -212,7 +213,7 @@ pwsh -NoProfile -File plugins/incident-manager/tests/startcheck-test.ps1
 des `skill-creator`: fünf Windows-Fälle (1618 auf einem Teil der Clients, 0xc000007b mit
 Frist, Lagebild auswerten, Programm nur als Administrator, Bluescreen am Dock), Phishing mit
 laufender Kontoübernahme, einen Home-Assistant-Sensor und einen Anmeldeausfall an einem
-Standort, zusammen 63 prüfbare Kriterien. Jedes Szenario läuft einmal mit und einmal ohne
+Standort, zusammen 66 prüfbare Kriterien (im ersten Durchlauf 63). Jedes Szenario läuft einmal mit und einmal ohne
 Skill, Prüf-Agents bewerten die Antworten, `skill-evals/incident/iteration-<n>/review.html`
 zeigt Antworten, Bewertungen und die Übersicht.
 
@@ -225,6 +226,19 @@ eines Ausfalls noch den Vergleich mit funktionierenden Rechnern. Der Skill koste
 Mittel etwa 45 000 Tokens und zwei Minuten mehr je Antwort. Welche Kriterien noch nicht
 trennen und was vor dem nächsten Durchlauf zu ändern ist, steht in
 `skill-evals/incident/iteration-1/benchmark.md`.
+
+Zweiter Durchlauf am selben Tag, mit kürzeren Antworten (Richtwert eine Bildschirmseite),
+geschärften Kriterien und einem Testrahmen, der bei Phishing Recherche erlaubt: mit Skill 61
+von 66, ohne Skill 48 von 66, in der Sache 52 zu 48 von 57 (91 % zu 84 %). Die Antworten mit
+Skill sind ohne Codeblöcke im Mittel 4 550 statt 6 870 Zeichen lang, die längste 5 055 statt
+10 432. Das Kürzen hat drei Regeln gekostet, die im ersten Durchlauf hielten: höchstens drei
+Rückfragen, der Workaround vor der Diagnose und die Warnung vor einem eingefrorenen Messwert.
+Dazu kamen zwei Fehler, die der Skill selbst verursacht hatte: der Screenshot vor dem Ablehnen
+der Anmeldeanfrage und ein unterstellter Dock-Treiber. Die Läufe fanden außerdem einen
+Sachfehler im Sicherheits-Playbook (Google widerruft App-Passwörter beim Passwortwechsel).
+Alle Punkte sind nach dem Durchlauf eingearbeitet; ob das wirkt, zeigt erst ein dritter
+Durchlauf. Einzelheiten in `skill-evals/incident/iteration-2/benchmark.md`, die Seite
+`review.html` dort zeigt die Antworten beider Durchläufe nebeneinander.
 
 Hilfsskripte: `tests/eval_transkript.py` macht aus dem Protokoll eines Laufs Transkript und
 Werkzeugstatistik, `tests/eval_testdaten.py` erzeugt die Eingabedatei für das Lagebild-Szenario.

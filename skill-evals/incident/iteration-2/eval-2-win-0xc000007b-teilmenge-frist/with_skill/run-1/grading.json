@@ -1,0 +1,157 @@
+{
+  "expectations": [
+    {
+      "text": "Die Antwort beginnt mit einer Statuszeile im Format `INC-JJJJMMTT-HHMM | P<1-4> | <Bereich> | <Status> | <Titel>`, deren Zeit der Uhrzeit aus der Nachricht (10:05) entspricht",
+      "passed": true,
+      "evidence": "Zeile 1 von antwort.md: `INC-20260929-1005 | P2 | Windows-Software | wartet auf Nutzer | LohnPro startet seit Patchday-Rollout auf 3 von 23 Buchhaltungs-PCs nicht (0xc000007b)`. Fünf durch ' | ' getrennte Felder; 20260929 = Dienstag, 29.09.2026, 1005 = 10:05 aus der Nachricht; P2 liegt im Bereich P1-P4. Die Zeile steht in Backticks, am Format ändert das nichts."
+    },
+    {
+      "text": "Die Priorität ist P1 oder P2, begründet mit stillstehender Arbeit oder der Abrechnungsfrist am Donnerstag",
+      "passed": true,
+      "evidence": "Einordnung: 'P2: Die Auswirkung ist mittel (3 von 23 Plätzen, aber genau die Lohnabrechnung), die Dringlichkeit hoch (die drei können gar nicht arbeiten, Abrechnung am Donnerstag).' Dazu die Hochstufungsregel: 'Gibt es bis Mittwochmorgen weder Workaround noch Lösung, stufe ich auf P1 hoch.' Beide Begründungen (Stillstand, Frist) sind genannt."
+    },
+    {
+      "text": "0xc000007b wird als ungültiges Image-Format erklärt, mit 32/64-Bit-Mischung oder beschädigter bzw. falscher DLL als Richtung",
+      "passed": true,
+      "evidence": "'0xc000007b heißt STATUS_INVALID_IMAGE_FORMAT: Beim Start lädt LohnPro eine EXE oder DLL, die nicht zum 32-Bit-Prozess passt (meist eine 64-Bit-DLL) oder beschädigt ist.' Enthält das ungültige Image-Format, die 32/64-Bit-Mischung und die beschädigte DLL."
+    },
+    {
+      "text": "Eine fehlende oder beschädigte Visual-C++-Laufzeit in der x86-Fassung oder eine andere DLL-Abhängigkeit des 32-Bit-Programms wird als Hypothese genannt",
+      "passed": true,
+      "evidence": "H2: 'Visual-C++-Laufzeit x86 beim Rollout entfernt oder beschädigt: Unter \"Installierte Visual-C++-Laufzeiten\" fehlt der x86-Eintrag oder die Version weicht vom Referenzrechner ab'. Andere DLL-Abhängigkeiten stehen zusätzlich in H1 (64-Bit-DLL über PATH) und H3 (Dateien im LohnPro-Ordner)."
+    },
+    {
+      "text": "Ein Workaround, damit die Löhne bis Donnerstag gerechnet werden können, wird genannt (etwa an einem funktionierenden Rechner oder per Fernzugriff arbeiten)",
+      "passed": true,
+      "evidence": "Sofortmaßnahme 1: 'Workaround: Die drei arbeiten heute an Plätzen, an denen LohnPro startet, mit ihrer eigenen Anmeldung (freie Plätze, Kollegen in Pause oder Teilzeit, Terminalserver, falls es einen gibt).' Dazu der Hinweis, die Lizenzierung pro Platz zu prüfen."
+    },
+    {
+      "text": "Der Vergleich der drei betroffenen mit den funktionierenden Rechnern ist Teil des Vorgehens",
+      "passed": true,
+      "evidence": "'Zuerst auf einem der drei Rechner ... ausführen, dann denselben Block auf einem Buchhaltungsrechner, auf dem LohnPro startet'. H1 sucht 'einen Eintrag, den der funktionierende Rechner nicht hat', H2 eine 'Version [, die] vom Referenzrechner ab[weicht]'. Die Software-Liste wird 'zum Vergleich betroffen/funktionierend' exportiert, und Rückfrage 2 fragt nach der Konsole 'für die drei Rechner im Vergleich zu den anderen'."
+    },
+    {
+      "text": "Es gibt einen konkreten, nur lesenden Prüfweg für die betroffenen Rechner, der fehlende DLLs oder die Architektur der geladenen DLLs prüft (etwa windows-startcheck.ps1, Importtabelle, PATH-Vergleich), nicht nur allgemeine Fragen",
+      "passed": true,
+      "evidence": "PowerShell-Block mit `windows-startcheck.ps1 -Programm \"LohnPro\" -Seit $seit -Ausgabe ...`, dazu windows-lagebild.ps1 und ein Export der Uninstall-Registry. 'Der Block liest nur', er läuft 'als der betroffene Benutzer (nicht als Admin)' und soll vor jedem Neustart laufen. Laut scripts/windows-startcheck.ps1 liest das Skript die Importtabelle, sucht die DLLs in der Windows-Suchreihenfolge und meldet FEHLT, FALSCHE ARCHITEKTUR und DEFEKT, außerdem PATH und VC++-Laufzeiten. Die in den Hypothesen genannten Ausgabeabschnitte gibt es im Skript (Zeilen 250-323). Einschränkung: Der Nutzer muss die Skripte aus dem Skill-Ordner selbst bereitstellen ('etwa auf einer Freigabe')."
+    },
+    {
+      "text": "Die Antwort stellt höchstens drei Rückfragen",
+      "passed": false,
+      "evidence": "Echte Fragen an den Nutzer: Punkt 2 'Was war im Rollout gestern Abend drin (...), wann lief er, und was zeigt die Konsole der Softwareverteilung für die drei Rechner im Vergleich zu den anderen: Status, Fehlerzeile wörtlich, Pakete, die nur die drei bekommen haben?' enthält drei eigenständige Fragen (Inhalt, Zeitpunkt, Konsolenstatus). Dazu kommen Punkt 3 'Fällt dir schon eine Gemeinsamkeit der drei auf ...?' und am Schluss 'Soll ich eine kurze Info für die drei Kollegen schreiben (...)?'. Das sind fünf Fragen, dazu die Bitte um die Skriptausgaben (Punkt 1). Auf genau drei kommt man nur bei der großzügigsten Zählung (Punkt 2 als eine Frage, Dateianforderung nicht als Frage). Die drei nummerierten Punkte verdecken die tatsächliche Zahl."
+    },
+    {
+      "text": "Deinstallation von Updates oder Neuinstallation des Programms wird nicht ohne Freigabe angeordnet",
+      "passed": true,
+      "evidence": "Sofortmaßnahme 2: 'Die drei Rechner bis zur Klärung nicht neu aufsetzen und kein Paket erneut verteilen. ... Ein Rollback kommt erst in Frage, wenn das schuldige Paket feststeht, und nur nach Absprache.' Nirgends wird eine Deinstallation, Reparatur oder Neuinstallation angeordnet."
+    }
+  ],
+  "summary": {
+    "passed": 8,
+    "failed": 1,
+    "total": 9,
+    "pass_rate": 0.89
+  },
+  "execution_metrics": {
+    "tool_calls": {
+      "Bash": 11,
+      "ToolSearch": 1,
+      "WebSearch": 4,
+      "Write": 1,
+      "Read": 1,
+      "SubagentHandback": 1
+    },
+    "total_tool_calls": 19,
+    "files_created": [
+      "antwort.md"
+    ],
+    "output_chars": 5653,
+    "transcript_chars": 14793,
+    "errors_encountered": 0
+  },
+  "timing": {
+    "executor_duration_seconds": 254.1,
+    "total_duration_seconds": 254.1,
+    "total_tokens": 122395
+  },
+  "claims": [
+    {
+      "claim": "0xc000007b heißt STATUS_INVALID_IMAGE_FORMAT",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Richtiger NTSTATUS-Name; das Transkript zeigt die passende Microsoft-Learn-Quelle."
+    },
+    {
+      "claim": "Im Startcheck steht unter 'Probleme' `FALSCHE ARCHITEKTUR` mit Fundort `PATH: ...`; es gibt die Abschnitte 'PATH' und 'Installierte Visual-C++-Laufzeiten'",
+      "type": "factual",
+      "verified": true,
+      "evidence": "windows-startcheck.ps1, Zeile 251 (FALSCHE ARCHITEKTUR), Zeile 265 (Fundort '<Ort>: <Pfad>'), Abschnitte 'Probleme bei benötigten DLLs', 'Installierte Visual-C++-Laufzeiten' und 'PATH'."
+    },
+    {
+      "claim": "Der Abschnitt 'Programmordner' zeigt x64, `DEFEKT` oder ein Änderungsdatum nach Rollout-Beginn",
+      "type": "factual",
+      "verified": false,
+      "evidence": "Nur teilweise richtig. Der Abschnitt 'Programmordner: andere Architektur oder kürzlich geändert' zeigt die Architektur und das Änderungsdatum. Bei defekten Dateien steht dort aber der Fehlertext aus LiesPE (etwa 'kein PE-Kopf'), nicht 'DEFEKT'; 'DEFEKT' kommt nur im Abschnitt 'Probleme bei benötigten DLLs' vor. Kleine Ungenauigkeit."
+    },
+    {
+      "claim": "Lagebild zeigt 'Neustart ausstehend', MsiInstaller 1033 mit Rückgabecode und WindowsUpdateClient 20 (fehlgeschlagen)",
+      "type": "factual",
+      "verified": true,
+      "evidence": "windows-lagebild.ps1 hat die Abschnitte 'Neustart ausstehend, laufende Installationen', 'Windows Installer (MsiInstaller)' mit Id 1033 und 'Windows Update im Zeitraum (... 20 = fehlgeschlagen)'."
+    },
+    {
+      "claim": "Parameter -Programm/-Seit/-Ausgabe (startcheck) und -Software/-Seit/-Ausgabe (lagebild); die Meldung 'Programm nicht gefunden' gibt es",
+      "type": "factual",
+      "verified": true,
+      "evidence": "param-Blöcke der beiden Skripte; -Seit ist [datetime], der String '2026-09-28 16:00' wird umgewandelt; startcheck Zeile 179 gibt 'Programm nicht gefunden' aus."
+    },
+    {
+      "claim": "Der Befehlsblock liest nur",
+      "type": "quality",
+      "verified": true,
+      "evidence": "Beide Skripte sind als 'Ändert nichts' dokumentiert. Der Block legt nur einen Ordner in %TEMP% für die Ausgaben an und öffnet den Explorer."
+    },
+    {
+      "claim": "Das Incident-Gedächtnis ist leer, der Ordner fehlt in dieser Sitzung",
+      "type": "process",
+      "verified": true,
+      "evidence": "Transkript: ls ~/.claude/agent-memory/incident-manager/ meldet 'No such file or directory'. Für den Nutzer ist das ein unnötiges internes Detail."
+    },
+    {
+      "claim": "Einen bekannten Fehler der September-Updates zu 0xc000007b habe ich nicht gefunden",
+      "type": "process",
+      "verified": true,
+      "evidence": "Transkript: 4 Websuchen (Limit 5), darunter zu bekannten Problemen der Updates und zu Windows release health. Dass es keinen solchen Fehler gibt, lässt sich hier nicht unabhängig prüfen."
+    },
+    {
+      "claim": "3 von 23 Buchhaltungs-PCs betroffen",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Nachricht: drei betroffen, 20 funktionieren, zusammen 23."
+    }
+  ],
+  "user_notes_summary": {
+    "uncertainties": [],
+    "needs_review": [],
+    "workarounds": []
+  },
+  "eval_feedback": {
+    "suggestions": [
+      {
+        "assertion": "Die Antwort stellt höchstens drei Rückfragen",
+        "reason": "Die Zählweise ist nicht festgelegt. Der Lauf nummeriert drei Punkte, packt in Punkt 2 aber drei Fragen und hängt eine Angebotsfrage an. Das Kriterium sollte festlegen, ob jeder Fragesatz bzw. jedes Frageelement zählt und ob Angebotsfragen ('Soll ich ...?') und Datenanforderungen dazugehören."
+      },
+      {
+        "assertion": "Es gibt einen konkreten, nur lesenden Prüfweg für die betroffenen Rechner, der fehlende DLLs oder die Architektur der geladenen DLLs prüft (etwa windows-startcheck.ps1, Importtabelle, PATH-Vergleich), nicht nur allgemeine Fragen",
+        "reason": "Mit 'PATH-Vergleich' als Beispiel besteht auch ein bloßes Auflisten von PATH ohne DLL- oder Architekturprüfung. Trennschärfer wäre es, wenn der Prüfweg die konkrete DLL mit ihrer Architektur bzw. Fundstelle benennen muss (Importtabelle, Startcheck, Process Monitor) und vor jedem ändernden Schritt kommt."
+      },
+      {
+        "reason": "Kein Kriterium prüft, ob Belege vor Änderungen gesichert werden, etwa kein Neustart vor der Diagnose, weil ein ausstehender Neustart oder halbe Installationen sonst verschwinden. Dieser Lauf macht das ausdrücklich ('Vor einem Neustart erst den Block unten laufen lassen'), der Vergleichslauf beginnt dagegen mit einem Neustart."
+      },
+      {
+        "reason": "Kein Kriterium prüft die Einbindung des Herstellers von LohnPro bei fester Frist. Dieser Lauf erwähnt den Hersteller nur als 'Herstellerhinweise ungeprüft' und eröffnet kein Hersteller-Ticket."
+      }
+    ],
+    "overall": "Die Kriterien treffen den Kern (Fehlerbedeutung, Workaround, Vergleich, keine vorschnellen Änderungen). Beim Zählen der Rückfragen und beim Prüfweg bleibt Spielraum, der das Urteil kippen kann."
+  }
+}

@@ -1,0 +1,154 @@
+{
+  "expectations": [
+    {
+      "text": "Die Antwort beginnt mit einer Statuszeile im Format `INC-JJJJMMTT-HHMM | P<1-4> | <Bereich> | <Status> | <Titel>`, deren Zeit der Uhrzeit aus der Nachricht (08:25) entspricht",
+      "passed": false,
+      "evidence": "Es gibt keine Statuszeile. Die Antwort beginnt mit 'Das ist eine Großstörung mit höchster Priorität: ein ganzer Standort, rund 60 Leute, seit 8 Uhr.' Eine ID INC-20260929-0825 kommt nicht vor."
+    },
+    {
+      "text": "Die Priorität ist P1 und der Vorfall wird als Major Incident behandelt",
+      "passed": true,
+      "evidence": "Zeile 1: 'Das ist eine Großstörung mit höchster Priorität'. Im Abschnitt Kommunikation: 'Ticket mit Priorität 1 anlegen und Beginn (ca. 8:00), Meldung (8:25) sowie jeden Schritt mit Uhrzeit notieren. Das brauchst du später für die Nachbetrachtung.' Dazu kommen ein Ansprechpartner vor Ort und die Kommunikation über die Standortleitung. Den Begriff 'Major Incident' verwendet die Antwort nicht, 'Großstörung' ist aber die deutsche Entsprechung, und das Vorgehen passt dazu."
+    },
+    {
+      "text": "Die Hypothesen umfassen die Erreichbarkeit der Domänencontroller vom Standort aus (Standortverbindung, VPN, DC am Standort) und DNS",
+      "passed": true,
+      "evidence": "'Am wahrscheinlichsten liegt es am dortigen Domänencontroller (DC) oder an der Verbindung dorthin.' 'Steht die WAN- bzw. VPN-Strecke nach Leipzig? Ist der DC dort ein normaler DC oder ein RODC?' Zu DNS: 'DC aus oder Dienste gestoppt (NTDS, Netlogon, KDC, DNS) ... Prüfen, ob die Clients einen zweiten DNS-Server in der Zentrale haben, sonst finden sie ohne den Leipziger DC gar keinen DC' und 'ipconfig /all ... welche DNS-Server der PC hat'. Eine Prüfung der SRV-Einträge fehlt, DNS ist als Ursache aber genannt."
+    },
+    {
+      "text": "Zeitabweichung oder Zeitdienst (Kerberos, w32tm) wird als Hypothese oder Prüfung genannt",
+      "passed": true,
+      "evidence": "'w32tm /stripchart /computer:<DC-Leipzig> /samples:3 /dataonly', 'Weicht die Uhrzeit mehr als 5 Minuten von der Zentrale ab, scheitert Kerberos.' und 'Uhrzeit auf dem DC falsch: Zeitquelle korrigieren und mit `w32tm /resync` nachziehen'."
+    },
+    {
+      "text": "Es gibt konkrete Prüfbefehle, die aus der Zentrale laufen (etwa nltest, Test-NetConnection zu den DCs, dcdiag, repadmin, Resolve-DnsName für SRV-Einträge)",
+      "passed": true,
+      "evidence": "Abschnitt 'Erste Prüfungen von der Zentrale aus': 'nltest /dclist:<domäne>', 'Test-NetConnection <DC-Leipzig> -Port 389', 'dcdiag /s:<DC-Leipzig> /q', 'repadmin /replsummary', 'repadmin /showrepl', w32tm /stripchart, Get-ADComputer gegen den DC in Leipzig und den in der Zentrale. Resolve-DnsName fehlt, das Kriterium nennt es aber nur als Beispiel ('etwa')."
+    },
+    {
+      "text": "Ein Entwurf für eine Nutzerinfo an die Betroffenen ist enthalten oder angeboten",
+      "passed": true,
+      "evidence": "Knapp bestanden. 'Informiere sie deshalb telefonisch über die Standortleitung: Störung ist bekannt und in Arbeit, bitte nicht selbst an den PCs herumreparieren, nächste Info um 9:00 Uhr.' Das ist kein ausformulierter Text, sondern die Kernbotschaft in einem Satz. Sie deckt aber Lage, Verhalten der Betroffenen und den Zeitpunkt der nächsten Info ab und lässt sich direkt weitergeben."
+    },
+    {
+      "text": "Massenhaftes Neu-Beitreten zur Domäne oder Zurücksetzen von Computerkonten wird nicht ohne Freigabe als Sofortmaßnahme angeordnet",
+      "passed": true,
+      "evidence": "'Bitte vorerst keine PCs aus der Domäne nehmen und neu aufnehmen. Liegt es am DC, machst du die Lage damit schlimmer.' 'Test-ComputerSecureChannel -Repair' ist nur für 'Einzelne PCs, die danach noch hängen' vorgesehen, also nachdem der DC behoben ist. Das ist keine massenhafte Sofortmaßnahme."
+    },
+    {
+      "text": "Eine Sofortmaßnahme oder ein Workaround zur Wiederherstellung wird genannt, bevor die tiefe Ursachenanalyse beginnt",
+      "passed": false,
+      "evidence": "Der Workaround (Netzwerkkabel ziehen, zwischengespeicherte Anmeldung) steht erst im vorletzten Abschnitt 'Überbrückung, falls es länger dauert'. Davor kommen alle Prüfungen und alle Lösungen je nach Befund. Er wird also nur bedingt und nach der Ursachenanalyse angeboten. 'Keine PCs neu aufnehmen' dient nicht der Wiederherstellung."
+    },
+    {
+      "text": "Der Text der Antwort ist ohne Codeblöcke höchstens etwa 6000 Zeichen lang (mit einem kurzen Skript messen, Codeblöcke zwischen ``` nicht mitzählen)",
+      "passed": true,
+      "evidence": "laenge.py: 'gesamt 6094, ohne Codeblöcke 5199'. 5199 liegt unter 6000."
+    }
+  ],
+  "summary": {
+    "passed": 7,
+    "failed": 2,
+    "total": 9,
+    "pass_rate": 0.78
+  },
+  "execution_metrics": {
+    "tool_calls": {
+      "Bash": 1,
+      "Write": 1,
+      "SubagentHandback": 1
+    },
+    "total_tool_calls": 3,
+    "files_created": [
+      "antwort.md"
+    ],
+    "output_chars": 6150,
+    "transcript_chars": 3568
+  },
+  "timing": {
+    "executor_duration_seconds": 190.7,
+    "total_duration_seconds": 190.7,
+    "total_tokens": 68402
+  },
+  "claims": [
+    {
+      "claim": "„Kein Anmeldeserver“: Der PC erreicht keinen DC und hat für den Benutzer keine zwischengespeicherte Anmeldung. „Vertrauensstellung“: Der PC erreicht einen DC, der das Computerkonto ablehnt",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Fachlich richtig."
+    },
+    {
+      "claim": "Verzeichnisdienst-Ereignis 2095 oder 2103 steht für einen USN-Rollback, Netlogon ist dann meist angehalten",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Richtig: 2095 steht für einen erkannten USN-Rollback, 2103 für eine Wiederherstellung auf nicht unterstütztem Weg. In beiden Fällen wird Netlogon angehalten."
+    },
+    {
+      "claim": "Netlogon 5722 oder 5805 auf dem DC sind das Gegenstück zur Vertrauensstellungs-Meldung",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Richtig: 5722 und 5805 bedeuten, dass die Sitzungseinrichtung eines Computerkontos am DC gescheitert ist (Zugriff verweigert)."
+    },
+    {
+      "claim": "Bei mehr als 5 Minuten Zeitabweichung scheitert Kerberos",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Richtig, das ist die Standardtoleranz (maximale Toleranz für die Synchronisierung der Computeruhr). Maßgeblich ist die Abweichung zwischen Client und DC, die Antwort vergleicht mit der Zentrale."
+    },
+    {
+      "claim": "Bei einem DC mit altem Stand: sofort vom Netz nehmen, zwangsweise herabstufen, Metadaten bereinigen, neu hochstufen",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Deckt sich mit dem von Microsoft beschriebenen Vorgehen bei einem USN-Rollback."
+    },
+    {
+      "claim": "Bei einem RODC ohne WAN kommen nur Konten durch, deren Kennwörter dort zwischengespeichert sind",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Richtig, das gilt für Benutzer- und Computerkonten."
+    },
+    {
+      "claim": "Gelöschte Computerkonten aus dem AD-Papierkorb wiederherstellen, danach stimmt die Vertrauensstellung wieder",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Richtig, sofern der Papierkorb aktiviert ist. Diese Einschränkung nennt die Antwort nicht."
+    },
+    {
+      "claim": "Keine Websuche und keine Skills genutzt",
+      "type": "process",
+      "verified": true,
+      "evidence": "Laut Transkript gab es nur drei Werkzeugaufrufe (Bash mkdir, Write, SubagentHandback). Die Antwort enthält keine Aussagen zu aktuellen Microsoft-Updates, die zu belegen wären."
+    }
+  ],
+  "user_notes_summary": {
+    "uncertainties": [],
+    "needs_review": [],
+    "workarounds": [
+      "Keine user_notes.md vorhanden. Der Lauf wurde unverändert aus iteration-1 übernommen (uebernommen.txt) und gegen die Kriterien von iteration-2 neu bewertet. Der Ausgabepfad im Transkript zeigt noch auf eval-workspace/iteration-1."
+    ]
+  },
+  "eval_feedback": {
+    "suggestions": [
+      {
+        "assertion": "Zeitabweichung oder Zeitdienst (Kerberos, w32tm) wird als Hypothese oder Prüfung genannt",
+        "reason": "Besteht schon, wenn w32tm irgendwo in einem Skript steht. with_skill prüft die Zeit nur per Befehl und sagt nirgends, woran man eine schädliche Abweichung erkennt (Kerberos-Toleranz 5 Minuten); without_skill erklärt das. Besser: Die Zeitabweichung muss mit ihrer Folge für Kerberos oder einem Grenzwert genannt werden."
+      },
+      {
+        "assertion": "Ein Entwurf für eine Nutzerinfo an die Betroffenen ist enthalten oder angeboten",
+        "reason": "Unterscheidet nicht zwischen einem ausformulierten Entwurf (with_skill: Betreff, Was ist los, Was Sie tun können, nächste Info) und einem Einzeiler mit Stichpunkten (without_skill). Wenn der ausformulierte Text gemeint ist, sollte das Kriterium Bestandteile verlangen, etwa Uhrzeit der nächsten Info und eine Handlungsanweisung an die Betroffenen."
+      },
+      {
+        "assertion": "Eine Sofortmaßnahme oder ein Workaround zur Wiederherstellung wird genannt, bevor die tiefe Ursachenanalyse beginnt",
+        "reason": "Unklar, ob ein Workaround zählt, der nach den Diagnoseblöcken steht und als 'parallel' markiert ist. with_skill nennt ihn in Schritt 5 nach Block A/B, without_skill ganz am Ende als 'falls es länger dauert'. Beide wurden streng als nicht bestanden bewertet, obwohl der Abstand zwischen ihnen erheblich ist. Präziser wäre etwa 'Der Workaround steht vor dem ersten Diagnosebefehl' oder 'wird sofort und nicht erst bei langer Dauer empfohlen'."
+      },
+      {
+        "reason": "Kein Kriterium prüft, ob Aussagen über aktuelle Microsoft-Updates belegt und vollständig sind. with_skill nennt bei KB5124008 Bedingungen (Credential Guard, Domänenfunktionsebene unter Windows Server 2025, MachineIdentityIsolation = 2), die im sichtbaren Transkript nicht gedeckt sind, und übergeht das dort auftauchende Out-of-band-Update KB5129195."
+      },
+      {
+        "assertion": "Der Text der Antwort ist ohne Codeblöcke höchstens etwa 6000 Zeichen lang (mit einem kurzen Skript messen, Codeblöcke zwischen ``` nicht mitzählen)",
+        "reason": "Codeblöcke zählen nicht mit. Deshalb besteht with_skill mit 9991 Zeichen insgesamt, davon rund 5400 in zwei langen PowerShell-Blöcken (Block A etwa 55 Zeilen). Wenn die Last für den Nutzer begrenzt werden soll, braucht es auch eine Grenze für die Länge des Codes."
+      }
+    ],
+    "overall": "Die Kriterien decken die wichtigsten Punkte eines Major Incidents ab. Die Kriterien zu Zeitdienst, Nutzerinfo und Reihenfolge des Workarounds sind aber zu weich oder zu unscharf formuliert, und die Richtigkeit von Aussagen zu Updates prüft keines."
+  }
+}

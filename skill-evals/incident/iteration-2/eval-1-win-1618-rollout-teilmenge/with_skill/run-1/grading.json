@@ -1,0 +1,151 @@
+{
+  "expectations": [
+    {
+      "text": "Die Antwort beginnt mit einer Statuszeile im Format `INC-JJJJMMTT-HHMM | P<1-4> | <Bereich> | <Status> | <Titel>`, deren Zeit der Uhrzeit aus der Nachricht (10:40) entspricht und nicht einer UTC-Zeit",
+      "passed": true,
+      "evidence": "Zeile 1 von antwort.md: `INC-20260929-1040 | P3 | Windows-Software | wartet auf Nutzer | Empirum-Rollout Notepad++ 8.8.5: Rückgabewert 1618 auf 14 von 230 Clients`. Datum 20260929 und Zeit 1040 stimmen mit der Nachricht überein (UTC wäre 0840). Fünf Felder in der richtigen Reihenfolge, Status aus der Liste der Skill-Vorlage. Die Inline-Code-Backticks entsprechen dem Beispiel in vorlagen.md."
+    },
+    {
+      "text": "Die Priorität ist P3 oder P4 und wird mit Auswirkung und Dringlichkeit begründet",
+      "passed": true,
+      "evidence": "„P3: Auswirkung mittel (14 Clients, Arbeit geht weiter), Dringlichkeit mittel (Frist morgen).“ Dazu kommt eine Eskalationsbedingung: „fehlt Notepad++ deshalb auf einigen ganz und wird gebraucht, wird es P2“."
+    },
+    {
+      "text": "1618 wird richtig als 'eine andere Windows-Installer-Installation läuft bereits' erklärt",
+      "passed": true,
+      "evidence": "„1618 heißt: Windows Installer war gerade mit einer anderen Installation beschäftigt und hat die zweite abgewiesen (ERROR_INSTALL_ALREADY_RUNNING, Mutex `_MSIExecute`).“"
+    },
+    {
+      "text": "Als Prüfweg wird genannt, welche andere Installation zur Fehlerzeit lief: MsiInstaller-Ereignisse 1040/1042 oder Windows-Update-Ereignisse im selben Zeitfenster",
+      "passed": true,
+      "evidence": "Hypothese 1: „in `MsiNacht` ein 1040 (Beginn) eines fremden Produkts vor der Fehlerzeit, das 1042 (Ende) danach“. Hypothese 2: „`WUNacht` zeigt 43/19/20 um die Fehlerzeit, gehäuft auf den 14“. Der Block fragt MsiInstaller Id 1033, 1034, 1040, 1042 und WindowsUpdateClient 19, 20, 43 ab `$seit` ab."
+    },
+    {
+      "text": "Die Antwort schlägt vor, betroffene und erfolgreiche Clients zu vergleichen (was die 14 gemeinsam haben)",
+      "passed": true,
+      "evidence": "„Empirum-Konsole: die 14 gegen die erfolgreichen halten (Fehlerzeitpunkte, Standort oder Gruppe, andere Zuweisungen derselben Nacht).“ Im Block steht zusätzlich `$referenz = '<ein Client, auf dem 8.8.5 erfolgreich lief>'`, und das Lagebild wird für einen betroffenen Client und den Referenz-Client gezogen. „Gesucht ist also, was auf den 14 zur selben Zeit lief und auf den anderen nicht.“"
+    },
+    {
+      "text": "Für die Clients gibt es einen nur lesenden Befehlsblock oder das Lagebild-Skript mit dem Zeitfenster der Rollout-Nacht",
+      "passed": true,
+      "evidence": "Der PowerShell-Block trägt den Kommentar „# Nur lesend.“ und nutzt nur Get-ItemProperty, Get-WinEvent, Get-CimInstance und Test-Path. Geschrieben werden nur lokale CSV- und TXT-Dateien auf dem Admin-Rechner. `$seit = '2026-09-28 18:00' # Beginn der Rollout-Nacht` ist als Annahme markiert. Das Lagebild-Skript läuft mit `-ArgumentList 'Notepad++', 48, $seit`; die Positionsbindung passt zu param(Software, Stunden, Seit, Ausgabe), und das Skript gibt den Bericht in die Pipeline aus. Als Alternative wird `-Software \"Notepad++\" -Seit \"2026-09-28 18:00\"` genannt."
+    },
+    {
+      "text": "Die Antwort stellt höchstens drei Rückfragen",
+      "passed": true,
+      "evidence": "Das einzige Fragezeichen steht in einem Codekommentar (Zeile 29). „Was ich brauche“ enthält genau drei Anforderungen: Konsolenvergleich mit Namensliste, Fehlerzeile wörtlich, Block ausführen und Ergebnisse schicken. „dafür brauche ich dein OK“ betrifft eine spätere, bedingte Freigabe, „Überleg, ob …“ ist eine Empfehlung. Damit höchstens drei."
+    },
+    {
+      "text": "Erneutes Verteilen des Pakets wird nicht sofort angeordnet, sondern als Schritt nach Klärung der Ursache oder mit Freigabe dargestellt",
+      "passed": true,
+      "evidence": "„Das Paket bitte nicht tagsüber neu anstoßen: Ohne geklärte Ursache kommt derselbe Fehler“ und „Ursache 1 bis 3: heute Nacht die 14 in Empirum erneut ausführen … Stufe 2, dafür brauche ich dein OK.“ Für Ursache 4 soll das Paket selbst geändert werden."
+    },
+    {
+      "text": "Die Antwort weist auf eine Tücke beim Wiederholen hin: tagsüber scheitert der Installer bei geöffnetem Programm anders, oder der Reparaturpfad des Pakets entfernt zuerst die Vorversion",
+      "passed": true,
+      "evidence": "Beide Tücken werden genannt: „bei offenem Notepad++ scheitert der Installer anders“ und „Die Paketvorlagen deinstallieren aber erst die Vorversion und installieren dann neu; fehlt Notepad++ deshalb auf einigen ganz …“. Dazu: „Scheitert es wieder, bleibt der heutige Stand, außer die Deinstallation läuft durch und die Installation nicht; deshalb vorher die Fehlerzeile.“"
+    }
+  ],
+  "summary": {
+    "passed": 9,
+    "failed": 0,
+    "total": 9,
+    "pass_rate": 1.0
+  },
+  "execution_metrics": {
+    "tool_calls": {
+      "Bash": 13,
+      "ToolSearch": 1,
+      "WebSearch": 5,
+      "Write": 1,
+      "Read": 1,
+      "SubagentHandback": 1
+    },
+    "total_tool_calls": 22,
+    "files_created": [
+      "antwort.md"
+    ],
+    "errors_encountered": 0,
+    "output_chars": 7600,
+    "transcript_chars": 17573
+  },
+  "timing": {
+    "executor_duration_seconds": 331.2,
+    "total_duration_seconds": 331.2,
+    "total_tokens": 131684
+  },
+  "claims": [
+    {
+      "claim": "1618 ist ERROR_INSTALL_ALREADY_RUNNING, gesteuert über den Mutex _MSIExecute",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Die WebSearch zeigt das Ergebnis „_MSIExecute Mutex - Win32 apps | Microsoft Learn“. Das ist die Standardbedeutung des Codes."
+    },
+    {
+      "claim": "MsiInstaller 1040/1042 = Beginn/Ende einer Installer-Transaktion; WindowsUpdateClient 43/19/20 = Beginn/installiert/Fehler; `msiexec /V` ist nur der Dienst",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Das sind die üblichen Ereignisbedeutungen, und sie stimmen mit dem Abschnitt 1618 im Skill-Playbook windows-software.md überein."
+    },
+    {
+      "claim": "Vor 8.8.9 prüft der Notepad++-Updater WinGUp Updates nicht kryptografisch (CVE-2025-15556); 2025 über gekaperte Hosting-Infrastruktur gegen ausgewählte Ziele ausgenutzt",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Die WebSearch zeigt „CVE-2025-15556: Notepad++ WinGUp Updater RCE Vulnerability“ (SentinelOne) und „Notepad++ Update Mechanism Hijacked in Targeted Supply Chain Attack“ (Lumifi)."
+    },
+    {
+      "claim": "Aktuell ist laut Hersteller 8.9.8.1",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Die WebSearch zeigt „Notepad++ v8.9.8.1 release“ auf notepad-plus-plus.org."
+    },
+    {
+      "claim": "Die Paketvorlagen deinstallieren erst die Vorversion und installieren dann neu",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Stammt aus dem Skill-Playbook („Der Reparaturpfad der Vorlagen deinstalliert zuerst die gefundene Vorversion …“). Die Antwort verallgemeinert den Reparaturpfad zu „die Paketvorlagen“, was in der Sache vertretbar ist."
+    },
+    {
+      "claim": "Der Befehlsblock ändert nichts und das Lagebild-Skript lässt sich per Invoke-Command -FilePath mit Positionsargumenten aufrufen",
+      "type": "quality",
+      "verified": true,
+      "evidence": "Im Block stehen nur lesende Cmdlets. Das Skript hat param([string]$Software, [int]$Stunden = 48, [datetime]$Seit, [string]$Ausgabe) und gibt $text in die Pipeline aus. Damit liefert Out-File Inhalt."
+    },
+    {
+      "claim": "Quellen NVD (CVE-2025-15556) und Unit 42 zum Notepad++-Angriff",
+      "type": "factual",
+      "verified": false,
+      "evidence": "Nicht prüfbar: Diese beiden URLs erscheinen in den sichtbaren, gekürzten Suchergebnissen des Transkripts nicht. Die Aussage selbst ist durch andere Treffer gedeckt."
+    },
+    {
+      "claim": "Skill befolgt: SKILL.md, prioritaet.md, vorlagen.md, werkzeuge.md, Playbooks und Lagebild-Skript gelesen, evals/ nicht gelesen",
+      "type": "process",
+      "verified": true,
+      "evidence": "Die Bash-Aufrufe im Transkript zeigen cat bzw. sed auf genau diese Dateien. Der find-Aufruf schließt */evals/* aus."
+    }
+  ],
+  "user_notes_summary": {
+    "uncertainties": [
+      "Die Antwort markiert als Annahmen: Prioritätsregeln des Arbeitgebers unbekannt, auf den 14 läuft noch die alte Version, Rollout-Fenster ab 28.09. 18:00."
+    ],
+    "needs_review": [
+      "Die Antwort enthält Meta-Hinweise, die für den Nutzer wenig Sinn ergeben: „Den Skill `paketieren` habe ich hier nicht“ und „Ein Journal früherer Fälle gibt es in dieser Sitzung nicht“."
+    ],
+    "workarounds": []
+  },
+  "eval_feedback": {
+    "suggestions": [
+      {
+        "reason": "Laut Playbook ist die wörtliche Fehlerzeile aus dem Empirum-Protokoll („… ErrorLevel: 1618“) die wichtigste Angabe, weil sie zeigt, ob Deinstallation oder Installation scheiterte. Kein Kriterium prüft das. with_skill fordert sie an, without_skill nicht. Das wäre ein gut trennendes Kriterium."
+      },
+      {
+        "assertion": "Die Antwort schlägt vor, betroffene und erfolgreiche Clients zu vergleichen (was die 14 gemeinsam haben)",
+        "reason": "Durch den Klammerzusatz besteht auch eine Antwort, die nur Gemeinsamkeiten der 14 sucht, ohne einen erfolgreichen Referenz-Client heranzuziehen. Schärfer wäre: ein betroffener und ein erfolgreicher Client werden mit demselben Skript bzw. Block gegenübergestellt."
+      },
+      {
+        "reason": "Kein Kriterium prüft, ob interne Meta-Angaben (Skillnamen, Journal, Stufen-Jargon) in der Nutzerantwort stehen. with_skill schreibt „Den Skill `paketieren` habe ich hier nicht“, was ein Nutzer nicht einordnen kann."
+      }
+    ],
+    "overall": "Die Kriterien treffen die fachlichen Kernpunkte und trennen beim Statuskopf und bei der Priorität klar. Das Kriterium „höchstens drei Rückfragen“ bestehen beide Läufe mühelos, es trennt hier also nicht."
+  }
+}

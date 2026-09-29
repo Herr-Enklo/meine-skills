@@ -1,0 +1,134 @@
+{
+  "expectations": [
+    {
+      "text": "Die Antwort beginnt mit einer Statuszeile im Format `INC-JJJJMMTT-HHMM | P<1-4> | <Bereich> | <Status> | <Titel>`",
+      "passed": false,
+      "evidence": "antwort.md beginnt mit Fließtext: \"Das lässt sich meistens gut eingrenzen. DRIVER_IRQL_NOT_LESS_OR_EQUAL (Stopcode 0xD1) bedeutet ...\". Es gibt keine Incident-ID, keine Priorität und keine Statuszeile."
+    },
+    {
+      "text": "Es wird ein Weg genannt, den Treibernamen nachträglich zu finden: BugCheck-Ereignis 1001, Zuverlässigkeitsüberwachung (perfmon /rel) oder Minidump unter C:\\Windows\\Minidump",
+      "passed": true,
+      "evidence": "Abschnitt \"1. Den Treibernamen herausfinden\": \"Windows legt bei jedem Bluescreen eine kleine Absturzdatei unter `C:\\Windows\\Minidump` ab\", auszuwerten mit BlueScreenView (Spalte \"Caused By Driver\") oder WinDbg `!analyze -v`. Außerdem `perfmon /rel` (\"wenigstens, wann genau die Abstürze waren\"). Ereignis 1001 fehlt, der Minidump-Weg reicht aber."
+    },
+    {
+      "text": "Für die Ursachensuche gibt es einen einzigen nur lesenden Befehlsblock oder das Lagebild-Skript, der Stopcode, Treibername und kürzlich installierte Treiber auf einmal liefert, statt den Nutzer mehrere Programme (Ereignisanzeige, Zuverlässigkeitsverlauf, Geräte-Manager) von Hand durchsuchen zu lassen",
+      "passed": false,
+      "evidence": "Es gibt keinen einzigen Befehlsblock für die Ursachensuche. Der Nutzer soll mehrere Werkzeuge einzeln durchgehen: BlueScreenView (Drittanbieter-Download) oder WinDbg, \"Zuverlässigkeitsverlauf (Win+R, `perfmon /rel`)\", \"Einstellungen > Windows Update > Updateverlauf\", \"Dell Command Update oder SupportAssist\", Geräte-Manager. Die einzigen Befehle (`sfc /scannow`, `DISM ... /RestoreHealth`, `mdsched.exe`) sind Reparaturen, nicht nur lesend und nur für einen Sonderfall."
+    },
+    {
+      "text": "Treiber rund um die Dockingstation (Dock-Firmware, USB/Thunderbolt, Grafik, Netzwerk, DisplayLink o. ä.) werden als Hypothese genannt, ohne für diesen Laptop einen konkreten Treibernamen oder Hersteller als Ursache zu behaupten (auch nicht nebenbei, etwa 'bei dir ist es der Intel-Grafiktreiber')",
+      "passed": true,
+      "evidence": "Hypothesen auf Ebene der Treiberklassen: \"kommen vor allem die Treiber für die Geräte im Dock in Frage: der LAN-Anschluss im Dock (bei Dell-Docks meist ein Realtek-USB-Netzwerkchip, Dateiname z. B. rtux64w10.sys)\", \"DisplayLink, falls dein Dock damit arbeitet\", \"Thunderbolt/USB4 oder der Intel-Grafiktreiber (igdkmd….sys)\", \"seltener ein VPN- oder Virenschutz-Treiber\". Konkrete Namen stehen nur bedingt oder als 'z. B.' da. Kein Satz sagt 'bei dir ist es X'. Grenzwertig: \"der Intel-Grafiktreiber\" und in \"Beheben\" \"den Realtek-USB-LAN-Treiber\" unterstellen die Hardware, nennen sie aber als Kandidat bzw. Update-Ziel und nicht als Ursache."
+    },
+    {
+      "text": "Ein Workaround bis zur Lösung wird genannt (etwa ohne Dock arbeiten, Arbeit häufig speichern)",
+      "passed": true,
+      "evidence": "Abschnitt \"Bis es gelöst ist\": \"Vor dem Andocken alles speichern.\", \"Laptop ausgeschaltet ans Dock hängen und erst dann einschalten.\", dazu \"den USB-/Dock-LAN-Adapter testweise deaktivieren\"."
+    },
+    {
+      "text": "Die Antwort stellt höchstens drei Rückfragen",
+      "passed": false,
+      "evidence": "Abschnitt \"Damit ich gezielter helfen kann\" hat vier nummerierte Fragen, Punkt 1 enthält zwei: \"Welches Dock ist es (...) und welches Latitude-Modell?\", \"Welchen Treiber zeigt BlueScreenView an?\", \"Stürzt er auch ohne Dock ab?\", \"Privat- oder Firmengerät?\". Das sind mindestens vier, also mehr als drei. Die Selbstprüf-Fragen in Abschnitt 2 (\"Wurden BIOS, Treiber oder Dock-Firmware aktualisiert?\") sind dabei nicht mitgezählt."
+    },
+    {
+      "text": "Treiber zurücksetzen oder deinstallieren wird als Änderung mit Freigabe oder Eingriffsstufe gekennzeichnet",
+      "passed": false,
+      "evidence": "Der Rollback steht als direkte Anleitung ohne Freigabe oder Eingriffsstufe da: \"**Treiber wurde gestern aktualisiert:** Geräte-Manager > Gerät > Eigenschaften > Treiber > „Vorheriger Treiber“.\" Ebenso \"diese aktualisieren oder testweise deinstallieren\" (VPN/Virenschutz) und im Workaround \"den USB-/Dock-LAN-Adapter testweise deaktivieren\". Der Abschnitt zum Firmenlaptop verweist nur bei fehlenden Adminrechten an die IT und kennzeichnet nichts als freigabepflichtige Änderung."
+    }
+  ],
+  "summary": {
+    "passed": 3,
+    "failed": 4,
+    "total": 7,
+    "pass_rate": 0.43
+  },
+  "execution_metrics": {
+    "tool_calls": {
+      "ToolSearch": 1,
+      "WebSearch": 3,
+      "Bash": 1,
+      "Write": 1,
+      "SubagentHandback": 1
+    },
+    "total_tool_calls": 7,
+    "files_created": [
+      "antwort.md"
+    ],
+    "output_chars": 4904,
+    "transcript_chars": 5980
+  },
+  "timing": {
+    "executor_duration_seconds": 119.5,
+    "total_duration_seconds": 119.5,
+    "total_tokens": 63300
+  },
+  "claims": [
+    {
+      "claim": "DRIVER_IRQL_NOT_LESS_OR_EQUAL ist Stopcode 0xD1; ein Treiber hat auf Speicher zugegriffen, auf den er in dem Moment nicht zugreifen durfte",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Stimmt mit Microsoft Learn Bug Check 0xD1 überein."
+    },
+    {
+      "claim": "Seit Montag (28.09.)",
+      "type": "factual",
+      "verified": true,
+      "evidence": "28.09.2026 ist ein Montag."
+    },
+    {
+      "claim": "Bei Dell-Docks meist ein Realtek-USB-Netzwerkchip (rtux64w10.sys)",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Als allgemeine, bedingte Aussage über Dell-Docks der WD-Serie plausibel. Für das Dock dieses Nutzers ist das nicht belegt, weil das Modell unbekannt ist."
+    },
+    {
+      "claim": "'der Intel-Grafiktreiber' und 'den Realtek-USB-LAN-Treiber' auf diesem Laptop",
+      "type": "factual",
+      "verified": false,
+      "evidence": "Die GPU und das Dock des Nutzers sind unbekannt. Die Antwort unterstellt Intel-Grafik und einen Realtek-LAN-Treiber, nennt sie aber nicht als Ursache."
+    },
+    {
+      "claim": "BlueScreenView zeigt in der Spalte 'Caused By Driver' den Treiber; WinDbg gibt es im Microsoft Store",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Beides korrekt. BlueScreenView ist allerdings ein Drittanbieter-Download, auf Firmenlaptops oft nicht erlaubt; das erwähnt die Antwort nicht."
+    },
+    {
+      "claim": "Nach mehreren Abstürzen kann BitLocker den Wiederherstellungsschlüssel verlangen; privat unter aka.ms/myrecoverykey",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Plausibel: Wiederholte Startfehler können eine BitLocker-Wiederherstellung auslösen. aka.ms/myrecoverykey ist der richtige Kurzlink."
+    },
+    {
+      "claim": "DisplayLink-Treiber direkt beim Hersteller (Synaptics)",
+      "type": "factual",
+      "verified": true,
+      "evidence": "DisplayLink gehört zu Synaptics."
+    },
+    {
+      "claim": "3 von 5 Websuchen genutzt, keine bekannte Störung vom September 2026 gefunden",
+      "type": "process",
+      "verified": true,
+      "evidence": "transcript.md zeigt drei WebSearch-Aufrufe."
+    }
+  ],
+  "user_notes_summary": {
+    "uncertainties": [],
+    "needs_review": [
+      "Lauf unverändert aus iteration-1 übernommen (uebernommen.txt), hier gegen die Kriterien von iteration-2 neu bewertet."
+    ],
+    "workarounds": []
+  },
+  "eval_feedback": {
+    "suggestions": [
+      {
+        "assertion": "Treiber rund um die Dockingstation (Dock-Firmware, USB/Thunderbolt, Grafik, Netzwerk, DisplayLink o. ä.) werden als Hypothese genannt, ohne für diesen Laptop einen konkreten Treibernamen oder Hersteller als Ursache zu behaupten (auch nicht nebenbei, etwa 'bei dir ist es der Intel-Grafiktreiber')",
+        "reason": "Dieser Lauf besteht, weil konkrete Namen nur bedingt oder als 'z. B.' vorkommen. Der with_skill-Lauf fällt durch, weil er Realtek zur ranghöchsten Hypothese macht. Inhaltlich liegen beide nah beieinander (beide nennen Realtek zuerst). Die Grenze sollte im Kriterium ausdrücklich stehen, sonst hängt das Ergebnis an der Formulierung."
+      },
+      {
+        "reason": "Der Lauf empfiehlt ein Drittanbieter-Tool (BlueScreenView) zum Herunterladen. Auf einem wahrscheinlichen Firmen-Latitude kann das gegen Richtlinien verstoßen. Kein Kriterium prüft, ob Fremdsoftware ohne Freigabe empfohlen wird."
+      }
+    ],
+    "overall": "Die Kriterien trennen die Läufe klar bei Statuszeile, Befehlsblock, Zahl der Rückfragen und Rollback-Freigabe. Das Hypothesenkriterium hängt an der Formulierung und sollte schärfer gefasst werden."
+  }
+}

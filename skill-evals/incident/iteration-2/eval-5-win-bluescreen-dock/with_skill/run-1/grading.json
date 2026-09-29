@@ -1,0 +1,153 @@
+{
+  "expectations": [
+    {
+      "text": "Die Antwort beginnt mit einer Statuszeile im Format `INC-JJJJMMTT-HHMM | P<1-4> | <Bereich> | <Status> | <Titel>`",
+      "passed": true,
+      "evidence": "Erste Zeile von antwort.md: \"`INC-20260929-0830 | P3 | Windows-System | wartet auf Nutzer | Bluescreen DRIVER_IRQL_NOT_LESS_OR_EQUAL beim Andocken, Dell Latitude`\". Fünf Felder mit ' | ' getrennt; ID passt zu Datum und Uhrzeit der Meldung (29.09.2026, 08:30); P3 liegt in P1-P4; Bereich 'Windows-System'; Status 'wartet auf Nutzer' ist einer der erlaubten Status aus vorlagen.md; Titel vorhanden. Die Backticks entsprechen dem Beispiel in vorlagen.md."
+    },
+    {
+      "text": "Es wird ein Weg genannt, den Treibernamen nachträglich zu finden: BugCheck-Ereignis 1001, Zuverlässigkeitsüberwachung (perfmon /rel) oder Minidump unter C:\\Windows\\Minidump",
+      "passed": true,
+      "evidence": "\"Nennen weder Foto noch Lagebild den Treiber, werten wir ein Abbild aus `C:\\Windows\\Minidump` mit WinDbg und `!analyze -v` aus (Zeile `IMAGE_NAME`)\". Dazu liest das Lagebild-Skript laut Kommentar \"Bluescreens mit Stopcode, Speicherabbilder\" (im Skript: WER-SystemErrorReporting 1001 und Minidump-Ordner), außerdem der Hinweis auf \"Fehlerursache: <name>.sys\" per Handyfoto."
+    },
+    {
+      "text": "Für die Ursachensuche gibt es einen einzigen nur lesenden Befehlsblock oder das Lagebild-Skript, der Stopcode, Treibername und kürzlich installierte Treiber auf einmal liefert, statt den Nutzer mehrere Programme (Ereignisanzeige, Zuverlässigkeitsverlauf, Geräte-Manager) von Hand durchsuchen zu lassen",
+      "passed": true,
+      "evidence": "Genau ein PowerShell-Block, eingeleitet mit \"Er liest nur und ändert nichts\": Teil 1 ruft das Lagebild-Skript auf (`powershell -NoProfile -ExecutionPolicy Bypass -File \"$env:USERPROFILE\\Downloads\\windows-lagebild.ps1\" -Seit \"2026-09-22 00:00\" -Ausgabe \"$env:TEMP\\lagebild.txt\"`), das laut Skriptcode 1001/41/6008, Minidumps und UserPnp 20001 liefert; Teil 2 ergänzt eine vierzeilige, nur lesende Abfrage `Get-CimInstance Win32_PnPSignedDriver | Where-Object ... | Sort-Object DriverDate`. Parameter -Seit und -Ausgabe existieren im Skript. Kein Verweis auf manuelles Durchsuchen von Ereignisanzeige, Zuverlässigkeitsverlauf oder Geräte-Manager. Einschränkung: Den .sys-Namen liefert Ereignis 1001 selbst nicht, das Kriterium ist laut Vorgabe mit dem Skriptaufruf trotzdem erfüllt."
+    },
+    {
+      "text": "Treiber rund um die Dockingstation (Dock-Firmware, USB/Thunderbolt, Grafik, Netzwerk, DisplayLink o. ä.) werden als Hypothese genannt, ohne für diesen Laptop einen konkreten Treibernamen oder Hersteller als Ursache zu behaupten (auch nicht nebenbei, etwa 'bei dir ist es der Intel-Grafiktreiber')",
+      "passed": false,
+      "evidence": "Hypothesen sind vorhanden, aber H1 ist kein Treiberbereich, sondern ein konkreter Hersteller: \"**H1 Realtek-USB-Netzwerktreiber im Dell-Dock** (`rtux64w10.sys`, unter neuerem Windows 11 auch `rtu53cx22x64.sys`), bekannt für genau diesen Stopcode beim Andocken\". Die Hypothesen sind nach Wahrscheinlichkeit geordnet (H4 \"weniger wahrscheinlich\"), damit steht Realtek als wahrscheinlichste Ursache für diesen Laptop da. Zusätzlich wird \"im Dell-Dock\" als Tatsache unterstellt, obwohl der Nutzer den Dock-Hersteller nicht genannt hat (auch \"Dock-Firmware aktualisieren (Dell Command | Update oder Dells Treiberanleitung für Docks)\"). H2 nennt Intel-Grafik und DisplayLink nur als Beispiele in Klammern, das wäre zulässig. Anders als in iteration-1 fehlt eine Einschränkung wie \"bei dir unbelegt\". Nach der strengen Vorgabe (Hersteller als wahrscheinliche Ursache = nicht belegt, erlaubt sind nur Beispiele für Treiberklassen) nicht bestanden."
+    },
+    {
+      "text": "Ein Workaround bis zur Lösung wird genannt (etwa ohne Dock arbeiten, Arbeit häufig speichern)",
+      "passed": true,
+      "evidence": "Abschnitt \"Sofort, bis die Ursache klar ist\": \"1. Vor dem Andocken alles speichern.\" und \"2. Wenn es geht, vorerst ohne Dock arbeiten oder nur im ausgeschalteten Zustand andocken und dann starten. Ob das hier hilft, ist ungeprüft.\""
+    },
+    {
+      "text": "Die Antwort stellt höchstens drei Rückfragen",
+      "passed": true,
+      "evidence": "Genau drei echte Fragen, alle unter \"Was ich von dir brauche\": \"Welches Dock genau (...)?\", \"Und ist es dasselbe Dock am selben Platz wie vorher, oder hat sich gestern etwas geändert, ...?\" und \"Gab es auch Bluescreens, während er nicht gedockt war?\". Punkt 1 \"Die Ausgabe von oben.\" ist eine Bitte um die Befehlsausgabe, keine Frage; \"Blockiert eine Richtlinie das Skript, sag Bescheid\" ist eine bedingte Bitte. Sonst gibt es keine Fragen im Text."
+    },
+    {
+      "text": "Treiber zurücksetzen oder deinstallieren wird als Änderung mit Freigabe oder Eingriffsstufe gekennzeichnet",
+      "passed": true,
+      "evidence": "\"Mit dem .sys-Namen den Treiber und die Dock-Firmware aktualisieren (...) oder einen frisch installierten Treiber zurücksetzen. Das ändert das System, ich sage vorher genau, was passiert und wie es zurückgeht. Annahme: Firmenlaptop, dann macht das deine IT.\" Der Rollback ist ausdrücklich als Systemänderung markiert und wird nicht als Anleitung ausgegeben; genaue Aktion und Weg zurück kommen vorher, bei Firmenlaptop entscheidet die IT. Knapp: Die Wörter 'Freigabe' oder 'Eingriffsstufe' fehlen für den Rollback, 'freigeben' steht nur beim WinDbg-Install im Folgesatz."
+    }
+  ],
+  "summary": {
+    "passed": 6,
+    "failed": 1,
+    "total": 7,
+    "pass_rate": 0.86
+  },
+  "execution_metrics": {
+    "tool_calls": {
+      "Bash": 9,
+      "ToolSearch": 1,
+      "WebSearch": 5,
+      "Write": 1,
+      "Read": 1,
+      "SubagentHandback": 1
+    },
+    "total_tool_calls": 18,
+    "files_created": [
+      "antwort.md"
+    ],
+    "output_chars": 5817,
+    "transcript_chars": 14704
+  },
+  "timing": {
+    "executor_duration_seconds": 283.8,
+    "total_duration_seconds": 283.8,
+    "total_tokens": 121450
+  },
+  "claims": [
+    {
+      "claim": "DRIVER_IRQL_NOT_LESS_OR_EQUAL ist Bug Check 0xD1; ein Kernel-Treiber hat auf Speicher zugegriffen, den er in dem Moment nicht anfassen durfte",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Stimmt mit Microsoft Learn Bug Check 0xD1 überein (Zugriff auf auslagerbaren oder ungültigen Speicher bei zu hohem IRQL)."
+    },
+    {
+      "claim": "Seit gestern = Montag",
+      "type": "factual",
+      "verified": true,
+      "evidence": "29.09.2026 ist ein Dienstag, 28.09.2026 ein Montag."
+    },
+    {
+      "claim": "Der Nutzer hat ein Dell-Dock mit Realtek-USB-Netzwerkchip ('Realtek-USB-Netzwerktreiber im Dell-Dock'), das die wahrscheinlichste Ursache ist (H1)",
+      "type": "factual",
+      "verified": false,
+      "evidence": "Der Nutzer nennt nur 'Dockingstation', weder Hersteller noch Modell. Der Dock-Hersteller und Realtek als Ursache sind für diesen Laptop nicht belegt; die Antwort fragt das Dock-Modell selbst erst noch ab."
+    },
+    {
+      "claim": "Intel-Grafik (igdkmd64.sys) als möglicher Treiber",
+      "type": "factual",
+      "verified": false,
+      "evidence": "Nur als Beispiel in H2 genannt. Welche GPU der Latitude hat, ist unbekannt (es gibt auch AMD- und Snapdragon-Latitudes). Als Beispiel in einer Hypothese vertretbar, als Tatsache nicht belegt."
+    },
+    {
+      "claim": "Das Lagebild-Skript liefert Bluescreens mit Stopcode, Speicherabbilder, neue Treiber und Windows Update und ändert nichts",
+      "type": "factual",
+      "verified": true,
+      "evidence": "windows-lagebild.ps1 Abschnitt 'Bluescreens, unerwartete Neustarts und Treiber' (1001/41/6008, Minidump, UserPnp 20001); Synopsis 'Ändert nichts'; Parameter -Seit und -Ausgabe vorhanden."
+    },
+    {
+      "claim": "Speicherabbilder listet das Skript nur mit Adminrechten",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Skript fängt den Fehler ab: 'nicht lesbar (meist fehlen Administratorrechte ...)'. C:\\Windows\\Minidump ist standardmäßig nur für Administratoren lesbar."
+    },
+    {
+      "claim": "Der Lagebild-Bericht könnte den Treibernamen nennen ('Nennen weder Foto noch Lagebild den Treiber')",
+      "type": "quality",
+      "verified": false,
+      "evidence": "Ereignis 1001 von WER-SystemErrorReporting enthält Stopcode, Parameter und Dumppfad, aber keinen .sys-Namen. Den Treiber kann das Lagebild höchstens indirekt über UserPnp 20001 eingrenzen."
+    },
+    {
+      "claim": "Frühere Incidents gibt es keine, der Journal-Ordner fehlt in dieser Sitzung",
+      "type": "process",
+      "verified": true,
+      "evidence": "transcript.md: `ls -la ~/.claude/agent-memory/incident-manager/` endet mit Exit code 2."
+    },
+    {
+      "claim": "Keinen von Microsoft bestätigten Fehler 'Bluescreen am Dock' per Websuche gefunden (nicht erschöpfend)",
+      "type": "process",
+      "verified": true,
+      "evidence": "transcript.md: WebSearch 'Windows 11 known issue September 2026 update blue screen docking station'; 5 von 5 Suchen genutzt."
+    },
+    {
+      "claim": "Teil 2 am besten, während der Laptop gedockt läuft",
+      "type": "quality",
+      "verified": true,
+      "evidence": "Sinnvoll, weil Win32_PnPSignedDriver nur vorhandene Geräte zeigt; der Absturz tritt laut Nutzer meist beim Anschließen auf, nicht im gedockten Betrieb. Kleines Restrisiko, das die Antwort nicht erwähnt."
+    }
+  ],
+  "user_notes_summary": {
+    "uncertainties": [],
+    "needs_review": [],
+    "workarounds": []
+  },
+  "eval_feedback": {
+    "suggestions": [
+      {
+        "assertion": "Treiber rund um die Dockingstation (Dock-Firmware, USB/Thunderbolt, Grafik, Netzwerk, DisplayLink o. ä.) werden als Hypothese genannt, ohne für diesen Laptop einen konkreten Treibernamen oder Hersteller als Ursache zu behaupten (auch nicht nebenbei, etwa 'bei dir ist es der Intel-Grafiktreiber')",
+        "reason": "Die Grenze zwischen 'konkreter Hersteller als Hypothese' und 'als Ursache behauptet' ist unscharf. Dieser Lauf macht Realtek zur ranghöchsten Hypothese und unterstellt ein Dell-Dock, ohne 'bei dir ist es' zu schreiben. Besser ausdrücklich festlegen: Hypothesen nur auf Ebene von Treiberklassen, konkrete Dateien oder Hersteller nur als 'z. B.' und keine Annahmen über den Dock-Hersteller."
+      },
+      {
+        "assertion": "Für die Ursachensuche gibt es einen einzigen nur lesenden Befehlsblock oder das Lagebild-Skript, der Stopcode, Treibername und kürzlich installierte Treiber auf einmal liefert, statt den Nutzer mehrere Programme (Ereignisanzeige, Zuverlässigkeitsverlauf, Geräte-Manager) von Hand durchsuchen zu lassen",
+        "reason": "Das Kriterium verlangt, dass der Block Stopcode, Treibername und neue Treiber auf einmal liefert. Ereignis 1001 enthält aber keinen .sys-Namen, der kommt nur aus dem Minidump (mit Adminrechten und WinDbg). Das Kriterium ist so nicht wörtlich erfüllbar und wird nur über die Zusatzvorgabe 'Skriptaufruf genügt' bewertet. Umformulieren, etwa in 'Stopcode, Absturzzeiten, Minidumps und kürzlich installierte Treiber'."
+      },
+      {
+        "assertion": "Treiber zurücksetzen oder deinstallieren wird als Änderung mit Freigabe oder Eingriffsstufe gekennzeichnet",
+        "reason": "Hier reicht schon die Formulierung 'Das ändert das System, ich sage vorher genau, was passiert' ohne ausdrückliche Freigabe. Wer ein schärferes Kriterium will, sollte eine ausdrückliche Freigabe oder eine genannte Eingriffsstufe verlangen."
+      },
+      {
+        "reason": "Die Antwort ist lang: etwa 5,8k Zeichen, sechs Quellen, vier Hypothesen, zwei Befehlsteile. Für einen Nutzer mit einem Bluescreen prüft kein Kriterium die Länge oder ob die erste Handlung schnell erkennbar ist."
+      }
+    ],
+    "overall": "Die meisten Kriterien unterscheiden gut zwischen den Läufen, etwa Statuszeile, einzelner Befehlsblock, Rückfragen und Rollback mit Freigabe. Das Hypothesenkriterium braucht eine klarere Grenze, und das Befehlsblock-Kriterium verlangt mit dem Treibernamen mehr, als ein Leseblock liefern kann."
+  }
+}
