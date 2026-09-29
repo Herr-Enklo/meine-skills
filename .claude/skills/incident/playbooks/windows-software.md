@@ -140,9 +140,13 @@ Für 32-Bit-Programme auf 64-Bit-Windows ist der Systemordner `SysWOW64`, nicht 
 
 Wer die Befunde vergleichen will: Startcheck auf einem betroffenen und einem funktionierenden Rechner laufen lassen und die Abschnitte "Probleme" und "PATH" gegenüberstellen.
 
-### Fehlende Laufzeitumgebungen
+### Laufzeitumgebungen
 
 - Meldung zu `MSVCP140.dll`, `VCRUNTIME140.dll` oder `VCRUNTIME140_1.dll`: die Visual-C++-Laufzeit (aktuell "Visual C++ v14 Redistributable", früher als "2015–2022" geführt) fehlt in der Architektur des Programms oder ist beschädigt. In Listen nach `*Visual C++*` suchen, nicht nach einer Jahreszahl. 32-Bit-Programme brauchen die x86-Fassung, auch auf 64-Bit-Windows.
+- Eine veraltete, beschädigte oder gemischte Visual-C++-Laufzeit zeigt sich nicht nur beim Start. Das Programm startet, verhält sich aber falsch: Abstürze in einzelnen Funktionen, Hänger, Darstellungsfehler. Ein Fall aus der Praxis: Der Amazon-WorkSpaces-Client flackerte auch mitten in der Sitzung, ein Neustart half nicht, eine Neuinstallation der Laufzeit schon. Die Laufzeit deshalb nicht ausschließen, nur weil das Programm startet.
+- Ein bekannter Mechanismus: Programme, die ab Visual Studio 2022 17.10 gebaut sind, brauchen `msvcp140.dll` ab Version 14.40. Mit einer älteren Fassung scheitert zum Beispiel `std::mutex` (microsoft/STL, Issues 4730 und 4978). Ein Uninstall-Eintrag "Visual C++ v14" sagt nichts über die Dateiversion; maßgeblich ist die Version der DLL im Systemordner.
+- Hilft eine Neuinstallation der Laufzeit und ein Neustart nicht, ist die Laufzeit als Ursache belegt, auch wenn das Programm normal startet. Vor der nächsten Reparatur den Zustand sichern, sonst ist der Beleg weg: `Version` und `Installed` unter `HKLM\SOFTWARE\WOW6432Node\Microsoft\VisualStudio\14.0\VC\Runtimes\x64` und `\x86`, Dateiversion, Datum und Signatur von `msvcp140*.dll`, `vcruntime140*.dll` und `concrt140.dll` in `System32` (64 Bit) und `SysWOW64` (32 Bit), eigene Kopien im Programmordner, MsiInstaller-Ereignisse der letzten Wochen. Einen betroffenen und einen gesunden Rechner vergleichen.
+- Kommt der Fehler nach der Reparatur wieder, setzt etwas die Laufzeit zurück: ein Paket, das eigene DLLs direkt in die Systemordner kopiert, statt den Installer des Herstellers aufzurufen; eine Neuinstallation nur einer Architektur; bei virtuellen Desktops ein Rebuild oder Restore aus einem Image mit alter Laufzeit. Dauerhaft hilft die aktuelle Laufzeit in x86 und x64 als Paket der Softwareverteilung, das auf die Dateiversion von `msvcp140.dll` prüft und nicht nur auf den Uninstall-Eintrag, dazu ein Problem-Ticket für das Paket, das sie zurücksetzt.
 - Ereignis SideBySide 33 im Anwendungsprotokoll: eine im Manifest verlangte Laufzeit fehlt; die Meldung nennt Name und Version.
 - .NET Framework 4.x: `(Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full').Release` liefert die installierte Stufe. Neueres .NET: `dotnet --list-runtimes`.
 

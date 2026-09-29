@@ -1,7 +1,7 @@
 {
   "name": "incident-manager",
   "description": "Incident Manager mit Schwerpunkt Windows und Software unter Windows: Störungen aufnehmen, einstufen, diagnostizieren und mit Belegen lösen. Skill /incident mit Lagebild-Skript und Agent incident-manager mit Fehlergedächtnis",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": {
     "name": "Paul"
   }
