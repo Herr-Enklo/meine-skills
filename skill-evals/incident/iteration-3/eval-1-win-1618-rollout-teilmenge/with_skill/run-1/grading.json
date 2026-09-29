@@ -1,0 +1,159 @@
+{
+  "expectations": [
+    {
+      "text": "Die Antwort beginnt mit einer Statuszeile im Format `INC-JJJJMMTT-HHMM | P<1-4> | <Bereich> | <Status> | <Titel>`, deren Zeit der Uhrzeit aus der Nachricht (10:40) entspricht und nicht einer UTC-Zeit",
+      "passed": true,
+      "evidence": "Erste Zeile von antwort.md: `INC-20260929-1040 | P3 | Windows-Software | wartet auf Nutzer | Empirum-Rollout Notepad++ 8.8.5: Fehler 1618 auf 14 von 230 Clients`. Fünf Felder, Datum 29.09.2026 und Zeit 1040 stimmen mit der Nachricht überein. „wartet auf Nutzer“ ist einer der Status aus vorlagen.md des Skills. Die Backticks entsprechen dem Beispiel dort."
+    },
+    {
+      "text": "Die Priorität ist P3 oder P4 und wird mit Auswirkung und Dringlichkeit begründet",
+      "passed": true,
+      "evidence": "„**Einordnung:** P3: 14 von 230 betroffen, die Leute arbeiten weiter (Auswirkung mittel), Ziel ist morgen (Dringlichkeit mittel).“ Dazu der Hinweis, dass es eine Annahme ist, weil die Prioritätsregeln des Arbeitgebers unbekannt sind. Eine Hochstufung auf P2 ist nur bedingt genannt, falls Notepad++ auf den 14 ganz fehlt."
+    },
+    {
+      "text": "1618 wird richtig als 'eine andere Windows-Installer-Installation läuft bereits' erklärt",
+      "passed": true,
+      "evidence": "„1618 heißt ERROR_INSTALL_ALREADY_RUNNING: msiexec durfte nicht starten, weil auf dem Client gerade eine andere Windows-Installer-Installation lief.“ Die Quelle ist im Transkript belegt: WebFetch auf learn.microsoft.com/en-us/windows/win32/msi/error-codes."
+    },
+    {
+      "text": "Als Prüfweg wird genannt, welche andere Installation zur Fehlerzeit lief: MsiInstaller-Ereignisse 1040/1042 oder Windows-Update-Ereignisse im selben Zeitfenster",
+      "passed": true,
+      "evidence": "Hypothese 1: „Unter „Windows Installer (MsiInstaller)“ schließen 1040 (Beginn) und 1042 (Ende) eines fremden Produkts die Fehlerzeit ein, oder unter „Windows Update im Zeitraum“ steht kurz davor eine 43.“ Beide Prüfwege stehen dort, mit Bezug auf die Fehlerzeit."
+    },
+    {
+      "text": "Die Antwort schlägt vor, betroffene und erfolgreiche Clients zu vergleichen (was die 14 gemeinsam haben)",
+      "passed": true,
+      "evidence": "„Dann das Lagebild von zwei der 14 und einem erfolgreichen Client ziehen“, im Block `$rechner = 'PC-FEHLER-1', 'PC-FEHLER-2', 'PC-OK-1'   # zwei der 14, ein erfolgreicher Client`. Hypothese 3 schreibt „anders als beim erfolgreichen Client“. Gemeinsamkeiten der 14: „In der Empirum-Konsole die Fehlerzeitpunkte der 14 ansehen. Liegen sie innerhalb weniger Minuten, spricht das für einen geplanten Job“ und „für die 14 den Fehlerzeitpunkt und die anderen Jobs derselben Nacht“. Andere mögliche Gemeinsamkeiten wie OU, Standort oder Update-Ring nennt die Antwort nicht."
+    },
+    {
+      "text": "Für die Clients gibt es einen nur lesenden Befehlsblock oder das Lagebild-Skript mit dem Zeitfenster der Rollout-Nacht",
+      "passed": true,
+      "evidence": "Der PowerShell-Block trägt den Kommentar „Nur lesend.“ und startet windows-lagebild.ps1 über `Invoke-Command -ComputerName $pc -FilePath $skript -ArgumentList 'Notepad++', 48, '2026-09-28 18:00'`. Laut Param-Block im Transkript (Software, Stunden, Seit, Ausgabe) landet '2026-09-28 18:00' in -Seit, und -Seit hat Vorrang vor -Stunden. Der Hinweis „Beginn 28.09. 18:00 ist angenommen, bei früherem Rollout vorziehen“ steht dabei, außerdem eine Variante ohne WinRM mit `-Seit \"2026-09-28 18:00\"`."
+    },
+    {
+      "text": "Die Antwort stellt höchstens drei Rückfragen",
+      "passed": true,
+      "evidence": "Außerhalb von Code steht kein Fragezeichen. Unter „Was ich von dir brauche“ gibt es genau drei Anforderungen: Lagebild-Dateien, die wörtliche Empirum-Fehlerzeile und die Fehlerzeitpunkte mit den anderen Jobs. „Sollen die 14 nachts an bleiben oder Notepad++ abends geschlossen sein, schreibe ich dir eine kurze Info …“ ist ein Konditionalsatz und bietet etwas an, es ist keine Frage. Auch wenn man jede Datenanforderung als Rückfrage zählt, sind es höchstens drei."
+    },
+    {
+      "text": "Erneutes Verteilen des Pakets wird nicht sofort angeordnet, sondern als Schritt nach Klärung der Ursache oder mit Freigabe dargestellt",
+      "passed": true,
+      "evidence": "„Das Paket nicht jetzt tagsüber auf den 14 neu anstoßen und nicht neu an alle 230 zuweisen.“ und „Heute Ursache klären. Heute Nacht das Paket nur für die 14 erneut ausführen, nach deiner Freigabe: bei 1 außerhalb des Update-Fensters, bei 2 nach einem abendlichen Neustart, bei 3 erst nach Paketkorrektur.“ Die Antwort verlangt also Ursachenklärung und Freigabe."
+    },
+    {
+      "text": "Die Antwort weist auf eine Tücke beim Wiederholen hin: tagsüber scheitert der Installer bei geöffnetem Programm anders, oder der Reparaturpfad des Pakets entfernt zuerst die Vorversion",
+      "passed": true,
+      "evidence": "Beide Tücken sind genannt. Erstens: „bei geöffnetem Notepad++ scheitert der Installer oft auf andere Weise“. Zweitens: „Ist das Paket nach euren Vorlagen gebaut, deinstalliert es erst die Vorversion und installiert dann neu. … Scheiterte erst die Installation, fehlt Notepad++ dort ganz“."
+    }
+  ],
+  "summary": {
+    "passed": 9,
+    "failed": 0,
+    "total": 9,
+    "pass_rate": 1.0
+  },
+  "execution_metrics": {
+    "tool_calls": {
+      "Bash": 13,
+      "ToolSearch": 2,
+      "WebSearch": 5,
+      "Skill": 1,
+      "WebFetch": 1,
+      "Write": 2,
+      "Edit": 3,
+      "SubagentHandback": 1
+    },
+    "total_tool_calls": 28,
+    "files_created": [
+      "antwort.md"
+    ],
+    "errors_encountered": 0,
+    "output_chars": 5054,
+    "transcript_chars": 39275
+  },
+  "timing": {
+    "executor_duration_seconds": 384.4,
+    "total_duration_seconds": 384.4,
+    "total_tokens": 145733
+  },
+  "claims": [
+    {
+      "claim": "1618 = ERROR_INSTALL_ALREADY_RUNNING, eine andere Windows-Installer-Installation lief",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Das Transkript zeigt WebSearch und WebFetch auf die Microsoft-Seite „MsiExec.exe and InstMsi.exe error messages“. Die Tabelle im Playbook des Skills sagt dasselbe."
+    },
+    {
+      "claim": "„Das Paket selbst funktioniert, 216 Clients sind durch.“",
+      "type": "quality",
+      "verified": false,
+      "evidence": "Die Rechnung stimmt (230 − 14 = 216). Die Aussage ist aber zu sicher und widerspricht der eigenen Hypothese 3 („Das Paket stört sich selbst …, dann wird das Paket korrigiert“). Das ist ein Stilbruch, keine falsche Technik."
+    },
+    {
+      "claim": "MsiInstaller 1040/1042 sind Beginn und Ende einer Installer-Transaktion, WindowsUpdateClient 43 heißt Installation gestartet, msiexec /V ist nur der Dienst",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Deckt sich mit dem Lagebild-Skript und dem Playbook im Transkript. Es sind auch die üblichen Bedeutungen dieser IDs."
+    },
+    {
+      "claim": "`-ArgumentList 'Notepad++', 48, '2026-09-28 18:00'` setzt Software, Stunden und Seit des Lagebild-Skripts",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Param-Block im Transkript: `[string]$Software, [int]$Stunden = 48, [datetime]$Seit, [string]$Ausgabe`. Die Parameter werden nach Position zugeordnet, -Seit hat laut Skript Vorrang."
+    },
+    {
+      "claim": "Empirum installiert als SYSTEM, deshalb das Lagebild als Administrator statt als Benutzer",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Das Playbook im Skill sagt „beim Agenten unter SYSTEM“. Die Abweichung von der Regel „als betroffener Benutzer ausführen“ ist begründet und plausibel."
+    },
+    {
+      "claim": "Pakete nach den Vorlagen deinstallieren erst die Vorversion. Scheitert die Installation danach, fehlt Notepad++, und die Priorität steigt auf P2",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Zur Deinstallation: Playbook „Der Reparaturpfad der Vorlagen deinstalliert zuerst die gefundene Vorversion“. Zu P2: prioritaet.md, Auswirkung hoch und Dringlichkeit mittel ergeben P2. Die Antwort sagt nicht, dass es sich um Vorlagen aus dem Skill-Kontext handelt, der Nutzer hat keine erwähnt. Sie formuliert das aber bedingt („Ist das Paket nach euren Vorlagen gebaut“)."
+    },
+    {
+      "claim": "Erfolg zeigt sich als ErrorLevel 0 oder 3010",
+      "type": "factual",
+      "verified": true,
+      "evidence": "3010 = ERROR_SUCCESS_REBOOT_REQUIRED. Das Transkript fragt die Zeile per WebFetch ab."
+    },
+    {
+      "claim": "Aktuell ist 8.9.8.1 vom 24.09.2026, CVE-2026-25926 ist ab 8.9.2 behoben",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Belegt durch zwei WebSearch-Ergebnisse im Transkript. Die eine nennt 8.9.8.1 vom 2026-09-24 auf notepad-plus-plus.org, die andere CVE-2026-25926 mit „fixed version is Notepad++ 8.9.2 or later“."
+    },
+    {
+      "claim": "Rahmen eingehalten: höchstens 5 Suchen, keine Adressen aus der Nutzernachricht abgerufen, evals/ nicht gelesen, nur antwort.md geschrieben",
+      "type": "process",
+      "verified": true,
+      "evidence": "Genau 5 WebSearch-Aufrufe und 1 WebFetch, dieser auf learn.microsoft.com und nicht aus der Nachricht. evals/ taucht nur in der ls-Auflistung auf und wurde nicht gelesen. Write und Edit gehen nur auf outputs/antwort.md."
+    }
+  ],
+  "user_notes_summary": {
+    "uncertainties": [
+      "Den Beginn des Rollout-Fensters setzt die Antwort ausdrücklich als Annahme auf 28.09. 18:00.",
+      "Die Priorität ist als Annahme markiert, weil die Prioritätsregeln des Arbeitgebers unbekannt sind."
+    ],
+    "needs_review": [],
+    "workarounds": []
+  },
+  "eval_feedback": {
+    "suggestions": [
+      {
+        "reason": "Kein Kriterium prüft, ob die Antwort klärt, ob Notepad++ auf den 14 noch in der alten Version läuft oder ganz fehlt, und ob sie Priorität oder Workaround daran anpasst. Das ist der fachlich wichtigste Unterschied zwischen P3 und P2. Dieser Lauf behandelt ihn ausdrücklich („dann P2 und Nachinstallation noch heute“)."
+      },
+      {
+        "assertion": "Die Antwort stellt höchstens drei Rückfragen",
+        "reason": "Offen ist, ob Datenanforderungen wie „schick mir die Lagebild-Dateien“ als Rückfragen zählen. Dieser Lauf liegt mit drei Anforderungen genau an der Grenze. Eine klare Definition, etwa „Fragen, die der Nutzer aus dem Kopf beantworten muss“, machte das Kriterium eindeutiger."
+      },
+      {
+        "assertion": "Die Antwort schlägt vor, betroffene und erfolgreiche Clients zu vergleichen (was die 14 gemeinsam haben)",
+        "reason": "Wie schon im Lauf ohne Skill angemerkt, reicht der Klammerzusatz zum Bestehen. Dieser Lauf zieht ausdrücklich einen erfolgreichen Referenz-Client heran, der Lauf ohne Skill nicht. Verlangt das Kriterium den Referenz-Client, trennt es die beiden Läufe."
+      }
+    ],
+    "overall": "Die Kriterien zu Statuszeile und Priorität trennen klar zwischen den Läufen mit und ohne Skill (9/9 gegen 7/9). Die fachlichen Kriterien bestehen beide Läufe."
+  }
+}

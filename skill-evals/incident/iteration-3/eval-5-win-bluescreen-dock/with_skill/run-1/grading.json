@@ -1,0 +1,149 @@
+{
+  "expectations": [
+    {
+      "text": "Die Antwort beginnt mit einer Statuszeile im Format `INC-JJJJMMTT-HHMM | P<1-4> | <Bereich> | <Status> | <Titel>`",
+      "passed": true,
+      "evidence": "Zeile 1 von antwort.md: \"`INC-20260929-0830 | P3 | Windows-System | wartet auf Nutzer | Bluescreen DRIVER_IRQL_NOT_LESS_OR_EQUAL beim Andocken, Dell Latitude`\". Die ID passt zu Datum und Uhrzeit der Meldung (29.09.2026, 08:30). P3 liegt in P1-P4, Bereich und Status sind erlaubte Werte aus vorlagen.md, fünf Felder, getrennt mit \" | \". Die Backticks um die Zeile entsprechen dem Beispiel in vorlagen.md. Vor der Zeile steht nichts."
+    },
+    {
+      "text": "Es wird ein Weg genannt, den Treibernamen nachträglich zu finden: BugCheck-Ereignis 1001, Zuverlässigkeitsüberwachung (perfmon /rel) oder Minidump unter C:\\Windows\\Minidump",
+      "passed": true,
+      "evidence": "Minidump als Quelle für den Treibernamen: \"Bitte nichts in `C:\\Windows\\Minidump` löschen ... Die Speicherabbilder sind neben einem Foto die einzige Quelle für den Treibernamen.\" Die Auswertung wird ebenfalls genannt: \"Danach wird mit Adminrechten das neueste Speicherabbild mit WinDbg ausgewertet (`!analyze -v`)\". Ereignis 1001 liest das Lagebild-Skript mit (Abschnitt \"Bluescreens, unerwartete Neustarts und Treiber\"). Als Weg zum Treibernamen werden 1001 und perfmon /rel nicht ausdrücklich genannt. Der Weg über den Minidump reicht für das Kriterium."
+    },
+    {
+      "text": "Für die Ursachensuche gibt es einen einzigen nur lesenden Befehlsblock oder das Lagebild-Skript, der Stopcode, Treibername und kürzlich installierte Treiber auf einmal liefert, statt den Nutzer mehrere Programme (Ereignisanzeige, Zuverlässigkeitsverlauf, Geräte-Manager) von Hand durchsuchen zu lassen",
+      "passed": true,
+      "evidence": "Es gibt einen einzigen PowerShell-Block: `powershell -NoProfile -ExecutionPolicy Bypass -File \"$env:USERPROFILE\\Downloads\\windows-lagebild.ps1\" -Seit \"2026-09-21\" -Ausgabe \"$env:TEMP\\lagebild.txt\"`. Im selben Block folgen wenige Zeilen: Win32_BIOS, Win32_PnPSignedDriver für NET/DISPLAY/Thunderbolt/USB4/DisplayLink nach DriverDate sortiert, und notepad. Dazu heißt es: \"Der Block liest nur.\" Laut Quelltext (windows-lagebild.ps1, Zeilen 218-245) liefert das Skript BugCheck 1001 mit Stopcode, Kernel-Power 41 und EventLog 6008, die Minidump-Liste und UserPnp 20001 im Zeitraum. Ereignisanzeige, Zuverlässigkeitsverlauf und Geräte-Manager muss der Nutzer nicht von Hand durchsuchen."
+    },
+    {
+      "text": "Treiber rund um die Dockingstation (Dock-Firmware, USB/Thunderbolt, Grafik, Netzwerk, DisplayLink o. ä.) werden als Hypothese genannt, ohne für diesen Laptop einen konkreten Treibernamen oder Hersteller als Ursache zu behaupten (auch nicht nebenbei, etwa 'bei dir ist es der Intel-Grafiktreiber')",
+      "passed": true,
+      "evidence": "Abschnitt \"Vermutungen (Treiberklassen, solange keine .sys-Datei bekannt ist)\" mit den Punkten \"Netzwerktreiber des Docks\", \"USB-C/Thunderbolt, BIOS oder Dock-Firmware\", \"Grafik- oder DisplayLink-Treiber für die Monitore am Dock\" und \"Hardware oder ein Treiber ohne Dock-Bezug\". Die Antwort nennt keinen .sys-Namen und keinen Chip- oder Treiberhersteller (kein Realtek, Intel, NVIDIA o. ä.). Dell steht nur als Quelle einer Empfehlung da, mit ausdrücklicher Einschränkung: \"das gilt für Dell-Docks, dein Modell kenne ich noch nicht\". Außerdem: \"Welcher es ist, zeigt nur die .sys-Datei auf dem Bluescreen oder im Speicherabbild.\""
+    },
+    {
+      "text": "Ein Workaround bis zur Lösung wird genannt (etwa ohne Dock arbeiten, Arbeit häufig speichern)",
+      "passed": true,
+      "evidence": "Abschnitt \"Damit du weiterarbeiten kannst\": \"1. Bis zur Klärung ohne Dock arbeiten.\" und \"2. Musst du ans Dock: vorher alles speichern.\" Als ungeprüft markiert kommt dazu: \"Laptop herunterfahren, andocken, dann einschalten.\""
+    },
+    {
+      "text": "Die Antwort stellt höchstens drei Rückfragen",
+      "passed": true,
+      "evidence": "Unter \"Was ich von dir brauche\" stehen genau drei Fragen: \"Welches Dock ist es genau (Hersteller und Modell, steht auf der Unterseite)?\", \"Kam ein Bluescreen auch schon, als der Laptop nicht am Dock hing?\" und \"Hat sich vor gestern etwas am Arbeitsplatz geändert, etwa ein anderes Dock, Kabel oder ein neuer Monitor?\". Laut grep hat antwort.md sonst kein Fragezeichen. \"Schick mir beide Dateien\" und \"Blockiert eine Richtlinie das Skript, sag Bescheid\" sind Aufforderungen und keine Rückfragen. Frage 1 fragt nach einem einzigen Gerät, und die Beispiele in Frage 3 sind keine weiteren Fragen."
+    },
+    {
+      "text": "Treiber zurücksetzen oder deinstallieren wird als Änderung mit Freigabe oder Eingriffsstufe gekennzeichnet",
+      "passed": true,
+      "evidence": "\"Je nach Befund folgt Zurücksetzen des zuletzt geänderten Treibers oder BIOS, Firmware und Treiber auf Herstellerstand, vorher abgestimmt mit dir.\" Dazu kommen \"Keine Treiber auf Verdacht deinstallieren\" und \"Auf einem Firmenrechner ... macht das und die Korrektur meist eure IT.\" Das Zurücksetzen erscheint nirgends als Anleitung, sondern nur als späterer Schritt mit vorheriger Abstimmung, also mit Freigabe. Knapp: Die Antwort nennt keine Stufe 2 und keinen Weg zurück, die Freigabe steht aber eindeutig da."
+    }
+  ],
+  "summary": {
+    "passed": 7,
+    "failed": 0,
+    "total": 7,
+    "pass_rate": 1.0
+  },
+  "execution_metrics": {
+    "tool_calls": {
+      "Bash": 10,
+      "ToolSearch": 1,
+      "WebSearch": 5,
+      "Skill": 1,
+      "Write": 2,
+      "SubagentHandback": 1
+    },
+    "total_tool_calls": 20,
+    "files_created": [
+      "antwort.md"
+    ],
+    "output_chars": 5190,
+    "transcript_chars": 31807
+  },
+  "timing": {
+    "executor_duration_seconds": 345.1,
+    "total_duration_seconds": 345.1,
+    "total_tokens": 128225
+  },
+  "claims": [
+    {
+      "claim": "DRIVER_IRQL_NOT_LESS_OR_EQUAL ist Stopcode 0xD1: Ein Kernel-Treiber hat auf ungültigen oder auslagerbaren Speicher zugegriffen",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Stimmt im Kern mit Microsoft Learn (Bug Check 0xD1) überein: Ein Kernel-Treiber greift bei zu hohem IRQL auf auslagerbaren Speicher oder eine ungültige Adresse zu. Den IRQL erwähnt die Antwort nicht, die Aussage ist trotzdem richtig."
+    },
+    {
+      "claim": "Welcher Treiber es ist, zeigt nur die .sys-Datei auf dem Bluescreen oder im Speicherabbild",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Ereignis 1001 und die Zuverlässigkeitsüberwachung zeigen nur Stopcode und Parameter, nicht das Modul. Das Modul steht auf dem Bluescreen (\"Fehlerursache: xxx.sys\") oder im Dump."
+    },
+    {
+      "claim": "Gestern war Montag; das Zeitfenster reicht bis 21.09.",
+      "type": "factual",
+      "verified": true,
+      "evidence": "28.09.2026 ist ein Montag, der 21.09.2026 ebenfalls (mit date geprüft)."
+    },
+    {
+      "claim": "Das Skript windows-lagebild.ps1 liegt im Repo meine-skills unter plugins/incident-manager/skills/incident/scripts/ und hat die Abschnitte \"Bluescreens, unerwartete Neustarts und Treiber\" und Windows Update",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Die Datei liegt dort. Die Abschnitte stehen in den Zeilen 218 und 258/264. -Seit und -Ausgabe sind gültige Parameter."
+    },
+    {
+      "claim": "Der Befehlsblock liest nur",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Der Block schreibt nur Berichtsdateien nach %TEMP% (Out-File, -Ausgabe) und öffnet notepad. -ExecutionPolicy Bypass gilt nur für diesen Prozess. Am System wird nichts geändert."
+    },
+    {
+      "claim": "Datenträgerfehler zeigen sich als Disk 7, Disk 153, Ntfs 55",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Die IDs sind korrekt: Disk 7 steht für einen fehlerhaften Block, Disk 153 für eine wiederholte E/A, Ntfs 55 für eine Beschädigung des Dateisystems."
+    },
+    {
+      "claim": "Dell empfiehlt bei Dock-Problemen zuerst aktuelle Windows-Updates, BIOS, Dock-Firmware und Treiber [2]",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Die Websuche im Transkript hat den Dell-Artikel 000124220 (\"BIOS Settings and Driver Installation for Troubleshooting\") gefunden. Die Antwort schränkt die Aussage auf Dell-Docks ein."
+    },
+    {
+      "claim": "Das Speicherabbild wird mit Adminrechten mit WinDbg ausgewertet",
+      "type": "factual",
+      "verified": true,
+      "evidence": "C:\\Windows\\Minidump ist ohne Adminrechte meist nicht lesbar. !analyze -v ist der Standardweg laut Microsoft Learn."
+    },
+    {
+      "claim": "P3 als Annahme",
+      "type": "quality",
+      "verified": true,
+      "evidence": "Die Einstufung ist nachvollziehbar und als Annahme markiert. Bei geringer Auswirkung (ein Nutzer) hängt es an der Dringlichkeit, ob P3 oder P4 gilt. Ohne Dock gibt es einen Workaround, deshalb wäre auch P4 vertretbar. Eine falsche technische Aussage ist das nicht."
+    },
+    {
+      "claim": "Einen aktuell bekannten Windows-Fehler mit Bluescreens beim Andocken per Websuche nicht gefunden; 5 von 5 Websuchen genutzt",
+      "type": "process",
+      "verified": true,
+      "evidence": "Das Transkript zeigt fünf WebSearch-Aufrufe. Der letzte sucht nach bekannten Problemen im September 2026, und die Zusammenfassung nennt keinen Dock-Bluescreen."
+    }
+  ],
+  "user_notes_summary": {
+    "uncertainties": [],
+    "needs_review": [],
+    "workarounds": []
+  },
+  "eval_feedback": {
+    "suggestions": [
+      {
+        "assertion": "Für die Ursachensuche gibt es einen einzigen nur lesenden Befehlsblock oder das Lagebild-Skript, der Stopcode, Treibername und kürzlich installierte Treiber auf einmal liefert, statt den Nutzer mehrere Programme (Ereignisanzeige, Zuverlässigkeitsverlauf, Geräte-Manager) von Hand durchsuchen zu lassen",
+        "reason": "Den Treibernamen liefert das Lagebild-Skript nicht. Es listet nur die Minidumps, und für den Namen braucht es WinDbg mit Adminrechten. Bestanden ist das Kriterium nur über die Auslegung in der Grader-Anweisung. Der Wortlaut sollte zu dem passen, was ein nur lesender Block ohne Adminrechte liefern kann: Stopcode, Absturzzeitpunkte, vorhandene Minidumps und kürzlich installierte Treiber."
+      },
+      {
+        "assertion": "Treiber zurücksetzen oder deinstallieren wird als Änderung mit Freigabe oder Eingriffsstufe gekennzeichnet",
+        "reason": "Hier reicht ein halber Satz über einen späteren Schritt (\"vorher abgestimmt mit dir\"). Eine Antwort, die den Rollback beiläufig erwähnt, ohne Stufe, erwartete Wirkung und Weg zurück, besteht genauso. Soll das Kriterium die Eingriffsstufen-Regel des Skills prüfen, sollte es bei einem angebotenen Rollback Stufe oder Freigabe und den Weg zurück verlangen."
+      },
+      {
+        "reason": "Kein Kriterium prüft die Beweissicherung: Minidumps nicht löschen (die Datenträgerbereinigung entfernt sie) und den Bluescreen fotografieren. Dieser Lauf macht beides ausdrücklich. Ein Lauf, der zum Aufräumen oder zu einem \"Treiber-Updater\" rät, würde die Ursache verwischen und trotzdem nicht auffallen."
+      }
+    ],
+    "overall": "Der Lauf mit Skill erfüllt alle sieben Kriterien, belegt aus antwort.md. Kriterium 3 besteht nur über die Auslegung in der Grader-Anweisung, Kriterium 7 mit einer knappen Formulierung. Beide sollten schärfer gefasst werden."
+  }
+}

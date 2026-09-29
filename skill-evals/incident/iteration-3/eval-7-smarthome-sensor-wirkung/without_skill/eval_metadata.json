@@ -1,0 +1,13 @@
+{
+  "eval_id": 7,
+  "eval_name": "smarthome-sensor-wirkung",
+  "prompt": "In Home Assistant steht der Temperatursensor im Büro (Shelly H&T, batteriebetrieben) seit ein paar Tagen auf 'nicht verfügbar'. Ist das schlimm? Du hast gerade keinen Zugriff auf mein Home Assistant, sag mir, was ich prüfen soll. (Dienstag, 29.09.2026, 10:30 Uhr)",
+  "assertions": [
+    "Die Antwort beginnt mit einer Statuszeile im Format `INC-JJJJMMTT-HHMM | P<1-4> | <Bereich> | <Status> | <Titel>`",
+    "Die Wichtigkeit wird davon abhängig gemacht, was den Sensor benutzt (Automationen, Thermostat oder Heizungsregelung), mit einem konkreten Prüfweg dafür",
+    "Es wird darauf hingewiesen, dass ein eingefrorener letzter Wert eine Regelung (etwa die Heizung) falsch weiterarbeiten lassen kann",
+    "Eine leere Batterie bzw. ein schlafendes Batteriegerät wird als wahrscheinlichste Ursache genannt, mit Prüfung des Batterieverlaufs oder des Protokolls",
+    "Neuladen der Integration oder Neustart von Home Assistant wird nicht als Lösung für eine leere Batterie empfohlen",
+    "Als Folgeaufgabe wird eine Warnung bei niedriger Batterie oder langer Funkstille vorgeschlagen"
+  ]
+}

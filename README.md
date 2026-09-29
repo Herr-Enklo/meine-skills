@@ -236,9 +236,17 @@ Rückfragen, der Workaround vor der Diagnose und die Warnung vor einem eingefror
 Dazu kamen zwei Fehler, die der Skill selbst verursacht hatte: der Screenshot vor dem Ablehnen
 der Anmeldeanfrage und ein unterstellter Dock-Treiber. Die Läufe fanden außerdem einen
 Sachfehler im Sicherheits-Playbook (Google widerruft App-Passwörter beim Passwortwechsel).
-Alle Punkte sind nach dem Durchlauf eingearbeitet; ob das wirkt, zeigt erst ein dritter
-Durchlauf. Einzelheiten in `skill-evals/incident/iteration-2/benchmark.md`, die Seite
-`review.html` dort zeigt die Antworten beider Durchläufe nebeneinander.
+Alle Punkte sind nach dem Durchlauf eingearbeitet. Einzelheiten in
+`skill-evals/incident/iteration-2/benchmark.md`.
+
+Dritter Durchlauf mit dem überarbeiteten Skill und unveränderten Kriterien: mit Skill 66 von
+66, ohne Skill weiter 48 von 66 (diese Läufe samt Bewertung aus dem zweiten Durchlauf
+übernommen). Alle fünf Fehler des zweiten Durchlaufs sind weg, die Antworten bleiben bei im
+Mittel 4 440 Zeichen ohne Codeblöcke. Der Katalog zeigt damit keine weiteren Verbesserungen
+mehr an; dafür bräuchte es schwerere Szenarien oder mehrere Läufe je Szenario. Was die
+Kriterien nicht erfassen, etwa dass der Anmeldeausfall diesmal ohne den bekannten Fehler des
+September-Updates auskam, steht in `skill-evals/incident/iteration-3/benchmark.md`. Die Seite
+`review.html` in jedem Durchlauf zeigt die Antworten neben denen des vorigen.
 
 Hilfsskripte: `tests/eval_transkript.py` macht aus dem Protokoll eines Laufs Transkript und
 Werkzeugstatistik, `tests/eval_testdaten.py` erzeugt die Eingabedatei für das Lagebild-Szenario.

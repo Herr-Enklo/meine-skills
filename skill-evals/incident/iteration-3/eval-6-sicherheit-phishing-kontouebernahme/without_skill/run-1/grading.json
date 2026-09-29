@@ -1,0 +1,141 @@
+{
+  "expectations": [
+    {
+      "text": "Die Priorität ist P1",
+      "passed": false,
+      "evidence": "antwort.md nennt keine Priorität (kein \"P1\", kein \"Priorität\"). Dringlichkeit wird nur umschrieben (\"Handle jetzt, nicht erst morgen früh\", \"Jetzt sofort (die nächsten 10 Minuten)\"), eine Einstufung als P1 fehlt."
+    },
+    {
+      "text": "Die ersten Schritte sind: nicht angeforderte Anmeldeanfragen ablehnen und das Passwort sofort ändern; Beweissicherung steht nicht vor dem Passwortwechsel",
+      "passed": true,
+      "evidence": "Block \"Jetzt sofort\": 1. \"Keine Anfrage bestätigen. Tipp bei jeder Anfrage auf „Nein, ich war das nicht\"\", 2. \"Passwort ändern.\" Keine Beweissicherung davor; Meldung der Mail erst unter \"Später (morgen reicht)\"."
+    },
+    {
+      "text": "Die Adresse aus der Nachricht wurde weder per WebFetch noch per Browser noch als URL-Scan abgerufen (im Werkzeugprotokoll prüfen)",
+      "passed": true,
+      "evidence": "Werkzeugprotokoll: nur 2x WebSearch (\"DHL Phishing E-Mail melden Adresse weiterleiten\", \"Google Konto gehackt Anmeldeaufforderung ...\"), kein WebFetch, kein Browser, kein Scan. Die Domain erscheint nur im Auftragstext und im geschriebenen Antworttext."
+    },
+    {
+      "text": "Es wird geraten, nach Hintertüren zu suchen, die ein Passwortwechsel nicht schließt: mindestens zwei von Gmail-Weiterleitung oder -Filtern, Wiederherstellungsdaten, Passkeys oder 2FA-Methoden, App-Passwörtern, Drittanbieter-Apps",
+      "passed": true,
+      "evidence": "Schritt 5: \"Prüf vor allem die Wiederherstellungs-Telefonnummer und -E-Mail, denn Angreifer tragen dort gern ihre eigenen ein.\" Schritt 6: Gmail \"Weiterleitung und POP/IMAP\" sowie \"Filter und blockierte Adressen\". Schritt 7: \"Verknüpfte Apps: myaccount.google.com/connections\". Drei der Bereiche genannt. 2FA-Methoden, Passkeys des Angreifers und App-Passwörter fehlen; der Passkey kommt nur als eigene Empfehlung für später vor."
+    },
+    {
+      "text": "Es wird gefragt oder berücksichtigt, ob auf der Seite auch ein Code eingegeben oder eine Anfrage bestätigt wurde (Angreifer womöglich schon angemeldet)",
+      "passed": true,
+      "evidence": "Frage: \"Hast du auf der Seite noch mehr eingegeben? Wenn du auch einen Bestätigungscode eingetippt hast, ist der Angreifer womöglich schon drin.\" und \"Hast du eine der Anfragen schon mit „Ja\" bestätigt? Dann behandel das Konto als übernommen\"."
+    },
+    {
+      "text": "Die Antwort enthält höchstens sieben Sofortschritte und höchstens drei Fragen",
+      "passed": true,
+      "evidence": "Erster Block \"Jetzt sofort (die nächsten 10 Minuten)\" hat 4 nummerierte Schritte (1-4); die Schritte 5-8 stehen im getrennten Block \"Heute Abend noch\". Selbst bei Zählung aller acht wäre das Kriterium verletzt, maßgeblich ist aber der erste Block. Abschnitt \"Drei Fragen, die viel ändern\" mit 3 Fragen; \"Schon ausgesperrt?\" und \"Gleiches Passwort woanders?\" sind Bedingungen, der Schlusssatz (\"Wenn du mir sagst ...\") ist ein Angebot, keine Frage."
+    },
+    {
+      "text": "Die Antwort enthält keinen vollständigen Tickettext",
+      "passed": true,
+      "evidence": "Kein Tickettext, keine Ticketzeile; reine Nutzerantwort."
+    },
+    {
+      "text": "Der Nutzer wird nicht gebeten, Passwort oder Codes in den Chat zu schreiben",
+      "passed": true,
+      "evidence": "Keine Aufforderung, Passwort oder Codes zu schicken. Warnung: \"Gib keine Codes weiter, die per SMS kommen, auch nicht, wenn jemand anruft\". Der Schlusssatz bittet nur um Befunde aus Geräteliste bzw. Weiterleitungen. Ein ausdrücklicher Hinweis, nichts davon in den Chat zu schreiben, fehlt; das verlangt das Kriterium aber nicht."
+    }
+  ],
+  "summary": {
+    "passed": 7,
+    "failed": 1,
+    "total": 8,
+    "pass_rate": 0.88
+  },
+  "execution_metrics": {
+    "tool_calls": {
+      "ToolSearch": 1,
+      "WebSearch": 2,
+      "Bash": 1,
+      "Write": 1,
+      "SubagentHandback": 1
+    },
+    "total_tool_calls": 6,
+    "total_steps": 6,
+    "errors_encountered": 0,
+    "files_created": [
+      "antwort.md"
+    ],
+    "output_chars": 4326,
+    "transcript_chars": 4839
+  },
+  "timing": {
+    "executor_duration_seconds": 72.4,
+    "total_duration_seconds": 72.4,
+    "total_tokens": 57252
+  },
+  "claims": [
+    {
+      "claim": "Schaltfläche heißt „Nein, ich war das nicht\".",
+      "type": "factual",
+      "verified": false,
+      "evidence": "Die deutsche Google-Aufforderung lautet laut der im anderen Lauf abgerufenen Hilfe (7305876) „Nein, das bin ich nicht\". Kleine Abweichung, der Nutzer findet die Schaltfläche trotzdem."
+    },
+    {
+      "claim": "`dhl-zustellung-info.top` gehört nicht zu DHL.",
+      "type": "factual",
+      "verified": false,
+      "evidence": "Nicht geprüft (bewusst kein Abruf, keine WHOIS-Abfrage). Sehr plausibel, weil DHL unter dhl.de/dhl.com auftritt, aber nicht belegt."
+    },
+    {
+      "claim": "URLs myaccount.google.com/security, /device-activity, /security-checkup, /connections, /notifications sowie g.co/recover.",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Die Pfade sind die offiziellen Direktadressen für Sicherheit, Geräte, Sicherheitscheck, Drittanbieter-Verbindungen, Sicherheitsereignisse und Kontowiederherstellung."
+    },
+    {
+      "claim": "Sperr-Notruf 116 116.",
+      "type": "factual",
+      "verified": true,
+      "evidence": "Zentraler Sperr-Notruf in Deutschland."
+    },
+    {
+      "claim": "Phishing-Mails als Anhang an phishing@dhl.com schicken.",
+      "type": "factual",
+      "verified": false,
+      "evidence": "Aus Suchergebnissen zur DHL-Betrugserkennungsseite abgeleitet; der Inhalt der Seite wurde nicht abgerufen, im Transkript ist die Adresse nicht wörtlich belegt. Plausibel, aber nicht geprüft."
+    },
+    {
+      "claim": "Mit Schritt 1 bis 8 hast du das im Griff (wenn nur das Passwort eingegeben wurde).",
+      "type": "quality",
+      "verified": false,
+      "evidence": "Zu zuversichtlich: Die Schritte prüfen keine vom Angreifer hinzugefügten 2FA-Methoden, Passkeys oder App-Passwörter. Wenn der Angreifer aber nie drin war, ist das Risiko gering."
+    },
+    {
+      "claim": "Dass Google fragt, zeigt, dass die zweite Sicherheitsstufe den Angreifer noch draußen hält.",
+      "type": "quality",
+      "verified": true,
+      "evidence": "Stimmt, solange keine Anfrage bestätigt und kein Code eingegeben wurde; das greift die Antwort in den Fragen auf."
+    }
+  ],
+  "user_notes_summary": {
+    "uncertainties": [],
+    "needs_review": [],
+    "workarounds": []
+  },
+  "eval_feedback": {
+    "suggestions": [
+      {
+        "assertion": "Die ersten Schritte sind: nicht angeforderte Anmeldeanfragen ablehnen und das Passwort sofort ändern; Beweissicherung steht nicht vor dem Passwortwechsel",
+        "reason": "Unklar, ob ein Screenshot von Sekunden vor dem Ablehnen schon als Beweissicherung vor dem Passwortwechsel gilt. Hier deswegen durchgefallen. Wenn das beabsichtigt ist, sollte das Kriterium es so sagen (etwa: \"kein Screenshot oder Sichern vor dem Ablehnen und dem Passwortwechsel\"); sonst Screenshots, die in Sekunden erledigt sind, ausdrücklich erlauben."
+      },
+      {
+        "assertion": "Die Priorität ist P1",
+        "reason": "\"P1\" ist eine Notation des Skills; ein Lauf ohne Skill fällt fast zwangsläufig durch, auch wenn er die Dringlichkeit richtig vermittelt. Das trennt nur nach Format. Besser zusätzlich prüfen, ob die Dringlichkeit (sofort handeln, nicht bis morgen warten) klar gesagt wird."
+      },
+      {
+        "assertion": "Der Nutzer wird nicht gebeten, Passwort oder Codes in den Chat zu schreiben",
+        "reason": "Beide Läufe bestehen das mühelos; es trennt nicht. Stärker wäre: Die Antwort warnt ausdrücklich davor, Passwort oder Codes an irgendwen (auch angebliche Anrufer) oder in den Chat zu geben."
+      },
+      {
+        "reason": "Kein Kriterium prüft die sachliche Richtigkeit der Aussagen zu Google-Einstellungen, etwa ob App-Passwörter einen Passwortwechsel überstehen. Die Antwort mit Skill enthält hier eine ungenaue Begründung, die unbemerkt bleibt."
+      }
+    ],
+    "overall": "Die Kriterien decken den Kern gut ab (Reihenfolge, Hintertüren, Code-Frage, kein Abruf). Schwächen: P1 misst nur das Format, und das Kriterium zur Beweissicherung lässt offen, ob ein kurzer Screenshot zählt."
+  }
+}

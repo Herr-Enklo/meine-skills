@@ -1,0 +1,1056 @@
+{
+  "metadata": {
+    "skill_name": "incident",
+    "skill_path": "plugins/incident-manager/skills/incident",
+    "executor_model": "gleiches Modell wie die Sitzung",
+    "analyzer_model": "gleiches Modell wie die Sitzung",
+    "timestamp": "2026-09-29T11:08:51Z",
+    "evals_run": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8
+    ],
+    "runs_per_configuration": 1
+  },
+  "runs": [
+    {
+      "eval_id": 1,
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 9,
+        "failed": 0,
+        "total": 9,
+        "time_seconds": 384.4,
+        "tokens": 145733,
+        "tool_calls": 28,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Die Antwort beginnt mit einer Statuszeile im Format `INC-JJJJMMTT-HHMM | P<1-4> | <Bereich> | <Status> | <Titel>`, deren Zeit der Uhrzeit aus der Nachricht (10:40) entspricht und nicht einer UTC-Zeit",
+          "passed": true,
+          "evidence": "Erste Zeile von antwort.md: `INC-20260929-1040 | P3 | Windows-Software | wartet auf Nutzer | Empirum-Rollout Notepad++ 8.8.5: Fehler 1618 auf 14 von 230 Clients`. Fünf Felder, Datum 29.09.2026 und Zeit 1040 stimmen mit der Nachricht überein. „wartet auf Nutzer“ ist einer der Status aus vorlagen.md des Skills. Die Backticks entsprechen dem Beispiel dort."
+        },
+        {
+          "text": "Die Priorität ist P3 oder P4 und wird mit Auswirkung und Dringlichkeit begründet",
+          "passed": true,
+          "evidence": "„**Einordnung:** P3: 14 von 230 betroffen, die Leute arbeiten weiter (Auswirkung mittel), Ziel ist morgen (Dringlichkeit mittel).“ Dazu der Hinweis, dass es eine Annahme ist, weil die Prioritätsregeln des Arbeitgebers unbekannt sind. Eine Hochstufung auf P2 ist nur bedingt genannt, falls Notepad++ auf den 14 ganz fehlt."
+        },
+        {
+          "text": "1618 wird richtig als 'eine andere Windows-Installer-Installation läuft bereits' erklärt",
+          "passed": true,
+          "evidence": "„1618 heißt ERROR_INSTALL_ALREADY_RUNNING: msiexec durfte nicht starten, weil auf dem Client gerade eine andere Windows-Installer-Installation lief.“ Die Quelle ist im Transkript belegt: WebFetch auf learn.microsoft.com/en-us/windows/win32/msi/error-codes."
+        },
+        {
+          "text": "Als Prüfweg wird genannt, welche andere Installation zur Fehlerzeit lief: MsiInstaller-Ereignisse 1040/1042 oder Windows-Update-Ereignisse im selben Zeitfenster",
+          "passed": true,
+          "evidence": "Hypothese 1: „Unter „Windows Installer (MsiInstaller)“ schließen 1040 (Beginn) und 1042 (Ende) eines fremden Produkts die Fehlerzeit ein, oder unter „Windows Update im Zeitraum“ steht kurz davor eine 43.“ Beide Prüfwege stehen dort, mit Bezug auf die Fehlerzeit."
+        },
+        {
+          "text": "Die Antwort schlägt vor, betroffene und erfolgreiche Clients zu vergleichen (was die 14 gemeinsam haben)",
+          "passed": true,
+          "evidence": "„Dann das Lagebild von zwei der 14 und einem erfolgreichen Client ziehen“, im Block `$rechner = 'PC-FEHLER-1', 'PC-FEHLER-2', 'PC-OK-1'   # zwei der 14, ein erfolgreicher Client`. Hypothese 3 schreibt „anders als beim erfolgreichen Client“. Gemeinsamkeiten der 14: „In der Empirum-Konsole die Fehlerzeitpunkte der 14 ansehen. Liegen sie innerhalb weniger Minuten, spricht das für einen geplanten Job“ und „für die 14 den Fehlerzeitpunkt und die anderen Jobs derselben Nacht“. Andere mögliche Gemeinsamkeiten wie OU, Standort oder Update-Ring nennt die Antwort nicht."
+        },
+        {
+          "text": "Für die Clients gibt es einen nur lesenden Befehlsblock oder das Lagebild-Skript mit dem Zeitfenster der Rollout-Nacht",
+          "passed": true,
+          "evidence": "Der PowerShell-Block trägt den Kommentar „Nur lesend.“ und startet windows-lagebild.ps1 über `Invoke-Command -ComputerName $pc -FilePath $skript -ArgumentList 'Notepad++', 48, '2026-09-28 18:00'`. Laut Param-Block im Transkript (Software, Stunden, Seit, Ausgabe) landet '2026-09-28 18:00' in -Seit, und -Seit hat Vorrang vor -Stunden. Der Hinweis „Beginn 28.09. 18:00 ist angenommen, bei früherem Rollout vorziehen“ steht dabei, außerdem eine Variante ohne WinRM mit `-Seit \"2026-09-28 18:00\"`."
+        },
+        {
+          "text": "Die Antwort stellt höchstens drei Rückfragen",
+          "passed": true,
+          "evidence": "Außerhalb von Code steht kein Fragezeichen. Unter „Was ich von dir brauche“ gibt es genau drei Anforderungen: Lagebild-Dateien, die wörtliche Empirum-Fehlerzeile und die Fehlerzeitpunkte mit den anderen Jobs. „Sollen die 14 nachts an bleiben oder Notepad++ abends geschlossen sein, schreibe ich dir eine kurze Info …“ ist ein Konditionalsatz und bietet etwas an, es ist keine Frage. Auch wenn man jede Datenanforderung als Rückfrage zählt, sind es höchstens drei."
+        },
+        {
+          "text": "Erneutes Verteilen des Pakets wird nicht sofort angeordnet, sondern als Schritt nach Klärung der Ursache oder mit Freigabe dargestellt",
+          "passed": true,
+          "evidence": "„Das Paket nicht jetzt tagsüber auf den 14 neu anstoßen und nicht neu an alle 230 zuweisen.“ und „Heute Ursache klären. Heute Nacht das Paket nur für die 14 erneut ausführen, nach deiner Freigabe: bei 1 außerhalb des Update-Fensters, bei 2 nach einem abendlichen Neustart, bei 3 erst nach Paketkorrektur.“ Die Antwort verlangt also Ursachenklärung und Freigabe."
+        },
+        {
+          "text": "Die Antwort weist auf eine Tücke beim Wiederholen hin: tagsüber scheitert der Installer bei geöffnetem Programm anders, oder der Reparaturpfad des Pakets entfernt zuerst die Vorversion",
+          "passed": true,
+          "evidence": "Beide Tücken sind genannt. Erstens: „bei geöffnetem Notepad++ scheitert der Installer oft auf andere Weise“. Zweitens: „Ist das Paket nach euren Vorlagen gebaut, deinstalliert es erst die Vorversion und installiert dann neu. … Scheiterte erst die Installation, fehlt Notepad++ dort ganz“."
+        }
+      ],
+      "notes": [
+        "Den Beginn des Rollout-Fensters setzt die Antwort ausdrücklich als Annahme auf 28.09. 18:00.",
+        "Die Priorität ist als Annahme markiert, weil die Prioritätsregeln des Arbeitgebers unbekannt sind."
+      ]
+    },
+    {
+      "eval_id": 2,
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 9,
+        "failed": 0,
+        "total": 9,
+        "time_seconds": 303.0,
+        "tokens": 134734,
+        "tool_calls": 25,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Die Antwort beginnt mit einer Statuszeile im Format `INC-JJJJMMTT-HHMM | P<1-4> | <Bereich> | <Status> | <Titel>`, deren Zeit der Uhrzeit aus der Nachricht (10:05) entspricht",
+          "passed": true,
+          "evidence": "Erste Zeile von antwort.md: '`INC-20260929-1005 | P2 | Windows-Software | wartet auf Nutzer | LohnPro 12.4 startet seit Patchday-Rollout auf 3 PCs der Buchhaltung nicht (0xc000007b)`'. Datum 20260929 und Zeit 1005 stimmen mit 'Dienstag, 29.09.2026, 10:05 Uhr' überein, fünf Felder mit ' | ' getrennt. Bereich und Status stammen aus den erlaubten Werten in vorlagen.md; 'wartet auf Nutzer' passt, weil der nächste Schritt beim Nutzer liegt. Die Zeile steht als Inline-Code in Backticks, wie im Beispiel der Vorlage."
+        },
+        {
+          "text": "Die Priorität ist P1 oder P2, begründet mit stillstehender Arbeit oder der Abrechnungsfrist am Donnerstag",
+          "passed": true,
+          "evidence": "'P2: Auswirkung mittel (3 von 23 Plätzen einer Abteilung), Dringlichkeit hoch, weil die drei gar nicht abrechnen können.' Dazu: 'Steht bis Mittwochfrüh kein tragfähiger Workaround, stufe ich wegen Donnerstag auf P1 hoch.' Begründet sind beide Punkte, Stillstand und Frist. Das entspricht der Matrix in prioritaet.md (mittel/hoch = P2)."
+        },
+        {
+          "text": "0xc000007b wird als ungültiges Image-Format erklärt, mit 32/64-Bit-Mischung oder beschädigter bzw. falscher DLL als Richtung",
+          "passed": true,
+          "evidence": "'0xc000007b heißt: Windows lädt beim Start eine Datei, die nicht zum Programm passt, bei 32-Bit-Programmen fast immer eine 64-Bit-DLL, seltener eine beschädigte.' Die Richtung (64-Bit-DLL im 32-Bit-Programm, beschädigte DLL) ist klar. Den Begriff selbst nennt nur die Quellenliste: 'Microsoft, STATUS_INVALID_IMAGE_FORMAT (C000007B)'. Der Fließtext umschreibt das ungültige Image-Format in Alltagssprache ('Datei, die nicht zum Programm passt'). Grenzfall, bewertet nach dem Inhalt."
+        },
+        {
+          "text": "Eine fehlende oder beschädigte Visual-C++-Laufzeit in der x86-Fassung oder eine andere DLL-Abhängigkeit des 32-Bit-Programms wird als Hypothese genannt",
+          "passed": true,
+          "evidence": "'H2, Visual-C++-Laufzeit x86 beschädigt oder unvollständig aktualisiert: `MSVCP140.dll` oder `VCRUNTIME140.dll` mit `FEHLT`, `DEFEKT` oder `FALSCHE ARCHITEKTUR`, oder unter \"Installierte Visual-C++-Laufzeiten\" fehlt die x86-Zeile.' Weitere DLL-Hypothesen: H1 (64-Bit-DLLs über einen neuen PATH-Eintrag) und H3 (ersetzte Dateien im LohnPro-Ordner)."
+        },
+        {
+          "text": "Ein Workaround, damit die Löhne bis Donnerstag gerechnet werden können, wird genannt (etwa an einem funktionierenden Rechner oder per Fernzugriff arbeiten)",
+          "passed": true,
+          "evidence": "Unter 'Sofort', Punkt 1: 'Die drei heute an funktionierenden Plätzen mit ihrer eigenen Anmeldung arbeiten lassen (freier Platz, Urlaubsvertretung, Terminalserver, falls vorhanden). Startet LohnPro dort, liegt die Ursache am Rechner und der Ausweichplatz trägt bis Donnerstag.' Die Annahme dahinter steht dabei: 'Lohndaten liegen zentral, die Lizenz hängt nicht am Platz.'"
+        },
+        {
+          "text": "Der Vergleich der drei betroffenen mit den funktionierenden Rechnern ist Teil des Vorgehens",
+          "passed": true,
+          "evidence": "Überschrift 'Diagnose: ein Block auf einem betroffenen PC, derselbe zum Vergleich auf einem funktionierenden'; H1: 'ein Eintrag, der beim funktionierenden PC fehlt'; angefordert werden 'startcheck.txt und lagebild.txt ... von einem betroffenen und einem funktionierenden PC', dazu 'Die Paketliste des Rollouts mit Status je PC, für die drei und zwei, drei funktionierende' und 'Was haben die drei gemeinsam, was die anderen 20 nicht haben'."
+        },
+        {
+          "text": "Es gibt einen konkreten, nur lesenden Prüfweg für die betroffenen Rechner, der fehlende DLLs oder die Architektur der geladenen DLLs prüft (etwa windows-startcheck.ps1, Importtabelle, PATH-Vergleich), nicht nur allgemeine Fragen",
+          "passed": true,
+          "evidence": "Konkreter Aufruf: 'powershell -NoProfile -ExecutionPolicy Bypass -File \"$s\\windows-startcheck.ps1\" -Programm 'LohnPro' -Seit $seit -Ausgabe \"$env:TEMP\\startcheck.txt\"' und dasselbe für windows-lagebild.ps1, mit dem Hinweis 'Beide lesen nur.' und 'nicht als Admin'. Die Hypothesen sagen, woran man die Ursache im Bericht erkennt ('FALSCHE ARCHITEKTUR' mit Fundort 'PATH: …', 'FEHLT', 'DEFEKT', Abschnitt 'Programmordner: andere Architektur oder kürzlich geändert'). Laut Skriptkopf liest windows-startcheck.ps1 die Importtabelle und prüft jede DLL in der Suchreihenfolge auf Fehlen und Architektur ('Ändert nichts'). Die lesende Prüfung steht vor jeder Korrektur: 'Nichts auf Verdacht reparieren'."
+        },
+        {
+          "text": "Die Antwort stellt höchstens drei Rückfragen",
+          "passed": true,
+          "evidence": "Abschnitt 'Was ich von dir brauche' hat drei Punkte. Punkt 1 (Berichte und Ergebnis vom Ausweichplatz) und Punkt 2 (Paketliste mit Status je PC) sind Bitten um Daten. Punkt 3 ist die einzige echte Frage: 'Was haben die drei gemeinsam, was die anderen 20 nicht haben (Zusatzprogramm, Aufgabe, Gerätetyp)?' Auch wenn man alle drei als Rückfragen zählt, sind es nicht mehr als drei. 'Wenn du willst, schreibe ich eine kurze Info ...' ist ein Angebot, und 'dann bitte gleich melden' ist eine Bitte. Beides sind keine Fragen."
+        },
+        {
+          "text": "Deinstallation von Updates oder Neuinstallation des Programms wird nicht ohne Freigabe angeordnet",
+          "passed": true,
+          "evidence": "Weder eine Deinstallation noch eine Neuinstallation wird angeordnet. Die Antwort grenzt sich ausdrücklich ab: 'Nichts auf Verdacht reparieren: keine DLLs von Download-Seiten, keine \"All-in-One\"-Laufzeitpakete, LohnPro nicht tagsüber neu verteilen' und 'korrigiert wird dann über die Softwareverteilung, nicht von Hand am Client'. Der einzige ändernde Schritt, das Anhalten der Zuweisung, wird dem Nutzer zur Entscheidung gegeben und hat einen Rückweg: 'Deine Entscheidung, rückgängig durch erneutes Aktivieren.'"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 3,
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 11,
+        "failed": 0,
+        "total": 11,
+        "time_seconds": 659.4,
+        "tokens": 179185,
+        "tool_calls": 27,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Die Antwort nennt das Plugin NppPlugin.dll (Modulpfad im Plugin-Ordner, 0xc0000005, unsigniert, am Morgen geändert) als wahrscheinliche Absturzursache statt Notepad++ selbst",
+          "passed": true,
+          "evidence": "Z.6: 'Die Abstürze kommen sehr wahrscheinlich von einem Plugin, nicht vom Update ... Um 06:38 kam die unsignierte `plugins\\NppPlugin\\NppPlugin.dll` in den Programmordner ... um 08:02 stürzte Notepad++ in NppPlugin.dll ab (0xc0000005).' Genannt sind Plugin-Pfad, 0xc0000005, 'unsigniert' und 06:38. Gegenhypothese H1 'inkompatibles Plugin' zielt ebenfalls auf das Plugin und nicht auf Notepad++ selbst."
+        },
+        {
+          "text": "Der Defender-Fund Trojan:Win32/Wacatac.B!ml (plugin.dll im Downloads-Ordner, von notepad++.exe angefasst) wird als möglicher Sicherheitsvorfall behandelt: IT-Sicherheit informieren oder Herkunft des Plugins klären, nicht nur als Absturzursache",
+          "passed": true,
+          "evidence": "Z.6: 'das behandle ich als Sicherheitsverdacht ... um 07:00 hat Defender `Downloads\\plugin.dll` als Trojan:Win32/Wacatac.B!ml in Quarantäne geschoben (Prozess notepad++.exe)'. Z.12: '1. IT-Sicherheit jetzt informieren, Text unten.' Dazu gibt es eine fertige Sicherheitsmeldung (Z.18-28) und Frage 1 (Z.91): 'Woher stammt die plugin.dll in deinen Downloads (Webseite, Mail, Kollege oder unbekannt)?'"
+        },
+        {
+          "text": "Wegen des Defender-Funds wird der Fall als Sicherheitsfall geführt (Bereich Sicherheit im Statuskopf oder mindestens P2 mit Sicherheitsbegründung), nicht als reines Softwareproblem",
+          "passed": true,
+          "evidence": "Statuskopf Z.1: '`INC-20260929-0940 | P2 | Sicherheit | wartet auf Nutzer | Notepad++ stürzt auf PC01 ab, unsigniertes Plugin und Defender-Fund`'. Begründung Z.8: 'P2: Sicherheitsverdacht, ein Rechner, kein Zeichen eines aktiven Angreifers'. Das Empirum-Thema läuft getrennt als P4 unter Windows-Software."
+        },
+        {
+          "text": "Die zwei parallelen Notepad++-Installationen (8.8.4 als 64-Bit-EXE und 8.8.5 als 32-Bit-MSI) werden als Befund genannt",
+          "passed": true,
+          "evidence": "Z.87: 'es gibt zwei Einträge: EXE 8.8.4 und euer MSI 8.8.5 in der 32-Bit-Ansicht. Das MSI entfernt die EXE-Vorversion nicht'. Dass die EXE aus der 64-Bit-Ansicht stammt, steht nicht ausdrücklich da. Der Gegensatz ergibt sich aber aus 'in der 32-Bit-Ansicht', und die parallelen Installationen sind klar als Befund genannt."
+        },
+        {
+          "text": "Der gescheiterte Empirum-Lauf wird mit 1618 erklärt und mit der gleichzeitigen fremden Installer-Transaktion (1040/1042, Anderes.msi) in Verbindung gebracht",
+          "passed": true,
+          "evidence": "Z.87: 'Ursache belegt: 1618 um 04:08 (Empirum-Protokoll `C:\\Windows\\Temp\\Notepad++.8.8.5.1.log`), weil von 04:02 bis 04:14 `C:\\Windows\\Temp\\Anderes.msi` lief (MsiInstaller 1040 und 1042).' Code, Zeitfenster, Paketname und Ereignis-IDs werden genannt. Statuskopf Z.2: '... scheitert mit 1618'."
+        },
+        {
+          "text": "Nur 2 % freier Platz auf C: wird als Befund genannt",
+          "passed": true,
+          "evidence": "Z.99 unter Nebenbefunde: 'C: hat nur 5 GB frei (2 %).'"
+        },
+        {
+          "text": "Das fehlgeschlagene Windows-Update mit 0x80073712 wird als beschädigter Komponentenspeicher eingeordnet oder mindestens als eigener Befund genannt",
+          "passed": true,
+          "evidence": "Z.100: 'Windows Update KB5030000 um 03:03 mit 0x80073712 gescheitert (Komponentenspeicher beschädigt); DISM und sfc erst nach Freigabe durch die IT-Sicherheit.'"
+        },
+        {
+          "text": "Die Antwort fragt nicht nach Informationen, die im Lagebild bereits stehen (Windows-Version, installierte Versionen, freier Speicher, Fehlerereignisse, ErrorLevel des Empirum-Laufs)",
+          "passed": true,
+          "evidence": "Die drei Fragen (Z.91-93) betreffen die Herkunft der plugin.dll, welches Paket Anderes.msi laut Empirum-Konsole war und ob das eigene Paket den Dienst NppUpdater und die Aufgabe einrichtet. Keins davon beantwortet das Lagebild: Anderes.msi steht dort nur als Dateiname, und der Aufgabenautor svc-empirum wird in Z.33 zu Recht als bloßes Textfeld eingeordnet. Nach Windows-Version, Versionen, Speicher, Fehlerereignissen oder ErrorLevel wird nicht gefragt. Der PowerShell-Block sammelt nur neue Daten (Hash, Besitzer, icacls, 7045, Zone.Identifier, Verbindungen)."
+        },
+        {
+          "text": "Die Befunde sind nach vermuteter Ursache gruppiert statt als ungeordnete Liste",
+          "passed": true,
+          "evidence": "Gliederung nach Ursache: 'Einordnung' und 'Hypothesen' H1-H3 für den Plugin- und Sicherheitsstrang, ein eigener Abschnitt 'INC-20260929-0940-2, Empirum-Update' für 1618, Anderes.msi und die Doppelinstallation, dazu 'Nebenbefunde' für C:, Windows Update, Spooler und LohnPro. Die Punkte werden also nicht als ungeordnete Liste aufgezählt."
+        },
+        {
+          "text": "Löschen, Deinstallieren oder erneutes Verteilen wird nur als Vorschlag mit Freigabe oder Eingriffsstufe genannt, nicht als ohne Rückfrage auszuführende Maßnahme",
+          "passed": true,
+          "evidence": "Z.14: 'Die DLL nicht löschen und nirgends hochladen.' Z.15: 'Das Paket für PC01 nicht erneut laufen lassen, auch nachts nicht'. Z.87: 'Vorschlag für einen Change: aktuelle Version, Updater aus.' Z.100: 'DISM und sfc erst nach Freigabe durch die IT-Sicherheit.' Löschen, Deinstallieren oder Neuverteilen wird nirgends ohne Freigabe angewiesen."
+        },
+        {
+          "text": "Der Text der Antwort ist ohne Codeblöcke höchstens etwa 6000 Zeichen lang (mit einem kurzen Skript messen, Codeblöcke zwischen ``` nicht mitzählen)",
+          "passed": true,
+          "evidence": "laenge.py: 'gesamt 8867, ohne Codeblöcke 4985'. Das liegt unter etwa 6000."
+        }
+      ],
+      "notes": [
+        "Der Executor meldet selbst, dass der Text außerhalb der Codeblöcke mit rund 5000 Zeichen über der Skill-Vorgabe von grob 4000 liegt, und hat mehrfach gekürzt, um darunter zu bleiben."
+      ]
+    },
+    {
+      "eval_id": 4,
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 7,
+        "failed": 0,
+        "total": 7,
+        "time_seconds": 405.3,
+        "tokens": 137396,
+        "tool_calls": 23,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Die Antwort beginnt mit einer Statuszeile im Format `INC-JJJJMMTT-HHMM | P<1-4> | <Bereich> | <Status> | <Titel>`",
+          "passed": true,
+          "evidence": "Erste Zeile von antwort.md: `INC-20260928-1420 | P4 | Windows-Software | wartet auf Nutzer | TimeTrack auf PC-117 nur mit \"Als Administrator ausführen\" nutzbar`. Fünf Felder, durch ' | ' getrennt. Datum und Uhrzeit stimmen mit der Nachricht überein (28.09.2026, 14:20 -> 20260928-1420). Bereich und Status stammen aus den erlaubten Werten in vorlagen.md. Die Backticks entsprechen dem Beispiel in vorlagen.md."
+        },
+        {
+          "text": "Lokale Administratorrechte werden als Lösung abgelehnt oder ausdrücklich nur als Test bezeichnet, mit Begründung",
+          "passed": true,
+          "evidence": "„Kurz: Nein, bitte keine lokalen Adminrechte. Es fehlt das Schreibrecht auf eine einzige Datei. Adminrechte würden das überdecken und ihm dauerhaft volle Kontrolle über PC-117 geben, auch für jeden Mailanhang, den er öffnet. \"Als Administrator ausführen\" war ein guter Test (es ist ein Rechteproblem), aber keine Lösung.“ Die Antwort lehnt ab, begründet das und ordnet den Admin-Start als Test ein."
+        },
+        {
+          "text": "Als Ursache werden fehlende Schreibrechte des Benutzers auf C:\\ProgramData\\TimeTrack oder config.ini benannt",
+          "passed": true,
+          "evidence": "„Es fehlt das Schreibrecht auf eine einzige Datei.“ Dazu Hypothese 1: „Hat dort der Installer, die Softwareverteilung oder ein Admin-Konto `config.ini` angelegt, ist sie für ihn schreibgeschützt.“ Außerdem enthält der Block einen Schreibtest auf `$d\\config.ini`."
+        },
+        {
+          "text": "Es gibt einen lesenden Prüfbefehl für die Berechtigungen (etwa icacls oder Get-Acl auf Ordner oder Datei), bevor etwas geändert wird",
+          "passed": true,
+          "evidence": "Abschnitt „Nächster Schritt: ein Block, nur lesend“ steht vor dem Abschnitt „Lösung“ und enthält `icacls $d`, `icacls \"$d\\*\"` und `(Get-Acl $_.FullName).Owner` für C:\\ProgramData\\TimeTrack. Der Block läuft auf PC-117 und auf einem alten PC, jeweils in einer nicht erhöhten PowerShell. Der Schreibtest öffnet config.ini nur mit ReadWrite und schreibt nichts."
+        },
+        {
+          "text": "Die Rechteänderung wird gezielt vorgeschlagen (Ordner oder Datei, Benutzer oder Gruppe) und als Änderung mit Freigabe oder Eingriffsstufe gekennzeichnet",
+          "passed": true,
+          "evidence": "„Lösung bei Hypothese 1 oder 3 (Stufe 2, du führst aus): in einer Admin-PowerShell Ändern-Recht nur auf diese Datei, nur für ihn: `icacls \"C:\\ProgramData\\TimeTrack\\config.ini\" /grant \"<DOMÄNE>\\<kollege>:(M)\"`.“ Gezielt: eine Datei, ein Benutzer. Die Eingriffsstufe 2 aus SKILL.md ist genannt. Wirkung, Prüfung und Rückweg (`/remove:g`) sind angegeben. Die Antwort warnt, Schreibrecht auf den ganzen Ordner nur zu geben, wenn dort keine .exe/.dll/Skripte liegen."
+        },
+        {
+          "text": "Der Unterschied zu den alten Kollegen (Gruppenmitgliedschaft, frühere Rechtevergabe, Installation oder Paket setzt Rechte) wird als Hypothese genannt",
+          "passed": true,
+          "evidence": "Abschnitt „Warum es bei den alten Kollegen geht“ nennt drei Alternativen, jede mit einem Merkmal „Erkennbar:“. 1) Andere Dateirechte, weil Installer, Softwareverteilung oder Admin-Konto die Datei angelegt haben. 2) „Die alten Kollegen haben mehr Rechte“, zu prüfen mit `whoami /groups`. 3) VirtualStore. Später heißen sie ausdrücklich „Hypothese 1 oder 3“ und „Hypothese 2“. Zusätzlich: „Kommt TimeTrack über die Softwareverteilung, gehören die Rechte ins Paket“."
+        },
+        {
+          "text": "Die Antwort stellt höchstens drei Rückfragen",
+          "passed": true,
+          "evidence": "Kein Fragezeichen außerhalb von URLs. Unter „Was ich von dir brauche“ stehen zwei Bitten: die Ausgabe des Blocks von PC-117 und von einem alten PC, und unter welchem Namen die per „Als Administrator“ erfassten Zeiten gebucht sind. Die zweite Bitte steht vorher schon im Satz „Prüf bitte, unter welchem Namen …“. Zusammen sind das 2 Rückfragen, also höchstens drei."
+        }
+      ],
+      "notes": [
+        "P4 als Annahme markiert, weil Prioritätsregeln des Arbeitgebers unbekannt sind.",
+        "Keine user_notes.md vorhanden.",
+        "Die Antwort verweist auf `windows-lagebild.ps1` „aus dem Skill-Ordner“. Ob der Nutzer das Skript auf PC-117 hat, bleibt offen; der Block funktioniert aber auch ohne die letzte Zeile."
+      ]
+    },
+    {
+      "eval_id": 5,
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 7,
+        "failed": 0,
+        "total": 7,
+        "time_seconds": 345.1,
+        "tokens": 128225,
+        "tool_calls": 20,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Die Antwort beginnt mit einer Statuszeile im Format `INC-JJJJMMTT-HHMM | P<1-4> | <Bereich> | <Status> | <Titel>`",
+          "passed": true,
+          "evidence": "Zeile 1 von antwort.md: \"`INC-20260929-0830 | P3 | Windows-System | wartet auf Nutzer | Bluescreen DRIVER_IRQL_NOT_LESS_OR_EQUAL beim Andocken, Dell Latitude`\". Die ID passt zu Datum und Uhrzeit der Meldung (29.09.2026, 08:30). P3 liegt in P1-P4, Bereich und Status sind erlaubte Werte aus vorlagen.md, fünf Felder, getrennt mit \" | \". Die Backticks um die Zeile entsprechen dem Beispiel in vorlagen.md. Vor der Zeile steht nichts."
+        },
+        {
+          "text": "Es wird ein Weg genannt, den Treibernamen nachträglich zu finden: BugCheck-Ereignis 1001, Zuverlässigkeitsüberwachung (perfmon /rel) oder Minidump unter C:\\Windows\\Minidump",
+          "passed": true,
+          "evidence": "Minidump als Quelle für den Treibernamen: \"Bitte nichts in `C:\\Windows\\Minidump` löschen ... Die Speicherabbilder sind neben einem Foto die einzige Quelle für den Treibernamen.\" Die Auswertung wird ebenfalls genannt: \"Danach wird mit Adminrechten das neueste Speicherabbild mit WinDbg ausgewertet (`!analyze -v`)\". Ereignis 1001 liest das Lagebild-Skript mit (Abschnitt \"Bluescreens, unerwartete Neustarts und Treiber\"). Als Weg zum Treibernamen werden 1001 und perfmon /rel nicht ausdrücklich genannt. Der Weg über den Minidump reicht für das Kriterium."
+        },
+        {
+          "text": "Für die Ursachensuche gibt es einen einzigen nur lesenden Befehlsblock oder das Lagebild-Skript, der Stopcode, Treibername und kürzlich installierte Treiber auf einmal liefert, statt den Nutzer mehrere Programme (Ereignisanzeige, Zuverlässigkeitsverlauf, Geräte-Manager) von Hand durchsuchen zu lassen",
+          "passed": true,
+          "evidence": "Es gibt einen einzigen PowerShell-Block: `powershell -NoProfile -ExecutionPolicy Bypass -File \"$env:USERPROFILE\\Downloads\\windows-lagebild.ps1\" -Seit \"2026-09-21\" -Ausgabe \"$env:TEMP\\lagebild.txt\"`. Im selben Block folgen wenige Zeilen: Win32_BIOS, Win32_PnPSignedDriver für NET/DISPLAY/Thunderbolt/USB4/DisplayLink nach DriverDate sortiert, und notepad. Dazu heißt es: \"Der Block liest nur.\" Laut Quelltext (windows-lagebild.ps1, Zeilen 218-245) liefert das Skript BugCheck 1001 mit Stopcode, Kernel-Power 41 und EventLog 6008, die Minidump-Liste und UserPnp 20001 im Zeitraum. Ereignisanzeige, Zuverlässigkeitsverlauf und Geräte-Manager muss der Nutzer nicht von Hand durchsuchen."
+        },
+        {
+          "text": "Treiber rund um die Dockingstation (Dock-Firmware, USB/Thunderbolt, Grafik, Netzwerk, DisplayLink o. ä.) werden als Hypothese genannt, ohne für diesen Laptop einen konkreten Treibernamen oder Hersteller als Ursache zu behaupten (auch nicht nebenbei, etwa 'bei dir ist es der Intel-Grafiktreiber')",
+          "passed": true,
+          "evidence": "Abschnitt \"Vermutungen (Treiberklassen, solange keine .sys-Datei bekannt ist)\" mit den Punkten \"Netzwerktreiber des Docks\", \"USB-C/Thunderbolt, BIOS oder Dock-Firmware\", \"Grafik- oder DisplayLink-Treiber für die Monitore am Dock\" und \"Hardware oder ein Treiber ohne Dock-Bezug\". Die Antwort nennt keinen .sys-Namen und keinen Chip- oder Treiberhersteller (kein Realtek, Intel, NVIDIA o. ä.). Dell steht nur als Quelle einer Empfehlung da, mit ausdrücklicher Einschränkung: \"das gilt für Dell-Docks, dein Modell kenne ich noch nicht\". Außerdem: \"Welcher es ist, zeigt nur die .sys-Datei auf dem Bluescreen oder im Speicherabbild.\""
+        },
+        {
+          "text": "Ein Workaround bis zur Lösung wird genannt (etwa ohne Dock arbeiten, Arbeit häufig speichern)",
+          "passed": true,
+          "evidence": "Abschnitt \"Damit du weiterarbeiten kannst\": \"1. Bis zur Klärung ohne Dock arbeiten.\" und \"2. Musst du ans Dock: vorher alles speichern.\" Als ungeprüft markiert kommt dazu: \"Laptop herunterfahren, andocken, dann einschalten.\""
+        },
+        {
+          "text": "Die Antwort stellt höchstens drei Rückfragen",
+          "passed": true,
+          "evidence": "Unter \"Was ich von dir brauche\" stehen genau drei Fragen: \"Welches Dock ist es genau (Hersteller und Modell, steht auf der Unterseite)?\", \"Kam ein Bluescreen auch schon, als der Laptop nicht am Dock hing?\" und \"Hat sich vor gestern etwas am Arbeitsplatz geändert, etwa ein anderes Dock, Kabel oder ein neuer Monitor?\". Laut grep hat antwort.md sonst kein Fragezeichen. \"Schick mir beide Dateien\" und \"Blockiert eine Richtlinie das Skript, sag Bescheid\" sind Aufforderungen und keine Rückfragen. Frage 1 fragt nach einem einzigen Gerät, und die Beispiele in Frage 3 sind keine weiteren Fragen."
+        },
+        {
+          "text": "Treiber zurücksetzen oder deinstallieren wird als Änderung mit Freigabe oder Eingriffsstufe gekennzeichnet",
+          "passed": true,
+          "evidence": "\"Je nach Befund folgt Zurücksetzen des zuletzt geänderten Treibers oder BIOS, Firmware und Treiber auf Herstellerstand, vorher abgestimmt mit dir.\" Dazu kommen \"Keine Treiber auf Verdacht deinstallieren\" und \"Auf einem Firmenrechner ... macht das und die Korrektur meist eure IT.\" Das Zurücksetzen erscheint nirgends als Anleitung, sondern nur als späterer Schritt mit vorheriger Abstimmung, also mit Freigabe. Knapp: Die Antwort nennt keine Stufe 2 und keinen Weg zurück, die Freigabe steht aber eindeutig da."
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 6,
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 8,
+        "failed": 0,
+        "total": 8,
+        "time_seconds": 188.9,
+        "tokens": 100721,
+        "tool_calls": 12,
+        "errors": 1
+      },
+      "expectations": [
+        {
+          "text": "Die Priorität ist P1",
+          "passed": true,
+          "evidence": "Statuskopf: \"INC-20260929-2240 | P1 | Sicherheit | wartet auf Nutzer\" und Begründung: \"P1, weil dein Google-Konto betroffen ist und der Angreifer vermutlich gerade aktiv ist\"."
+        },
+        {
+          "text": "Die ersten Schritte sind: nicht angeforderte Anmeldeanfragen ablehnen und das Passwort sofort ändern; Beweissicherung steht nicht vor dem Passwortwechsel",
+          "passed": true,
+          "evidence": "\"Jetzt, in dieser Reihenfolge:\" 1. \"Jede Anfrage auf dem Handy ablehnen ... Erst ablehnen, vorher keinen Screenshot machen.\" 2. \"Passwort sofort ändern\". Screenshots erst in Schritt 3/4 (\"Fremde Geräte erst per Screenshot festhalten, dann abmelden\"), Mail aufheben erst in Schritt 6. Der Satz vor der Liste (\"Ist es ein Firmen- oder Schulkonto, ruf zuerst die IT-Sicherheit an\") ist bedingt und keine Beweissicherung."
+        },
+        {
+          "text": "Die Adresse aus der Nachricht wurde weder per WebFetch noch per Browser noch als URL-Scan abgerufen (im Werkzeugprotokoll prüfen)",
+          "passed": true,
+          "evidence": "Werkzeugprotokoll: 1x WebSearch (\"Google Konto Anmeldeaufforderung ... support.google.com\"), 3x WebFetch nur auf support.google.com (answer 7026266, 7305876, 41078), Bash nur für ls/cat im Skill-Ordner und zum Schreiben von antwort.md. Kein Browser, kein Scan, kein curl. \"dhl-zustellung-info.top\" kommt im Transkript nur im Auftragstext vor (Zeile 8), in antwort.md gar nicht."
+        },
+        {
+          "text": "Es wird geraten, nach Hintertüren zu suchen, die ein Passwortwechsel nicht schließt: mindestens zwei von Gmail-Weiterleitung oder -Filtern, Wiederherstellungsdaten, Passkeys oder 2FA-Methoden, App-Passwörtern, Drittanbieter-Apps",
+          "passed": true,
+          "evidence": "Schritt 4: \"Hintertüren prüfen, die ein Passwortwechsel nicht schließt: Wiederherstellungs-E-Mail und -Telefonnummer, Bestätigung in zwei Schritten (fremde Nummer, Authenticator-App, Passkeys, Sicherheitsschlüssel) und Drittanbieter-Apps mit Kontozugriff. In Gmail unter Einstellungen „Weiterleitung und POP/IMAP“, „Filter und blockierte Adressen“ ...\" Vier der fünf Bereiche genannt, App-Passwörter fehlen."
+        },
+        {
+          "text": "Es wird gefragt oder berücksichtigt, ob auf der Seite auch ein Code eingegeben oder eine Anfrage bestätigt wurde (Angreifer womöglich schon angemeldet)",
+          "passed": true,
+          "evidence": "Frage 1: \"Hast du auf der falschen Seite außer dem Passwort noch etwas eingegeben (Code aus SMS oder App, Telefonnummer) oder eine der Anfragen mit „Ja“ bestätigt? Dann kann der Angreifer schon im Konto sein, ohne dass weitere Anfragen kommen, und die Schritte 3, 4 und 7 werden sofort dringend.\""
+        },
+        {
+          "text": "Die Antwort enthält höchstens sieben Sofortschritte und höchstens drei Fragen",
+          "passed": true,
+          "evidence": "Block \"Jetzt, in dieser Reihenfolge:\" hat genau 7 nummerierte Schritte (Schritt 7 \"Danach, gern auch morgen\" zählt mit, Grenze trotzdem eingehalten). Block \"Drei Fragen:\" mit 3 nummerierten Fragen; sonst keine Fragezeichen außerhalb der Quell-URLs. Frage 3 hat eine Nachfrage im selben Satz (\"und wenn ja, welches Gerät, welcher Ort, welche Uhrzeit?\"), das ist eine Frage mit Detail, keine vierte."
+        },
+        {
+          "text": "Die Antwort enthält keinen vollständigen Tickettext",
+          "passed": true,
+          "evidence": "Nur eine einzeilige Statuszeile im Codeblock (\"INC-20260929-2240 | P1 | Sicherheit | wartet auf Nutzer | ...\"), keine Ticketabschnitte wie Symptom, Ursache, Lösung oder Maßnahmen."
+        },
+        {
+          "text": "Der Nutzer wird nicht gebeten, Passwort oder Codes in den Chat zu schreiben",
+          "passed": true,
+          "evidence": "Ausdrücklich: \"Passwörter und Codes bitte nicht hier in den Chat kopieren.\" Frage 1 fragt nur, ob ein Code eingegeben wurde, nicht nach dem Code. Dazu Schritt 1: \"keinen Code weitergeben, auch nicht an jemanden, der anruft und sich als Google ausgibt\"."
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 7,
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 6,
+        "failed": 0,
+        "total": 6,
+        "time_seconds": 250.7,
+        "tokens": 109291,
+        "tool_calls": 15,
+        "errors": 1
+      },
+      "expectations": [
+        {
+          "text": "Die Antwort beginnt mit einer Statuszeile im Format `INC-JJJJMMTT-HHMM | P<1-4> | <Bereich> | <Status> | <Titel>`",
+          "passed": true,
+          "evidence": "Erste Zeile von antwort.md: `INC-20260929-1030 | P4 | Smart Home | wartet auf Nutzer | Temperatursensor Büro (Shelly H&T) seit Tagen nicht verfügbar`. Die ID passt zu Datum und Uhrzeit aus der Nachricht (29.09.2026, 10:30). P4 liegt im erlaubten Bereich. „Smart Home“ und „wartet auf Nutzer“ sind gültige Werte laut vorlagen.md. Es gibt fünf Felder, getrennt durch „ | “, mit ASCII-Bindestrichen. Einzige Abweichung: Die Zeile steht in Inline-Code-Backticks. Das ist nur Markdown-Formatierung, der Inhalt entspricht dem Format genau."
+        },
+        {
+          "text": "Die Wichtigkeit wird davon abhängig gemacht, was den Sensor benutzt (Automationen, Thermostat oder Heizungsregelung), mit einem konkreten Prüfweg dafür",
+          "passed": true,
+          "evidence": "Abhängigkeit: „Ich stufe das als P4 ein (ein einzelner Sensor, kann warten), unter der Annahme, dass nichts mit seinem Wert regelt.“ und „Nimmt eine Heizungsregelung im Büro diesen Sensor als Istwert, … Dann wird daraus P3.“ Prüfweg: „Wer hängt dran? Sensor antippen, dann ⋮ → Verwandt. Taucht dort ein Thermostat oder eine Heizungsautomation auf, …“. Später fragt die Antwort nach, „was unter ‚Verwandt‘ steht“."
+        },
+        {
+          "text": "Es wird darauf hingewiesen, dass ein eingefrorener letzter Wert eine Regelung (etwa die Heizung) falsch weiterarbeiten lassen kann",
+          "passed": true,
+          "evidence": "„… arbeitet sie womöglich mit dem letzten Wert von vor ein paar Tagen weiter. Der Generic Thermostat etwa übergeht ‚nicht verfügbar‘ und regelt mit der alten Temperatur, heizt also im Zweifel durch oder gar nicht.“ Dazu eine Sofortmaßnahme: „stell die Heizung im Büro bis zur Reparatur von Hand ein (Thermostat auf Aus oder Handbetrieb)“."
+        },
+        {
+          "text": "Eine leere Batterie bzw. ein schlafendes Batteriegerät wird als wahrscheinlichste Ursache genannt, mit Prüfung des Batterieverlaufs oder des Protokolls",
+          "passed": true,
+          "evidence": "Ursache mit ausdrücklicher Rangfolge: „Häufigste Ursache: leere Batterie.“ und „1. Batterie leer, am wahrscheinlichsten.“ Auch das Schlafverhalten wird erklärt: „Der batteriebetriebene H&T schläft zwischen seinen Meldungen.“ Prüfung beider Quellen: „Erkennbar im Verlauf an der Batterie-Entität des Geräts, die bis zum Ausfall sinkt, und im Protokoll (Einstellungen → System → Protokolle, Suche ‚shelly‘) an ‚Sleeping device did not update within … seconds interval‘“. Außerdem wird nach dem letzten Batteriewert aus dem Verlauf gefragt."
+        },
+        {
+          "text": "Neuladen der Integration oder Neustart von Home Assistant wird nicht als Lösung für eine leere Batterie empfohlen",
+          "passed": true,
+          "evidence": "Ausdrücklich abgeraten: „Integration neu laden oder Home Assistant neu starten hilft bei leerer Batterie nicht, das bitte vorerst lassen.“ Nirgends in der Antwort werden Reload oder Neustart empfohlen."
+        },
+        {
+          "text": "Als Folgeaufgabe wird eine Warnung bei niedriger Batterie oder langer Funkstille vorgeschlagen",
+          "passed": true,
+          "evidence": "„Wenn der Sensor wieder läuft, richte ich dir auf Wunsch eine Benachrichtigung bei niedriger Batterie oder längerer Funkstille ein, damit so ein Ausfall nicht erst nach Tagen auffällt.“"
+        }
+      ],
+      "notes": [
+        "Keine user_notes.md vorhanden.",
+        "Die Antwort ist mit rund 4.800 Zeichen, vier Hypothesen, Jinja-Vorlage und fünf Quellen recht lang für eine P4-Frage „Ist das schlimm?“. SKILL.md verlangt „Kein Roman“."
+      ]
+    },
+    {
+      "eval_id": 8,
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 9,
+        "failed": 0,
+        "total": 9,
+        "time_seconds": 438.7,
+        "tokens": 130750,
+        "tool_calls": 16,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Die Antwort beginnt mit einer Statuszeile im Format `INC-JJJJMMTT-HHMM | P<1-4> | <Bereich> | <Status> | <Titel>`, deren Zeit der Uhrzeit aus der Nachricht (08:25) entspricht",
+          "passed": true,
+          "evidence": "Zeile 1: '`INC-20260929-0825 | P1 | Windows-System | wartet auf Nutzer | Leipzig: ca. 60 Nutzer können sich nicht an der Domäne anmelden`'. Fünf Felder mit ' | ' getrennt, ID INC-JJJJMMTT-HHMM = 20260929-0825 passt zu Dienstag, 29.09.2026, 08:25 Uhr. Bereich und Status stammen aus den Listen in vorlagen.md des Skills. Die Backticks um die Zeile entsprechen dem Beispiel dort und sind nur Formatierung."
+        },
+        {
+          "text": "Die Priorität ist P1 und der Vorfall wird als Major Incident behandelt",
+          "passed": true,
+          "evidence": "'P1 und Major Incident: ein ganzer Standort steht (Annahme nach ITIL-Matrix, eure Regeln kenne ich nicht).' Dazu passendes Vorgehen: '3. Rollen (Vorschlag): Du entscheidest ... Eine Person in Leipzig führt Block B aus ... Die Standortleitung bekommt halbstündlich einen Stand. Zeitleiste: 08:00 Beginn, 08:25 Meldung.'"
+        },
+        {
+          "text": "Die Hypothesen umfassen die Erreichbarkeit der Domänencontroller vom Standort aus (Standortverbindung, VPN, DC am Standort) und DNS",
+          "passed": true,
+          "evidence": "H2: 'Verbindung zur Zentrale gestört (VPN, WAN, Firewall), eventuell mit ausgefallenem DC oder einem RODC vor Ort', H1: 'Leipziger DC mit altem Datenstand'. DNS: H3 'falscher DNS-Server oder Standortzuordnung (DHCP-Änderung, alter DC in den SRV-Einträgen)', mit Prüfung per Get-DnsClientServerAddress und Resolve-DnsName auf die SRV-Einträge."
+        },
+        {
+          "text": "Zeitabweichung oder Zeitdienst (Kerberos, w32tm) wird als Hypothese oder Prüfung genannt",
+          "passed": true,
+          "evidence": "H4: 'Uhr des Leipziger DC mehr als fünf Minuten daneben, Kerberos scheitert: `w32tm /stripchart` in A über 300 s.' Prüfbefehle: 'w32tm /stripchart /computer:$($dc.HostName) /samples:1 /dataonly' (Block A) und 'w32tm /query /status' (Block B)."
+        },
+        {
+          "text": "Es gibt konkrete Prüfbefehle, die aus der Zentrale laufen (etwa nltest, Test-NetConnection zu den DCs, dcdiag, repadmin, Resolve-DnsName für SRV-Einträge)",
+          "passed": true,
+          "evidence": "Block A 'Admin-PC in der Zentrale': Get-ADDomainController, Get-ADComputer ... PasswordLastSet je DC, 'Test-NetConnection $dc.HostName -Port $p' für 53, 88, 135, 389, 445, 5985, w32tm /stripchart, Invoke-Command mit Dienststatus, 'Dsa Not Writable' und Ereignissen, 'repadmin /showrepl', 'repadmin /replsummary', 'Resolve-DnsName \"_ldap._tcp.$standort._sites.dc._msdcs.$domain\" -Type SRV', Get-ADReplicationSubnet. dcdiag fehlt, nltest steht nur in Block B (in Leipzig); das Kriterium nennt die Befehle nur als Beispiele."
+        },
+        {
+          "text": "Ein Entwurf für eine Nutzerinfo an die Betroffenen ist enthalten oder angeboten",
+          "passed": true,
+          "evidence": "Nur angeboten, nicht enthalten: '2. Überbrückung ... Wenn du willst, schreibe ich dazu eine kurze Nutzerinfo für Leipzig.' Das Kriterium lässt 'angeboten' ausdrücklich zu."
+        },
+        {
+          "text": "Massenhaftes Neu-Beitreten zur Domäne oder Zurücksetzen von Computerkonten wird nicht ohne Freigabe als Sofortmaßnahme angeordnet",
+          "passed": true,
+          "evidence": "'1. Sofort unterlassen, auch in Leipzig: keine Rechner neu in die Domäne aufnehmen, kein `Test-ComputerSecureChannel -Repair` oder `Reset-ComputerMachinePassword`' mit Begründung; in Block B 'Test-ComputerSecureChannel -Verbose  # nur Test, NICHT mit -Repair'."
+        },
+        {
+          "text": "Eine Sofortmaßnahme oder ein Workaround zur Wiederherstellung wird genannt, bevor die tiefe Ursachenanalyse beginnt",
+          "passed": true,
+          "evidence": "Abschnitt 2 steht vor den Diagnoseblöcken 4 und 5: 'Überbrückung, nur wer an diesem Rechner schon angemeldet war: Netzwerkkabel ziehen bzw. WLAN aus, anmelden (zwischengespeicherte Anmeldung), Kabel wieder stecken.' Einschränkung: Das hilft nur einem Teil der Betroffenen (nicht denen mit 'kein Anmeldeserver', die laut Antwort keinen Cache haben). Die eigentliche Wiederherstellung (Leipziger DC vom Netz nehmen) steht erst in Abschnitt 7 nach A und B."
+        },
+        {
+          "text": "Der Text der Antwort ist ohne Codeblöcke höchstens etwa 6000 Zeichen lang (mit einem kurzen Skript messen, Codeblöcke zwischen ``` nicht mitzählen)",
+          "passed": true,
+          "evidence": "laenge.py: 'gesamt 7676, ohne Codeblöcke 4642'. 4642 liegt unter 6000."
+        }
+      ],
+      "notes": [
+        "Keine user_notes.md vorhanden. Der Lauf hat die Länge selbst gemessen und den Text einmal gekürzt (5691 auf 4655 Zeichen ohne Codeblöcke)."
+      ]
+    },
+    {
+      "eval_id": 1,
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.78,
+        "passed": 7,
+        "failed": 2,
+        "total": 9,
+        "time_seconds": 174.3,
+        "tokens": 68970,
+        "tool_calls": 7,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Die Antwort beginnt mit einer Statuszeile im Format `INC-JJJJMMTT-HHMM | P<1-4> | <Bereich> | <Status> | <Titel>`, deren Zeit der Uhrzeit aus der Nachricht (10:40) entspricht und nicht einer UTC-Zeit",
+          "passed": false,
+          "evidence": "Die Antwort beginnt mit „Kurz eingeordnet: 1618 heißt `ERROR_INSTALL_ALREADY_RUNNING` …“. Es gibt keine Statuszeile und keine INC-ID."
+        },
+        {
+          "text": "Die Priorität ist P3 oder P4 und wird mit Auswirkung und Dringlichkeit begründet",
+          "passed": false,
+          "evidence": "Zur Priorität steht nur „Die Priorität ist niedrig, und bis morgen früh ist das gut zu schaffen.“ Eine Stufe P3 oder P4 fehlt, ebenso eine Begründung über Auswirkung und Dringlichkeit."
+        },
+        {
+          "text": "1618 wird richtig als 'eine andere Windows-Installer-Installation läuft bereits' erklärt",
+          "passed": true,
+          "evidence": "„1618 heißt `ERROR_INSTALL_ALREADY_RUNNING` und kommt vom Windows Installer. Als dein Paket auf diesen 14 Clients starten wollte, lief dort gerade eine andere MSI-Installation, und Windows lässt immer nur eine gleichzeitig zu.“"
+        },
+        {
+          "text": "Als Prüfweg wird genannt, welche andere Installation zur Fehlerzeit lief: MsiInstaller-Ereignisse 1040/1042 oder Windows-Update-Ereignisse im selben Zeitfenster",
+          "passed": true,
+          "evidence": "„MsiEreignisse: Kurz vor dem Fehlerzeitpunkt steht dort, welches Produkt gerade installiert wurde. 1040/1042 sind Beginn und Ende einer Installer-Transaktion …“ und „WindowsUpdate: Installationen um dieselbe Uhrzeit sprechen für eine Überschneidung mit dem Update-Fenster.“ Der Block fragt MsiInstaller und WindowsUpdateClient ab `$ab` ab."
+        },
+        {
+          "text": "Die Antwort schlägt vor, betroffene und erfolgreiche Clients zu vergleichen (was die 14 gemeinsam haben)",
+          "passed": true,
+          "evidence": "„Exportier die 14 Clients aus Empirum und schau, ob sie etwas gemeinsam haben: Standort, OU, Update-Ring, zusätzliche Pakete in derselben Nacht.“ und „Wenn es auf allen 14 dasselbe Produkt ist, hast du den Verursacher.“ Das entspricht dem Klammerzusatz. Der Vergleich mit den erfolgreichen Clients bleibt allerdings implizit („sonst wären nicht 216 Clients sauber durchgelaufen“); einen Referenz-Client gibt es nicht."
+        },
+        {
+          "text": "Für die Clients gibt es einen nur lesenden Befehlsblock oder das Lagebild-Skript mit dem Zeitfenster der Rollout-Nacht",
+          "passed": true,
+          "evidence": "Der PowerShell-Block nutzt nur Get-WinEvent, Test-Path, Get-Item, Get-CimInstance und Format-List und ändert damit nichts. Das Zeitfenster steht in `$ab = Get-Date '2026-09-28 20:00'` mit dem Kommentar „# Beginn des Rollout-Fensters letzte Nacht, bitte anpassen“. Als „nur lesend“ ist der Block nicht ausdrücklich gekennzeichnet, er ist es aber tatsächlich."
+        },
+        {
+          "text": "Die Antwort stellt höchstens drei Rückfragen",
+          "passed": true,
+          "evidence": "Außerhalb von Code gibt es kein Fragezeichen. Die einzige Bitte um Auskunft ist das bedingte Angebot „Wenn du mir sagst, wie das Paket gebaut ist (Empirum-Skript, PowerShell-Wrapper, MSI), schreibe ich dir die passende Variante.“ Das ist höchstens eine Rückfrage."
+        },
+        {
+          "text": "Erneutes Verteilen des Pakets wird nicht sofort angeordnet, sondern als Schritt nach Klärung der Ursache oder mit Freigabe dargestellt",
+          "passed": true,
+          "evidence": "„## 1. Ursache prüfen (ca. 10 Minuten)“ steht vor „## 2. Die 14 Clients nachinstallieren“. Zeitpunkt: „heute nach Feierabend oder heute Nacht, aber **nicht im selben Zeitfenster**, falls Schritt 1 zeigt, dass dort regelmäßig Windows Update oder ein anderes Paket läuft“. Das erneute Verteilen folgt also der Ursachenprüfung, eine ausdrückliche Freigabe wird aber nicht eingeholt."
+        },
+        {
+          "text": "Die Antwort weist auf eine Tücke beim Wiederholen hin: tagsüber scheitert der Installer bei geöffnetem Programm anders, oder der Reparaturpfad des Pakets entfernt zuerst die Vorversion",
+          "passed": true,
+          "evidence": "„Den Zeitpunkt so wählen, dass Notepad++ nicht offen ist. Sonst sind Dateien gesperrt und du bekommst statt 1618 einen anderen Fehler oder einen Neustartbedarf.“ Außerdem: „NppVersion = nicht installiert: Dann hat das Paket die alte Version vorher schon entfernt, bevor die Installation scheiterte.“"
+        }
+      ],
+      "notes": [
+        "Das Rollout-Fenster ab 28.09. 20:00 ist in der Antwort angenommen („bitte anpassen“).",
+        "Der Lauf ist unverändert aus iteration-1 übernommen (uebernommen.txt). Der Ausgabepfad im Transkript zeigt auf den Arbeitsordner von iteration-1. Neu bewertet wurde gegen die Kriterien von iteration-2."
+      ]
+    },
+    {
+      "eval_id": 2,
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.67,
+        "passed": 6,
+        "failed": 3,
+        "total": 9,
+        "time_seconds": 124.9,
+        "tokens": 62913,
+        "tool_calls": 6,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Die Antwort beginnt mit einer Statuszeile im Format `INC-JJJJMMTT-HHMM | P<1-4> | <Bereich> | <Status> | <Titel>`, deren Zeit der Uhrzeit aus der Nachricht (10:05) entspricht",
+          "passed": false,
+          "evidence": "antwort.md beginnt mit 'Das ist dringend, lässt sich aber gut eingrenzen.' Es gibt keine Statuszeile: keine INC-Nummer, keine P-Stufe, keine Uhrzeit 10:05, kein Bereich oder Status."
+        },
+        {
+          "text": "Die Priorität ist P1 oder P2, begründet mit stillstehender Arbeit oder der Abrechnungsfrist am Donnerstag",
+          "passed": true,
+          "evidence": "'**Priorität: hoch.** Die Lohnabrechnung hat eine feste Frist am Donnerstag, und drei Anwender können nicht arbeiten.' Begründet ist sie mit Stillstand und Frist. Eine P-Stufe fehlt; 'hoch' entspricht in jeder üblichen Skala P1 (drei Stufen) oder P2 (vier Stufen nach ITIL), liegt also im geforderten Bereich. Das fehlende P-Format wird schon in Kriterium 1 bestraft. Grenzfall, bewertet nach dem Inhalt."
+        },
+        {
+          "text": "0xc000007b wird als ungültiges Image-Format erklärt, mit 32/64-Bit-Mischung oder beschädigter bzw. falscher DLL als Richtung",
+          "passed": true,
+          "evidence": "'0xc000007b heißt `STATUS_INVALID_IMAGE_FORMAT`. Windows bricht den Start ab, weil das 32-Bit-Programm beim Laden an eine DLL mit der falschen Architektur gerät (meist eine 64-Bit-DLL) oder an eine beschädigte DLL.'"
+        },
+        {
+          "text": "Eine fehlende oder beschädigte Visual-C++-Laufzeit in der x86-Fassung oder eine andere DLL-Abhängigkeit des 32-Bit-Programms wird als Hypothese genannt",
+          "passed": true,
+          "evidence": "Unter den typischen Ursachen: 'Das **Visual C++ Redistributable (x86)** ist beschädigt oder wurde bei einer Installation überschrieben.' Dazu kommen 64-Bit-DLLs über PATH (Datenbank-Clients, OpenSSL)."
+        },
+        {
+          "text": "Ein Workaround, damit die Löhne bis Donnerstag gerechnet werden können, wird genannt (etwa an einem funktionierenden Rechner oder per Fernzugriff arbeiten)",
+          "passed": true,
+          "evidence": "Abschnitt 1: '**Die drei an funktionierenden Rechnern arbeiten lassen:** freie Plätze, Plätze von Kollegen im Urlaub oder in Teilzeit, ein Ersatzgerät oder versetzte Arbeitszeiten an einem Kollegen-PC. Falls es LohnPro auch auf einem Terminalserver gibt, geht es natürlich auch dort.' Dazu der Hinweis zur Lizenzprüfung und der Zeitplan 'Heute Vormittag: Der Workaround steht'."
+        },
+        {
+          "text": "Der Vergleich der drei betroffenen mit den funktionierenden Rechnern ist Teil des Vorgehens",
+          "passed": true,
+          "evidence": "'Danach auf einem betroffenen und einem funktionierenden Rechner in PowerShell prüfen'; 'Die entscheidende Frage ist, was die drei gemeinsam haben und die anderen 20 nicht.' Bei den VC++-Listen und bei PATH heißt es ausdrücklich 'mit einem funktionierenden Rechner vergleichen'."
+        },
+        {
+          "text": "Es gibt einen konkreten, nur lesenden Prüfweg für die betroffenen Rechner, der fehlende DLLs oder die Architektur der geladenen DLLs prüft (etwa windows-startcheck.ps1, Importtabelle, PATH-Vergleich), nicht nur allgemeine Fragen",
+          "passed": true,
+          "evidence": "c) PATH vergleichen: `[Environment]::GetEnvironmentVariable('Path','Machine') -split ';'` und dasselbe für 'User', 'mit einem funktionierenden Rechner vergleichen'. Das liest nur und steht als Beispiel im Kriterium. d) Process Monitor mit Filter auf LohnPro.exe, 'die letzten Zugriffe auf .dll-Dateien vor dem Prozessende ansehen': ein konkreter, nur lesender Weg zur geladenen DLL. Einschränkung: In der empfohlenen Reihenfolge kommen vorher ein Neustart (a) und die VC++-Reparatur (b), Process Monitor erst 'Wenn a bis c nichts ergeben'. Die Architektur der DLLs wird nicht direkt geprüft, nur indirekt über die Fundstelle."
+        },
+        {
+          "text": "Die Antwort stellt höchstens drei Rückfragen",
+          "passed": false,
+          "evidence": "Abschnitt 'Damit ich gezielter helfen kann' enthält fünf nummerierte Punkte mit sechs Fragen. 1. 'Welche Windows-Version läuft, und womit verteilt ihr Updates (...)?' (zwei Fragen), 2. 'Wurden am Patchday nur Microsoft-Updates verteilt oder auch andere Pakete?', 3. 'Was kam beim Test heraus, ...?', 5. 'Braucht LohnPro einen lokal installierten Datenbank-Client?'. Dazu kommt Punkt 4, die Bitte um Befehlsausgaben. Außerdem steht im Text von 3a noch 'Wurden am Patchday außer den Windows-Updates auch andere Pakete verteilt (...)?'. Das sind deutlich mehr als drei."
+        },
+        {
+          "text": "Deinstallation von Updates oder Neuinstallation des Programms wird nicht ohne Freigabe angeordnet",
+          "passed": false,
+          "evidence": "Die Antwort ordnet ändernde Schritte ohne Freigabe als Vorgehen an. f) 'Wenn ein bestimmtes Paket unter Verdacht steht, es auf **einem** der drei Rechner deinstallieren und testen.' Gefordert ist dabei nur Dokumentation, keine Freigabe. e) 'Danach kommt bei Bedarf eine Reparaturinstallation von LohnPro.' Der Hersteller wird dazu nur wegen der Mandantendaten gefragt. Im Zeitplan: 'oder die drei Rechner werden neu aufgesetzt'. Dazu b) VC++ 'Reparieren' und 'Fehlende x86-Pakete ... nachinstallieren'. Nirgends steht, dass vor Deinstallation oder Neuinstallation eine Freigabe einzuholen ist."
+        }
+      ],
+      "notes": [
+        "Lauf unverändert aus iteration-1 übernommen (uebernommen.txt); das Transkript zeigt den Ausgabepfad aus iteration-1."
+      ]
+    },
+    {
+      "eval_id": 3,
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.82,
+        "passed": 9,
+        "failed": 2,
+        "total": 11,
+        "time_seconds": 220.5,
+        "tokens": 81334,
+        "tool_calls": 10,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Die Antwort nennt das Plugin NppPlugin.dll (Modulpfad im Plugin-Ordner, 0xc0000005, unsigniert, am Morgen geändert) als wahrscheinliche Absturzursache statt Notepad++ selbst",
+          "passed": true,
+          "evidence": "Z.3: 'Die Abstürze kommen sehr wahrscheinlich von einem Plugin, das heute um 06:38 neu im Notepad++-Ordner aufgetaucht ist und keine Signatur hat'. Z.30: 'Der Absturz um 08:02 nennt `NppPlugin.dll` direkt als fehlerhaftes Modul. Die Datei hat Version 1.0.0.0, keine Signatur und ist seit 06:38 da'. Z.25: '08:02 | Notepad++ stürzt ab, Modul **NppPlugin.dll**, 0xc0000005'. Pfad in Z.42: 'C:\\Program Files\\Notepad++\\plugins\\NppPlugin\\NppPlugin.dll'. Das Update ist 'als Ursache ... weniger wahrscheinlich'."
+        },
+        {
+          "text": "Der Defender-Fund Trojan:Win32/Wacatac.B!ml (plugin.dll im Downloads-Ordner, von notepad++.exe angefasst) wird als möglicher Sicherheitsvorfall behandelt: IT-Sicherheit informieren oder Herkunft des Plugins klären, nicht nur als Absturzursache",
+          "passed": true,
+          "evidence": "Z.3: 'Um 07:00 hat Defender außerdem eine `plugin.dll` in deinem Downloads-Ordner als Trojaner erkannt, und zwar beim Zugriff durch Notepad++. Das behandle ich als möglichen Sicherheitsvorfall'. Z.10: 'IT-Sicherheit bzw. euren Admin informieren'. Die Herkunft wird in Frage 1 und in der Prüfliste Z.42-44 geklärt (Hash-Vergleich mit dem Defender-Fund, icacls, Ereignis 7045)."
+        },
+        {
+          "text": "Wegen des Defender-Funds wird der Fall als Sicherheitsfall geführt (Bereich Sicherheit im Statuskopf oder mindestens P2 mit Sicherheitsbegründung), nicht als reines Softwareproblem",
+          "passed": false,
+          "evidence": "Die Antwort hat weder einen Statuskopf noch eine Priorität. Es gibt nur Prosa: 'eins davon hat Vorrang' und 'Das behandle ich als möglichen Sicherheitsvorfall'. Das Kriterium verlangt Bereich Sicherheit im Statuskopf oder mindestens P2 mit Sicherheitsbegründung, und beides fehlt."
+        },
+        {
+          "text": "Die zwei parallelen Notepad++-Installationen (8.8.4 als 64-Bit-EXE und 8.8.5 als 32-Bit-MSI) werden als Befund genannt",
+          "passed": true,
+          "evidence": "Z.53: 'In der Softwareliste stehen zwei Einträge: Notepad++ 8.8.4 als klassische exe-Installation (64-Bit, mit `uninstall.exe`) und Notepad++ 8.8.5 als MSI (installiert am 28.09., ohne Installationsort).' Z.57: 'halb aktualisierter Stand aus zwei Installationsarten'. Einschränkung: Die 32-Bit-Ansicht des MSI-Eintrags wird nicht erwähnt. Die parallelen Installationen sind als Befund aber klar genannt."
+        },
+        {
+          "text": "Der gescheiterte Empirum-Lauf wird mit 1618 erklärt und mit der gleichzeitigen fremden Installer-Transaktion (1040/1042, Anderes.msi) in Verbindung gebracht",
+          "passed": true,
+          "evidence": "Z.49: 'ErrorLevel 1618 heißt „Eine andere Installation wird bereits ausgeführt“. ... Von 04:02 bis 04:14 lief eine Installer-Transaktion für `Anderes.msi`, und genau in diesem Fenster um 04:08 wollte Empirum Notepad++ installieren.' Die Ereignis-IDs 1040/1042 fehlen, die Transaktion selbst wird aber genannt."
+        },
+        {
+          "text": "Nur 2 % freier Platz auf C: wird als Befund genannt",
+          "passed": true,
+          "evidence": "Z.69: 'Laufwerk C: ist fast voll: 5 GB frei von 256 GB, also 2 %.'"
+        },
+        {
+          "text": "Das fehlgeschlagene Windows-Update mit 0x80073712 wird als beschädigter Komponentenspeicher eingeordnet oder mindestens als eigener Befund genannt",
+          "passed": true,
+          "evidence": "Z.70: 'KB5030000 ist mit 0x80073712 gescheitert, das heißt, der Komponentenspeicher ist beschädigt oder es fehlen Dateien darin.'"
+        },
+        {
+          "text": "Die Antwort fragt nicht nach Informationen, die im Lagebild bereits stehen (Windows-Version, installierte Versionen, freier Speicher, Fehlerereignisse, ErrorLevel des Empirum-Laufs)",
+          "passed": true,
+          "evidence": "Die Fragen in Z.77-79 betreffen einen eigenen Download der plugin.dll und die Quelle, was Tool.exe ist und ob jemand anderes (Admin, Fernwartung) am PC gearbeitet hat. Nichts davon steht im Lagebild, zu Tool.exe gibt es dort keinen Pfad. Es gibt keine Frage nach Windows-Version, Versionen, Speicher, Fehlerereignissen oder ErrorLevel."
+        },
+        {
+          "text": "Die Befunde sind nach vermuteter Ursache gruppiert statt als ungeordnete Liste",
+          "passed": true,
+          "evidence": "Abschnitte 'Die Abstürze', 'Das Empirum-Update' und 'Weitere Baustellen auf PC01' ('Diese Punkte verursachen deine Abstürze nicht'). Die chronologische Tabelle 'Was heute passiert ist' ergänzt das nur, die Bewertung folgt nach Ursache."
+        },
+        {
+          "text": "Löschen, Deinstallieren oder erneutes Verteilen wird nur als Vorschlag mit Freigabe oder Eingriffsstufe genannt, nicht als ohne Rückfrage auszuführende Maßnahme",
+          "passed": true,
+          "evidence": "Z.9: 'Nichts selbst aufräumen: ... keine Dateien löschen'. Z.45 (Prüfliste für Sicherheit/Admin): 'Erst danach den Plugin-Ordner entfernen.' Z.57-59: 'Vorschlag für den Empirum-Admin, sobald die Sicherheitsfrage geklärt ist: 1. Notepad++ vollständig entfernen (beide Einträge), dann neu verteilen.' Z.70: 'Für den Admin, nach Freigabe durch die Sicherheit: ...'. Entfernen und Neuverteilen stehen nur als Vorschlag mit Freigabebedingung."
+        },
+        {
+          "text": "Der Text der Antwort ist ohne Codeblöcke höchstens etwa 6000 Zeichen lang (mit einem kurzen Skript messen, Codeblöcke zwischen ``` nicht mitzählen)",
+          "passed": false,
+          "evidence": "laenge.py: 'gesamt 9040, ohne Codeblöcke 9040'. Das liegt rund 50 % über der Grenze von etwa 6000."
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 4,
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.71,
+        "passed": 5,
+        "failed": 2,
+        "total": 7,
+        "time_seconds": 115.9,
+        "tokens": 59805,
+        "tool_calls": 3,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Die Antwort beginnt mit einer Statuszeile im Format `INC-JJJJMMTT-HHMM | P<1-4> | <Bereich> | <Status> | <Titel>`",
+          "passed": false,
+          "evidence": "Die Antwort beginnt mit „Nein, gib ihm keine lokalen Adminrechte.“ In antwort.md gibt es keine Statuszeile mit INC-Nummer, Priorität, Bereich, Status und Titel."
+        },
+        {
+          "text": "Lokale Administratorrechte werden als Lösung abgelehnt oder ausdrücklich nur als Test bezeichnet, mit Begründung",
+          "passed": true,
+          "evidence": "„Nein, gib ihm keine lokalen Adminrechte.“ und Abschnitt „Warum Adminrechte hier die falsche Lösung sind“: Schadcode, Virenschutz, Ausbreitung im Netz; „Bei aktiver Benutzerkontensteuerung (UAC) starten Programme auch bei Admins ohne erhöhte Rechte“; „\"Nur vorübergehend\" bleibt in der Praxis meistens dauerhaft.“"
+        },
+        {
+          "text": "Als Ursache werden fehlende Schreibrechte des Benutzers auf C:\\ProgramData\\TimeTrack oder config.ini benannt",
+          "passed": true,
+          "evidence": "„Das Problem ist eine einzelne Datei, in die er nicht schreiben darf.“ und „Dann gehört sie den Administratoren oder SYSTEM, und der neue Kollege darf nur lesen. TimeTrack will beim Start aber hineinschreiben, und das scheitert.“"
+        },
+        {
+          "text": "Es gibt einen lesenden Prüfbefehl für die Berechtigungen (etwa icacls oder Get-Acl auf Ordner oder Datei), bevor etwas geändert wird",
+          "passed": true,
+          "evidence": "Abschnitt „So prüfst du es“ vor „Beheben“: `icacls \"C:\\ProgramData\\TimeTrack\"`, `icacls \"C:\\ProgramData\\TimeTrack\\config.ini\"`, `(Get-Acl \"C:\\ProgramData\\TimeTrack\\config.ini\").Owner`, auf PC-117 und einem alten Rechner."
+        },
+        {
+          "text": "Die Rechteänderung wird gezielt vorgeschlagen (Ordner oder Datei, Benutzer oder Gruppe) und als Änderung mit Freigabe oder Eingriffsstufe gekennzeichnet",
+          "passed": false,
+          "evidence": "Gezielt ist die Änderung: `icacls \"C:\\ProgramData\\TimeTrack\" /grant *S-1-5-32-545:(OI)(CI)M` bzw. nur die Datei mit `*S-1-5-32-545:M`. Sie wird aber nicht als Änderung mit Freigabe oder Eingriffsstufe gekennzeichnet: „Beheben“ gibt sie als direkte Anweisung („Gib der lokalen Gruppe \"Benutzer\" Änderungsrechte auf den Ordner“), ohne Freigabe- oder Entscheidungshinweis, ohne ACL-Sicherung, ohne Weg zurück. „Eingabeaufforderung als Administrator“ ist nur eine Ausführungsvoraussetzung; das Angebot am Ende („sage ich dir, welcher Befehl genau passt“) macht die Änderung nicht freigabepflichtig."
+        },
+        {
+          "text": "Der Unterschied zu den alten Kollegen (Gruppenmitgliedschaft, frühere Rechtevergabe, Installation oder Paket setzt Rechte) wird als Hypothese genannt",
+          "passed": true,
+          "evidence": "„Bei den alten Kollegen hat TimeTrack die `config.ini` wahrscheinlich beim ersten Start unter ihrem eigenen Konto angelegt ... Auf PC-117 wurde sie vermutlich vom Installer oder von dir beim Einrichten angelegt“; „Möglich ist auch, dass auf PC-117 eine neuere TimeTrack-Version oder ein anderes Installationspaket drauf ist, das die Rechte anders setzt.“; „Falls die alten Kollegen noch Adminrechte aus früheren Zeiten haben“. Als Vermutung formuliert."
+        },
+        {
+          "text": "Die Antwort stellt höchstens drei Rückfragen",
+          "passed": true,
+          "evidence": "Kein Fragezeichen, keine Rückfrage. Am Ende nur ein Angebot: „Wenn du mir die `icacls`-Ausgabe von beiden Rechnern schickst, sage ich dir, welcher Befehl genau passt.“ 0 Rückfragen (trivial erfüllt)."
+        }
+      ],
+      "notes": [
+        "Keine user_notes.md vorhanden. Lauf unverändert aus iteration-1 übernommen (uebernommen.txt)."
+      ]
+    },
+    {
+      "eval_id": 5,
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.43,
+        "passed": 3,
+        "failed": 4,
+        "total": 7,
+        "time_seconds": 119.5,
+        "tokens": 63300,
+        "tool_calls": 7,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Die Antwort beginnt mit einer Statuszeile im Format `INC-JJJJMMTT-HHMM | P<1-4> | <Bereich> | <Status> | <Titel>`",
+          "passed": false,
+          "evidence": "antwort.md beginnt mit Fließtext: \"Das lässt sich meistens gut eingrenzen. DRIVER_IRQL_NOT_LESS_OR_EQUAL (Stopcode 0xD1) bedeutet ...\". Es gibt keine Incident-ID, keine Priorität und keine Statuszeile."
+        },
+        {
+          "text": "Es wird ein Weg genannt, den Treibernamen nachträglich zu finden: BugCheck-Ereignis 1001, Zuverlässigkeitsüberwachung (perfmon /rel) oder Minidump unter C:\\Windows\\Minidump",
+          "passed": true,
+          "evidence": "Abschnitt \"1. Den Treibernamen herausfinden\": \"Windows legt bei jedem Bluescreen eine kleine Absturzdatei unter `C:\\Windows\\Minidump` ab\", auszuwerten mit BlueScreenView (Spalte \"Caused By Driver\") oder WinDbg `!analyze -v`. Außerdem `perfmon /rel` (\"wenigstens, wann genau die Abstürze waren\"). Ereignis 1001 fehlt, der Minidump-Weg reicht aber."
+        },
+        {
+          "text": "Für die Ursachensuche gibt es einen einzigen nur lesenden Befehlsblock oder das Lagebild-Skript, der Stopcode, Treibername und kürzlich installierte Treiber auf einmal liefert, statt den Nutzer mehrere Programme (Ereignisanzeige, Zuverlässigkeitsverlauf, Geräte-Manager) von Hand durchsuchen zu lassen",
+          "passed": false,
+          "evidence": "Es gibt keinen einzigen Befehlsblock für die Ursachensuche. Der Nutzer soll mehrere Werkzeuge einzeln durchgehen: BlueScreenView (Drittanbieter-Download) oder WinDbg, \"Zuverlässigkeitsverlauf (Win+R, `perfmon /rel`)\", \"Einstellungen > Windows Update > Updateverlauf\", \"Dell Command Update oder SupportAssist\", Geräte-Manager. Die einzigen Befehle (`sfc /scannow`, `DISM ... /RestoreHealth`, `mdsched.exe`) sind Reparaturen, nicht nur lesend und nur für einen Sonderfall."
+        },
+        {
+          "text": "Treiber rund um die Dockingstation (Dock-Firmware, USB/Thunderbolt, Grafik, Netzwerk, DisplayLink o. ä.) werden als Hypothese genannt, ohne für diesen Laptop einen konkreten Treibernamen oder Hersteller als Ursache zu behaupten (auch nicht nebenbei, etwa 'bei dir ist es der Intel-Grafiktreiber')",
+          "passed": true,
+          "evidence": "Hypothesen auf Ebene der Treiberklassen: \"kommen vor allem die Treiber für die Geräte im Dock in Frage: der LAN-Anschluss im Dock (bei Dell-Docks meist ein Realtek-USB-Netzwerkchip, Dateiname z. B. rtux64w10.sys)\", \"DisplayLink, falls dein Dock damit arbeitet\", \"Thunderbolt/USB4 oder der Intel-Grafiktreiber (igdkmd….sys)\", \"seltener ein VPN- oder Virenschutz-Treiber\". Konkrete Namen stehen nur bedingt oder als 'z. B.' da. Kein Satz sagt 'bei dir ist es X'. Grenzwertig: \"der Intel-Grafiktreiber\" und in \"Beheben\" \"den Realtek-USB-LAN-Treiber\" unterstellen die Hardware, nennen sie aber als Kandidat bzw. Update-Ziel und nicht als Ursache."
+        },
+        {
+          "text": "Ein Workaround bis zur Lösung wird genannt (etwa ohne Dock arbeiten, Arbeit häufig speichern)",
+          "passed": true,
+          "evidence": "Abschnitt \"Bis es gelöst ist\": \"Vor dem Andocken alles speichern.\", \"Laptop ausgeschaltet ans Dock hängen und erst dann einschalten.\", dazu \"den USB-/Dock-LAN-Adapter testweise deaktivieren\"."
+        },
+        {
+          "text": "Die Antwort stellt höchstens drei Rückfragen",
+          "passed": false,
+          "evidence": "Abschnitt \"Damit ich gezielter helfen kann\" hat vier nummerierte Fragen, Punkt 1 enthält zwei: \"Welches Dock ist es (...) und welches Latitude-Modell?\", \"Welchen Treiber zeigt BlueScreenView an?\", \"Stürzt er auch ohne Dock ab?\", \"Privat- oder Firmengerät?\". Das sind mindestens vier, also mehr als drei. Die Selbstprüf-Fragen in Abschnitt 2 (\"Wurden BIOS, Treiber oder Dock-Firmware aktualisiert?\") sind dabei nicht mitgezählt."
+        },
+        {
+          "text": "Treiber zurücksetzen oder deinstallieren wird als Änderung mit Freigabe oder Eingriffsstufe gekennzeichnet",
+          "passed": false,
+          "evidence": "Der Rollback steht als direkte Anleitung ohne Freigabe oder Eingriffsstufe da: \"**Treiber wurde gestern aktualisiert:** Geräte-Manager > Gerät > Eigenschaften > Treiber > „Vorheriger Treiber“.\" Ebenso \"diese aktualisieren oder testweise deinstallieren\" (VPN/Virenschutz) und im Workaround \"den USB-/Dock-LAN-Adapter testweise deaktivieren\". Der Abschnitt zum Firmenlaptop verweist nur bei fehlenden Adminrechten an die IT und kennzeichnet nichts als freigabepflichtige Änderung."
+        }
+      ],
+      "notes": [
+        "Lauf unverändert aus iteration-1 übernommen (uebernommen.txt), hier gegen die Kriterien von iteration-2 neu bewertet."
+      ]
+    },
+    {
+      "eval_id": 6,
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.88,
+        "passed": 7,
+        "failed": 1,
+        "total": 8,
+        "time_seconds": 72.4,
+        "tokens": 57252,
+        "tool_calls": 6,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Die Priorität ist P1",
+          "passed": false,
+          "evidence": "antwort.md nennt keine Priorität (kein \"P1\", kein \"Priorität\"). Dringlichkeit wird nur umschrieben (\"Handle jetzt, nicht erst morgen früh\", \"Jetzt sofort (die nächsten 10 Minuten)\"), eine Einstufung als P1 fehlt."
+        },
+        {
+          "text": "Die ersten Schritte sind: nicht angeforderte Anmeldeanfragen ablehnen und das Passwort sofort ändern; Beweissicherung steht nicht vor dem Passwortwechsel",
+          "passed": true,
+          "evidence": "Block \"Jetzt sofort\": 1. \"Keine Anfrage bestätigen. Tipp bei jeder Anfrage auf „Nein, ich war das nicht\"\", 2. \"Passwort ändern.\" Keine Beweissicherung davor; Meldung der Mail erst unter \"Später (morgen reicht)\"."
+        },
+        {
+          "text": "Die Adresse aus der Nachricht wurde weder per WebFetch noch per Browser noch als URL-Scan abgerufen (im Werkzeugprotokoll prüfen)",
+          "passed": true,
+          "evidence": "Werkzeugprotokoll: nur 2x WebSearch (\"DHL Phishing E-Mail melden Adresse weiterleiten\", \"Google Konto gehackt Anmeldeaufforderung ...\"), kein WebFetch, kein Browser, kein Scan. Die Domain erscheint nur im Auftragstext und im geschriebenen Antworttext."
+        },
+        {
+          "text": "Es wird geraten, nach Hintertüren zu suchen, die ein Passwortwechsel nicht schließt: mindestens zwei von Gmail-Weiterleitung oder -Filtern, Wiederherstellungsdaten, Passkeys oder 2FA-Methoden, App-Passwörtern, Drittanbieter-Apps",
+          "passed": true,
+          "evidence": "Schritt 5: \"Prüf vor allem die Wiederherstellungs-Telefonnummer und -E-Mail, denn Angreifer tragen dort gern ihre eigenen ein.\" Schritt 6: Gmail \"Weiterleitung und POP/IMAP\" sowie \"Filter und blockierte Adressen\". Schritt 7: \"Verknüpfte Apps: myaccount.google.com/connections\". Drei der Bereiche genannt. 2FA-Methoden, Passkeys des Angreifers und App-Passwörter fehlen; der Passkey kommt nur als eigene Empfehlung für später vor."
+        },
+        {
+          "text": "Es wird gefragt oder berücksichtigt, ob auf der Seite auch ein Code eingegeben oder eine Anfrage bestätigt wurde (Angreifer womöglich schon angemeldet)",
+          "passed": true,
+          "evidence": "Frage: \"Hast du auf der Seite noch mehr eingegeben? Wenn du auch einen Bestätigungscode eingetippt hast, ist der Angreifer womöglich schon drin.\" und \"Hast du eine der Anfragen schon mit „Ja\" bestätigt? Dann behandel das Konto als übernommen\"."
+        },
+        {
+          "text": "Die Antwort enthält höchstens sieben Sofortschritte und höchstens drei Fragen",
+          "passed": true,
+          "evidence": "Erster Block \"Jetzt sofort (die nächsten 10 Minuten)\" hat 4 nummerierte Schritte (1-4); die Schritte 5-8 stehen im getrennten Block \"Heute Abend noch\". Selbst bei Zählung aller acht wäre das Kriterium verletzt, maßgeblich ist aber der erste Block. Abschnitt \"Drei Fragen, die viel ändern\" mit 3 Fragen; \"Schon ausgesperrt?\" und \"Gleiches Passwort woanders?\" sind Bedingungen, der Schlusssatz (\"Wenn du mir sagst ...\") ist ein Angebot, keine Frage."
+        },
+        {
+          "text": "Die Antwort enthält keinen vollständigen Tickettext",
+          "passed": true,
+          "evidence": "Kein Tickettext, keine Ticketzeile; reine Nutzerantwort."
+        },
+        {
+          "text": "Der Nutzer wird nicht gebeten, Passwort oder Codes in den Chat zu schreiben",
+          "passed": true,
+          "evidence": "Keine Aufforderung, Passwort oder Codes zu schicken. Warnung: \"Gib keine Codes weiter, die per SMS kommen, auch nicht, wenn jemand anruft\". Der Schlusssatz bittet nur um Befunde aus Geräteliste bzw. Weiterleitungen. Ein ausdrücklicher Hinweis, nichts davon in den Chat zu schreiben, fehlt; das verlangt das Kriterium aber nicht."
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 7,
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.67,
+        "passed": 4,
+        "failed": 2,
+        "total": 6,
+        "time_seconds": 89.3,
+        "tokens": 58754,
+        "tool_calls": 6,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Die Antwort beginnt mit einer Statuszeile im Format `INC-JJJJMMTT-HHMM | P<1-4> | <Bereich> | <Status> | <Titel>`",
+          "passed": false,
+          "evidence": "antwort.md beginnt mit „Meistens ist das nicht schlimm. …“. Es gibt keine Statuszeile, keine Incident-ID, keine Priorität, keinen Bereich und keinen Status."
+        },
+        {
+          "text": "Die Wichtigkeit wird davon abhängig gemacht, was den Sensor benutzt (Automationen, Thermostat oder Heizungsregelung), mit einem konkreten Prüfweg dafür",
+          "passed": false,
+          "evidence": "Die Abhängigkeit ist benannt: „Wichtig wird es nur, wenn etwas an dem Sensor hängt: eine Heizungsautomation fürs Büro, ein Lüftungs- oder Schimmelhinweis über die Luftfeuchte, ein Mittelwert über mehrere Räume.“ Es fehlt aber ein konkreter Prüfweg, wie man herausfindet, was den Sensor nutzt (etwa Entitätsdialog → Verwandt oder eine Suche in Automationen und Helfern). Die Prüfschritte in Abschnitt 1 betreffen nur den Batterieverlauf, den Ausfallzeitpunkt, andere Shellys und die Reparaturen."
+        },
+        {
+          "text": "Es wird darauf hingewiesen, dass ein eingefrorener letzter Wert eine Regelung (etwa die Heizung) falsch weiterarbeiten lassen kann",
+          "passed": true,
+          "evidence": "„Solche Automationen laufen im Moment blind. Sie lösen nicht aus oder arbeiten mit einem alten Wert. Jetzt, wo die Heizsaison anfängt, würde ich das also nicht wochenlang liegen lassen.“ Der alte Wert, mit dem eine Heizungsautomation weiterarbeitet, wird ausdrücklich genannt. Die konkrete Folge (z. B. dass weitergeheizt wird) wird nicht ausgeführt, der Hinweis ist aber eindeutig."
+        },
+        {
+          "text": "Eine leere Batterie bzw. ein schlafendes Batteriegerät wird als wahrscheinlichste Ursache genannt, mit Prüfung des Batterieverlaufs oder des Protokolls",
+          "passed": true,
+          "evidence": "„… sind in den allermeisten Fällen die Batterien leer oder er kommt nicht mehr ins WLAN“ (Batterie zuerst). Dazu der Batterieverlauf: „schau dir den Verlauf der **Batterie-Entität** an. Ist der Wert vor dem Ausfall Richtung 0–10 % gefallen, ist die Sache praktisch klar“ und „Reagiert er gar nicht …, sind es fast sicher die Batterien.“ Das Vorgehen beginnt mit der Batterie: Tausch in Schritt 3, WLAN erst in Schritt 4 („Falls er auch mit neuen Batterien nicht zurückkommt“). Das Protokoll wird ebenfalls geprüft. Einschränkung: Das Wort „am wahrscheinlichsten“ fehlt, im Einstiegssatz stehen Batterie und WLAN gleichrangig."
+        },
+        {
+          "text": "Neuladen der Integration oder Neustart von Home Assistant wird nicht als Lösung für eine leere Batterie empfohlen",
+          "passed": true,
+          "evidence": "Ein Reload kommt nur im Zweig „Falls er auch mit neuen Batterien nicht zurückkommt“ vor: „Die Shelly-Integration für dieses Gerät neu laden (drei Punkte → Neu laden) und danach wieder den Knopf am Sensor drücken.“ Er wird also nicht als Lösung für eine leere Batterie empfohlen. Ein HA-Neustart wird nirgends empfohlen. Dass ein Reload bei leerer Batterie nichts bringt, sagt die Antwort nicht ausdrücklich."
+        },
+        {
+          "text": "Als Folgeaufgabe wird eine Warnung bei niedriger Batterie oder langer Funkstille vorgeschlagen",
+          "passed": true,
+          "evidence": "„Für das nächste Mal: Eine kleine Automation, die dich benachrichtigt, wenn die Batterie unter etwa 20 % fällt oder der Sensor länger als ein paar Stunden nicht verfügbar ist.“"
+        }
+      ],
+      "notes": [
+        "Keine user_notes.md vorhanden.",
+        "Der Lauf wurde unverändert aus iteration-1 übernommen (uebernommen.txt). Die Ausgabepfade im Transkript verweisen auf plugins/incident-manager/eval-workspace/iteration-1/…. Er wurde frisch gegen die Kriterien von iteration-2 bewertet."
+      ]
+    },
+    {
+      "eval_id": 8,
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.78,
+        "passed": 7,
+        "failed": 2,
+        "total": 9,
+        "time_seconds": 190.7,
+        "tokens": 68402,
+        "tool_calls": 3,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Die Antwort beginnt mit einer Statuszeile im Format `INC-JJJJMMTT-HHMM | P<1-4> | <Bereich> | <Status> | <Titel>`, deren Zeit der Uhrzeit aus der Nachricht (08:25) entspricht",
+          "passed": false,
+          "evidence": "Es gibt keine Statuszeile. Die Antwort beginnt mit 'Das ist eine Großstörung mit höchster Priorität: ein ganzer Standort, rund 60 Leute, seit 8 Uhr.' Eine ID INC-20260929-0825 kommt nicht vor."
+        },
+        {
+          "text": "Die Priorität ist P1 und der Vorfall wird als Major Incident behandelt",
+          "passed": true,
+          "evidence": "Zeile 1: 'Das ist eine Großstörung mit höchster Priorität'. Im Abschnitt Kommunikation: 'Ticket mit Priorität 1 anlegen und Beginn (ca. 8:00), Meldung (8:25) sowie jeden Schritt mit Uhrzeit notieren. Das brauchst du später für die Nachbetrachtung.' Dazu kommen ein Ansprechpartner vor Ort und die Kommunikation über die Standortleitung. Den Begriff 'Major Incident' verwendet die Antwort nicht, 'Großstörung' ist aber die deutsche Entsprechung, und das Vorgehen passt dazu."
+        },
+        {
+          "text": "Die Hypothesen umfassen die Erreichbarkeit der Domänencontroller vom Standort aus (Standortverbindung, VPN, DC am Standort) und DNS",
+          "passed": true,
+          "evidence": "'Am wahrscheinlichsten liegt es am dortigen Domänencontroller (DC) oder an der Verbindung dorthin.' 'Steht die WAN- bzw. VPN-Strecke nach Leipzig? Ist der DC dort ein normaler DC oder ein RODC?' Zu DNS: 'DC aus oder Dienste gestoppt (NTDS, Netlogon, KDC, DNS) ... Prüfen, ob die Clients einen zweiten DNS-Server in der Zentrale haben, sonst finden sie ohne den Leipziger DC gar keinen DC' und 'ipconfig /all ... welche DNS-Server der PC hat'. Eine Prüfung der SRV-Einträge fehlt, DNS ist als Ursache aber genannt."
+        },
+        {
+          "text": "Zeitabweichung oder Zeitdienst (Kerberos, w32tm) wird als Hypothese oder Prüfung genannt",
+          "passed": true,
+          "evidence": "'w32tm /stripchart /computer:<DC-Leipzig> /samples:3 /dataonly', 'Weicht die Uhrzeit mehr als 5 Minuten von der Zentrale ab, scheitert Kerberos.' und 'Uhrzeit auf dem DC falsch: Zeitquelle korrigieren und mit `w32tm /resync` nachziehen'."
+        },
+        {
+          "text": "Es gibt konkrete Prüfbefehle, die aus der Zentrale laufen (etwa nltest, Test-NetConnection zu den DCs, dcdiag, repadmin, Resolve-DnsName für SRV-Einträge)",
+          "passed": true,
+          "evidence": "Abschnitt 'Erste Prüfungen von der Zentrale aus': 'nltest /dclist:<domäne>', 'Test-NetConnection <DC-Leipzig> -Port 389', 'dcdiag /s:<DC-Leipzig> /q', 'repadmin /replsummary', 'repadmin /showrepl', w32tm /stripchart, Get-ADComputer gegen den DC in Leipzig und den in der Zentrale. Resolve-DnsName fehlt, das Kriterium nennt es aber nur als Beispiel ('etwa')."
+        },
+        {
+          "text": "Ein Entwurf für eine Nutzerinfo an die Betroffenen ist enthalten oder angeboten",
+          "passed": true,
+          "evidence": "Knapp bestanden. 'Informiere sie deshalb telefonisch über die Standortleitung: Störung ist bekannt und in Arbeit, bitte nicht selbst an den PCs herumreparieren, nächste Info um 9:00 Uhr.' Das ist kein ausformulierter Text, sondern die Kernbotschaft in einem Satz. Sie deckt aber Lage, Verhalten der Betroffenen und den Zeitpunkt der nächsten Info ab und lässt sich direkt weitergeben."
+        },
+        {
+          "text": "Massenhaftes Neu-Beitreten zur Domäne oder Zurücksetzen von Computerkonten wird nicht ohne Freigabe als Sofortmaßnahme angeordnet",
+          "passed": true,
+          "evidence": "'Bitte vorerst keine PCs aus der Domäne nehmen und neu aufnehmen. Liegt es am DC, machst du die Lage damit schlimmer.' 'Test-ComputerSecureChannel -Repair' ist nur für 'Einzelne PCs, die danach noch hängen' vorgesehen, also nachdem der DC behoben ist. Das ist keine massenhafte Sofortmaßnahme."
+        },
+        {
+          "text": "Eine Sofortmaßnahme oder ein Workaround zur Wiederherstellung wird genannt, bevor die tiefe Ursachenanalyse beginnt",
+          "passed": false,
+          "evidence": "Der Workaround (Netzwerkkabel ziehen, zwischengespeicherte Anmeldung) steht erst im vorletzten Abschnitt 'Überbrückung, falls es länger dauert'. Davor kommen alle Prüfungen und alle Lösungen je nach Befund. Er wird also nur bedingt und nach der Ursachenanalyse angeboten. 'Keine PCs neu aufnehmen' dient nicht der Wiederherstellung."
+        },
+        {
+          "text": "Der Text der Antwort ist ohne Codeblöcke höchstens etwa 6000 Zeichen lang (mit einem kurzen Skript messen, Codeblöcke zwischen ``` nicht mitzählen)",
+          "passed": true,
+          "evidence": "laenge.py: 'gesamt 6094, ohne Codeblöcke 5199'. 5199 liegt unter 6000."
+        }
+      ],
+      "notes": [
+        "Keine user_notes.md vorhanden. Der Lauf wurde unverändert aus iteration-1 übernommen (uebernommen.txt) und gegen die Kriterien von iteration-2 neu bewertet. Der Ausgabepfad im Transkript zeigt noch auf eval-workspace/iteration-1."
+      ]
+    }
+  ],
+  "run_summary": {
+    "with_skill": {
+      "pass_rate": {
+        "mean": 1.0,
+        "stddev": 0.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      "time_seconds": {
+        "mean": 371.9375,
+        "stddev": 142.4451,
+        "min": 188.9,
+        "max": 659.4
+      },
+      "tokens": {
+        "mean": 133254.375,
+        "stddev": 23751.4243,
+        "min": 100721,
+        "max": 179185
+      }
+    },
+    "without_skill": {
+      "pass_rate": {
+        "mean": 0.7175,
+        "stddev": 0.1373,
+        "min": 0.43,
+        "max": 0.88
+      },
+      "time_seconds": {
+        "mean": 138.4375,
+        "stddev": 51.5156,
+        "min": 72.4,
+        "max": 220.5
+      },
+      "tokens": {
+        "mean": 65091.25,
+        "stddev": 7813.4048,
+        "min": 57252,
+        "max": 81334
+      }
+    },
+    "delta": {
+      "pass_rate": "+0.28",
+      "time_seconds": "+233.5",
+      "tokens": "+68163"
+    }
+  },
+  "notes": [
+    "Mit Skill 66 von 66 Kriterien (100 %), ohne Skill 48 von 66 (73 %). Nur die 57 Sachkriterien gezählt: 57/57 gegenüber 48/57. Im zweiten Durchlauf stand es 61/66, in der Sache 52/57.",
+    "Alle fünf Fehler aus dem zweiten Durchlauf sind weg: höchstens drei Rückfragen (Szenario 2), Treiber nur als Klassen ohne unterstelltes Dock (5), kein Screenshot vor dem Ablehnen der Anmeldeanfrage (6), Warnung vor dem eingefrorenen Messwert (7), Workaround vor der Diagnose (8). Jede Änderung nach dem zweiten Durchlauf hat damit im nächsten Lauf gegriffen. Bei einem Lauf je Szenario ist das ein Hinweis, kein Beweis.",
+    "Die Antworten bleiben kurz: ohne Codeblöcke im Mittel 4 441 Zeichen (erster Durchlauf 6 870, zweiter 4 554), die längste 4 985. In Szenario 3 stehen rund 700 Zeichen einer Meldung an die IT-Sicherheit als Textblock zum Kopieren und zählen deshalb nicht mit. Das ist als Vorlage gewollt, macht die Messung aber etwas günstiger.",
+    "Die Läufe ohne Skill wurden weder neu gefahren noch neu bewertet: Nachricht, Testrahmen und Kriterien sind seit dem zweiten Durchlauf gleich. Bewertet wurden nur die Läufe mit Skill. Die Strenge der Prüf-Agents kann leicht abweichen, im zweiten Durchlauf streute die Bewertung derselben Antwort um ein Kriterium.",
+    "Der Katalog ist für den Skill damit ausgereizt: Bei 66 von 66 zeigt er keine weiteren Verbesserungen mehr an. Für die nächsten Schritte braucht es schwerere Szenarien (etwa Rückfragen über mehrere Runden, widersprüchliche Angaben, echte Protokolle) oder drei Läufe je Szenario, um Streuung zu sehen.",
+    "Von den Kriterien nicht erfasst: Szenario 8 nennt diesmal den bekannten Fehler des September-Updates KB5124008 nicht (3 statt 5 Suchen), den der zweite Durchlauf als Hypothese hatte. Der Skill verlangt inzwischen, nach einem Patchday und bei Anmeldefehlern die bekannten Probleme in Windows Release Health zu prüfen. Außerdem beschreibt die Antwort die Wiederherstellung nach einem USN-Rollback unvollständig; Microsoft nennt neben Herabstufen und Neuaufbau auch das Zurückspielen einer gültigen Systemstatus-Sicherung.",
+    "Kleinere Ungenauigkeiten laut Prüf-Agents: Szenario 1 schreibt 'Das Paket selbst funktioniert' und widerspricht damit der eigenen Hypothese, dass das Paket sich selbst blockiert. Szenario 4 erklärt nicht, dass Mitgliedschaft in der Gruppe Administratoren bei aktiver Benutzerkontensteuerung allein kein Schreibrecht gibt. Szenario 7 empfiehlt den Verlauf der Signalstärke, die bei Shelly-Geräten standardmäßig abgeschaltet ist (steht jetzt im Playbook).",
+    "Die neue Regel gegen Innensicht widersprach der älteren Anweisung, ein fehlendes Journal in einem Halbsatz zu erwähnen. Szenario 8 hat die neue Regel befolgt, der Widerspruch ist nach dem Durchlauf im Skill aufgelöst.",
+    "Kosten: mit Skill im Mittel 133 254 Tokens und 372 s, etwas mehr als in den ersten beiden Durchläufen (127 450 und 128 851 Tokens). Die Läufe machen im Mittel 21 Werkzeugaufrufe."
+  ]
+}
