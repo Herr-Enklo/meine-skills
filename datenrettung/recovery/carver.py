@@ -236,8 +236,12 @@ def _resolve_size(source, start: int, sig: Signature, source_size: Optional[int]
         limit = min(limit, source_size)
 
     def clamp(size: int, partial: bool = False, certain: bool = False):
-        if source_size is not None:
-            size = min(size, source_size - start)
+        if source_size is not None and size > source_size - start:
+            # Die Quelle endet vor dem belegten Dateiende: der Rest fehlt.
+            size = source_size - start
+            partial = True
+        if partial and not recover_partial:
+            return None
         if size <= header_len:
             return None
         return (size, partial, certain)

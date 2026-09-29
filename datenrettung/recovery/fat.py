@@ -24,6 +24,7 @@ import time
 from typing import Iterator, Optional
 
 from .models import CancelCb, Finding, ProgressCb, safe_name
+from .runs import byte_runs, chain_to_runs, clamp_range, free_runs
 
 ATTR_LFN = 0x0F
 ATTR_DIRECTORY = 0x10
@@ -185,23 +186,15 @@ class FatTable:
             cluster = self.next_cluster(cluster)
         return out
 
-    def free_run(self, start: int, needed: int, window: int) -> tuple[list[int], int]:
+    def free_run(self, start: int, needed: int, window: int):
         """Sammelt ab ``start`` freie Cluster und ueberspringt belegte.
 
-        Rueckgabe: ``(cluster_liste, anzahl_uebersprungener)``. Gesucht wird in
-        einem Fenster von ``window`` Clustern.
+        Rueckgabe: ``(bereiche, anzahl_gefunden, anzahl_uebersprungen)``, die
+        Bereiche als ``(erster_cluster, anzahl)``. Gesucht wird in einem Fenster
+        von ``window`` Clustern.
         """
-        out: list[int] = []
-        skipped = 0
-        cluster = start
-        end = min(self.boot.max_cluster, start + window)
-        while len(out) < needed and cluster <= end:
-            if self.is_free(cluster):
-                out.append(cluster)
-            else:
-                skipped += 1
-            cluster += 1
-        return out, skipped
+        return free_runs(lambda c: not self.is_free(c), start, needed, window,
+                         self.boot.max_cluster)
 
     def is_allocated_offset(self, abs_offset: int) -> Optional[bool]:
         """Belegungsstatus der Stelle ``abs_offset`` (None = nicht im Datenbereich)."""
@@ -217,14 +210,7 @@ class FatTable:
 
 def clusters_to_runs(boot, clusters: list[int]) -> list[tuple[int, int]]:
     """Wandelt eine Clusterliste in Bereiche ``(offset, laenge)`` um."""
-    runs: list[tuple[int, int]] = []
-    for cluster in clusters:
-        off = boot.cluster_offset(cluster)
-        if runs and runs[-1][0] + runs[-1][1] == off:
-            runs[-1] = (runs[-1][0], runs[-1][1] + boot.cluster_size)
-        else:
-            runs.append((off, boot.cluster_size))
-    return runs
+    return byte_runs(boot, chain_to_runs(clusters))
 
 
 def _short_name(entry: bytes, deleted: bool, first_char: Optional[str] = None) -> str:
@@ -328,6 +314,7 @@ class _Walker:
         self.findings: list[Finding] = []
         self.visited: set[int] = set()
         self.errors = 0
+        self.bad_entries = 0
 
     def cancelled(self) -> bool:
         return bool(self.should_cancel and self.should_cancel())
@@ -418,7 +405,11 @@ class _Walker:
                 continue
             if size <= 0 or not self.boot.valid_cluster(cluster):
                 continue
-            self._add_file(entry, full, name, cluster, size, deleted, first == DELETED)
+            # Ein beschaedigter Eintrag darf die Geschwister nicht mitreissen.
+            try:
+                self._add_file(entry, full, name, cluster, size, deleted, first == DELETED)
+            except Exception:
+                self.bad_entries += 1
 
     def _descend(self, cluster: int, full: str, depth: int, entry_deleted: bool,
                  deleted: bool) -> None:
@@ -438,27 +429,30 @@ class _Walker:
                   deleted: bool, entry_deleted: bool) -> None:
         boot = self.boot
         needed = (size + boot.cluster_size - 1) // boot.cluster_size
+        if needed > boot.max_cluster - 1:
+            self.bad_entries += 1                  # groesser als das ganze Volume
+            return
         if not deleted:
-            clusters = self.table.chain(cluster, needed)
+            chain = self.table.chain(cluster, needed)
+            runs = chain_to_runs(chain)
             state = "vorhanden"
-            if len(clusters) < needed:
-                clusters = list(range(cluster, cluster + needed))
+            if len(chain) < needed:
+                runs = clamp_range(boot, cluster, needed)
                 state = "vorhanden (FAT-Kette beschädigt)"
         elif not self.table.is_free(cluster):
             # Der Startcluster gehoert schon einer anderen Datei: der Anfang ist weg.
-            clusters = list(range(cluster, cluster + needed))
+            runs = clamp_range(boot, cluster, needed)
             state = "überschrieben"
         else:
-            clusters, skipped = self.table.free_run(cluster, needed, needed * 4 + 1024)
-            if len(clusters) < needed:
-                clusters = list(range(cluster, cluster + needed))
+            runs, found, skipped = self.table.free_run(cluster, needed, needed * 4 + 1024)
+            if found < needed:
+                runs = clamp_range(boot, cluster, needed)
                 state = "teilweise überschrieben"
             elif skipped:
                 state = "zusammengesetzt"
             else:
                 state = "gut"
-        clusters = [c for c in clusters if boot.valid_cluster(c)]
-        if not clusters:
+        if not runs:
             return
         modified, epoch = _fat_datetime(entry)
         ext = name.rsplit(".", 1)[-1].lower() if "." in name else "bin"
@@ -468,10 +462,10 @@ class _Walker:
             type_name="FAT-Datei" + (" (gelöscht)" if deleted else ""),
             ext=ext,
             name=f"{number:06d}_{safe_name(full)}",
-            offset=boot.cluster_offset(clusters[0]),
+            offset=boot.cluster_offset(runs[0][0]),
             size=size,
             extra={"path": full, "modified": modified, "mtime_epoch": epoch,
-                   "fs": boot.fat_type, "runs": clusters_to_runs(boot, clusters),
+                   "fs": boot.fat_type, "runs": byte_runs(boot, runs),
                    "state": state, "deleted": deleted},
         ))
 
@@ -492,6 +486,9 @@ def scan_fat(source, base_offset: int = 0, deleted_only: bool = True,
     if walker.errors and warnings is not None:
         warnings.append(f"FAT-Volume bei Offset {base_offset:#x}: {walker.errors} "
                         "Verzeichnis(se) nicht lesbar.")
+    if walker.bad_entries and warnings is not None:
+        warnings.append(f"FAT-Volume bei Offset {base_offset:#x}: {walker.bad_entries} "
+                        "beschädigte Dateieinträge übersprungen (z.B. unmögliche Größe).")
     if progress_cb:
         progress_cb("FAT-Verzeichnisse lesen", 1.0, len(walker.findings))
     yield from walker.findings

@@ -94,8 +94,16 @@ Funde, und „Alle wiederherstellen“ rettet auch die ausgeblendeten.
 Bricht man eine Wiederherstellung ab, bleibt die Trefferliste erhalten. Ein
 erneuter Klick setzt fort und überspringt die schon geschriebenen Dateien; ein
 neuer Scan ist dafür nicht nötig. Welche Funde fertig sind, steht in der Datei
-`.datenrettung.json` im Ausgabeordner. Die Änderungszeit der geretteten Dateien
-wird vom Original übernommen, soweit sie bekannt ist.
+`.datenrettung.json` im Ausgabeordner, getrennt nach Quelle. Die Quelle erkennt
+das Werkzeug an Größe, Anfang und Ende des Datenträgers, nicht am Pfad; eine
+Platte, die Windows nach einem Neustart unter anderer Nummer führt, gilt also
+weiter als dieselbe. Übersprungen wird eine Datei nur, wenn sie noch die
+protokollierte Länge hat und ihr Anfang mit dem Fund in der Quelle
+übereinstimmt. Andernfalls wird sie unter neuem Namen geschrieben, vorhandene
+Dateien werden nie überschrieben. So landen auch zwei Funde mit gleichem Namen
+und gleicher Größe, etwa aus zwei Partitionen, beide im Ausgabeordner. Die
+Änderungszeit der geretteten Dateien wird vom Original übernommen, soweit sie
+bekannt ist.
 
 Schließt man das Fenster, während ein Scan oder eine Wiederherstellung läuft,
 fragt das Programm nach. Bestätigt man, bricht es den Lauf zuerst geordnet ab
@@ -128,7 +136,9 @@ wichtigste Kontrolle: Steht dort ein winziger Bruchteil, wurde der Datenträger
 gar nicht vollständig gelesen (meist fehlende Administratorrechte oder ein
 Zugriffsproblem), und dann kann auch nichts gefunden werden. Hinweise, etwa auf
 beschädigte Strukturen oder verschlüsselte Partitionen, erscheinen nach dem Scan
-gesammelt.
+gesammelt. Dazu gehören auch FAT- und exFAT-Einträge mit unmöglicher
+Größenangabe: Sie werden einzeln übersprungen, die übrigen Dateien im selben
+Ordner werden weiter gefunden.
 
 ## Warum ein Scan Zeit braucht
 
@@ -158,7 +168,10 @@ Der Ausgabeordner gehört auf einen anderen Datenträger als die Quelle. Das
 Werkzeug prüft das vor dem Schreiben: Liegt der Ausgabeordner auf dem gewählten
 Laufwerk oder auf einer Partition der gewählten Platte, verweigert es die
 Wiederherstellung (auf der Kommandozeile lässt sich das mit `--allow-same-disk`
-übergehen). Bei einer physisch defekten Platte ist der übliche Weg, zuerst ein
+übergehen). Unter Windows fragt es dazu das System, auf welchem Volume der
+Ordner tatsächlich liegt. Erweiterte Pfade wie `\\?\C:\…`, Junctions,
+symbolische Links und in Ordner eingehängte Volumes werden so richtig
+zugeordnet. Bei einer physisch defekten Platte ist der übliche Weg, zuerst ein
 Image zu ziehen (etwa mit `ddrescue`) und danach nur noch mit diesem Image zu
 arbeiten.
 
@@ -189,10 +202,12 @@ fragmentiert oder teilweise überschrieben ist, endet der Fund an der letzten
 sicheren Stelle, und ein direkt folgendes Bild wird eigenständig gefunden. ZIP-
 und Office-Dateien enden an dem Abschluss, der zu ihrem eigenen
 Inhaltsverzeichnis passt, sodass eingebettete Archive (JAR, DOCX in einem ZIP)
-die Datei nicht abschneiden. PDFs mit inkrementellen Updates enden am letzten
+die Datei nicht abschneiden. Das gilt auch für ZIP64, das schon bei mehr als
+65.535 Einträgen nötig ist. PDFs mit inkrementellen Updates enden am letzten
 `%%EOF` samt Zeilenende, RTF-Dokumente an der äußersten Klammergruppe. GZIP wird
 probeweise entpackt; das liefert das exakte Ende und verwirft zufällige Treffer.
-7z und SQLite bekommen ihre exakte Größe aus dem Dateikopf. Typen ohne
+7z und SQLite bekommen ihre exakte Größe aus dem Dateikopf. Endet die Quelle
+vor der angegebenen Größe, gilt der Fund als unvollständig. Typen ohne
 Endmuster (TIFF/RAW, RAR, Videos) enden spätestens am nächsten Kopf desselben
 Typs.
 
@@ -261,6 +276,7 @@ datenrettung/
     usn.py                USN-Change-Journal ($UsnJrnl) auswerten
     fat.py                FAT12/16/32-Undelete
     exfat.py              exFAT-Undelete
+    runs.py               Clusterbereiche für FAT und exFAT
     scanner.py            Orchestrierung und Wiederherstellung
     models.py             gemeinsamer Fund-Typ
   gui/
@@ -271,6 +287,7 @@ datenrettung/
     fixtures/             kleine Images echter Dateisysteme (ntfs-3g, mtools, exfat-fuse)
     test_engine.py        Tests für Carving, NTFS, FAT, exFAT, USN
     test_befunde.py       Regressionstests zu den Befunden des Reviews
+    test_gegenpruefung.py Regressionstests zu den Befunden der Gegenprüfung
     test_gui.py           Rauchtest der Oberfläche (braucht eine Anzeige)
     windows_geraete.py    Prüfung der Windows-Gerätezugriffe (nur unter Windows)
 ```

@@ -13,9 +13,11 @@ einen getrennten Ausgabeordner; die Quelle bleibt unangetastet.
 from __future__ import annotations
 
 import errno
+import hashlib
 import itertools
 import json
 import os
+import zlib
 from dataclasses import dataclass
 from typing import Callable, Iterator, Optional
 
@@ -31,6 +33,11 @@ CHUNK = 8 * 1024 * 1024
 
 # Protokoll der bereits geretteten Funde im Ausgabeordner (fuer die Fortsetzung).
 MANIFEST = ".datenrettung.json"
+
+# Vor dem Ueberspringen wird der Anfang jeder Datei mit der Quelle verglichen.
+_VERIFY_BYTES = 16 * 1024
+# Fingerabdruck der Quelle: Anfang und Ende (Partitionstabellen, Bootsektoren).
+_FINGERPRINT_BYTES = 1024 * 1024
 
 # Partitionstypen, die NTFS enthalten koennen (MBR 0x07, GPT "Basic data").
 _NTFS_PARTITION_TYPES = {"0x07", "a2a0d0ebe5b9334487c068b6b72699c7"}
@@ -461,16 +468,32 @@ def recover(source: ByteSource, findings: list[Finding], output_dir: str,
 
     Ist ``skip_existing`` gesetzt, werden Funde uebersprungen, die ein frueherer
     Lauf schon geschrieben hat. Welche das sind, steht in einer kleinen
-    Protokolldatei im Ausgabeordner – so erkennt die Fortsetzung jeden Fund
-    eindeutig wieder, auch wenn zwei Funde gleich heissen oder die Reihenfolge
-    der Auswahl eine andere ist. Jede Datei wird erst unter ``.part`` geschrieben
-    und zum Schluss umbenannt; ein Abbruch hinterlaesst keine halbe Datei. Die
+    Protokolldatei im Ausgabeordner, getrennt nach Quelle (Fingerabdruck aus
+    Groesse, Anfang und Ende des Datentraegers). Uebersprungen wird nur, wenn
+    die vorhandene Datei noch die protokollierte Laenge hat und ihr Anfang mit
+    dem Fund in der Quelle uebereinstimmt; sonst wird unter neuem Namen
+    geschrieben, nie ueberschrieben. Jede Datei entsteht erst als ``.part`` und
+    wird zum Schluss umbenannt; ein Abbruch hinterlaesst keine halbe Datei. Die
     Aenderungszeit wird, soweit bekannt, vom Original uebernommen.
 
     Rueckgabe: ``(anzahl_geschrieben, anzahl_uebersprungen, liste_der_fehler)``.
     """
     os.makedirs(output_dir, exist_ok=True)
-    manifest = _load_manifest(output_dir) if skip_existing else {}
+    # Das Protokoll wird immer gefuehrt; ``skip_existing`` entscheidet nur, ob
+    # es beim Ueberspringen beachtet wird.
+    book = _load_manifest(output_dir)
+    ident = source_identity(source)
+    entry = book["quellen"].setdefault(ident, {"pfad": getattr(source, "path", ""),
+                                               "fertig": {}})
+    done_map: dict = entry["fertig"]
+    legacy: dict = book["alt"]
+    # Namen, die schon einem protokollierten Fund gehoeren (egal welcher Quelle).
+    claimed = {rec["datei"].lower() for src in book["quellen"].values()
+               for rec in src["fertig"].values()}
+    claimed |= {name.lower() for name in legacy.values()}
+    # Nur Dateien, die schon vor diesem Lauf da waren, kommen als Altbestand in
+    # Frage; was dieser Lauf selbst schreibt, gilt nie als "schon erledigt".
+    preexisting = _listdir_lower(output_dir) if skip_existing else set()
     used: set[str] = set()
     ok = 0
     skipped = 0
@@ -482,35 +505,61 @@ def recover(source: ByteSource, findings: list[Finding], output_dir: str,
         if should_cancel and should_cancel():
             break
         key = finding_key(finding)
-        done = manifest.get(key)
-        if skip_existing and done and _exists(os.path.join(output_dir, done)):
-            skipped += 1
-            used.add(done.lower())
-            if progress_cb:
-                progress_cb(i + 1, total, done)
-            continue
+        rec = done_map.get(key)
+        if skip_existing:
+            # Zuerst der Eintrag dieser Quelle. Aendert sich der Fingerabdruck
+            # (etwa bei einem eingebundenen Laufwerk, auf das Windows schreibt),
+            # zaehlen auch Eintraege anderer Quellen, aber nur nach derselben
+            # Inhaltspruefung.
+            candidates = [rec] if rec else [src["fertig"][key] for src in book["quellen"].values()
+                                            if key in src["fertig"]]
+            hit = next((r for r in candidates if r["datei"].lower() not in used
+                        and _recorded_file_ok(source, finding, output_dir, r)), None)
+            if hit is not None:
+                if hit is not rec:
+                    done_map[key] = dict(hit)
+                    dirty += 1
+                skipped += 1
+                used.add(hit["datei"].lower())
+                if progress_cb:
+                    progress_cb(i + 1, total, hit["datei"])
+                continue
         name = _fit_name(finding.name)
-        if skip_existing and not done and _same_file_present(output_dir, name, finding):
-            # Von einer frueheren Programmversion ohne Protokoll geschrieben.
-            manifest[key] = name
-            used.add(name.lower())
-            skipped += 1
-            dirty += 1
-            if progress_cb:
-                progress_cb(i + 1, total, name)
-            continue
+        if skip_existing and not rec:
+            old = legacy.get(key)
+            candidate = old or name
+            low = candidate.lower()
+            if (low in preexisting and low not in used and (old or low not in claimed)
+                    and _legacy_file_ok(source, finding, os.path.join(output_dir, candidate))):
+                # Von einer frueheren Programmversion geschrieben.
+                path = os.path.join(output_dir, candidate)
+                done_map[key] = {"datei": candidate,
+                                 "bytes": os.path.getsize(_long_path(path)),
+                                 "kopf": _file_head_crc(path)}
+                used.add(low)
+                skipped += 1
+                dirty += 1
+                if progress_cb:
+                    progress_cb(i + 1, total, candidate)
+                continue
         target = _unique_path(output_dir, name, used)
         part = target + ".part"
         try:
+            written = 0
+            head = bytearray()
             with open(_long_path(part), "wb") as fh:
                 for chunk in iter_chunks(source, finding, CHUNK):
                     if should_cancel and should_cancel():
                         raise _Cancelled()
                     fh.write(chunk)
+                    written += len(chunk)
+                    if len(head) < _VERIFY_BYTES:
+                        head += chunk[:_VERIFY_BYTES - len(head)]
             os.replace(_long_path(part), _long_path(target))
             _set_times(target, finding)
             ok += 1
-            manifest[key] = os.path.basename(target)
+            done_map[key] = {"datei": os.path.basename(target), "bytes": written,
+                             "kopf": zlib.crc32(bytes(head))}
             dirty += 1
         except _Cancelled:
             _remove_quietly(part)
@@ -525,14 +574,89 @@ def recover(source: ByteSource, findings: list[Finding], output_dir: str,
             _remove_quietly(part)
             errors.append(f"{finding.name}: {exc}")
         if dirty >= 50:
-            _save_manifest(output_dir, manifest)
+            _save_manifest(output_dir, book)
             dirty = 0
         if progress_cb:
             progress_cb(i + 1, total, os.path.basename(target))
 
-    if skip_existing and dirty:
-        _save_manifest(output_dir, manifest)
+    if dirty:
+        _save_manifest(output_dir, book)
     return ok, skipped, errors
+
+
+def source_identity(source) -> str:
+    """Fingerabdruck einer Quelle: Groesse sowie erstes und letztes MiB.
+
+    Haengt nicht am Pfad, damit eine Fortsetzung auch dann greift, wenn Windows
+    die Platte nach einem Neustart unter anderer Nummer fuehrt.
+    """
+    size = getattr(source, "size", None) or 0
+    digest = hashlib.sha256(str(size).encode("ascii"))
+    digest.update(source.read(0, _FINGERPRINT_BYTES))
+    if size > _FINGERPRINT_BYTES:
+        tail = max(_FINGERPRINT_BYTES, size - _FINGERPRINT_BYTES)
+        digest.update(source.read(tail, size - tail))
+    return digest.hexdigest()[:32]
+
+
+def _source_head(source, finding: Finding) -> Optional[bytes]:
+    head = bytearray()
+    try:
+        for chunk in iter_chunks(source, finding, _VERIFY_BYTES):
+            head += chunk
+            if len(head) >= _VERIFY_BYTES:
+                break
+    except Exception:
+        return None
+    return bytes(head[:_VERIFY_BYTES])
+
+
+def _file_head(path: str) -> Optional[bytes]:
+    try:
+        with open(_long_path(path), "rb") as fh:
+            return fh.read(_VERIFY_BYTES)
+    except OSError:
+        return None
+
+
+def _file_head_crc(path: str) -> int:
+    head = _file_head(path)
+    return zlib.crc32(head) if head is not None else -1
+
+
+def _recorded_file_ok(source, finding: Finding, output_dir: str, rec: dict) -> bool:
+    """Protokollierte Datei noch vorhanden, unveraendert und passend zur Quelle?"""
+    path = os.path.join(output_dir, rec["datei"])
+    try:
+        if os.path.getsize(_long_path(path)) != rec["bytes"]:
+            return False
+    except OSError:
+        return False
+    head = _file_head(path)
+    if head is None or zlib.crc32(head) != rec["kopf"]:
+        return False
+    expected = _source_head(source, finding)
+    return expected is not None and zlib.crc32(expected) == rec["kopf"]
+
+
+def _legacy_file_ok(source, finding: Finding, path: str) -> bool:
+    """Datei ohne Protokolleintrag: nur bei gleicher Groesse und gleichem Anfang."""
+    if finding.kind == "usn":
+        return False
+    try:
+        if os.path.getsize(_long_path(path)) != finding.size:
+            return False
+    except OSError:
+        return False
+    head = _file_head(path)
+    return head is not None and head == _source_head(source, finding)
+
+
+def _listdir_lower(path: str) -> set[str]:
+    try:
+        return {name.lower() for name in os.listdir(_long_path(path))}
+    except OSError:
+        return set()
 
 
 class _Cancelled(Exception):
@@ -591,15 +715,6 @@ def _unique_path(output_dir: str, name: str, used: set[str]) -> str:
     return os.path.join(output_dir, candidate)
 
 
-def _same_file_present(output_dir: str, name: str, finding: Finding) -> bool:
-    if finding.kind == "usn":
-        return False
-    try:
-        return os.path.getsize(_long_path(os.path.join(output_dir, name))) == finding.size
-    except OSError:
-        return False
-
-
 def _set_times(path: str, finding: Finding) -> None:
     mtime = finding.extra.get("mtime_epoch")
     if not mtime:
@@ -611,23 +726,50 @@ def _set_times(path: str, finding: Finding) -> None:
         pass
 
 
+def _empty_manifest() -> dict:
+    return {"quellen": {}, "alt": {}}
+
+
 def _load_manifest(output_dir: str) -> dict:
+    """Liest das Protokoll. Version 1 kannte keine Quellen; ihre Eintraege
+    gelten nur noch als Altbestand und werden vor dem Ueberspringen geprueft."""
+    book = _empty_manifest()
     try:
         with open(_long_path(os.path.join(output_dir, MANIFEST)), encoding="utf-8") as fh:
             data = json.load(fh)
-        return data.get("fertig", {}) if isinstance(data, dict) else {}
     except (OSError, ValueError):
-        return {}
+        return book
+    if not isinstance(data, dict):
+        return book
+    if data.get("version") == 1:
+        old = data.get("fertig")
+        if isinstance(old, dict):
+            book["alt"] = {k: v for k, v in old.items() if isinstance(v, str)}
+        return book
+    alt = data.get("alt")
+    if isinstance(alt, dict):
+        book["alt"] = {k: v for k, v in alt.items() if isinstance(v, str)}
+    sources = data.get("quellen")
+    if isinstance(sources, dict):
+        for ident, entry in sources.items():
+            if not isinstance(entry, dict) or not isinstance(entry.get("fertig"), dict):
+                continue
+            done = {k: rec for k, rec in entry["fertig"].items()
+                    if isinstance(rec, dict) and isinstance(rec.get("datei"), str)
+                    and isinstance(rec.get("bytes"), int) and isinstance(rec.get("kopf"), int)}
+            book["quellen"][ident] = {"pfad": str(entry.get("pfad", "")), "fertig": done}
+    return book
 
 
-def _save_manifest(output_dir: str, manifest: dict) -> None:
+def _save_manifest(output_dir: str, book: dict) -> None:
     path = os.path.join(output_dir, MANIFEST)
     tmp = path + ".tmp"
     try:
         if os.name == "nt" and os.path.exists(path):
             _set_hidden(path, False)
         with open(_long_path(tmp), "w", encoding="utf-8") as fh:
-            json.dump({"version": 1, "fertig": manifest}, fh, ensure_ascii=False)
+            json.dump({"version": 2, "quellen": book["quellen"], "alt": book["alt"]},
+                      fh, ensure_ascii=False)
         os.replace(_long_path(tmp), _long_path(path))
         if os.name == "nt":
             _set_hidden(path, True)
